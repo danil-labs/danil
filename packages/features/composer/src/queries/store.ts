@@ -3,7 +3,6 @@ import type { Agent, AgentModels, ModoDePermiso } from "../../../../../apps/desk
 import { type CatalogosDeModelos, effortAlCambiarDeModelo, type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models.ts";
 import type { CliCommand, Skill, SlashMenu } from "../../../../../apps/desktop/src/lib/skills.ts";
 import { esDe, paraElMenu, type Superficie, superficieDe } from "../../../../../apps/desktop/src/lib/surfaces.ts";
-import { modoInicial, modoRecordado, recordarModo } from "../../../chat/src/index.ts";
 import { OPENCODE } from "../../../../tasks/src/agents.ts";
 
 type Invoke = <T>(command: string, args?: Record<string, unknown>, options?: { headers: Record<string, string> }) => Promise<T>;
@@ -18,8 +17,11 @@ export function createComposerStore(deps: {
   scope: Scope;
   workspaceMode: () => string | null;
   draftConfiguration: () => ComposerConfiguration | undefined;
+  modoInicial: (modos: ModoDePermiso[], recordado: string) => string;
+  modoRecordado: () => string;
+  recordarModo: (id: string) => void;
 }) {
-  const { invoke, withLastAnswer } = deps;
+  const { invoke, withLastAnswer, modoInicial, modoRecordado, recordarModo } = deps;
   const composerMachine = deps.scope.machine;
   const workspaceActivo = deps.scope.workspace;
   const connected = deps.scope.connected;
