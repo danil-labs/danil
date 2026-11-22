@@ -2,7 +2,7 @@ import { ATTACHMENT_DOCUMENTS_FEATURE } from "@terminus/protocol";
 import { createMemo, createSignal, onCleanup, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { sessionRefresh } from "../../../../session/src/sessionRefresh.ts";
-import { withRemoteLaunchers, type RemoteScope } from "../../../../tasks/src/remote.ts";
+import { withRemoteLaunchers, type RemoteScope } from "../../../../ui/src/lib/tasks/remote.ts";
 import { clave, threadPreview, type Author, type Machine, type Msg, type OptimisticHistoryState, type Preview, type Session, type TabsStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { AttentionStore, WorkspaceStore } from "../screens/workspace-session.ts";
 import type { ClonEnCurso } from "../screens/AddWorkdir.tsx";

@@ -6,7 +6,7 @@
  * 2026-11-19-proveedores-ia.md` § 2 y § 3).
  */
 // Con extensión: este módulo se carga también desde `node --test`.
-import { isFreeRouterAgent } from "../../../../tasks/src/agents.ts";
+import { isFreeRouterAgent } from "../../../../ui/src/lib/tasks/agents.ts";
 import type { Prosa } from "../../../../../apps/desktop/src/lib/prose.ts";
 import type { Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
 import { SUPPORTED_AGENTS } from "./ai-providers-view.ts";

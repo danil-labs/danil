@@ -94,9 +94,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../packages/tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -311,9 +308,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -504,9 +498,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -697,9 +688,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -890,9 +878,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1083,9 +1068,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1276,9 +1258,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1469,9 +1448,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1662,9 +1638,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1855,9 +1828,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2048,9 +2018,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2241,9 +2208,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2434,9 +2398,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2627,9 +2588,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2820,9 +2778,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3013,9 +2968,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3206,9 +3158,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3399,9 +3348,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3592,9 +3538,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3785,9 +3728,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -4051,9 +3991,6 @@ importers:
       '@terminus/protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -4166,8 +4103,6 @@ importers:
       vite-plugin-solid:
         specifier: ^2.11.14
         version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-
-  packages/tasks: {}
 
   packages/ui:
     dependencies:

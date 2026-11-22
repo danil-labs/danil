@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_SIDEBAR_VIEW, agentOptions, applySidebarView, groupKey, groupLabel, sanitizeSidebarView } from "../src/index.ts";
+import { DEFAULT_SIDEBAR_VIEW, agentOptions, applySidebarView, groupKey, groupLabel, sanitizeSidebarView } from "../src/lib/tasks.ts";
 
 const task = (id: string, agent: string | null, extra: object = {}) => ({ id, agent, esperando: false, ...extra });
 const ctx = { live: [], approving: [] };

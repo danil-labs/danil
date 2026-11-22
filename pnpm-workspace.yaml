@@ -5,6 +5,7 @@ packages:
   - apps/desk
   - packages/*
   - "!packages/design"
+  - "!packages/tasks"
   - packages/features/*
 
 # pnpm 10.15+ / 12: approval for packages that run install scripts.

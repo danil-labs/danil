@@ -1,24 +1,11 @@
-# @terminus/tasks
+# @terminus/tasks (solo reexporta)
 
-## Qué hace
-Paquete legado de derivación y presentación de tareas y dock de agentes.
-Transforma la estructura de tareas en listas planas, agrupa por carpetas, genera tarjetas de tarea (`TaskCard`) y modela subtareas remotas.
+La lista plana, el filtro y la agrupación, la tarjeta de dos líneas, el dock de agentes y los
+ids de agente se fundieron en `packages/ui/src/lib/tasks.ts` y `packages/ui/src/lib/tasks/`
+(tarea 3.6b del plan front-move); sus pruebas están en `packages/ui/test/`. Lo que queda aquí
+existe solo porque `apps/mobile` está fuera del pnpm workspace y enlaza `@terminus/tasks` con
+`file:../../packages/tasks`:
 
-## Qué expone
-Exporta desde `src/index.ts`:
-- Subtareas y lanzadores remotos: `REMOTE_CHILD_FEATURE`, `RemoteParent`, `RemoteRow`, `RemoteScope`, `remoteLauncherOf`, `remoteParentOf`, `withRemoteLaunchers`.
-- Lista plana y conteos: `FlatRow`, `FlatTask`, `LauncherRow`, `delegatedOf`, `flattenTasks`, `folderCounts`, `isSubtask`, `launcherOf`.
-- Tarjetas de tarea: `CardOptions`, `CardTask`, `TaskCard`, `groupCardOptions`, `taskCard`.
-- Identificadores de agentes: `canonicalAgentId`, `chipModel`.
+- `src/index.ts` reexporta `packages/ui/src/lib/tasks.ts`.
 
-## Qué consume
-- `@terminus/design`.
-
-## Qué contratos toca
-- Rutas `/v1` del borde: ninguna directa.
-- Comandos RPC1 del motor: ninguno directo; procesa estructuras de datos de tareas.
-
-## Qué falta según la fase 2 del plan
-- Fase 2.1 y 2.2: componentes de tarjetas y utilidades de agentes suben a `packages/ui` (`packages/ui/lib/tasks/`).
-- El dock de agentes migra a `packages/features/chat` y la lista de sesiones a `packages/features/projects`. El paquete se retira en la fase 3.
-- Fuente y detalle: [INVENTORY.md](./INVENTORY.md).
+Se borra cuando el teléfono importe `packages/ui/src/lib/tasks.ts` directamente.

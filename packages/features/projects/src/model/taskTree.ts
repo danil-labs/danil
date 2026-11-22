@@ -1,4 +1,4 @@
-import { buildTaskTree, type TaskBranch, type TaskTreeRow } from "../../../../tasks/src/tree.ts";
+import { buildTaskTree, type TaskBranch, type TaskTreeRow } from "../../../../ui/src/lib/tasks/tree.ts";
 
 type Task = TaskTreeRow & {
   archived?: boolean | null;

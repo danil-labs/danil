@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { canFinishTask, readTaskGit, retainGitObservation, UNKNOWN_TASK_GIT, type TaskGitStatus } from "../src/index.ts";
+import { canFinishTask, readTaskGit, retainGitObservation, UNKNOWN_TASK_GIT, type TaskGitStatus } from "../src/lib/tasks.ts";
 
 const merged: TaskGitStatus = {
   ...UNKNOWN_TASK_GIT, kind: "branch", branch: "fix/example", head: "commit", pull_known: true,

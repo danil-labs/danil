@@ -1,4 +1,4 @@
-// El orden y el reparto del dock son los mismos en el teléfono: viven en `@terminus/tasks`.
+// El orden y el reparto del dock son los mismos en el teléfono: viven en `packages/ui/src/lib/tasks.ts`.
 export {
   type DockAgent,
   DOCK_DEFAULT_CAPACITY,
@@ -7,4 +7,4 @@ export {
   dockSources,
   orderDockAgents,
   planDock,
-} from "@terminus/tasks";
+} from "../../../ui/src/lib/tasks.ts";

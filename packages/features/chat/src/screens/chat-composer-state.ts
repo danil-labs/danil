@@ -14,7 +14,7 @@ import type { Msg } from "../model/messageTypes";
 import { seguirElFondo } from "../model/paste";
 import { createVisualBudget } from "../model/visualBudget";
 import type { ChatProps } from "./chat-props";
-import { isRetiredAgent } from "@terminus/tasks";
+import { isRetiredAgent } from "../../../../ui/src/lib/tasks.ts";
 import { createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js";
 
 /** Lo que el bloque usa del cuerpo de Chat. */

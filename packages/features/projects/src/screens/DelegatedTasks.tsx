@@ -10,12 +10,12 @@ import Sessions, { readableSessionTitle, type SessionRow } from "./Sessions";
 import { DelegatedSkeleton } from "../components/DelegatedSkeleton";
 import { DelegatedReference } from "../components/DelegatedReference";
 import { delegatedRailRows } from "../model/delegatedRail";
-import { type TaskTreeRow, taskDescendants } from "@terminus/tasks";
+import { type TaskTreeRow, taskDescendants } from "../../../../ui/src/lib/tasks.ts";
 import { taskPriority } from "../../../../ui/src/index";
 import { delegatedAttention } from "../model/delegatedRail";
 
 export { delegatedAttention } from "../model/delegatedRail";
-export { delegatedFamilies } from "@terminus/tasks";
+export { delegatedFamilies } from "../../../../ui/src/lib/tasks.ts";
 
 export type DelegatedListProps = Omit<ComponentProps<typeof Sessions>, "sessions" | "flat" | "card" | "hoverCardPlacement" | "includeArchived" | "groupByAuthor" | "groupByHandler">;
 

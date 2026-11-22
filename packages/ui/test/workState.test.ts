@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { WORK_STATUS_LABELS } from "../../ui/src/index.ts";
-import { applySidebarView, canFinishTask, DEFAULT_SIDEBAR_VIEW, groupKey, groupLabel, resolveTaskGit, sanitizeSidebarView, UNKNOWN_TASK_GIT, WORK_STATES, workStateOf, type TaskGit, type WorkState } from "../src/index.ts";
+import { WORK_STATUS_LABELS } from "../src/index.ts";
+import { applySidebarView, canFinishTask, DEFAULT_SIDEBAR_VIEW, groupKey, groupLabel, resolveTaskGit, sanitizeSidebarView, UNKNOWN_TASK_GIT, WORK_STATES, workStateOf, type TaskGit, type WorkState } from "../src/lib/tasks.ts";
 
 const git = (extra: Partial<TaskGit> = {}): TaskGit => ({
   kind: "branch", head: "current", branch: "work", has_remote: true,

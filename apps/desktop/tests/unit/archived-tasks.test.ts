@@ -148,7 +148,7 @@ test("si el padre kn ya guardó, la hija se puede finalizar aunque su copia est�
   assert.equal(canFinishTask({}, effectiveTaskGit(parent, rootDraft, [parent]), false), false);
 });
 
-const { buildTaskTree, taskIdentity, taskParent, withTaskAncestors, taskDescendants } = await import("../../../../packages/tasks/src/tree.ts");
+const { buildTaskTree, taskIdentity, taskParent, withTaskAncestors, taskDescendants } = await import("../../../../packages/ui/src/lib/tasks/tree.ts");
 
 test("parent prevalece y unavailable corta únicamente launched_by", () => {
   const root = { id: "root" };

@@ -10,7 +10,7 @@ Exporta desde `src/index.ts`:
 - Pantallas y componentes: `ProjectView`, `Sessions`, `ManageProjects`, `NewAgent`.
 
 ## Qué consume
-- `@danil/engine-client`, `@danil/platform-client`, `@danil/ui`, `@terminus/tasks`, `apps/desktop`.
+- `@danil/engine-client`, `@danil/platform-client`, `@danil/ui`, `@danil/ui` (`src/lib/tasks.ts`), `apps/desktop`.
 
 ## Qué contratos toca
 - Rutas `/v1` del borde: tipos de `Workspace` vía `platform-client`.

@@ -1,4 +1,4 @@
-import { routerAvailable } from "@terminus/tasks";
+import { routerAvailable } from "../../../../ui/src/lib/tasks.ts";
 import { createSignal, lazy, onCleanup, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { listModels, setProviderConsent, workspacesStartup } from "../queries/engine-consent";

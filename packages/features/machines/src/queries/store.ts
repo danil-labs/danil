@@ -1,5 +1,5 @@
 import { SEP } from "@terminus/fleet";
-import { REMOTE_CHILD_FEATURE, type RemoteScope } from "@terminus/tasks";
+import { REMOTE_CHILD_FEATURE, type RemoteScope } from "../../../../ui/src/lib/tasks.ts";
 import { createRoot, createSignal } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -80,7 +80,7 @@ export function runOnOptions(workspace: string | null, project?: ProjectPlace) {
 }
 
 /**
- * Cómo lee la ventana las hijas remotas (`@terminus/tasks`): solo si la máquina
+ * Cómo lee la ventana las hijas remotas (`packages/ui/src/lib/tasks.ts`): solo si la máquina
  * de la fila anuncia `remote_child_v1`; la de la ventana es la de las filas sin
  * `machine`. El coordinador va con el id de panel: suelto si es de esta máquina.
  */

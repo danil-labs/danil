@@ -14,7 +14,7 @@ import {
 } from "../../../../ui/src/Popover";
 import { ETAPAS } from "./TaskStage";
 import { taskTree } from "../model/taskTree";
-import { familySubtasks } from "@terminus/tasks";
+import { familySubtasks } from "../../../../ui/src/lib/tasks.ts";
 import { Pressable } from "../../../../ui/src/Pressable";
 import type { SessionRow, SessionsProps } from "./sessions-model";
 import type { SessionsState } from "./sessions-state";

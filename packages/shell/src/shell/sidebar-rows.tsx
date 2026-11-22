@@ -1,4 +1,4 @@
-import { groupCardOptions } from "@terminus/tasks";
+import { groupCardOptions } from "../../../ui/src/lib/tasks.ts";
 import Plus from "lucide-solid/icons/plus";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { createMemo, type JSX, type Setter, Show, Suspense } from "solid-js";

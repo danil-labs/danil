@@ -10,7 +10,7 @@ import EstadoDeTarea from "./TaskStatus";
 import { authorKey, authorKeys } from "../model/taskAuthors";
 import { descendientes, type Rama as RamaDeTareas } from "../model/taskTree";
 import { rolledOutcome } from "../../../../ui/src/index";
-import { taskIdentity } from "@terminus/tasks";
+import { taskIdentity } from "../../../../ui/src/lib/tasks.ts";
 import { Pressable } from "../../../../ui/src/Pressable";
 import type { SessionRow, SessionsProps } from "./sessions-model";
 import type { SessionsState } from "./sessions-state";

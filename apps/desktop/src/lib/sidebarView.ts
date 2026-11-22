@@ -6,12 +6,12 @@ import {
   type SidebarStatusKey,
   type SidebarView,
   sanitizeSidebarView,
-} from "@terminus/tasks";
+} from "../../../../packages/ui/src/lib/tasks.ts";
 import { createRoot, createSignal } from "solid-js";
 import { t } from "./i18n.ts";
 import { escribirPref, leerPref } from "./prefs.ts";
 
-// La vista (filtrar, agrupar) es la misma en el teléfono: vive en `@terminus/tasks`.
+// La vista (filtrar, agrupar) es la misma en el teléfono: vive en `packages/ui/src/lib/tasks.ts`.
 export {
   type SidebarGroup,
   type SidebarGrouping,
@@ -27,7 +27,7 @@ export {
   groupKey,
   nonDefaultCount,
   sameAgent,
-} from "@terminus/tasks";
+} from "../../../../packages/ui/src/lib/tasks.ts";
 
 /** La vista se guarda por workspace y espacio, como la tira de pestañas. */
 export function sidebarViewKey(workspace: string | null, space: string | null): string {

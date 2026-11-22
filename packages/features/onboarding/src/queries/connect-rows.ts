@@ -1,7 +1,7 @@
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { detalleDe, prosaDe } from "../../../../ui/src/Failure";
-import { canonicalAgentId, OPENCODE } from "../../../../tasks/src/agents.ts";
+import { canonicalAgentId, OPENCODE } from "../../../../ui/src/lib/tasks/agents.ts";
 
 /** Los que se conectan con una clave pegada en su panel, como en el diseño: dónde se crea y cómo se ve. */
 export const CLAVES: Record<string, { url: string; placeholder: string }> = {

@@ -1,4 +1,4 @@
-import { canonicalAgentId, OPENCODE } from "@terminus/tasks";
+import { canonicalAgentId, OPENCODE } from "../../../../ui/src/lib/tasks.ts";
 import { type JSX } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { revocada } from "../../../../../apps/desktop/src/lib/limits";

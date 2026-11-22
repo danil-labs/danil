@@ -3,11 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "How every Terminus client lists tasks: the flat list, its filter and grouping, the two-line card and the agents dock.",
+  "description": "Shim for apps/mobile only: re-exports the task list, card and dock that now live in packages/ui.",
   "exports": {
     ".": "./src/index.ts"
-  },
-  "scripts": {
-    "test": "node --test 'test/*.test.ts'"
   }
 }

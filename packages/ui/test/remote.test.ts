@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildTaskTree, delegatedOf, flattenTasks, REMOTE_CHILD_FEATURE, remoteLauncherOf, taskDescendants, withRemoteLaunchers, type RemoteScope } from "../src/index.ts";
+import { buildTaskTree, delegatedOf, flattenTasks, REMOTE_CHILD_FEATURE, remoteLauncherOf, taskDescendants, withRemoteLaunchers, type RemoteScope } from "../src/lib/tasks.ts";
 
 // El panel del escritorio: la Mac es la ventana (ids sueltos); la VM lleva prefijo.
 const panel = (features: Record<string, string[]>): RemoteScope => ({
