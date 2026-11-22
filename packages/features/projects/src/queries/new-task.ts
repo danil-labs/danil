@@ -5,49 +5,7 @@ import type { ComposerStore, ContextoDeProyectos, DraftsStore, PanelsStore, Tabs
 import { taskCountOf } from "../model/recent.ts";
 import type { PanelSite } from "../../../../../apps/desktop/src/lib/panels.ts";
 
-export type NewTaskDeps = {
-  abrirProyecto: (id: string) => void;
-  alta: Accessor<boolean>;
-  arrancando: Accessor<boolean>;
-  borrarProyecto: (id: string) => Promise<void>;
-  carpetaDelEscritorio: (pedido: string) => string;
-  cerrarBorrador: (sitio: PanelSite) => void;
-  cerrarPestanasYa: (ids: string[]) => void;
-  composer: ComposerStore;
-  drafts: DraftsStore;
-  enBorrador: (sitio: PanelSite) => boolean;
-  hablandoCon: Accessor<{ project: string; name: string } | null>;
-  hablarConEncargado: (enProyecto: string, name: string) => void;
-  multipleSpaces: () => boolean;
-  ocultarDelSelector: (id: string, ocultar: boolean) => void;
-  ocultosAqui: Accessor<Set<string>>;
-  paneles: PanelsStore;
-  pedirElCampo: () => void;
-  pestanaActiva: () => string | null;
-  pestanas: TabsStore;
-  project: Accessor<string>;
-  proyectosDelRiel: () => Project[];
-  proyectoDeNuevaTarea: (pedido: string | undefined, activo: string) => string;
-  removeFromActiveSpace: (folder: string) => Promise<void>;
-  renombrarProyecto: (id: string, name: string) => Promise<void>;
-  restoreDraftConfiguration: () => void;
-  setAnadiendoCarpeta: Setter<boolean>;
-  setAntesDelBorrador: Setter<string | null>;
-  setCuentasTocadas: Setter<number>;
-  setFolder: Setter<string | null>;
-  setHablandoCon: Setter<{ project: string; name: string } | null>;
-  setMaterialPedido: Setter<string | null>;
-  setProject: Setter<string>;
-  setProyectoAbierto: Setter<string | null>;
-  setRunOn: (workspace: string | null, id: string | null) => void;
-  setSessionId: Setter<string | null>;
-  setSettings: Setter<string | null>;
-  settings: Accessor<string | null>;
-  soltarCola: () => void;
-  soltarHilo: (session: string) => void;
-  tareasActivas: Accessor<Record<string, number>>;
-  workspaceActivo: Accessor<string | null>;
-};
+export type NewTaskDeps = { abrirProyecto: (id: string) => void; alta: Accessor<boolean>; arrancando: Accessor<boolean>; borrarProyecto: (id: string) => Promise<void>; carpetaDelEscritorio: (pedido: string) => string; cerrarBorrador: (sitio: PanelSite) => void; cerrarPestanasYa: (ids: string[]) => void; composer: ComposerStore; drafts: DraftsStore; enBorrador: (sitio: PanelSite) => boolean; hablandoCon: Accessor<{ project: string; name: string } | null>; hablarConEncargado: (enProyecto: string, name: string) => void; multipleSpaces: () => boolean; ocultarDelSelector: (id: string, ocultar: boolean) => void; ocultosAqui: Accessor<Set<string>>; paneles: PanelsStore; pedirElCampo: () => void; pestanaActiva: () => string | null; pestanas: TabsStore; project: Accessor<string>; proyectosDelRiel: () => Project[]; proyectoDeNuevaTarea: (pedido: string | undefined, activo: string) => string; removeFromActiveSpace: (folder: string) => Promise<void>; renombrarProyecto: (id: string, name: string) => Promise<void>; restoreDraftConfiguration: () => void; setAnadiendoCarpeta: Setter<boolean>; setAntesDelBorrador: Setter<string | null>; setCuentasTocadas: Setter<number>; setFolder: Setter<string | null>; setHablandoCon: Setter<{ project: string; name: string } | null>; setMaterialPedido: Setter<string | null>; setProject: Setter<string>; setProyectoAbierto: Setter<string | null>; setRunOn: (workspace: string | null, id: string | null) => void; setSessionId: Setter<string | null>; setSettings: Setter<string | null>; settings: Accessor<string | null>; soltarCola: () => void; soltarHilo: (session: string) => void; tareasActivas: Accessor<Record<string, number>>; workspaceActivo: Accessor<string | null>; };
 
 export function createNewTask(deps: NewTaskDeps) {
   const proyectosDelRiel = () => deps.proyectosDelRiel();

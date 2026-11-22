@@ -8,40 +8,7 @@ import type { ArbolEnTarea, Project, Source } from "../../../../../apps/desktop/
 import type { ChatExportado, DraftsStore, PanelsStore, TabsStore, TaskFilesStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { SessionRow } from "../screens/Sessions.tsx";
 
-export type SessionMutationsOpenDeps = {
-  abrirBorradorDeAgente: (enProyecto: string, name: string) => void;
-  abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>;
-  activeSpace: Accessor<Space | null>;
-  adjuntarFuente: (id: string) => Promise<void>;
-  arbolesDe: (project: string, session: string) => Promise<ArbolEnTarea[]>;
-  archivosDeTarea: TaskFilesStore;
-  cerrarPestana: (id: string) => void;
-  claveAbierta: () => string;
-  contiene: (carpeta: string, absoluta: string) => boolean;
-  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  draftBases: Accessor<Record<string, string>>;
-  drafts: DraftsStore;
-  esDeCodigo: (kind: string) => boolean;
-  filaDe: (id: string) => SessionRow | undefined;
-  folder: Accessor<string | null>;
-  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  maquinaDeLaVentana: () => string;
-  materialTarget: () => string;
-  nuevaSesion: (enProyecto?: string) => void;
-  paneles: PanelsStore;
-  pestanas: TabsStore;
-  project: Accessor<string>;
-  projectList: Accessor<Project[]>;
-  quitarFuente: (id: string) => Promise<void>;
-  sesiones: Accessor<Record<string, SessionRow[]>>;
-  sessionId: Accessor<string | null>;
-  setError: Setter<string | null>;
-  setProyectoAbierto: Setter<string | null>;
-  setRunOn: (workspace: string | null, id: string | null) => void;
-  taskMaterialOptions: () => { headers: Record<string, string> } | undefined;
-  ubicar: (arboles: readonly ArbolEnTarea[], absoluta: string) => { arbol: ArbolEnTarea; rel: string } | null;
-  workspaceActivo: Accessor<string | null>;
-};
+export type SessionMutationsOpenDeps = { abrirBorradorDeAgente: (enProyecto: string, name: string) => void; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activeSpace: Accessor<Space | null>; adjuntarFuente: (id: string) => Promise<void>; arbolesDe: (project: string, session: string) => Promise<ArbolEnTarea[]>; archivosDeTarea: TaskFilesStore; cerrarPestana: (id: string) => void; claveAbierta: () => string; contiene: (carpeta: string, absoluta: string) => boolean; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; draftBases: Accessor<Record<string, string>>; drafts: DraftsStore; esDeCodigo: (kind: string) => boolean; filaDe: (id: string) => SessionRow | undefined; folder: Accessor<string | null>; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; maquinaDeLaVentana: () => string; materialTarget: () => string; nuevaSesion: (enProyecto?: string) => void; paneles: PanelsStore; pestanas: TabsStore; project: Accessor<string>; projectList: Accessor<Project[]>; quitarFuente: (id: string) => Promise<void>; sesiones: Accessor<Record<string, SessionRow[]>>; sessionId: Accessor<string | null>; setError: Setter<string | null>; setProyectoAbierto: Setter<string | null>; setRunOn: (workspace: string | null, id: string | null) => void; taskMaterialOptions: () => { headers: Record<string, string> } | undefined; ubicar: (arboles: readonly ArbolEnTarea[], absoluta: string) => { arbol: ArbolEnTarea; rel: string } | null; workspaceActivo: Accessor<string | null>; };
 
 export function createSessionMutationOpen(deps: SessionMutationsOpenDeps) {
   const maquinaDeLaVentana = () => deps.maquinaDeLaVentana();

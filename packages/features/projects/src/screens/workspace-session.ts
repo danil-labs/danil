@@ -23,14 +23,7 @@ export type AttentionStore = { list: Accessor<WorkspaceAttention[]>; of: (worksp
 
 export type WorkspaceStore = { active: Accessor<string | null>; mode: Accessor<string | null>; root: Accessor<string | null>; confirmed: Accessor<boolean>; generation: () => number; beginTransition: (startup: { active: string | null; workspaces: { id: string; context_root: string | null; default_permission_mode: string | null; }[]; }) => Readonly<{ generation: number; material: number; }> & Readonly<{ previous: string | null; workspace: string | null; }>; activate: (token: Readonly<{ generation: number; material: number; }> & Readonly<{ previous: string | null; workspace: string | null; }>) => boolean; beginMaterial: () => Readonly<{ generation: number; material: number; }>; current: (token: Readonly<{ generation: number; material: number; }>) => boolean; currentMaterial: (token: Readonly<{ generation: number; material: number; }>) => boolean; confirmContext: (token: Readonly<{ generation: number; material: number; }>, candidate: string | null, listed: { id: string; root: boolean; missing: boolean; }[]) => "obsolete" | "unavailable" | "accepted"; modeChanged: (workspace: string | null, value: string | null, requestedGeneration?: number) => void; dispose: () => void; };
 
-export type WorkspaceSessionDeps = {
-  asleep: (error: unknown) => boolean;
-  createAttention: () => AttentionStore;
-  createWorkspaceStore: () => WorkspaceStore;
-  machineName: (id: string, local?: boolean) => string;
-  machines: Accessor<Machine[]>;
-  runOn: (workspace: string | null, project?: ProjectPlace) => string | null;
-};
+export type WorkspaceSessionDeps = { asleep: (error: unknown) => boolean; createAttention: () => AttentionStore; createWorkspaceStore: () => WorkspaceStore; machineName: (id: string, local?: boolean) => string; machines: Accessor<Machine[]>; runOn: (workspace: string | null, project?: ProjectPlace) => string | null; };
 
 export function createWorkspaceSession(deps: WorkspaceSessionDeps) {
   const { asleep, createAttention, createWorkspaceStore, machineName, machines, runOn } = deps;

@@ -15,53 +15,7 @@ import type { SessionRow } from "../screens/Sessions.tsx";
 
 const enMaquina = (machine: string | undefined) => (machine ? { headers: { "x-terminus-machine": machine } } : undefined);
 
-export type DeskStripDeps = {
-  abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>;
-  activarPestana: (p: Tab) => Promise<void>;
-  activeSpace: Accessor<Space | null>;
-  adjuntosEn: Map<string, string>;
-  attention: AttentionStore;
-  composerMachine: Accessor<string | null>;
-  connected: Accessor<boolean>;
-  createComposerStore: typeof createComposerStore;
-  createDraftsStore: typeof createDraftsStore;
-  createThreadsStore: typeof createThreadsStore;
-  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  escritorio: Accessor<string | null>;
-  filaDe: (id: string) => SessionRow | undefined;
-  grupos: Accessor<string[]>;
-  hablandoCon: Accessor<{ project: string; name: string } | null>;
-  irAlBlanco: (enProyecto?: string) => void;
-  liveThreads: Set<string>;
-  loadWindowThreads: (skip: string | null) => void;
-  machines: Accessor<Machine[]>;
-  modoInicial: (modos: ModoDePermiso[], recordado: string) => string;
-  modoRecordado: () => string;
-  recordarModo: (id: string) => void;
-  naciendo: Accessor<{ project: string; row: SessionRow }[]>;
-  olvidarPestana: (session: string) => void;
-  paneles: PanelsStore;
-  pegadasEn: Map<string, string>;
-  pestanaActiva: () => string | null;
-  pestanas: TabsStore;
-  project: Accessor<string>;
-  projectList: Accessor<Project[]>;
-  refreshSessions: (proyectos: string[]) => Promise<void>;
-  serviceStream: { paged: () => boolean };
-  sesiones: Accessor<Record<string, SessionRow[]>>;
-  sessionId: Accessor<string | null>;
-  setEscritorio: Setter<string | null>;
-  setProyectoAbierto: Setter<string | null>;
-  setSpaces: Setter<Space[]>;
-  spaces: Accessor<Space[]>;
-  taskSources: Accessor<Source[] | null>;
-  topState: (tasks: import("../screens/workspace-session.ts").TaskAttention[]) => import("../screens/workspace-session.ts").AttentionState | null;
-  vivas: Accessor<string[]>;
-  withLastAnswer: <T>(machine: string | null, key: string, call: () => Promise<T>) => Promise<T>;
-  workspaceActivo: Accessor<string | null>;
-  workspaceContext: WorkspaceStore;
-  workspaceMode: Accessor<string | null>;
-};
+export type DeskStripDeps = { abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activarPestana: (p: Tab) => Promise<void>; activeSpace: Accessor<Space | null>; adjuntosEn: Map<string, string>; attention: AttentionStore; composerMachine: Accessor<string | null>; connected: Accessor<boolean>; createComposerStore: typeof createComposerStore; createDraftsStore: typeof createDraftsStore; createThreadsStore: typeof createThreadsStore; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; escritorio: Accessor<string | null>; filaDe: (id: string) => SessionRow | undefined; grupos: Accessor<string[]>; hablandoCon: Accessor<{ project: string; name: string } | null>; irAlBlanco: (enProyecto?: string) => void; liveThreads: Set<string>; loadWindowThreads: (skip: string | null) => void; machines: Accessor<Machine[]>; modoInicial: (modos: ModoDePermiso[], recordado: string) => string; modoRecordado: () => string; recordarModo: (id: string) => void; naciendo: Accessor<{ project: string; row: SessionRow }[]>; olvidarPestana: (session: string) => void; paneles: PanelsStore; pegadasEn: Map<string, string>; pestanaActiva: () => string | null; pestanas: TabsStore; project: Accessor<string>; projectList: Accessor<Project[]>; refreshSessions: (proyectos: string[]) => Promise<void>; serviceStream: { paged: () => boolean }; sesiones: Accessor<Record<string, SessionRow[]>>; sessionId: Accessor<string | null>; setEscritorio: Setter<string | null>; setProyectoAbierto: Setter<string | null>; setSpaces: Setter<Space[]>; spaces: Accessor<Space[]>; taskSources: Accessor<Source[] | null>; topState: (tasks: import("../screens/workspace-session.ts").TaskAttention[]) => import("../screens/workspace-session.ts").AttentionState | null; vivas: Accessor<string[]>; withLastAnswer: <T>(machine: string | null, key: string, call: () => Promise<T>) => Promise<T>; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceStore; workspaceMode: Accessor<string | null>; };
 
 export function createDeskStrip(deps: DeskStripDeps) {
   const irAlBlanco = (...a: Parameters<DeskStripDeps["irAlBlanco"]>) => deps.irAlBlanco(...a);

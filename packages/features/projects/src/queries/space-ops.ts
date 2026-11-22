@@ -7,23 +7,7 @@ import { deleteStoredStrip, storedStrip } from "../../../../../apps/desktop/src/
 import type { SearchFilter } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 
 /** Lo que las acciones sobre espacios usan del estado de la ventana. */
-export type SpaceOpsDeps = {
-  abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>;
-  activeSpace: Accessor<Space | null>;
-  cambiarEscritorio: (id: string, restaurarActiva?: boolean) => void;
-  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  escritorio: Accessor<string | null>;
-  grupos: Accessor<string[]>;
-  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  refreshSessions: (proyectos: string[]) => Promise<void>;
-  reloadSpaces: () => Promise<void>;
-  setBuscando: Setter<SearchFilter | null>;
-  setError: Setter<string | null>;
-  setSpaces: Setter<Space[]>;
-  soltarPestanaGuardada: (id: string) => void;
-  spaces: Accessor<Space[]>;
-  workspaceActivo: Accessor<string | null>;
-};
+export type SpaceOpsDeps = { abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activeSpace: Accessor<Space | null>; cambiarEscritorio: (id: string, restaurarActiva?: boolean) => void; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; escritorio: Accessor<string | null>; grupos: Accessor<string[]>; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; refreshSessions: (proyectos: string[]) => Promise<void>; reloadSpaces: () => Promise<void>; setBuscando: Setter<SearchFilter | null>; setError: Setter<string | null>; setSpaces: Setter<Space[]>; soltarPestanaGuardada: (id: string) => void; spaces: Accessor<Space[]>; workspaceActivo: Accessor<string | null>; };
 
 /** Crear, renombrar, mover y borrar espacios, con el aviso de lo que acaba de pasar. */
 export function createSpaceOps(deps: SpaceOpsDeps) {
