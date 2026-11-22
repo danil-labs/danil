@@ -1,9 +1,9 @@
-import { scopedCreditsRead } from "../../src/platform/treasury.ts";
+import { scopedCreditsRead } from "../../../../packages/platform-client/src/treasury.ts";
 import { activeGroupCredits } from "../../src/web/active-group-credits.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { platformSession, PlatformSessionError } from "../../src/web/platform-session.ts";
-import { webSessionDeployment } from "../../src/web/session-config.ts";
+import { platformSession, PlatformSessionError } from "../../../../packages/session/src/platform-session.ts";
+import { webSessionDeployment } from "../../../../packages/session/src/session-config.ts";
 
 test("platform requires an explicit HTTPS edge origin and preserves its request budget", () => {
   for (const origin of ["https://edge.danil.ai", "https://edge.test:8443/"]) {
