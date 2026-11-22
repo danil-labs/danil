@@ -31,6 +31,7 @@ import SquareTerminal from "lucide-solid/icons/square-terminal";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import X from "lucide-solid/icons/x";
 import { For, Show } from "solid-js";
+import { Input } from "../../../../ui/src/Input";
 
 /** Lo que el bloque usa del cuerpo de Chat. */
 export type ChatComposerDeps = { CampoDeLaCaja: ReturnType<typeof createChatComposerField>["CampoDeLaCaja"]; MenuDeSugerencias: ReturnType<typeof createChatComposerPrompts>["MenuDeSugerencias"]; PermisoDeLaCaja: ReturnType<typeof createChatComposerPrompts>["PermisoDeLaCaja"]; PreguntaDeLaCaja: ReturnType<typeof createChatComposerPrompts>["PreguntaDeLaCaja"]; actual: ReturnType<typeof createChatComposerState>["actual"]; attachmentFailure: ReturnType<typeof createChatComposerState>["attachmentFailure"]; bloqueoDeSuperficie: ReturnType<typeof createChatComposerState>["bloqueoDeSuperficie"]; cambiarModo: ReturnType<typeof createChatComposerState>["cambiarModo"]; campo: HTMLTextAreaElement | undefined; carpetaDeTerminal: ReturnType<typeof createChatTurnState>["carpetaDeTerminal"]; composerBox: HTMLDivElement | undefined; efforts: ReturnType<typeof createChatComposerState>["efforts"]; elegido: ReturnType<typeof createChatComposerState>["elegido"]; elegirArchivos: ReturnType<typeof createChatAttachments>["elegirArchivos"]; entradaActiva: ReturnType<typeof createChatTurnState>["entradaActiva"]; entradaArchivo: HTMLInputElement | undefined; faltaUnanime: ReturnType<typeof createChatComposerState>["faltaUnanime"]; fuentes: ReturnType<typeof createChatTurnState>["fuentes"]; listo: ReturnType<typeof createChatComposerState>["listo"]; mandar: ReturnType<typeof createChatAttachments>["mandar"]; menuOpen: ReturnType<typeof createChatComposerInput>["menuOpen"]; modoAlMargen: ReturnType<typeof createChatTurnState>["modoAlMargen"]; modoTerminal: ReturnType<typeof createChatTurnState>["modoTerminal"]; opciones: ReturnType<typeof createChatComposerState>["opciones"]; preguntaPendiente: ReturnType<typeof createChatTurnState>["preguntaPendiente"]; preguntaPlegada: ReturnType<typeof createChatComposerState>["preguntaPlegada"]; presentation: ReturnType<typeof createChatComposerState>["presentation"]; pulsoDeModo: ReturnType<typeof createChatComposerState>["pulsoDeModo"]; setSoltadoDe: ReturnType<typeof createChatTurnState>["setSoltadoDe"]; trigger: ReturnType<typeof createChatComposerState>["trigger"] };
@@ -226,11 +227,11 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
           void mandar();
         }}
       >
-        <input
+        <Input
           ref={deps.entradaArchivo}
           type="file"
           multiple
-          class="hidden"
+          variant="filePicker"
           onChange={(e) => {
             // El `<input type=file>` del webview tampoco da rutas de disco:
             // el selector real es el de Tauri. Este existe solo para que el
