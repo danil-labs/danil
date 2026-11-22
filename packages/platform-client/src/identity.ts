@@ -12,27 +12,14 @@ import {
 } from "./client.ts";
 import { CAPABILITIES_PATH } from "./machines.ts";
 
-export type Me = {
-  id: string;
-  name: string;
-  state?: string;
-  workspace: string | null;
-  organizations: { id: string; name: string; type?: string; role?: string }[];
-  active_organization_id?: string | null;
-};
+import type { Me, OrganizationList, SelectOrganizationResponse } from "./generated/types.ts";
 
-type Organization = {
-  id: string;
-  name: string;
-  plan: string;
-  role: string;
-};
-
-type OrganizationList = {
-  items: Organization[];
-  next_cursor: string | null;
-  active_organization_id?: string | null;
-};
+/**
+ * Las respuestas del dominio salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7). Lo que el front
+ * leía antes y el contrato no trae (`workspace` como cadena en `Me`, `next_cursor` de la lista y
+ * `organization`/`workspace` en la respuesta de `select`) es hallazgo para danil-contracts, no un campo aquí.
+ */
+export type { Me, OrganizationList, OrganizationRef, SelectOrganizationResponse } from "./generated/types.ts";
 
 const bodyOf = <T>(method: EdgeMethod, path: string, body?: unknown, p?: Patience) =>
   edgeUntil<T>(method, path, body, p).then((r) => r.body);
@@ -44,7 +31,7 @@ export const organizations = (p?: Patience) =>
 
 export const selectOrganization = (organizationId: string, p?: Patience) => {
   cancelEdgeWrites();
-  return bodyOf<{ organization: Organization; workspace: string | null }>(
+  return bodyOf<SelectOrganizationResponse>(
     "POST",
     "/v1/identity/organizations/select",
     { organization_id: organizationId },
@@ -53,7 +40,7 @@ export const selectOrganization = (organizationId: string, p?: Patience) => {
 };
 
 /** Llamada directa a `/v1/identity/me` usando el transporte de borde. */
-export function fetchIdentityMe<T = { id?: unknown }>(
+export function fetchIdentityMe<T = Me>(
   transport = edgeFetch,
 ): Promise<EdgeReply<T>> {
   return transport<T>("GET", "/v1/identity/me");
