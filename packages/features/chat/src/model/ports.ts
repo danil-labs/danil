@@ -7,8 +7,6 @@ import type { OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models"
 import type { JournalEvent } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import type { Tab } from "../../../../../apps/desktop/src/lib/tabs-types";
 import type { TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
-import type { CarryJob, CarryResult, CarryState } from "../../../machines/src/queries/carryRun.ts";
-import type { Selection } from "../../../machines/src/model/carryPlan.ts";
 import type { Carry, CarriedBase, CarryCheck } from "../../../../ui/src/lib/carry.ts";
 import type { Draft, DraftConfiguration, HistoryEntry } from "../../../../ui/src/lib/draft.ts";
 import type { ConversationHandoffDeps, ConversationScope, HandoffFact, HandoffPresentation, HandoffView } from "../../../../ui/src/lib/handoff.ts";
@@ -139,6 +137,11 @@ export type CreateBatchDelivery = (deps: { resync: (session: string) => void; re
 /** `features/machines`: la lista compartida, dónde corre una tarea y carry. */
 export type MachinesPort = () => Machine[];
 export type RunOnPort = (workspace: string | null, project?: ProjectPlace) => string | null;
+/** Lo que chat ve de carry: las piezas de `Carry` (`ui/src/lib/carry.ts`), sin importar `features/machines`. */
+type CarryJob = Carry["job"];
+type CarryState = Carry["state"];
+type CarryResult = NonNullable<Carry["ready"]>;
+type Selection = CarryJob["selection"];
 export type CarryPort = {
   adoptOrigin: (key: string, session: string) => void;
   bringSummary: (check: CarryCheck, lastAgentMessage: string | null, branch: string | null) => string;
