@@ -25,3 +25,5 @@ export { createAttachments } from "./queries/attachments.ts";
 export { createThreadSide } from "./queries/thread-side.ts";
 export { createThreadStream } from "./queries/thread-stream.ts";
 export { createChatEvents } from "./queries/chat-events.ts";
+export { createThreadsStore } from "./queries/threads-store.ts";
+export { createActivityProjection, activityElapsed, type TurnActivity } from "./model/activity.ts";

@@ -45,9 +45,9 @@ import {
   
 } from "../../../features/chat/src/model/transcript";
 import { createComposerStore } from "../../../features/composer/src";
-import { createCloneFolder, createDeskStrip, createNewTask, createSpaceOps, createRailSessions,  createWorkspaceSession } from "../../../features/projects/src";
-import type { HandlerTarget } from "../../../features/settings/src/screens/HandlerPolicy";
-import { createThreadsStore } from "../../../features/threads/src";
+import { createCloneFolder, createDeskStrip, createNewTask, createSpaceOps, createRailSessions, createWorkspaceSession } from "../../../features/projects/src";
+import { createThreadsStore } from "../../../features/chat/src/index.ts";
+import type { HandlerTarget } from "../../../features/projects/src/screens/HandlerPolicy";
 import { createWorkspaceStore } from "../../../features/workspace/src";
 import { createContextSource } from "../../../features/workspaces/src";
 
@@ -148,7 +148,6 @@ import {
 import { Button } from "../../../ui/src/Button";
 import { prosaDe } from "../../../ui/src/Failure";
 import { LazyPart } from "../../../ui/src/LazyPart";
-
 import { createChatEvents, createSleepSession, createThreadStream, createThreadSide, createAttachments, createAttachmentsMount, createResync, createResyncCommands, createShellCommand, createDraftSend, createHandover, createSend, createSendGates, createSendNow, createPanelDeChat, createChatBackground } from "../../../features/chat/src";
 
 export const { sleepSession } = createSleepSession({ machineOf });
