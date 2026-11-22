@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { deleteCredential, edgeTransport, putCredential, removeCredentialMachine, restoreCredentialMachine, type EdgeTransport } from "../../computers/src/index.ts";
+import { deleteCredential, putCredential, removeCredentialMachine, restoreCredentialMachine } from "../src/account-credentials.ts";
+import { edgeTransport, type EdgeTransport } from "../src/edge.ts";
 import { edgeUntil, type EdgeReply } from "../src/client.ts";
 import { webCredentialSource } from "../src/credentials.ts";
 

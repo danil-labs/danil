@@ -3,7 +3,7 @@
  * transporte, el sobre de la respuesta (`MachinesAnswer`) y el ticket ya validado. Las respuestas
  * (`Machine`, `MachineList`, `MachineTicket`, `Operation`) salen del OpenAPI en `generated/types.ts`.
  */
-import type { Answer, Fetch } from "../../computers/src/api.ts";
+import type { Answer, Fetch } from "./api.ts";
 import type { MachineTicket } from "./generated/types.ts";
 
 /** El ticket que entrega `admission()`: el del contrato con `url` (ya validada) y `ticket` presentes. */

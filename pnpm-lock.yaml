@@ -534,9 +534,6 @@ importers:
 
   packages/platform-client:
     dependencies:
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../computers
       zod:
         specifier: ^4.6.5
         version: 4.6.5

@@ -10,8 +10,8 @@
  *
  * Sin APIs del DOM: `fetch`, el reloj y la espera se inyectan.
  */
-import { type Computer, apiUrl, errorCodeOf, globalFetch } from "../../computers/src/api.ts";
-import type { MachineState } from "../../computers/src/machine.ts";
+import { type Computer, apiUrl, errorCodeOf, globalFetch } from "./api.ts";
+import type { MachineState } from "./machine.ts";
 import type { Machine, MachineList, MachineTicket, Operation } from "./generated/types.ts";
 import type { Admission, MachinesAnswer, MachinesConfig, MachinesResponse } from "./machines-config.ts";
 import { newIdempotencyKey, withIdempotencyKey } from "./idempotency.ts";

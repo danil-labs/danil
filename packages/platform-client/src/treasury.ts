@@ -1,4 +1,4 @@
-import type { edgeTransport } from "@terminus/computers";
+import type { edgeTransport } from "./edge.ts";
 import { z } from "zod";
 import { edgeUntil, type Patience } from "./client.ts";
 import type {

@@ -32,7 +32,8 @@ Exporta desde `src/client.ts` y módulos de dominio:
 - `contract/billing-v2/`: copia literal de `platform/billing-v2/openapi/public.openapi.json` y de `platform/billing-v2/schemas/common.v1.schema.json` (sus `$defs`), del mismo commit de `PIN`. Generan `src/generated/billing.ts` aparte porque sus nombres chocan con los de platform; su hash es `BILLING_CONTRACT_HASH`.
 - Dominios generados: **machines** (`machines.ts` reexporta `Machine`, `MachineList`, `MachineTicket` y `Operation`). La configuración, el transporte y el sobre `MachinesAnswer` no son respuestas y viven en `machines-config.ts`.
 - **treasury** (`treasury.ts` reexporta `Catalog`, `OrganizationBilling`, `Balance`, `Checkout`, `CheckoutStatus`, `Purchase`, `PortalSession`, `TransactionPage`…). Los esquemas zod siguen validando lo que se lee; `fits<C>()` hace que no compilen si leen algo que no cabe en el contrato. El sobre `GroupReply` y `PlanChoice` (de `CheckoutUpgradeCreate`) viven en `treasury-config.ts`.
-- **credentials** (`credentials.ts` reexporta `WorkspaceAccounts`, `AccountCredential`, `CredentialMachine`, `CredentialRecipient`, `GithubConnection`…). La lectura normalizada sigue en `@terminus/computers`.
+- **credentials** (`credentials.ts` reexporta `WorkspaceAccounts`, `AccountCredential`, `CredentialMachine`, `CredentialRecipient`, `GithubConnection`…). La lectura normalizada está en `account-credentials.ts`.
+- **Movidos de `packages/computers` (p4-4a), tal cual:** `api.ts`, `machine.ts`, `edge.ts` y `account-credentials.ts` (era `credentials.ts` de computers; el nombre ya lo tenía el adaptador web). En computers queda cada archivo como reexportación de una línea, para el front viejo y `apps/mobile`.
 
 ## Qué falta según la fase 2 del plan
 - Fase 2.3: consumirse únicamente desde los archivos `queries.ts` de las features (R12).
