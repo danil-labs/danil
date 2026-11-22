@@ -6,6 +6,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../../ui/src/DropdownMenu";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { accountPresentation } from "../screens/AccountCard";
 import type Accounts from "./AccountsView";
 import type { createCuentas } from "./AccountsState";
@@ -133,12 +134,12 @@ export function createListaDeCuentas(props: Parameters<typeof Accounts>[0], cuen
               destructiveAction={
                 porQuitar() === a.id ? (
                   <>
-                    <button
+                    <Pressable
                       class="min-h-6 whitespace-nowrap rounded-md border border-error-strong bg-transparent px-2 text-xs font-medium text-error-strong"
                       onClick={() => void quitar(a.id)}
                     >
                       {t("settings.accounts.remove_yes")}
-                    </button>
+                    </Pressable>
                     <Button
                       variant="outline"
                       size="compact"

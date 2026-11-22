@@ -17,6 +17,7 @@ import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
 import type { ContextoDeProyectos } from "./ManageProjects";
 import type { Falla } from "../../../../ui/src/lib/bundled";
 import type { Failure } from "../../../../ui/src/Failure";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { secretsRoute } from "../model/secrets-support";
 import { type SettingsEntryId, settingsTarget } from "../model/settings-entries";
 import { createSuperficiesDeAjustes } from "./SettingsSurfaces";
@@ -278,8 +279,7 @@ export default function Settings(props: {
                   >
                     <For each={entrada().tabs.filter(pestanaVisible)}>
                       {(p) => (
-                        <button
-                          type="button"
+                        <Pressable
                           role="tab"
                           id={idSub(p.id)}
                           aria-selected={pestana().id === p.id}
@@ -297,7 +297,7 @@ export default function Settings(props: {
                           <Show when={!p.panel}>
                             <Badge forma="dato">{t("settings.nav.soon")}</Badge>
                           </Show>
-                        </button>
+                        </Pressable>
                       )}
                     </For>
                   </div>
