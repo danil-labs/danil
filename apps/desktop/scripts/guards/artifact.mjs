@@ -4,7 +4,7 @@
  *
  * El motor que corre dentro del marco —diapositivas, orden de tablas, edición y
  * el puente con la app— tiene que inyectarse dentro del documento del agente, y
- * por eso es una cadena en `packages/chat/src/sandbox.ts` (la comparten la ventana y el teléfono). Su CSS igual. Nada de lo que
+ * por eso es una cadena en `packages/chat/src/sandbox-runtime.ts` (la comparten la ventana y el teléfono). Su CSS igual. Nada de lo que
  * hay ahí dentro lo mira `tsc`: para el compilador son dos literales.
  *
  * Escribirlo así tiene dos trampas, y la que duele no es la ruidosa:
@@ -40,7 +40,8 @@ import { readFileSync } from "node:fs";
 // `.pathname` en Windows da `/C:/…` y revienta.
 import { fileURLToPath } from "node:url";
 
-const RUTA = fileURLToPath(new URL("../../../../packages/chat/src/sandbox.ts", import.meta.url));
+// El CSS y el runtime viven en `sandbox-runtime.ts` desde que `sandbox.ts` se partió (R6).
+const RUTA = fileURLToPath(new URL("../../../../packages/chat/src/sandbox-runtime.ts", import.meta.url));
 const fuente = readFileSync(RUTA, "utf8");
 
 const failures = [];

@@ -138,6 +138,33 @@ const extensiones = recortar(tema.fileExtensions);
 const nombres = recortar(tema.fileNames);
 
 const cita = (s) => JSON.stringify(s);
+/**
+ * Los mapas grandes van en archivos de a lo más `POR_ARCHIVO` entradas (tope R6 de 400 líneas).
+ * Cada trozo es `file-icons-<tipo>-<n>.ts`; `file-icons.ts` los junta en orden.
+ */
+const POR_ARCHIVO = 390;
+const trozos = new Map();
+const modulo = (nombre) => trozos.get(nombre).modulo;
+function partir(tipo, titulo, mapa) {
+  const filas = Object.entries(mapa);
+  const nombres = [];
+  for (let i = 0, n = 1; i < filas.length; i += POR_ARCHIVO, n++) {
+    const nombre = `${tipo.toUpperCase()}_${n}`;
+    const cuerpo = [
+      `// GENERADO por \`node scripts/icons.mjs\`. No se edita a mano.`,
+      ``,
+      `/** ${titulo}, parte ${n}: se juntan en \`file-icons.ts\`. */`,
+      `export const ${nombre}: Record<string, string> = {`,
+      ...filas.slice(i, i + POR_ARCHIVO).map(([k, v]) => `  ${cita(k)}: ${cita(v)},`),
+      `};`,
+      ``,
+    ].join("\n");
+    trozos.set(nombre, { modulo: `file-icons-${tipo}-${n}`, cuerpo });
+    nombres.push(nombre);
+  }
+  return nombres;
+}
+
 const lineas = [];
 lineas.push(`// GENERADO por \`node scripts/icons.mjs\`. No se edita a mano.`);
 lineas.push(`//`);
@@ -161,15 +188,14 @@ for (const [base, id] of [...claro].sort(([a], [b]) => a.localeCompare(b))) {
 lineas.push(`};`);
 lineas.push(``);
 lineas.push(`/** Nombre de archivo completo, en minúsculas → icono. Se mira antes que la extensión. */`);
-lineas.push(`export const POR_NOMBRE: Record<string, string> = {`);
-for (const [k, v] of Object.entries(nombres)) lineas.push(`  ${cita(k)}: ${cita(v)},`);
-lineas.push(`};`);
+const partesNombre = partir("names", "Nombres de archivo", nombres);
+lineas.push(`export const POR_NOMBRE: Record<string, string> = { ${partesNombre.map((p) => `...${p}`).join(", ")} };`);
 lineas.push(``);
 lineas.push(`/** Extensión, en minúsculas y sin el punto → icono. */`);
-lineas.push(`export const POR_EXTENSION: Record<string, string> = {`);
-for (const [k, v] of Object.entries(extensiones)) lineas.push(`  ${cita(k)}: ${cita(v)},`);
-lineas.push(`};`);
+const partesExtension = partir("extensions", "Extensiones", extensiones);
+lineas.push(`export const POR_EXTENSION: Record<string, string> = { ${partesExtension.map((p) => `...${p}`).join(", ")} };`);
 lineas.push(``);
+lineas.splice(5, 0, ...[...partesNombre, ...partesExtension].map((p) => `import { ${p} } from "./${modulo(p)}.ts";`), ``);
 
 function leerVersion() {
   const p = join(RAIZ, "node_modules/material-icon-theme/package.json");
@@ -188,8 +214,8 @@ const cuenta =
  * nuevas, y nada lo dice. Es el mismo trato que `docs/PHRASES.md`.
  */
 if (process.argv.includes("--check")) {
-  const actual = existsSync(DESTINO) ? readFileSync(DESTINO, "utf8") : "";
-  if (actual !== salida) {
+  const igual = (ruta, texto) => (existsSync(ruta) ? readFileSync(ruta, "utf8") : "") === texto;
+  if (!igual(DESTINO, salida) || [...trozos.values()].some((t) => !igual(join(dirname(DESTINO), `${t.modulo}.ts`), t.cuerpo))) {
     console.error(
       "packages/ui/src/file-icons.ts está desactualizado.\n" +
         "Córrelo: node scripts/icons.mjs",
@@ -201,4 +227,5 @@ if (process.argv.includes("--check")) {
 }
 
 writeFileSync(DESTINO, salida);
+for (const t of trozos.values()) writeFileSync(join(dirname(DESTINO), `${t.modulo}.ts`), t.cuerpo);
 console.log(cuenta);
