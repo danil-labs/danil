@@ -122,8 +122,45 @@ export async function edgeUntil<T = unknown>(method: EdgeMethod, path: string, b
 
 
 
+/**
+ * Lo que el borde atiende sin organización (ctx=none y lo que sirve antes de autenticar; edge
+ * `routing.ts` `optional_operations`, `index.ts` 78-81 y `web-session.ts`). Todo lo demás exige
+ * `X-Danil-Session`: sin él, el borde responde 403 `organization_selection_required`.
+ */
+function contextFree(method: string, path: string): boolean {
+  const get = method === "GET", post = method === "POST";
+  if (get && ["/v1/identity/me", "/v1/identity/organizations", "/v1/workspaces", "/v1/billing/catalog", "/v1/capabilities", "/v1/identity/login", "/v1/identity/callback", "/v1/identity/csrf"].includes(path)) return true;
+  if (post && ["/v1/identity/organizations/select", "/v1/identity/login/add", "/v1/identity/logout", "/v1/identity/contexts"].includes(path)) return true;
+  if (path.startsWith("/v1/identity/desk/") || path.startsWith("/v1/identity/harness/")) return true;
+  if (get && (path === "/v1/identity/sessions" || path.startsWith("/v1/identity/sessions/"))) return true;
+  if (post && /^\/v1\/identity\/(sessions|contexts)\/[^/]+\/logout$/.test(path)) return true;
+  return (get || post) && (path === "/v1/credentials/github/callback" || path === "/v1/credentials/github/done");
+}
+
+/** El borde de la ventana web y el contexto de su grupo activo (`setEdgeContext`). */
+let edgeContext: { origin: string; current: () => string | null } | null = null;
+/** La ventana web da su borde y su grupo activo; `null` al cerrarla. */
+export function setEdgeContext(origin: string | null, current?: () => string | null): void {
+  edgeContext = origin && current ? { origin: new URL(origin).origin, current } : null;
+}
+
+/** Toda llamada al borde con organización lleva el contexto del grupo activo, salvo que quien llama ya puso el suyo. */
+function withEdgeContext(input: RequestInfo | URL, init?: RequestInit): RequestInit | undefined {
+  if (!edgeContext) return init;
+  const request = input instanceof Request ? input : null;
+  const url = new URL(request ? request.url : String(input), globalThis.location?.href);
+  const method = (init?.method ?? request?.method ?? "GET").toUpperCase();
+  if (url.origin !== edgeContext.origin || !url.pathname.startsWith("/v1/") || method === "OPTIONS" || contextFree(method, url.pathname)) return init;
+  const headers = new Headers(init?.headers ?? request?.headers);
+  if (headers.has("X-Danil-Session")) return init;
+  const context = edgeContext.current();
+  if (!context) return init;
+  headers.set("X-Danil-Session", context);
+  return { ...init, headers };
+}
+
 /** El `fetch` real de la plataforma para las fuentes que lo necesitan directamente. */
-export const platformFetch: typeof fetch = (input, init) => fetch(input, init);
+export const platformFetch: typeof fetch = (input, init) => fetch(input, withEdgeContext(input, init));
 
 /** Una ruta del borde a partir de su tramo relativo (`workspaces/…` → `/v1/workspaces/…`). */
 export const edgePath = (path: string) => `/v1/${path}`;

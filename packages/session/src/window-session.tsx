@@ -26,7 +26,7 @@ import { freeModelScope } from '../../../apps/desktop/src/lib/free-model-policy'
 import { freeRouterEngine, freeRouterWebEdge } from '../../features/settings/src/queries/free-router-adapters';
 import { setFreeRouterHost, signOutPlatform } from '../../features/settings/src/queries/free-router-session';
 import { sessionRailState } from '../../shell/src/shell';
-import { platformFetch } from '../../platform-client/src/client';
+import { platformFetch, setEdgeContext } from '../../platform-client/src/client';
 import { contextMachinesQuery } from '../../features/machines/src/queries/machines-query';
 
 declare const __DANIL_WEB_RELAY_ORIGINS__: string[];
@@ -71,6 +71,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const gone = () => stopped || signedOut() || exit.leaving();
     const sessions = webSessionCommands(raw, { expired: () => expired() });
     const active = windowActiveContext(sessions);
+    // Las fuentes que llaman directo a `platformFetch` llevan el mismo contexto que `active.scoped`.
+    setEdgeContext(options.origin, () => active.current()?.context ?? null);
     const rail = webRailCatalog(sessions);
     /** La lista de máquinas de cada contexto, compartida por la facturación, la ventana y sus pantallas. */
     const machines = contextMachinesQuery(context => contextMachines(`${options.origin}/v1`, raw, __DANIL_WEB_RELAY_ORIGINS__, context));
@@ -202,7 +204,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     }
     const expiredGroup = () => sessionRailState()?.groups()?.find(g => g.empty_reason === 'session_expired') ?? null;
     function stopServices() { clearTimeout(timer); lifetime.abort(); }
-    const close = () => { stopped = true; stopServices(); windowApp?.close(); disposeGate?.(); dispose(); };
+    const close = () => { stopped = true; stopServices(); setEdgeContext(null); windowApp?.close(); disposeGate?.(); dispose(); };
     window.addEventListener('pagehide', close, { once: true });
     gate();
     void load();

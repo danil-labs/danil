@@ -1,3 +1,4 @@
+import { appendFileSync } from "node:fs";
 // Borde simulado común a las dos apps (misma persona, organizaciones, workspaces y máquinas). Una escuadra que necesite otra ruta la agrega aquí.
 
 export const mockData = {
@@ -91,6 +92,51 @@ export const mockData = {
 /** Los contextos de `/v1/identity/sessions` y su organización (el eco de cada respuesta con contexto). */
 const CONTEXT_ORG = { ctx_personal: "org_personal", ctx_danil: "org_danil" };
 
+/**
+ * Rutas que el borde atiende sin organización. Con `IDENTITY_SESSION_CONTEXTS=required` no hay
+ * respaldo al `org_id` del token (`auth.ts` 225-234): sin `X-Danil-Session` la organización no
+ * existe y `index.ts` 169-171 responde 403 `organization_selection_required` (`contracts.ts` 91-96).
+ *
+ * ctx=none es `optional_operations` (`routing.ts` 38-59, `fixtures/prefixes.yaml`):
+ * `GET /v1/identity/me`, `GET /v1/identity/organizations`, `POST /v1/identity/organizations/select`,
+ * `POST /v1/identity/login/add`, `GET /v1/workspaces`, `GET /v1/billing/catalog`.
+ * Antes de autenticar, tampoco exigen contexto: `GET /v1/capabilities` (`index.ts` 78-81),
+ * el login (`web-session.ts` 12 y 404-412: login, callback, csrf, logout y desk/harness)
+ * y `GET /v1/identity/sessions*` más la admisión y los logout parciales (`web-session.ts` 285-291).
+ */
+export function allowsWithoutSession(method, pathname) {
+  if (method === "GET" && (pathname === "/v1/identity/me" || pathname === "/v1/identity/organizations" || pathname === "/v1/workspaces" || pathname === "/v1/billing/catalog" || pathname === "/v1/capabilities")) return true;
+  if (method === "POST" && (pathname === "/v1/identity/organizations/select" || pathname === "/v1/identity/login/add")) return true;
+  if (method === "GET" && (pathname === "/v1/identity/login" || pathname === "/v1/identity/callback" || pathname === "/v1/identity/csrf")) return true;
+  if (method === "POST" && pathname === "/v1/identity/logout") return true;
+  if (pathname.startsWith("/v1/identity/desk/") || pathname.startsWith("/v1/identity/harness/")) return true;
+  if (method === "GET" && (pathname === "/v1/identity/sessions" || pathname.startsWith("/v1/identity/sessions/"))) return true;
+  if (method === "POST" && pathname === "/v1/identity/contexts") return true;
+  if (method === "POST" && /^\/v1\/identity\/(sessions|contexts)\/[^/]+\/logout$/.test(pathname)) return true;
+  if ((method === "GET" || method === "POST") && (pathname === "/v1/credentials/github/callback" || pathname === "/v1/credentials/github/done")) return true;
+  return false;
+}
+
+function organizationRequired(origin, pathname) {
+  return {
+    status: 403,
+    headers: {
+      "content-type": "application/problem+json",
+      "cache-control": "no-store",
+      "access-control-allow-origin": origin,
+      "access-control-allow-credentials": "true",
+    },
+    body: JSON.stringify({
+      type: "urn:danil:problem:organization_selection_required",
+      title: "organization_selection_required",
+      status: 403,
+      detail: "organization_selection_required",
+      instance: pathname,
+      code: "organization_selection_required",
+    }),
+  };
+}
+
 export async function handleEdgeRoute(route) {
   const req = route.request();
   const url = new URL(req.url());
@@ -120,6 +166,13 @@ export async function handleEdgeRoute(route) {
         "access-control-allow-credentials": "true"
       }
     });
+  }
+
+  // Borde nuevo: una ruta con organización sin `x-danil-session` no llega a ningún dominio.
+  if (!session && !allowsWithoutSession(method, pathname)) {
+    // PARITY_CTX_LOG=<archivo>: anota cada llamada rechazada para saber cuál salió sin contexto.
+    if (process.env.PARITY_CTX_LOG) appendFileSync(process.env.PARITY_CTX_LOG, `${method} ${pathname}\n`);
+    return route.fulfill(organizationRequired(origin, pathname));
   }
 
   if (method === "GET") {
