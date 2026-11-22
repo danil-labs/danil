@@ -123,4 +123,4 @@ else void mountAfterLanguagePacks(lenguasDeDisco, montar);
 
 // Las otras computadoras de la cuenta de Danil, en un trozo aparte: sin sesión no instala nada.
 // La web trae su propio transporte (`web/main.tsx`).
-if (capabilities().nativeWindow) void import("../../../features/machines/src/screens/account").then((m) => m.startAccountMachines());
+if (capabilities().nativeWindow) void Promise.all([import("../../../features/machines/src/screens/account"), import("../../../features/settings/src/queries/danil-sessions")]).then(([m, s]) => m.startAccountMachines(s.railSession));

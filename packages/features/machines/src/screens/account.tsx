@@ -38,7 +38,6 @@ import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
 import { deliver, listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { isMac, isWindows } from "../../../../host/src/window";
 import type { MachineStatus } from "../../../../../apps/desktop/src/web/SyncNote";
-import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../../../settings/src/queries/danil-sessions";
 import AccountMachines from "./AccountMachines";
 import { mergeBridgeInventory } from "../model/bridge-inventory";
 import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS } from "../queries/cloud-machines";
@@ -123,7 +122,11 @@ function slicesChanged(changes: SliceChange[]) {
 /** The machine picked in «Ejecutar en» for `workspace` (`store.ts`), remembered per workspace. */
 const pickedFor = (workspace: string | null) => (workspace ? (leerPref<Record<string, string>>("machines.run_on", {})[workspace] ?? null) : null);
 
-export function startAccountMachines(target: Target = window) {
+/** `railSession` es la sesión del riel de la cuenta: la pasa el shell, que es quien la conoce. */
+export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
+  railSession: (list: DanilSessionInfo[] | null, of: WorkspaceAccount | null) => { computer_id: string | null; account: string | null } | null,
+  target: Target = window,
+) {
   if (started) return;
   const found = target.__TAURI_INTERNALS__;
   if (!found) return;

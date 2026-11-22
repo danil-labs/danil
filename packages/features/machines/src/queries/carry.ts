@@ -206,11 +206,22 @@ export function jobFor(check: CarryCheck, choice: { selection: Selection; partSi
   return { source: check.source, target: check.target, project: check.project.id, task: choice.task, selection, partSize: choice.partSize, branchAs: choice.branchAs, create, recipientKey: check.recipientKey };
 }
 
+/** El seguimiento del clon es de projects (`followClone`): lo enchufa el shell al cargar este módulo. */
+type FollowClone = (
+  clone: { operation: string; machine: string; workspace: string; name: string },
+  start: Record<string, unknown> | null,
+  onProgress: (progress: { phase: string; percent: number | null }) => void,
+) => Promise<unknown>;
+let followClone: FollowClone = () => Promise.reject(new Error("carry: followClone sin enchufar"));
+
+export function setFollowClone(follow: FollowClone) {
+  followClone = follow;
+}
+
 /** Clona en el destino por `start_project_clone`, con su avance, como al añadir una carpeta. */
 async function cloneOn(check: CarryCheck, progress: (phase: string, percent: number | null) => void) {
   const url = check.status.remoteUrl ?? check.project.remote_url;
   if (!url) throw { what: { clave: "work.error.project_missing" }, detail: "no_remote" };
-  const { followClone } = await import("../../../projects/src/queries/remoteClone");
   const operation = crypto.randomUUID();
   await followClone(
     { operation, machine: check.target, workspace: check.workspace, name: check.project.name },

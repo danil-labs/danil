@@ -1,6 +1,6 @@
-import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
+import { createEffect, createMemo, createSignal, on, onCleanup, type JSX } from "solid-js";
 import { previewFile } from "../queries";
-import { machineOf } from "../../../machines/src/queries/store";
+import { machineOf } from "../../../../host/src/machine";
 import { FileMachine } from "../../../../ui/src/fileMachine";
 import PreviewPane, { type Preview } from "../components/Preview";
 import { prosaDe } from "../../../../ui/src/Failure";
@@ -28,6 +28,9 @@ export default function VisorDeArtefacto(props: {
   kind: "output" | "input" | "external";
   /** La tarea de la pestaña: si corre en otra máquina, el archivo está en su disco. */
   session?: string;
+  renderPdf: (props: { base64: string; name: string }) => JSX.Element;
+  renderImage: (props: { src: string; alt: string }) => JSX.Element;
+  renderTable: (props: { text: string; delim: string }) => JSX.Element;
 }) {
   const machine = createMemo(() => machineOf(props.session)?.headers["x-terminus-machine"]);
   const [preview, setPreview] = createSignal<Preview | null>(null);
@@ -66,6 +69,9 @@ export default function VisorDeArtefacto(props: {
            decidiera. */
         esArtefacto={props.kind === "output"}
         error={fallo()}
+        renderPdf={props.renderPdf}
+        renderImage={props.renderImage}
+        renderTable={props.renderTable}
       />
     </div>
     </FileMachine.Provider>
