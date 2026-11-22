@@ -1,3 +1,4 @@
+import { ATTACHMENT_DOCUMENTS_FEATURE } from "@terminus/protocol";
 import { createMemo, createSignal, onCleanup, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { sessionRefresh } from "../../../../session/src/sessionRefresh.ts";
@@ -7,38 +8,7 @@ import type { AttentionStore, WorkspaceStore } from "../screens/workspace-sessio
 import type { ClonEnCurso } from "../screens/AddWorkdir.tsx";
 import type { SessionRow } from "../screens/Sessions.tsx";
 
-const ATTACHMENT_DOCUMENTS_FEATURE = "attachment_documents_v1";
-
-export type CloneFolderDeps = {
-  attention: AttentionStore;
-  avisarDeLosArboles: (session: string) => void;
-  claveDelHilo: () => string;
-  colaSuelta: Accessor<Readonly<Record<string, Msg[]>>>;
-  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  draftOptions: () => { headers: { "x-terminus-machine": string } } | undefined;
-  esperandoFila: Set<string>;
-  grupos: Accessor<string[]>;
-  hiloAbierto: Accessor<OptimisticHistoryState & { base: Msg[]; vivo: Msg[]; guardados?: ReadonlySet<string> }>;
-  hilos: Accessor<Record<string, OptimisticHistoryState & { base: Msg[]; vivo: Msg[]; guardados?: ReadonlySet<string> }>>;
-  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>;
-  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void;
-  machines: Accessor<Machine[]>;
-  msgs: Accessor<Msg[]>;
-  naciendo: Accessor<{ project: string; row: SessionRow }[]>;
-  pedidas: Map<string, Set<string>>;
-  pestanas: TabsStore;
-  project: Accessor<string>;
-  remoteChildScope: () => RemoteScope;
-  retoques: Accessor<Record<string, { cambio: Partial<SessionRow>; n: number }>>;
-  sesiones: Accessor<Record<string, SessionRow[]>>;
-  sesionesConPestana: Accessor<string[]>;
-  sessionId: Accessor<string | null>;
-  setSesiones: Setter<Record<string, SessionRow[]>>;
-  unconfirmedOpen: (rows: unknown) => readonly string[];
-  vivas: Accessor<string[]>;
-  workspaceActivo: Accessor<string | null>;
-  workspaceContext: WorkspaceStore;
-};
+export type CloneFolderDeps = { attention: AttentionStore; avisarDeLosArboles: (session: string) => void; claveDelHilo: () => string; colaSuelta: Accessor<Readonly<Record<string, Msg[]>>>; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; draftOptions: () => { headers: { "x-terminus-machine": string } } | undefined; esperandoFila: Set<string>; grupos: Accessor<string[]>; hiloAbierto: Accessor<OptimisticHistoryState & { base: Msg[]; vivo: Msg[]; guardados?: ReadonlySet<string> }>; hilos: Accessor<Record<string, OptimisticHistoryState & { base: Msg[]; vivo: Msg[]; guardados?: ReadonlySet<string> }>>; leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machines: Accessor<Machine[]>; msgs: Accessor<Msg[]>; naciendo: Accessor<{ project: string; row: SessionRow }[]>; pedidas: Map<string, Set<string>>; pestanas: TabsStore; project: Accessor<string>; remoteChildScope: () => RemoteScope; retoques: Accessor<Record<string, { cambio: Partial<SessionRow>; n: number }>>; sesiones: Accessor<Record<string, SessionRow[]>>; sesionesConPestana: Accessor<string[]>; sessionId: Accessor<string | null>; setSesiones: Setter<Record<string, SessionRow[]>>; unconfirmedOpen: (rows: unknown) => readonly string[]; vivas: Accessor<string[]>; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceStore; };
 
 export function createCloneFolder(deps: CloneFolderDeps) {
   const { attention, avisarDeLosArboles, claveDelHilo, colaSuelta, deLaTarea, draftOptions, esperandoFila, grupos, hiloAbierto, hilos, leerTarea, loadResult, machines, msgs, naciendo, pedidas, pestanas, project, remoteChildScope, retoques, sesiones, sesionesConPestana, sessionId, setSesiones, unconfirmedOpen, vivas, workspaceActivo, workspaceContext } = deps;
@@ -122,7 +92,7 @@ export function createCloneFolder(deps: CloneFolderDeps) {
         .filter((n) => n.project === project && !enDisco.has(n.row.id))
         .map((n) => n.row);
       const cambios = retoques();
-      return [project, [...propias, ...rows.map((leida) => {
+      return [project, [...propias, ...rows.map(leida => {
         const retoque = cambios[leida.id];
         const row = retoque ? { ...leida, ...retoque.cambio } : leida;
         const preview = threadPreview(hilos()[row.id]?.vivo ?? []) ?? row.last_message;
@@ -187,8 +157,18 @@ export function createCloneFolder(deps: CloneFolderDeps) {
       .catch(() => {});
   }
 
+  // La miniatura de un adjunto del mensaje, o `null` si no hay que enseñar
+  // una: null no es un fallo, y no se distingue del error. Un PDF, un `.docx`
+  // o una imagen que no cabe se pintan igual —con su tarjeta—, y quien llama
+  // no decide con la diferencia. Lo que sí sería un fallo es tumbar la
+  // transcripción por un archivo que ya no está. Resuelve contra la tarea
+  // abierta: de esa son los mensajes que `Chat` está pintando.
   async function previewDeAdjunto(rel: string): Promise<Preview | null> {
     try {
+  // Un adjunto se guarda por su ruta del sistema. Los turnos anteriores a
+  // v0.1.23 guardaron una relativa `entradas/…`, y esas van por
+  // `attachment_preview`, que resuelve la ruta él para no ser un lector de
+  // archivos abierto a la ventana.
       const esDeLaTarea = rel.startsWith("entradas/");
       const id = sessionId();
       if (esDeLaTarea && !id) return null;
@@ -208,6 +188,8 @@ export function createCloneFolder(deps: CloneFolderDeps) {
     return (await previewDeAdjunto(rel))?.data_url ?? null;
   }
 
+  // Lo que se mandó a una tarea de otra máquina vive allá; lo que todavía no
+  // salió (el globo mientras se manda) sigue en la de la ventana.
   async function previewOn(path: string, id: string | null): Promise<Preview> {
     const there = deLaTarea(id);
     if (!there) return invoke<Preview>("preview_file", { path, rel: path });
@@ -230,11 +212,5 @@ export function createCloneFolder(deps: CloneFolderDeps) {
     const abierta = sessionId();
     return abierta ? deLaTarea(abierta) : draftOptions();
   }
-
-  return {
-    clonEnCurso, setClonEnCurso, cuentasTocadas, setCuentasTocadas, firmas, modelosEnVivo,
-    esperando, preguntadas, sesionesConEstado, sessionLists, refreshSessions, carpetasDeTarea,
-    refreshSessionsOnEvent, releerTrasHueco, previewDeAdjunto, miniaturaDeAdjunto,
-    documentosEn, opcionesDeAdjunto,
-  };
+  return { clonEnCurso, setClonEnCurso, cuentasTocadas, setCuentasTocadas, firmas, modelosEnVivo, esperando, preguntadas, sesionesConEstado, sessionLists, refreshSessions, carpetasDeTarea, refreshSessionsOnEvent, releerTrasHueco, previewDeAdjunto, miniaturaDeAdjunto, documentosEn, opcionesDeAdjunto, };
 }

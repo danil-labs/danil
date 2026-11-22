@@ -8,40 +8,7 @@ import type { ArbolEnTarea, Project, Source } from "../../../../../apps/desktop/
 import type { ChatExportado, DraftsStore, PanelsStore, TabsStore, TaskFilesStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { SessionRow } from "../screens/Sessions.tsx";
 
-export type SessionMutationsOpenDeps = {
-  abrirBorradorDeAgente: (enProyecto: string, name: string) => void;
-  abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>;
-  activeSpace: Accessor<Space | null>;
-  adjuntarFuente: (id: string) => Promise<void>;
-  arbolesDe: (project: string, session: string) => Promise<ArbolEnTarea[]>;
-  archivosDeTarea: TaskFilesStore;
-  cerrarPestana: (id: string) => void;
-  claveAbierta: () => string;
-  contiene: (carpeta: string, absoluta: string) => boolean;
-  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  draftBases: Accessor<Record<string, string>>;
-  drafts: DraftsStore;
-  esDeCodigo: (kind: string) => boolean;
-  filaDe: (id: string) => SessionRow | undefined;
-  folder: Accessor<string | null>;
-  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  maquinaDeLaVentana: () => string;
-  materialTarget: () => string;
-  nuevaSesion: (enProyecto?: string) => void;
-  paneles: PanelsStore;
-  pestanas: TabsStore;
-  project: Accessor<string>;
-  projectList: Accessor<Project[]>;
-  quitarFuente: (id: string) => Promise<void>;
-  sesiones: Accessor<Record<string, SessionRow[]>>;
-  sessionId: Accessor<string | null>;
-  setError: Setter<string | null>;
-  setProyectoAbierto: Setter<string | null>;
-  setRunOn: (workspace: string | null, id: string | null) => void;
-  taskMaterialOptions: () => { headers: Record<string, string> } | undefined;
-  ubicar: (arboles: readonly ArbolEnTarea[], absoluta: string) => { arbol: ArbolEnTarea; rel: string } | null;
-  workspaceActivo: Accessor<string | null>;
-};
+export type SessionMutationsOpenDeps = { abrirBorradorDeAgente: (enProyecto: string, name: string) => void; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activeSpace: Accessor<Space | null>; adjuntarFuente: (id: string) => Promise<void>; arbolesDe: (project: string, session: string) => Promise<ArbolEnTarea[]>; archivosDeTarea: TaskFilesStore; cerrarPestana: (id: string) => void; claveAbierta: () => string; contiene: (carpeta: string, absoluta: string) => boolean; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; draftBases: Accessor<Record<string, string>>; drafts: DraftsStore; esDeCodigo: (kind: string) => boolean; filaDe: (id: string) => SessionRow | undefined; folder: Accessor<string | null>; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; maquinaDeLaVentana: () => string; materialTarget: () => string; nuevaSesion: (enProyecto?: string) => void; paneles: PanelsStore; pestanas: TabsStore; project: Accessor<string>; projectList: Accessor<Project[]>; quitarFuente: (id: string) => Promise<void>; sesiones: Accessor<Record<string, SessionRow[]>>; sessionId: Accessor<string | null>; setError: Setter<string | null>; setProyectoAbierto: Setter<string | null>; setRunOn: (workspace: string | null, id: string | null) => void; taskMaterialOptions: () => { headers: Record<string, string> } | undefined; ubicar: (arboles: readonly ArbolEnTarea[], absoluta: string) => { arbol: ArbolEnTarea; rel: string } | null; workspaceActivo: Accessor<string | null>; };
 
 export function createSessionMutationOpen(deps: SessionMutationsOpenDeps) {
   const maquinaDeLaVentana = () => deps.maquinaDeLaVentana();
@@ -193,10 +160,23 @@ export function createSessionMutationOpen(deps: SessionMutationsOpenDeps) {
   }
 
   /**
+   * El servidor que levantó una tarea, pestaña más del centro. Se abre
+   * la tarea primero: `pestanas.abrir` mete la de contenido detrás de
+   * las de su tarea, o dejaría un hueco al cerrarla (`lib/tabs.ts`).
+   * El puerto puede ser de una tarea no abierta: pasa por `abrirSesion`.
+   */
+
+  /**
    * Un enlace, en una pestaña de esta ventana. Dos entradas y un solo
    * camino: el clic en un enlace del chat (evento `harness:abrir-sitio`)
    * y el guarda de navegación (`lib.rs` · `sitio-pedido`) —así el
    * «abrir enlace» del menú nativo acaba en el mismo sitio que un clic.
+   */
+
+  /**
+   * Un sitio cuelga de una tarea (`lib/tabs.ts`): se cuelga de la que
+   * esté delante. Sin ninguna se entrega al navegador del sistema: un
+   * enlace que no hace nada se lee como que la app está rota.
    */
   async function abrirEnlace(url: string) {
     // `activa()` es el id, no la pestaña: se busca en las abiertas.
@@ -297,10 +277,5 @@ export function createSessionMutationOpen(deps: SessionMutationsOpenDeps) {
     else nuevaSesion(proyecto);
     drafts.continueFrom(prompt, context.path, context.sources, context.excluded_sources);
   }
-
-  return {
-    cambiarRama, abrirRuta, archivoMovido, archivoBorrado, reatarVistaPrevia,
-    abrirEnlace, abrirNavegador, carpetasDelMas, abrirSitio, abrirPorRel,
-    exportarChat, forkDesde,
-  };
+  return { cambiarRama, abrirRuta, archivoMovido, archivoBorrado, reatarVistaPrevia, abrirEnlace, abrirNavegador, carpetasDelMas, abrirSitio, abrirPorRel, exportarChat, forkDesde, };
 }

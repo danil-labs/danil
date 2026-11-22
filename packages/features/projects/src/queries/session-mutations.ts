@@ -12,71 +12,11 @@ import type { Etapa } from "../screens/TaskStage.tsx";
 import { createSessionMutationOpen } from "./session-mutations-open.ts";
 import type { DeleteTarget } from "./deleteTask.ts";
 
-export type SessionMutationsDeps = {
-  abrirBorradorDeAgente: (enProyecto: string, name: string) => void;
-  abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>;
-  activarPestana: (p: Tab) => Promise<void>;
-  activeSpace: Accessor<Space | null>;
-  arbolesDe: (project: string, session: string) => Promise<ArbolEnTarea[]>;
-  archivosDeTarea: TaskFilesStore;
-  capabilities: () => Capabilities;
-  cerrarPestana: (id: string) => void;
-  claveAbierta: () => string;
-  contiene: (carpeta: string, absoluta: string) => boolean;
-  contextConfirmed: Accessor<boolean>;
-  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  draftBases: Accessor<Record<string, string>>;
-  draftOptions: () => { headers: { "x-terminus-machine": string } } | undefined;
-  drafts: DraftsStore;
-  esDeCodigo: (kind: string) => boolean;
-  filaDe: (id: string) => SessionRow | undefined;
-  folder: Accessor<string | null>;
-  irAlBlanco: (enProyecto?: string) => void;
-  machineName: (id: string, local?: boolean) => string;
-  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  machines: Accessor<Machine[]>;
-  maquinaDeLaVentana: () => string;
-  nuevaSesion: (enProyecto?: string) => void;
-  olvidarPestana: (session: string) => void;
-  opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: Record<string, string> };
-  paneles: PanelsStore;
-  pestanas: TabsStore;
-  project: Accessor<string>;
-  projectCatalog: { changed: () => Promise<unknown> };
-  projectList: Accessor<Project[]>;
-  proyectoAbierto: Accessor<string | null>;
-  readRevision: Accessor<number>;
-  refreshSessions: (proyectos: string[]) => Promise<void>;
-  senderTaskId: (machine: string, task: string) => string;
-  sesiones: Accessor<Record<string, SessionRow[]>>;
-  sessionId: Accessor<string | null>;
-  setError: Setter<string | null>;
-  setProject: Setter<string>;
-  setProyectoAbierto: Setter<string | null>;
-  setRetoques: Setter<Record<string, { cambio: Partial<SessionRow>; n: number }>>;
-  setRunOn: (workspace: string | null, id: string | null) => void;
-  setTaskSources: Setter<Source[] | null>;
-  setTaskSourcesError: Setter<string | null>;
-  soltarHilo: (session: string) => void;
-  sources: Accessor<Source[]>;
-  threads: ThreadsStore;
-  ubicar: (arboles: readonly ArbolEnTarea[], absoluta: string) => { arbol: ArbolEnTarea; rel: string } | null;
-  workspaceActivo: Accessor<string | null>;
-  workspaceContext: WorkspaceStore;
-};
+export type SessionMutationsDeps = { abrirBorradorDeAgente: (enProyecto: string, name: string) => void; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activarPestana: (p: Tab) => Promise<void>; activeSpace: Accessor<Space | null>; arbolesDe: (project: string, session: string) => Promise<ArbolEnTarea[]>; archivosDeTarea: TaskFilesStore; capabilities: () => Capabilities; cerrarPestana: (id: string) => void; claveAbierta: () => string; contiene: (carpeta: string, absoluta: string) => boolean; contextConfirmed: Accessor<boolean>; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; draftBases: Accessor<Record<string, string>>; draftOptions: () => { headers: { "x-terminus-machine": string } } | undefined; drafts: DraftsStore; esDeCodigo: (kind: string) => boolean; filaDe: (id: string) => SessionRow | undefined; folder: Accessor<string | null>; irAlBlanco: (enProyecto?: string) => void; machineName: (id: string, local?: boolean) => string; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; machines: Accessor<Machine[]>; maquinaDeLaVentana: () => string; nuevaSesion: (enProyecto?: string) => void; olvidarPestana: (session: string) => void; opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: Record<string, string> }; paneles: PanelsStore; pestanas: TabsStore; project: Accessor<string>; projectCatalog: { changed: () => Promise<unknown> }; projectList: Accessor<Project[]>; proyectoAbierto: Accessor<string | null>; readRevision: Accessor<number>; refreshSessions: (proyectos: string[]) => Promise<void>; senderTaskId: (machine: string, task: string) => string; sesiones: Accessor<Record<string, SessionRow[]>>; sessionId: Accessor<string | null>; setError: Setter<string | null>; setProject: Setter<string>; setProyectoAbierto: Setter<string | null>; setRetoques: Setter<Record<string, { cambio: Partial<SessionRow>; n: number }>>; setRunOn: (workspace: string | null, id: string | null) => void; setTaskSources: Setter<Source[] | null>; setTaskSourcesError: Setter<string | null>; soltarHilo: (session: string) => void; sources: Accessor<Source[]>; threads: ThreadsStore; ubicar: (arboles: readonly ArbolEnTarea[], absoluta: string) => { arbol: ArbolEnTarea; rel: string } | null; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceStore; };
 
 export function createSessionMutations(deps: SessionMutationsDeps) {
   const maquinaDeLaVentana = () => deps.maquinaDeLaVentana();
-  const {
-    abrirBorradorDeAgente, abrirSesion, activarPestana, activeSpace, arbolesDe, archivosDeTarea,
-    capabilities, cerrarPestana, claveAbierta, contiene, contextConfirmed, deLaTarea, draftBases,
-    draftOptions, drafts, esDeCodigo, filaDe, folder, irAlBlanco, machineName, machineOf, machines,
-    nuevaSesion, olvidarPestana, opcionesDeLaTarea, paneles, pestanas, project,
-    projectCatalog, projectList, proyectoAbierto, readRevision, refreshSessions, senderTaskId,
-    sesiones, sessionId, setError, setProject, setProyectoAbierto, setRetoques, setRunOn,
-    setTaskSources, setTaskSourcesError, soltarHilo, sources, threads, ubicar, workspaceActivo,
-    workspaceContext,
-  } = deps;
+  const { abrirBorradorDeAgente, abrirSesion, activarPestana, activeSpace, arbolesDe, archivosDeTarea, capabilities, cerrarPestana, claveAbierta, contiene, contextConfirmed, deLaTarea, draftBases, draftOptions, drafts, esDeCodigo, filaDe, folder, irAlBlanco, machineName, machineOf, machines, nuevaSesion, olvidarPestana, opcionesDeLaTarea, paneles, pestanas, project, projectCatalog, projectList, proyectoAbierto, readRevision, refreshSessions, senderTaskId, sesiones, sessionId, setError, setProject, setProyectoAbierto, setRetoques, setRunOn, setTaskSources, setTaskSourcesError, soltarHilo, sources, threads, ubicar, workspaceActivo, workspaceContext, } = deps;
 
   let ultimoRetoque = 0;
   const [deleteTarget, setDeleteTarget] = createSignal<DeleteTarget | null>(null);
@@ -87,26 +27,26 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
   function deleteTask(project: string, id: string, members?: number) {
     // One deletion at a time: its preview and consent belong to the task that started it.
     if (deleteTarget()) return;
-    const machine = deLaTarea(id)?.headers["x-terminus-machine"] ?? machines().find((item) => item.local || item.active)?.id;
-    const target = machines().find((item) => item.id === machine);
-    const folderNames = new Map(projectList().map((folder) => [folder.id, folder.name]));
+    const machine = deLaTarea(id)?.headers["x-terminus-machine"] ?? machines().find(item => item.local || item.active)?.id;
+    const target = machines().find(item => item.id === machine);
+    const folderNames = new Map(projectList().map(folder => [folder.id, folder.name]));
     setDeleteTarget({
       machineName: machine ? machineName(machine) : t("shell.machines.this_computer"),
-      folderName: (folder) => folderNames.get(folder) || folder || t("shell.sidebar.view.no_folder"),
+      folderName: folder => folderNames.get(folder) || folder || t("shell.sidebar.view.no_folder"),
       project, id, workspace: workspaceActivo(), members,
       supported: target?.features?.includes("task_lifecycle_v1") === true,
       options: opcionesDeLaTarea(id, workspaceActivo()),
-      panelId: (task) => machine ? senderTaskId(machine, task) : task,
+      panelId: task => machine ? senderTaskId(machine, task) : task,
     });
   }
 
   function deletedTaskMembers(members: { project: string; id: string }[]) {
     const view = proyectoAbierto();
-    const ids = members.map((member) => member.id);
+    const ids = members.map(member => member.id);
     const activeRemoved = ids.includes(sessionId() ?? "");
-    const tabIds = pestanas.open().filter((tab) => ids.includes(tab.id) || ids.includes(tab.session)).map((tab) => tab.id);
+    const tabIds = pestanas.open().filter(tab => ids.includes(tab.id) || ids.includes(tab.session)).map(tab => tab.id);
     const neighbor = pestanas.closeMany(tabIds);
-    paneles.sync(pestanas.open().map((tab) => tab.id));
+    paneles.sync(pestanas.open().map(tab => tab.id));
     for (const id of ids) {
       soltarHilo(id);
       drafts.drop(id);
@@ -117,14 +57,14 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
       if (!view && neighbor) void activarPestana(neighbor);
       else { irAlBlanco(); setProyectoAbierto(view); }
     }
-    void refreshSessions([...new Set(members.map((member) => member.project))]);
+    void refreshSessions([...new Set(members.map(member => member.project))]);
   }
 
   function dirtyTaskFiles(id: string): string[] {
-    const tabIds = pestanas.open().filter((tab) => tab.id === id || tab.session === id).map((tab) => tab.id);
-    const tabs = pestanas.dirtyTabsToClose(tabIds).map((tab) => tab.ruta);
+    const tabIds = pestanas.open().filter(tab => tab.id === id || tab.session === id).map(tab => tab.id);
+    const tabs = pestanas.dirtyTabsToClose(tabIds).map(tab => tab.ruta);
     const panel = archivosDeTarea.panel(id);
-    return [...new Set([...tabs, ...panel.tabs.filter((tab) => panel.dirty.includes(tab.id)).map((tab) => tab.path)])];
+    return [...new Set([...tabs, ...panel.tabs.filter(tab => panel.dirty.includes(tab.id)).map(tab => tab.path)])];
   }
 
   /**
@@ -240,10 +180,10 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
       }, deLaTarea(sid));
     } catch (e) {
       threads.appendPersisted(sid, [{
-        role: "system",
-        text: t("chat.scope.source.remove_failed", { error: prosaDe(e) }),
-        meta: "fallo",
-      }]);
+                  role: "system",
+                  text: t("chat.scope.source.remove_failed", { error: prosaDe(e) }),
+                  meta: "fallo",
+                }]);
     }
   };
 
@@ -285,21 +225,11 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
       if (request === taskSourcesRequest) setTaskSourcesError(prosaDe(e));
     });
   }));
+  const head = { deleteTarget, setDeleteTarget, setDeletingEditors, editorDeletionLocked, deleteTask, deletedTaskMembers, dirtyTaskFiles, moverSesion, etaparSesion, fijarSesion, renombrarSesion, adjuntarFuente, quitarFuente, taskMaterialOptions, materialTarget, };
 
-  const head = {
-    deleteTarget, setDeleteTarget, setDeletingEditors, editorDeletionLocked, deleteTask,
-    deletedTaskMembers, dirtyTaskFiles, moverSesion, etaparSesion, fijarSesion,
-    renombrarSesion, adjuntarFuente, quitarFuente, taskMaterialOptions, materialTarget,
-  };
 
-  const open = createSessionMutationOpen({
-    abrirBorradorDeAgente, abrirSesion, activeSpace, adjuntarFuente, arbolesDe,
-    archivosDeTarea, cerrarPestana, claveAbierta, contiene, deLaTarea, draftBases,
-    drafts, esDeCodigo, filaDe, folder, machineOf, maquinaDeLaVentana, materialTarget,
-    nuevaSesion, paneles, pestanas, project, projectList, quitarFuente, sesiones,
-    sessionId, setError, setProyectoAbierto, setRunOn, taskMaterialOptions, ubicar,
-    workspaceActivo,
-  });
+  const open = createSessionMutationOpen({ abrirBorradorDeAgente, abrirSesion, activeSpace, adjuntarFuente, arbolesDe, archivosDeTarea, cerrarPestana, claveAbierta, contiene, deLaTarea, draftBases, drafts, esDeCodigo, filaDe, folder, machineOf, maquinaDeLaVentana, materialTarget, nuevaSesion, paneles, pestanas, project, projectList, quitarFuente, sesiones, sessionId, setError, setProyectoAbierto, setRunOn, taskMaterialOptions, ubicar, workspaceActivo, });
+
 
   return { ...head, ...open };
 }

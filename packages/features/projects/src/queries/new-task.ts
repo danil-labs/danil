@@ -1,59 +1,11 @@
 import { batch, createSignal, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import type { AgentProfile as AgentProfileData, Project } from "../../../../../apps/desktop/src/lib/model.ts";
-import type {
-  ComposerStore,
-  ContextoDeProyectos,
-  DraftsStore,
-  PanelsStore,
-  TabsStore,
-} from "../../../../../apps/desktop/src/lib/project-block-types.ts";
+import type { ComposerStore, ContextoDeProyectos, DraftsStore, PanelsStore, TabsStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import { taskCountOf } from "../model/recent.ts";
 import type { PanelSite } from "../../../../../apps/desktop/src/lib/panels.ts";
 
-export type NewTaskDeps = {
-  abrirProyecto: (id: string) => void;
-  alta: Accessor<boolean>;
-  arrancando: Accessor<boolean>;
-  borrarProyecto: (id: string) => Promise<void>;
-  carpetaDelEscritorio: (pedido: string) => string;
-  cerrarBorrador: (sitio: PanelSite) => void;
-  cerrarPestanasYa: (ids: string[]) => void;
-  composer: ComposerStore;
-  drafts: DraftsStore;
-  enBorrador: (sitio: PanelSite) => boolean;
-  hablandoCon: Accessor<{ project: string; name: string } | null>;
-  hablarConEncargado: (enProyecto: string, name: string) => void;
-  multipleSpaces: () => boolean;
-  ocultarDelSelector: (id: string, ocultar: boolean) => void;
-  ocultosAqui: Accessor<Set<string>>;
-  paneles: PanelsStore;
-  pedirElCampo: () => void;
-  pestanaActiva: () => string | null;
-  pestanas: TabsStore;
-  project: Accessor<string>;
-  proyectosDelRiel: () => Project[];
-  proyectoDeNuevaTarea: (pedido: string | undefined, activo: string) => string;
-  removeFromActiveSpace: (folder: string) => Promise<void>;
-  renombrarProyecto: (id: string, name: string) => Promise<void>;
-  restoreDraftConfiguration: () => void;
-  setAnadiendoCarpeta: Setter<boolean>;
-  setAntesDelBorrador: Setter<string | null>;
-  setCuentasTocadas: Setter<number>;
-  setFolder: Setter<string | null>;
-  setHablandoCon: Setter<{ project: string; name: string } | null>;
-  setMaterialPedido: Setter<string | null>;
-  setProject: Setter<string>;
-  setProyectoAbierto: Setter<string | null>;
-  setRunOn: (workspace: string | null, id: string | null) => void;
-  setSessionId: Setter<string | null>;
-  setSettings: Setter<string | null>;
-  settings: Accessor<string | null>;
-  soltarCola: () => void;
-  soltarHilo: (session: string) => void;
-  tareasActivas: Accessor<Record<string, number>>;
-  workspaceActivo: Accessor<string | null>;
-};
+export type NewTaskDeps = { abrirProyecto: (id: string) => void; alta: Accessor<boolean>; arrancando: Accessor<boolean>; borrarProyecto: (id: string) => Promise<void>; carpetaDelEscritorio: (pedido: string) => string; cerrarBorrador: (sitio: PanelSite) => void; cerrarPestanasYa: (ids: string[]) => void; composer: ComposerStore; drafts: DraftsStore; enBorrador: (sitio: PanelSite) => boolean; hablandoCon: Accessor<{ project: string; name: string } | null>; hablarConEncargado: (enProyecto: string, name: string) => void; multipleSpaces: () => boolean; ocultarDelSelector: (id: string, ocultar: boolean) => void; ocultosAqui: Accessor<Set<string>>; paneles: PanelsStore; pedirElCampo: () => void; pestanaActiva: () => string | null; pestanas: TabsStore; project: Accessor<string>; proyectosDelRiel: () => Project[]; proyectoDeNuevaTarea: (pedido: string | undefined, activo: string) => string; removeFromActiveSpace: (folder: string) => Promise<void>; renombrarProyecto: (id: string, name: string) => Promise<void>; restoreDraftConfiguration: () => void; setAnadiendoCarpeta: Setter<boolean>; setAntesDelBorrador: Setter<string | null>; setCuentasTocadas: Setter<number>; setFolder: Setter<string | null>; setHablandoCon: Setter<{ project: string; name: string } | null>; setMaterialPedido: Setter<string | null>; setProject: Setter<string>; setProyectoAbierto: Setter<string | null>; setRunOn: (workspace: string | null, id: string | null) => void; setSessionId: Setter<string | null>; setSettings: Setter<string | null>; settings: Accessor<string | null>; soltarCola: () => void; soltarHilo: (session: string) => void; tareasActivas: Accessor<Record<string, number>>; workspaceActivo: Accessor<string | null>; };
 
 export function createNewTask(deps: NewTaskDeps) {
   const proyectosDelRiel = () => deps.proyectosDelRiel();
@@ -163,16 +115,16 @@ export function createNewTask(deps: NewTaskDeps) {
       setProject(enProyecto);
       setProyectoAbierto(null);
       pestanas.activate(null);
-      // Y la ventana también se queda sin pestaña delante: `pestanas` y
-      // `paneles` llevan la cuenta por separado. Sin esto, la ventana
-      // seguía enseñando la conversación anterior bajo la pantalla en blanco.
+    // Y la ventana también se queda sin pestaña delante: `pestanas` y
+    // `paneles` llevan la cuenta por separado. Sin esto, la ventana
+    // seguía enseñando la conversación anterior bajo la pantalla en blanco.
       paneles.showDraft();
       setSessionId(null);
       restoreDraftConfiguration();
       composer.startNewDraft();
       setFolder(null);
-      // Lo que la tarea que se deja ya lee es suyo; el borrador de la
-      // conversación en blanco es el suyo y no se toca.
+    // Lo que la tarea que se deja ya lee es suyo; el borrador de la
+    // conversación en blanco es el suyo y no se toca.
       drafts.replaceAttached([]);
       soltarCola();
       // El hilo sin id es el del primer turno. Si Rust lo negó, se quedaba
@@ -213,15 +165,8 @@ export function createNewTask(deps: NewTaskDeps) {
   }
 
   /** Lo que la tira tenía sin guardar cuando alguien pidió cerrar. */
-  const [cierreSinGuardar, setCierreSinGuardar] = createSignal<{
-    ids: string[];
-    archivos: string[];
-    sucios: string[];
-  } | null>(null);
-
-  return {
-    abrirBorradorDeAgente, requestedProfile, setRequestedProfile, proyectosEnAjustes,
-    cerrarAjustes, openAgentProfile, enLaMaquinaDelGrupo, nuevaSesion, irAlBlanco,
-    closeActiveTab, cerrarPestana, cerrarPestanas, cierreSinGuardar, setCierreSinGuardar,
-  };
+  const [cierreSinGuardar, setCierreSinGuardar] = createSignal<
+    { ids: string[]; archivos: string[]; sucios: string[] } | null
+  >(null);
+  return { abrirBorradorDeAgente, requestedProfile, setRequestedProfile, proyectosEnAjustes, cerrarAjustes, openAgentProfile, enLaMaquinaDelGrupo, nuevaSesion, irAlBlanco, closeActiveTab, cerrarPestana, cerrarPestanas, cierreSinGuardar, setCierreSinGuardar, };
 }

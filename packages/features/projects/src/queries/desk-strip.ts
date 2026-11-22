@@ -9,45 +9,14 @@ import { deleteLayout, readLayout, spacesWithLayout } from "../../../../../apps/
 import { claveDeBorrador, esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft.ts";
 import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
 import { chipModel as modeloDeSubtarea } from "../../../../tasks/src/surfaces.ts";
-const enMaquina = (machine: string | undefined) => (machine ? { headers: { "x-terminus-machine": machine } } : undefined);
 import type { ModoDePermiso, Project, Source } from "../../../../../apps/desktop/src/lib/model.ts";
-import type {
-  createComposerStore,
-  createDraftsStore,
-  createThreadsStore,
-  Machine,
-  PanelsStore,
-  SearchFilter,
-  Session,
-  TabsStore,
-} from "../../../../../apps/desktop/src/lib/project-block-types.ts";
+import type { createComposerStore, createDraftsStore, createThreadsStore, Machine, PanelsStore, SearchFilter, Session, TabsStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { AttentionStore, WorkspaceStore } from "../screens/workspace-session.ts";
 import type { SessionRow } from "../screens/Sessions.tsx";
 
-export type DeskStripDeps = {
-  abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>;
-  activarPestana: (p: Tab) => Promise<void>; activeSpace: Accessor<Space | null>; adjuntosEn: Map<string, string>;
-  attention: AttentionStore; composerMachine: Accessor<string | null>; connected: Accessor<boolean>;
-  createComposerStore: typeof createComposerStore; createDraftsStore: typeof createDraftsStore;
-  createThreadsStore: typeof createThreadsStore;
-  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  escritorio: Accessor<string | null>; filaDe: (id: string) => SessionRow | undefined; grupos: Accessor<string[]>;
-  hablandoCon: Accessor<{ project: string; name: string } | null>; irAlBlanco: (enProyecto?: string) => void;
-  liveThreads: Set<string>; loadWindowThreads: (skip: string | null) => void;
-  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-  machines: Accessor<Machine[]>; modoInicial: (modos: ModoDePermiso[], recordado: string) => string;
-  modoRecordado: () => string; recordarModo: (id: string) => void;
-  naciendo: Accessor<{ project: string; row: SessionRow }[]>; olvidarPestana: (session: string) => void;
-  paneles: PanelsStore; pegadasEn: Map<string, string>; pestanaActiva: () => string | null; pestanas: TabsStore;
-  project: Accessor<string>; projectList: Accessor<Project[]>; refreshSessions: (proyectos: string[]) => Promise<void>;
-  serviceStream: { paged: () => boolean }; sesiones: Accessor<Record<string, SessionRow[]>>;
-  sessionId: Accessor<string | null>; setBuscando: Setter<SearchFilter | null>; setError: Setter<string | null>;
-  setEscritorio: Setter<string | null>; setProyectoAbierto: Setter<string | null>; setSpaces: Setter<Space[]>;
-  spaces: Accessor<Space[]>; taskSources: Accessor<Source[] | null>;
-  topState: (tasks: import("../screens/workspace-session.ts").TaskAttention[]) => import("../screens/workspace-session.ts").AttentionState | null;
-  vivas: Accessor<string[]>; withLastAnswer: <T>(machine: string | null, key: string, call: () => Promise<T>) => Promise<T>;
-  workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceStore; workspaceMode: Accessor<string | null>;
-};
+const enMaquina = (machine: string | undefined) => (machine ? { headers: { "x-terminus-machine": machine } } : undefined);
+
+export type DeskStripDeps = { abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activarPestana: (p: Tab) => Promise<void>; activeSpace: Accessor<Space | null>; adjuntosEn: Map<string, string>; attention: AttentionStore; composerMachine: Accessor<string | null>; connected: Accessor<boolean>; createComposerStore: typeof createComposerStore; createDraftsStore: typeof createDraftsStore; createThreadsStore: typeof createThreadsStore; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; escritorio: Accessor<string | null>; filaDe: (id: string) => SessionRow | undefined; grupos: Accessor<string[]>; hablandoCon: Accessor<{ project: string; name: string } | null>; irAlBlanco: (enProyecto?: string) => void; liveThreads: Set<string>; loadWindowThreads: (skip: string | null) => void; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; machines: Accessor<Machine[]>; modoInicial: (modos: ModoDePermiso[], recordado: string) => string; modoRecordado: () => string; recordarModo: (id: string) => void; naciendo: Accessor<{ project: string; row: SessionRow }[]>; olvidarPestana: (session: string) => void; paneles: PanelsStore; pegadasEn: Map<string, string>; pestanaActiva: () => string | null; pestanas: TabsStore; project: Accessor<string>; projectList: Accessor<Project[]>; refreshSessions: (proyectos: string[]) => Promise<void>; serviceStream: { paged: () => boolean }; sesiones: Accessor<Record<string, SessionRow[]>>; sessionId: Accessor<string | null>; setBuscando: Setter<SearchFilter | null>; setError: Setter<string | null>; setEscritorio: Setter<string | null>; setProyectoAbierto: Setter<string | null>; setSpaces: Setter<Space[]>; spaces: Accessor<Space[]>; taskSources: Accessor<Source[] | null>; topState: (tasks: import("../screens/workspace-session.ts").TaskAttention[]) => import("../screens/workspace-session.ts").AttentionState | null; vivas: Accessor<string[]>; withLastAnswer: <T>(machine: string | null, key: string, call: () => Promise<T>) => Promise<T>; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceStore; workspaceMode: Accessor<string | null>; };
 
 export function createDeskStrip(deps: DeskStripDeps) {
   const irAlBlanco = (...a: Parameters<DeskStripDeps["irAlBlanco"]>) => deps.irAlBlanco(...a);
@@ -57,8 +26,10 @@ export function createDeskStrip(deps: DeskStripDeps) {
   const loadWindowThreads = (...a: Parameters<DeskStripDeps["loadWindowThreads"]>) => deps.loadWindowThreads(...a);
   const refreshSessions = (...a: Parameters<DeskStripDeps["refreshSessions"]>) => deps.refreshSessions(...a);
   const composerMachine = () => deps.composerMachine(), vivas = () => deps.vivas();
+  const serviceStream = { paged: () => deps.serviceStream.paged() };
+  const liveThreads = { has: (key: string) => deps.liveThreads.has(key) } as Set<string>;
 
-  const { activeSpace, adjuntosEn, attention, connected, createComposerStore, createDraftsStore, deLaTarea, escritorio, filaDe, grupos, hablandoCon, machineOf, machines, naciendo, paneles, pegadasEn, pestanaActiva, pestanas, project, projectList, sesiones, sessionId, setBuscando, setError, setEscritorio, setProyectoAbierto, setSpaces, spaces, taskSources, topState, withLastAnswer, workspaceActivo, workspaceContext, workspaceMode, createThreadsStore } = deps;
+  const { activeSpace, adjuntosEn, attention, connected, createComposerStore, createDraftsStore, deLaTarea, escritorio, filaDe, grupos, hablandoCon, machineOf, machines, modoInicial, modoRecordado, recordarModo, naciendo, paneles, pegadasEn, pestanaActiva, pestanas, project, projectList, sesiones, sessionId, setBuscando, setError, setEscritorio, setProyectoAbierto, setSpaces, spaces, taskSources, topState, withLastAnswer, workspaceActivo, workspaceContext, workspaceMode, createThreadsStore } = deps;
   /** El panel conserva workspace y conversación; el título pertenece a la tira. */
   const tareasEnVentanas = createMemo<(Pick<TaskTab, "id" | "session"> & { workspace: string | null })[]>((previous) =>
     conservar(previous ?? [], pestanas.open().filter(isTaskTab).map(({ id, session }) =>
@@ -238,7 +209,10 @@ export function createDeskStrip(deps: DeskStripDeps) {
     const guardado = leerPref<string | null>(`space.${ws}`, null);
     const desk = guardado && lista.some((i) => i.id === guardado) ? guardado : lista[0].id;
     podarTirasMuertas(ws, lista);
-    batch(() => { setSpaces(lista); setEscritorio(desk); });
+    batch(() => {
+      setSpaces(lista);
+      setEscritorio(desk);
+    });
     return desk;
   }
 
@@ -259,7 +233,8 @@ export function createDeskStrip(deps: DeskStripDeps) {
   /** El aviso de lo que un gesto sobre espacios acaba de hacer, con su «Ir». */
   const [aviso, setAviso] = createSignal<{ texto: string; boton?: string; ir?: () => void } | null>(null);
   const [deletingSpace, setDeletingSpace] = createSignal<string | null>(null);
-  const replaceSpace = (i: Space) => setSpaces((lista) => lista.map((x) => (x.id === i.id ? i : x)));
+  const replaceSpace = (i: Space) =>
+    setSpaces((lista) => lista.map((x) => (x.id === i.id ? i : x)));
 
   async function createSpace(name: string, folders: string[]) {
     const nueva = await invoke<Space>("create_space", { name, folders });
@@ -342,7 +317,7 @@ export function createDeskStrip(deps: DeskStripDeps) {
     project, projects: projectList, sources: taskSources,
     prepareAttachments: async (paths, project) => {
       const machine = paths.length ? pegadasEn.get(paths[0]) : undefined;
-      const routed = machine && paths.every((path) => pegadasEn.get(path) === machine) ? enMaquina(machine) : undefined;
+      const routed = machine && paths.every(path => pegadasEn.get(path) === machine) ? enMaquina(machine) : undefined;
       const workspace = workspaceActivo();
       const options = { headers: { ...routed?.headers, ...(workspace ? { "x-terminus-workspace": workspace } : {}) } };
       const prepared = await invoke<string[]>("prepare_attachments", { project, paths }, options);
@@ -351,47 +326,45 @@ export function createDeskStrip(deps: DeskStripDeps) {
     },
   });
   onCleanup(drafts.dispose);
-  const borrador = drafts.current, input = drafts.input, setInput = drafts.changeText;
-  const navigateMentionHistory = drafts.history, sourceIds = drafts.sourceIds, excludedSourceIds = drafts.excludedSourceIds;
-  const archivos = drafts.files, setArchivos = drafts.replaceFiles, agregarArchivos = drafts.addFiles;
-  const adjuntas = drafts.attached, materialPendiente = drafts.pendingMaterial, contexto = drafts.context;
+  const borrador = drafts.current;
+  const input = drafts.input;
+  const setInput = drafts.changeText;
+  const navigateMentionHistory = drafts.history;
+  const sourceIds = drafts.sourceIds;
+  const excludedSourceIds = drafts.excludedSourceIds;
+  const archivos = drafts.files;
+  const setArchivos = drafts.replaceFiles;
+  const agregarArchivos = drafts.addFiles;
+  const adjuntas = drafts.attached;
+  const materialPendiente = drafts.pendingMaterial;
+  const contexto = drafts.context;
 
   const composer = createComposerStore({
     invoke, withLastAnswer,
     scope: { workspace: workspaceActivo, machine: () => composerMachine(),
-      machineOn: () => machines().find((machine) => machine.id === composerMachine())?.on,
+      machineOn: () => machines().find(machine => machine.id === composerMachine())?.on,
       connected, session: () => sessionId() },
-    workspaceMode, draftConfiguration: () => borrador().configuration,
-    modoInicial: deps.modoInicial, modoRecordado: deps.modoRecordado, recordarModo: deps.recordarModo,
+    workspaceMode, draftConfiguration: () => borrador().configuration, modoInicial, modoRecordado, recordarModo,
   });
   const { agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes,
     model, effort, modo, modos, skills, cliCommands, sideCommand } = composer;
   onCleanup(composer.dispose);
   const threads = createThreadsStore({
-    scope: { workspace: workspaceActivo, generation: workspaceContext.generation, paged: () => deps.serviceStream.paged() },
-    activeSession: sessionId, project, invoke, route: deLaTarea, liveThreads: () => deps.liveThreads,
+    scope: { workspace: workspaceActivo, generation: workspaceContext.generation, paged: () => serviceStream.paged() },
+    activeSession: sessionId, project, invoke, route: deLaTarea, liveThreads: () => liveThreads,
   });
   onCleanup(threads.dispose);
   const hilos = threads.rows, hiloAbierto = threads.current, msgs = threads.messages, cargandoHilo = threads.loading;
   const origenes = threads.origins, apagadas = threads.offline, machineWaits = threads.machineWaits, traspasos = threads.handovers;
-  const conAntiguos = threads.olderAvailable, conRecientes = threads.recentAvailable, estadoAntiguos = threads.olderStatus;
-  const colaSuelta = threads.recentTail, leerTarea = threads.read, cargarAntiguos = threads.older, soltarHilo = threads.drop;
-  const avisar = (sesion: string) => (e: unknown) => threads.appendLive(sesion, [{ role: "system", text: prosaDe(e), meta: "aviso" }]);
+  const conAntiguos = threads.olderAvailable, conRecientes = threads.recentAvailable, estadoAntiguos = threads.olderStatus, colaSuelta = threads.recentTail;
+  const leerTarea = threads.read, cargarAntiguos = threads.older, soltarHilo = threads.drop;
+  function avisar(sesion: string) {
+    return (e: unknown) => threads.appendLive(sesion, [{ role: "system", text: prosaDe(e), meta: "aviso" }]);
+  }
   function loadResult(id: string, session: Session, clear: boolean, generation: number) {
     if (!threads.acceptSession(id, session, clear, generation)) return;
     drafts.invalidateProvider(id, session.provider);
     if (id === sessionId() && (session.subagent || session.parent)) composer.useProfile({ model: modeloDeSubtarea(session), effort: session.effort });
   }
-
-  return {
-    tareasEnVentanas, proyectoDePestana, sesionesConPestana, agentesEnUso, pedidas, esperandoFila,
-    cambiarEscritorio, carpetaDelEscritorio, asentarEscritorio, reloadSpaces, aviso, setAviso, deletingSpace,
-    setDeletingSpace, createSpace, renameSpace, removeFromActiveSpace, moveToSpace, spaceDeleted, senalDe,
-    claveDelHilo, claveAbierta, drafts, borrador, input, setInput, navigateMentionHistory, sourceIds,
-    excludedSourceIds, archivos, setArchivos, agregarArchivos, adjuntas, materialPendiente, contexto, composer,
-    agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes, model, effort, modo,
-    modos, skills, cliCommands, sideCommand, threads, hilos, hiloAbierto, msgs, cargandoHilo, origenes,
-    apagadas, machineWaits, traspasos, conAntiguos, conRecientes, estadoAntiguos, colaSuelta, leerTarea,
-    cargarAntiguos, soltarHilo, avisar, loadResult,
-  };
+  return { tareasEnVentanas, proyectoDePestana, sesionesConPestana, agentesEnUso, pedidas, esperandoFila, cambiarEscritorio, carpetaDelEscritorio, asentarEscritorio, reloadSpaces, aviso, setAviso, deletingSpace, setDeletingSpace, createSpace, renameSpace, removeFromActiveSpace, moveToSpace, spaceDeleted, senalDe, claveDelHilo, claveAbierta, drafts, borrador, input, setInput, navigateMentionHistory, sourceIds, excludedSourceIds, archivos, setArchivos, agregarArchivos, adjuntas, materialPendiente, contexto, composer, agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes, model, effort, modo, modos, skills, cliCommands, sideCommand, threads, hilos, hiloAbierto, msgs, cargandoHilo, origenes, apagadas, machineWaits, traspasos, conAntiguos, conRecientes, estadoAntiguos, colaSuelta, leerTarea, cargarAntiguos, soltarHilo, avisar, loadResult, };
 }

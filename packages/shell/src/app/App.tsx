@@ -52,14 +52,7 @@ import {
   type Turn,
 } from "../../../features/chat/src/model/transcript";
 import { createComposerStore } from "../../../features/composer/src";
-import {
-  createCloneFolder,
-  createDeskStrip,
-  createNewTask,
-  createRailSessions,
-  createSessionMutations,
-  createWorkspaceSession,
-} from "../../../features/projects/src";
+import { createCloneFolder, createDeskStrip, createNewTask, createRailSessions, createSessionMutations, createWorkspaceSession } from "../../../features/projects/src";
 import type { HandlerTarget } from "../../../features/settings/src/screens/HandlerPolicy";
 import { createThreadsStore } from "../../../features/threads/src";
 import { createWorkspaceStore } from "../../../features/workspace/src";
@@ -323,20 +316,8 @@ export default function App() {
    * primero, antes de pedir proveedores de IA y source control.
    */
   const [alta, setAlta] = createSignal(false);
-  const {
-    fondoDelAgente, setFondoDelAgente, workspaceContext, contextRoot, contextConfirmed, workspaceMode,
-    workspaceActivo, confirmContext, attention, draftBases, setDraftBases, hablandoCon, setHablandoCon,
-    projectCatalog, projectList, sources, setSources, draftMachine, draftOptions, composerProjects,
-    materialError, setMaterialError, taskSourcesError, setTaskSourcesError, draftProjectError,
-    setDraftProjectError, projectReadError, setProjectReadError, startupReadError, setStartupReadError,
-    connectionError, setConnectionError, readRevision, setReadRevision, draftMachineOn, taskSources,
-    setTaskSources, setError, errorVisible, bloqueo, setBloqueo, grupos, project,
-    setProject, sesiones, setSesiones, actividadDeProyectos, elegidosAqui, recordarEleccion,
-    tareasActivas, ocultosAqui, ocultarDelSelector, naciendo, setNaciendo, retoques, setRetoques,
-    retirarNaciendo, sessionId, setSessionId, materialPedido, setMaterialPedido, proyectoAbierto,
-    setProyectoAbierto, pestanas, archivosDeTarea, llaveDeBorrador, anchoDeArchivos,
-    setAnchoDeArchivos, anchoDelArbol, setAnchoDelArbol,
-  } = createWorkspaceSession({ asleep, createAttention, createWorkspaceStore, machineName, machines, runOn });
+  const { fondoDelAgente, setFondoDelAgente, workspaceContext, contextRoot, contextConfirmed, workspaceMode, workspaceActivo, confirmContext, attention, draftBases, setDraftBases, hablandoCon, setHablandoCon, projectCatalog, projectList, sources, setSources, draftMachine, draftOptions, composerProjects, materialError, setMaterialError, taskSourcesError, setTaskSourcesError, draftProjectError, setDraftProjectError, projectReadError, setProjectReadError, startupReadError, setStartupReadError, connectionError, setConnectionError, readRevision, setReadRevision, draftMachineOn, taskSources, setTaskSources, setError, errorVisible, bloqueo, setBloqueo, grupos, project, setProject, sesiones, setSesiones, actividadDeProyectos, elegidosAqui, recordarEleccion, tareasActivas, ocultosAqui, ocultarDelSelector, naciendo, setNaciendo, retoques, setRetoques, retirarNaciendo, sessionId, setSessionId, materialPedido, setMaterialPedido, proyectoAbierto, setProyectoAbierto, pestanas, archivosDeTarea, llaveDeBorrador, anchoDeArchivos, setAnchoDeArchivos, anchoDelArbol, setAnchoDelArbol, } = createWorkspaceSession({ asleep, createAttention, createWorkspaceStore, machineName, machines, runOn });
+
   const pestanaActiva = () => (proyectoAbierto() ? null : pestanas.active());
   // Los escritorios del workspace (`lib/spaces.ts`). Sin lista —un servicio
   // que no los conoce— la ventana se pinta como antes de los espacios.
@@ -625,66 +606,8 @@ export default function App() {
       },
     ),
   );
-  const {
-    tareasEnVentanas, proyectoDePestana, sesionesConPestana, agentesEnUso, pedidas, esperandoFila, cambiarEscritorio,
-    carpetaDelEscritorio, asentarEscritorio, reloadSpaces, aviso, setAviso, deletingSpace, setDeletingSpace,
-    createSpace, renameSpace, removeFromActiveSpace, moveToSpace, spaceDeleted, senalDe, claveDelHilo,
-    claveAbierta, drafts, borrador, input, setInput, navigateMentionHistory, sourceIds, excludedSourceIds,
-    archivos, setArchivos, agregarArchivos, adjuntas, materialPendiente, contexto, composer, agents,
-    agent, superficies, superficie, catalogos, models, modelosParaAgentes, model, effort, modo, modos,
-    skills, cliCommands, sideCommand, threads, hilos, hiloAbierto, msgs, cargandoHilo, origenes, apagadas,
-    machineWaits, traspasos, conAntiguos, conRecientes, estadoAntiguos, colaSuelta, leerTarea, cargarAntiguos,
-    soltarHilo, avisar, loadResult,
-  } = createDeskStrip({
-    abrirSesion: (proyecto, id, activar, propagateError) => abrirSesion(proyecto, id, activar, propagateError),
-    activarPestana: (p) => activarPestana(p),
-    activeSpace,
-    adjuntosEn,
-    attention,
-    composerMachine: () => composerMachine(),
-    connected,
-    createComposerStore,
-    createDraftsStore,
-    createThreadsStore,
-    deLaTarea: (id) => deLaTarea(id),
-    escritorio,
-    filaDe: (id) => filaDe(id),
-    grupos,
-    hablandoCon,
-    irAlBlanco: (enProyecto) => irAlBlanco(enProyecto),
-    get liveThreads() { return liveThreads; },
-    loadWindowThreads: (skip) => loadWindowThreads(skip),
-    machineOf: (id) => machineOf(id),
-    machines,
-    modoInicial,
-    modoRecordado,
-    recordarModo,
-    naciendo,
-    olvidarPestana: (session) => olvidarPestana(session),
-    paneles,
-    pegadasEn,
-    pestanaActiva,
-    pestanas,
-    project,
-    projectList,
-    refreshSessions: (proyectos) => refreshSessions(proyectos),
-    get serviceStream() { return serviceStream; },
-    sesiones,
-    sessionId,
-    setBuscando,
-    setError,
-    setEscritorio,
-    setProyectoAbierto,
-    setSpaces,
-    spaces,
-    taskSources,
-    topState,
-    vivas: () => vivas(),
-    withLastAnswer,
-    workspaceActivo,
-    workspaceContext,
-    workspaceMode,
-  });
+  const { tareasEnVentanas, proyectoDePestana, sesionesConPestana, agentesEnUso, pedidas, esperandoFila, cambiarEscritorio, carpetaDelEscritorio, asentarEscritorio, reloadSpaces, aviso, setAviso, deletingSpace, setDeletingSpace, createSpace, renameSpace, removeFromActiveSpace, moveToSpace, spaceDeleted, senalDe, claveDelHilo, claveAbierta, drafts, borrador, input, setInput, navigateMentionHistory, sourceIds, excludedSourceIds, archivos, setArchivos, agregarArchivos, adjuntas, materialPendiente, contexto, composer, agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes, model, effort, modo, modos, skills, cliCommands, sideCommand, threads, hilos, hiloAbierto, msgs, cargandoHilo, origenes, apagadas, machineWaits, traspasos, conAntiguos, conRecientes, estadoAntiguos, colaSuelta, leerTarea, cargarAntiguos, soltarHilo, avisar, loadResult, } = createDeskStrip({ abrirSesion: (proyecto, id, activar, propagateError) => abrirSesion(proyecto, id, activar, propagateError), activarPestana: (p) => activarPestana(p), activeSpace, adjuntosEn, attention, composerMachine: () => composerMachine(), connected, createComposerStore, createDraftsStore, createThreadsStore, deLaTarea: (id) => deLaTarea(id), escritorio, filaDe: (id) => filaDe(id), grupos, hablandoCon, irAlBlanco: (enProyecto) => irAlBlanco(enProyecto), get liveThreads() { return liveThreads; }, loadWindowThreads: (skip) => loadWindowThreads(skip), machineOf: (id) => machineOf(id), machines, modoInicial, modoRecordado, recordarModo, naciendo, olvidarPestana: (session) => olvidarPestana(session), paneles, pegadasEn, pestanaActiva, pestanas, project, projectList, refreshSessions: (proyectos) => refreshSessions(proyectos), get serviceStream() { return serviceStream; }, sesiones, sessionId, setBuscando, setError, setEscritorio, setProyectoAbierto, setSpaces, spaces, taskSources, topState, vivas: () => vivas(), withLastAnswer, workspaceActivo, workspaceContext, workspaceMode, });
+
   /**
    * El destino que demora el envío. Si la tarea aún no tiene id,
    * la espera se muestra en su pestaña provisional o en el borrador.
@@ -1076,41 +999,8 @@ export default function App() {
 
   const [anadiendoCarpeta, setAnadiendoCarpeta] = createSignal(false);
   const [inicioDeCarpeta, setInicioDeCarpeta] = createSignal<InicioDeCarpeta | null>(null);
-  const {
-    clonEnCurso, setClonEnCurso, cuentasTocadas, setCuentasTocadas, firmas, modelosEnVivo,
-    esperando, preguntadas, sesionesConEstado, sessionLists, refreshSessions, carpetasDeTarea,
-    refreshSessionsOnEvent, releerTrasHueco, previewDeAdjunto, miniaturaDeAdjunto,
-    documentosEn, opcionesDeAdjunto,
-  } = createCloneFolder({
-    attention,
-    avisarDeLosArboles,
-    claveDelHilo,
-    colaSuelta,
-    deLaTarea: (id) => deLaTarea(id),
-    draftOptions,
-    esperandoFila,
-    grupos,
-    hiloAbierto,
-    hilos,
-    leerTarea,
-    loadResult,
-    machines,
-    msgs,
-    naciendo,
-    pedidas,
-    pestanas,
-    project,
-    remoteChildScope,
-    retoques,
-    sesiones,
-    sesionesConPestana,
-    sessionId,
-    setSesiones,
-    unconfirmedOpen,
-    vivas: () => vivas(),
-    workspaceActivo,
-    workspaceContext,
-  });
+  const { clonEnCurso, setClonEnCurso, cuentasTocadas, setCuentasTocadas, firmas, modelosEnVivo, esperando, preguntadas, sesionesConEstado, sessionLists, refreshSessions, carpetasDeTarea, refreshSessionsOnEvent, releerTrasHueco, previewDeAdjunto, miniaturaDeAdjunto, documentosEn, opcionesDeAdjunto, } = createCloneFolder({ attention, avisarDeLosArboles, claveDelHilo, colaSuelta, deLaTarea: (id) => deLaTarea(id), draftOptions, esperandoFila, grupos, hiloAbierto, hilos, leerTarea, loadResult, machines, msgs, naciendo, pedidas, pestanas, project, remoteChildScope, retoques, sesiones, sesionesConPestana, sessionId, setSesiones, unconfirmedOpen, vivas: () => vivas(), workspaceActivo, workspaceContext, });
+
 
   /**
    * Los adjuntos con las rutas de la máquina donde corre el turno. Un archivo
@@ -2655,53 +2545,8 @@ export default function App() {
     onCleanup(() => window.removeEventListener(DEFAULT_PERMISSION_MODE_EVENT, onDefaultMode));
   });
 
-  const {
-    abrirBorradorDeAgente, requestedProfile, setRequestedProfile, proyectosEnAjustes,
-    cerrarAjustes, openAgentProfile, enLaMaquinaDelGrupo, nuevaSesion, irAlBlanco,
-    closeActiveTab, cerrarPestana, cerrarPestanas, cierreSinGuardar, setCierreSinGuardar,
-  } = createNewTask({
-    abrirProyecto: (id) => abrirProyecto(id),
-    alta,
-    arrancando,
-    borrarProyecto: (id) => borrarProyecto(id),
-    carpetaDelEscritorio,
-    cerrarBorrador,
-    cerrarPestanasYa,
-    composer,
-    drafts,
-    enBorrador,
-    hablandoCon,
-    hablarConEncargado: (enProyecto, name) => hablarConEncargado(enProyecto, name),
-    multipleSpaces,
-    ocultarDelSelector,
-    ocultosAqui,
-    paneles,
-    pedirElCampo,
-    pestanaActiva,
-    pestanas,
-    project,
-    proyectosDelRiel: () => proyectosDelRiel(),
-    proyectoDeNuevaTarea,
-    removeFromActiveSpace: (folder) => removeFromActiveSpace(folder),
-    renombrarProyecto: (id, name) => renombrarProyecto(id, name),
-    restoreDraftConfiguration,
-    setAnadiendoCarpeta,
-    setAntesDelBorrador,
-    setCuentasTocadas,
-    setFolder,
-    setHablandoCon,
-    setMaterialPedido,
-    setProject,
-    setProyectoAbierto,
-    setRunOn,
-    setSessionId,
-    setSettings,
-    settings,
-    soltarCola: () => soltarCola(),
-    soltarHilo,
-    tareasActivas,
-    workspaceActivo,
-  });
+  const { abrirBorradorDeAgente, requestedProfile, setRequestedProfile, proyectosEnAjustes, cerrarAjustes, openAgentProfile, enLaMaquinaDelGrupo, nuevaSesion, irAlBlanco, closeActiveTab, cerrarPestana, cerrarPestanas, cierreSinGuardar, setCierreSinGuardar, } = createNewTask({ abrirProyecto: (id) => abrirProyecto(id), alta, arrancando, borrarProyecto: (id) => borrarProyecto(id), carpetaDelEscritorio, cerrarBorrador, cerrarPestanasYa, composer, drafts, enBorrador, hablandoCon, hablarConEncargado: (enProyecto, name) => hablarConEncargado(enProyecto, name), multipleSpaces, ocultarDelSelector, ocultosAqui, paneles, pedirElCampo, pestanaActiva, pestanas, project, proyectosDelRiel: () => proyectosDelRiel(), proyectoDeNuevaTarea, removeFromActiveSpace: (folder) => removeFromActiveSpace(folder), renombrarProyecto: (id, name) => renombrarProyecto(id, name), restoreDraftConfiguration, setAnadiendoCarpeta, setAntesDelBorrador, setCuentasTocadas, setFolder, setHablandoCon, setMaterialPedido, setProject, setProyectoAbierto, setRunOn, setSessionId, setSettings, settings, soltarCola: () => soltarCola(), soltarHilo, tareasActivas, workspaceActivo, });
+
 
   const { elegirCarpetaDelWorkspace, releerProyectos, renombrarProyecto, abrirProyecto, adjuntarAlProyecto, quitarDelProyecto, carpetaEditable, borrarProyecto, elegirProyecto, soltarCola, abrirSesion, loadThread, loadWindowThreads, hablarConEncargado } = createContextSource({ abrirBorradorDeAgente, adjuntas, aplicar, cambiarEscritorio, cola, composer, deLaTarea, drafts, engineCanDispatch, escritorio, excludedSourceIds, filaDe, hilos, leerTarea, loadResult, nuevaSesion, open, paneles, pestanas, project, projectCatalog, proyectoAbierto, refreshFolder, refreshSessions, releerCola, reloadSpaces, restoreDraftConfiguration, restoreSessionConfiguration, sessionId, setError, setFolder, setHablandoCon, setMentionSources, setProject, setProjectReadError, setProyectoAbierto, setSessionId, setVentana, sourceIds, spaces, taskQueues, threads, workspaceActivo, workspaceContext });
 
@@ -3077,65 +2922,8 @@ export default function App() {
     if (p) void activarPestana(p);
   }
 
-  const {
-    deleteTarget, setDeleteTarget, setDeletingEditors, editorDeletionLocked, deleteTask,
-    deletedTaskMembers, dirtyTaskFiles, moverSesion, etaparSesion, fijarSesion,
-    renombrarSesion, adjuntarFuente, quitarFuente, taskMaterialOptions, materialTarget,
-    cambiarRama, abrirRuta, archivoMovido, archivoBorrado, reatarVistaPrevia,
-    abrirEnlace, abrirNavegador, carpetasDelMas, abrirSitio, abrirPorRel,
-    exportarChat, forkDesde,
-  } = createSessionMutations({
-    abrirBorradorDeAgente,
-    abrirSesion,
-    activarPestana,
-    activeSpace,
-    arbolesDe,
-    archivosDeTarea,
-    capabilities,
-    cerrarPestana,
-    claveAbierta,
-    contiene,
-    contextConfirmed,
-    deLaTarea,
-    draftBases,
-    draftOptions,
-    drafts,
-    esDeCodigo,
-    filaDe,
-    folder,
-    irAlBlanco,
-    machineName,
-    machineOf,
-    machines,
-    get maquinaDeLaVentana() { return maquinaDeLaVentana; },
-    nuevaSesion,
-    olvidarPestana,
-    opcionesDeLaTarea,
-    paneles,
-    pestanas,
-    project,
-    projectCatalog,
-    projectList,
-    proyectoAbierto,
-    readRevision,
-    refreshSessions,
-    senderTaskId,
-    sesiones,
-    sessionId,
-    setError,
-    setProject,
-    setProyectoAbierto,
-    setRetoques,
-    setRunOn,
-    setTaskSources,
-    setTaskSourcesError,
-    soltarHilo,
-    sources,
-    threads,
-    ubicar,
-    workspaceActivo,
-    workspaceContext,
-  });
+  const { deleteTarget, setDeleteTarget, setDeletingEditors, editorDeletionLocked, deleteTask, deletedTaskMembers, dirtyTaskFiles, moverSesion, etaparSesion, fijarSesion, renombrarSesion, adjuntarFuente, quitarFuente, taskMaterialOptions, materialTarget, cambiarRama, abrirRuta, archivoMovido, archivoBorrado, reatarVistaPrevia, abrirEnlace, abrirNavegador, carpetasDelMas, abrirSitio, abrirPorRel, exportarChat, forkDesde, } = createSessionMutations({ abrirBorradorDeAgente, abrirSesion, activarPestana, activeSpace, arbolesDe, archivosDeTarea, capabilities, cerrarPestana, claveAbierta, contiene, contextConfirmed, deLaTarea, draftBases, draftOptions, drafts, esDeCodigo, filaDe, folder, irAlBlanco, machineName, machineOf, machines, get maquinaDeLaVentana() { return maquinaDeLaVentana; }, nuevaSesion, olvidarPestana, opcionesDeLaTarea, paneles, pestanas, project, projectCatalog, projectList, proyectoAbierto, readRevision, refreshSessions, senderTaskId, sesiones, sessionId, setError, setProject, setProyectoAbierto, setRetoques, setRunOn, setTaskSources, setTaskSourcesError, soltarHilo, sources, threads, ubicar, workspaceActivo, workspaceContext, });
+
 
   const botonDeNuevaPestana = () => (
     <NewTabButton
@@ -5869,18 +5657,8 @@ export default function App() {
     </section>
   );
 
-  const { proyectosDelRiel, sesionesDelRiel, opcionesDeMover } = createRailSessions({
-    activeSpace,
-    escritorio,
-    multipleSpaces,
-    permissions,
-    projectList,
-    remoteChildScope,
-    sesiones,
-    sesionesConEstado,
-    spaces,
-    vivas,
-  });
+  const { proyectosDelRiel, sesionesDelRiel, opcionesDeMover } = createRailSessions({ activeSpace, escritorio, multipleSpaces, permissions, projectList, remoteChildScope, sesiones, sesionesConEstado, spaces, vivas, });
+
 
   const Principal = () => (
     // UNA superficie continua, no tres tarjetas flotando: las columnas
