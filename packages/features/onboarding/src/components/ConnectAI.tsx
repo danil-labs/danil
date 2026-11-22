@@ -5,8 +5,7 @@ import { For, Match, Show, Switch } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Spinner } from "../../../../ui/src/Spinner";
-import { Consentir } from "../../../settings/src/components/FreeRouterConsentDialog";
-import { DialogoDeConexion } from "../../../settings/src/components/LoginDialog";
+import { Consentir, DialogoDeConexion } from "../model/ports";
 import { FilaDeIA } from "./ConnectAICards";
 import { AL_FINAL, type Conexiones, type Fila, nombreDeFila } from "../queries/connect-store";
 

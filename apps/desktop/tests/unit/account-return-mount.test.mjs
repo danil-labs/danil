@@ -24,9 +24,12 @@ test("account return opens first, announces counts, retries errors and keeps can
   const { mountReturn } = await import(pathToFileURL(join(dir, "fixture.mjs")).href);
   const mounted = mountReturn(root); t.after(mounted.dispose);
   const doc = app.w.document;
-  const add = () => [...root.querySelectorAll("button")].find((b) => b.textContent === "Agregar cuenta u organización").click();
+  const add = () => {
+    root.querySelector("[data-add-workspace]").click();
+    doc.querySelector("[data-add-danil-step]").click();
+  };
   for (const detail of ["access_denied", "cancelled", "timeout"]) {
-    add(); assert.equal(mounted.closes(), mounted.starts());
+    add(); assert.equal(mounted.closes(), 1);
     mounted.fail(detail); await sleep(50);
     assert.ok(!doc.body.textContent.includes("No se pudo agregar la cuenta"));
     assert.ok(!doc.body.textContent.includes("Agregaste"));
@@ -67,7 +70,7 @@ test("account return opens first, announces counts, retries errors and keeps can
     ["en", ["IYEM", "Danil", "Acme"], "You added IYEM, Danil, and Acme"],
   ]) {
     const flow = mountReturn(root, locale);
-    [...root.querySelectorAll("button")].find((b) => b.textContent === (locale === "es" ? "Agregar cuenta u organización" : "Add account or organization")).click();
+    add();
     flow.success(names);
     assert.ok(await until(() => doc.body.textContent.includes(expected)), expected);
     flow.dispose(); root.replaceChildren();

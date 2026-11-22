@@ -1,38 +1,56 @@
-import { createSignal, type JSX, Show } from "solid-js";
+import { Show } from "solid-js";
 import { type GroupAccount, type GroupSend, redeemGroupCode } from "../../../../apps/desktop/src/lib/group-account";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { canRedeemPromo } from "../../../../apps/desktop/src/lib/promo-role";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
-import { SEPARADOR_DE_MENU, TITULO_DE_GRUPO } from "../../../ui/src/ContextMenu";
-import { ITEM_DE_MENU } from "../../../ui/src/Popover";
-import { OrganizationPositionMenu } from "./OrganizationPositionMenu";
+import { SEPARADOR_DE_MENU } from "../../../ui/src/ContextMenu";
+import { openHarnessWorkspaces, RAIL_MENU_ITEM } from "./rail-menu";
 import PromoRedeem from "./PromoRedeem";
 import { Pressable } from "../../../ui/src/Pressable";
 
-export function OrganizationAccountMenu(props: { group: GroupAccount; email: string | null; workspace: string; stack?: boolean; organizationControls?: boolean; onOpen?: () => void; notice?: JSX.Element; web?: boolean; canHide?: boolean; pinned: boolean; index: number; count: number; promo: boolean; send: GroupSend; onPromo: () => void; onManage: () => void; onHide: () => void; onPin: () => void; onMove: (step: -1 | 1) => void; onCloseOrg: (context: string) => Promise<void>; onCloseEmail: (email: string | null, context: string) => Promise<void>; onDismiss: () => void }) {
-  const [busy, setBusy] = createSignal(false);
-  const [failed, setFailed] = createSignal(false);
-  const close = async (action: () => Promise<void>) => {
-    if (busy()) return;
-    setBusy(true); setFailed(false);
-    try { await action(); props.onDismiss(); } catch { setFailed(true); } finally { setBusy(false); }
+export function OrganizationAccountMenu(props: {
+  group?: GroupAccount;
+  email?: string | null;
+  workspace: string;
+  promo: boolean;
+  send: GroupSend;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onPromo: () => void;
+  onOpen: () => void;
+  onHide: () => void;
+  onRemove: () => void;
+  onMove: (step: -1 | 1) => void;
+  onDismiss: () => void;
+}) {
+  const moveKey = (event: KeyboardEvent) => {
+    if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    props.onMove(event.key === "ArrowUp" ? -1 : 1);
   };
-  return <Show when={props.web || !props.promo || !canRedeemPromo(props.group.role)} fallback={<PromoRedeem redeem={(code, key) => redeemGroupCode(props.send, props.group, code, key)} />}>
-    <div class="contents" data-account-menu-context={props.group.context} onKeyDown={(event) => { if (event.altKey && ["ArrowUp", "ArrowDown"].includes(event.key)) { event.preventDefault(); event.stopPropagation(); props.onMove(event.key === "ArrowUp" ? -1 : 1); } }}>
-      <Show when={!props.stack}>
-        <p class={cn("m-0", TITULO_DE_GRUPO)}>{props.workspace}</p>
-        <Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => props.onOpen?.()}>{t("shell.rail.open")}</Pressable>
-        <Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => props.onManage()}>{t("settings.workspaces.manage")}</Pressable>
-        <Show when={props.canHide !== false}><Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => props.onHide()}>{t("shell.workspaces.hide")}</Pressable></Show>
-        <span aria-hidden="true" class={cn(SEPARADOR_DE_MENU, "block")} />
-      </Show>
-      <p class={cn("m-0", TITULO_DE_GRUPO)}>{t("shell.rail.tip_account", { org: props.group.name, email: props.email ?? "" })}</p>
-      {props.notice}
-      <Show when={!props.web && canRedeemPromo(props.group.role)}><Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => props.onPromo()}>{t("web.promo.redeem")}</Pressable></Show>
-      <Show when={props.organizationControls !== false}><OrganizationPositionMenu pinned={props.pinned} index={props.index} count={props.count} onPin={() => props.onPin()} onMove={(step) => props.onMove(step)} /></Show>
-      <Show when={!props.web}><Pressable role="menuitem" class={ITEM_DE_MENU} disabled={busy()} onClick={() => void close(() => props.onCloseOrg(props.group.context))}>{t("shell.workspaces.close_org", { name: props.group.name })}</Pressable></Show>
-      <Pressable role="menuitem" class={ITEM_DE_MENU} disabled={busy()} onClick={() => void close(() => props.onCloseEmail(props.email, props.group.context))}>{t("shell.workspaces.close_email", { email: props.email ?? "" })}</Pressable>
-      <Show when={failed()}><p role="alert" class="m-0 px-2 py-1 text-caption text-error-strong">{t("shell.workspaces.sessions_failed")}</p></Show>
+  const separator = () => <span aria-hidden="true" class={cn(SEPARADOR_DE_MENU, "block")} />;
+  return <Show when={props.promo && props.group} fallback={
+    <div class="contents" data-account-menu-context={props.group?.context} onKeyDown={moveKey}>
+      <header class="px-2 py-1.5">
+        <div class="truncate text-ui font-semibold">{props.workspace}</div>
+        <Show when={props.group}>{(group) => <div class="truncate text-caption text-neutral-500">{[group().name, props.email].filter(Boolean).join(" · ")}</div>}</Show>
+      </header>
+      <Pressable role="menuitem" class={RAIL_MENU_ITEM} onClick={props.onOpen}>{t("shell.rail.open")}</Pressable>
+      <Show when={props.group?.plan !== "free" && props.group?.org}>{(org) =>
+        <Pressable role="menuitem" class={RAIL_MENU_ITEM} onClick={() => { const id = org(); props.onDismiss(); void openHarnessWorkspaces(id); }}>{t("shell.workspaces.manage_in_harness")}</Pressable>
+      }</Show>
+      <Show when={canRedeemPromo(props.group?.role)}><Pressable role="menuitem" class={RAIL_MENU_ITEM} onClick={props.onPromo}>{t("web.promo.redeem")}</Pressable></Show>
+      {separator()}
+      <Pressable role="menuitem" class={cn(RAIL_MENU_ITEM, "flex items-center justify-between gap-2")} disabled={!props.canMoveUp} onClick={() => props.onMove(-1)}>
+        <span>{t("shell.rail.move_up")}</span><span class="text-caption text-neutral-500">⌥↑</span>
+      </Pressable>
+      <Pressable role="menuitem" class={cn(RAIL_MENU_ITEM, "flex items-center justify-between gap-2")} disabled={!props.canMoveDown} onClick={() => props.onMove(1)}>
+        <span>{t("shell.rail.move_down")}</span><span class="text-caption text-neutral-500">⌥↓</span>
+      </Pressable>
+      <Pressable role="menuitem" class={RAIL_MENU_ITEM} onClick={props.onHide}>{t("shell.workspaces.hide")}</Pressable>
+      {separator()}
+      <Pressable role="menuitem" class={cn(RAIL_MENU_ITEM, "text-error-strong")} onClick={props.onRemove}>{t("shell.workspaces.remove_workspace_menu")}</Pressable>
     </div>
-  </Show>;
+  }>{(group) => <PromoRedeem redeem={(code, key) => redeemGroupCode(props.send, group(), code, key)} />}</Show>;
 }
