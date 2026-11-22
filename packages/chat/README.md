@@ -1,25 +1,15 @@
-# @terminus/chat
+# @terminus/chat (solo reexporta)
 
-## Qué hace
-Paquete legado de renderizado y lectura de mensajes de agentes en los clientes.
-Maneja la directiva visual `::terminus-visual`, el sandbox HTML para artefactos, enlaces clicables y pasos de herramientas.
+Los lectores de mensajes se fundieron en otros paquetes (tarea 3.6d del plan front-move):
 
-## Qué expone
-Exporta desde `src/index.ts`:
-- Historia y detalle de mensajes: reexporta `history.ts` y `historyDetail.ts`.
-- Enlaces y parseo de texto: reexporta `links.ts` (`linkify`, `parseLinks`).
-- Pasos de herramientas: reexporta `steps.ts` y `tools.ts` (`formatToolCall`, etc.).
-- Módulos adicionales por ruta profunda: `inlineVisual.ts`, `sandbox.ts`, `table.ts`, `visual.ts`.
+- `packages/ui/src/lib/chat/`: `command`, `inlineVisual`, `links`, `nextSteps`, `sandbox`,
+  `slash`, `steps`, `table`, `tools` y `visual`. Sus pruebas están en `packages/ui/test/`.
+- `packages/engine-client/src/`: `history` e `historyDetail` (dependen de los tipos de
+  `@terminus/protocol`). Su prueba está en `packages/engine-client/test/`.
 
-## Qué consume
-- No consume clientes de red directamente; consumido por `apps/desktop`, `apps/mobile` y `packages/features/chat`.
+Lo que queda aquí existe solo porque `apps/mobile` está fuera del pnpm workspace y enlaza
+`@terminus/chat` con `file:../../packages/chat`: `src/index.ts` reexporta esos archivos.
 
-## Qué contratos toca
-- Rutas `/v1` del borde: ninguna directa.
-- Comandos RPC1 del motor: ninguno directo; formatea y procesa datos de respuestas y eventos push del motor.
-
-## Qué falta según la fase 2 del plan
-- Fase 2.1: componentes visuales de herramientas y pasos suben a `packages/ui`.
-- Fase 2.2: utilidades de comandos y texto pasan a `packages/ui/lib/chat`, y modelos de historia a `packages/engine-client/src/history.ts`.
-- Fase 3: borrado del paquete una vez que `packages/features/chat` y `packages/ui` asuman sus responsabilidades.
-- Fuente y detalle: [INVENTORY.md](./INVENTORY.md).
+El paquete no es miembro del pnpm workspace (`!packages/chat` en `pnpm-workspace.yaml`).
+Se borra cuando el teléfono importe esos archivos directamente.
+Inventario original: [INVENTORY.md](./INVENTORY.md).

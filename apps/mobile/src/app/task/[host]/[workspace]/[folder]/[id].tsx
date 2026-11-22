@@ -4,7 +4,7 @@ import { SendButton } from "../../../../../ui/SendButton";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AppState, FlatList, Image, type NativeScrollEvent, type NativeSyntheticEvent, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { type HistoryRead, HistoryPager, type LoadedHistory, type OlderState, hasOlder, hasRecentGap } from "@terminus/chat/history";
+import { type HistoryRead, HistoryPager, type LoadedHistory, type OlderState, hasOlder, hasRecentGap } from "@terminus/chat";
 import { type ChatEvent, DEFAULT_CHAT_VEIL, PROVIDER_HANDOFF_FEATURE, type Question, type Turn, savesSessionModel } from "@terminus/protocol";
 import { delegatedOf, taskTitle } from "@terminus/tasks";
 import {

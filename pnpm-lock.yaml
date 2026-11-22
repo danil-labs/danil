@@ -82,9 +82,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../packages/carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../packages/chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../packages/computers
@@ -214,8 +211,6 @@ importers:
 
   packages/carry: {}
 
-  packages/chat: {}
-
   packages/computers: {}
 
   packages/engine-client:
@@ -299,9 +294,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -492,9 +484,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -685,9 +674,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -878,9 +864,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1071,9 +1054,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1264,9 +1244,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1457,9 +1434,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1650,9 +1624,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1843,9 +1814,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -2036,9 +2004,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -2229,9 +2194,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -2422,9 +2384,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -2615,9 +2574,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -2808,9 +2764,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -3001,9 +2954,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -3194,9 +3144,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -3387,9 +3334,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -3580,9 +3524,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -3773,9 +3714,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -4039,9 +3977,6 @@ importers:
       '@terminus/carry':
         specifier: workspace:*
         version: link:../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../computers
@@ -4177,9 +4112,6 @@ importers:
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../computers

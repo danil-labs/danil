@@ -48,7 +48,6 @@
     "@tauri-apps/plugin-process": "^2.4.0",
     "@tauri-apps/plugin-updater": "^2.14.1",
     "@terminus/carry": "workspace:*",
-    "@terminus/chat": "workspace:*",
     "@terminus/computers": "workspace:*",
     "@terminus/fleet": "workspace:*",
     "@terminus/protocol": "workspace:*",

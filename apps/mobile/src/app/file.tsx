@@ -1,5 +1,4 @@
-import { envolver } from "@terminus/chat/sandbox";
-import { parseTable, delimiterFor } from "@terminus/chat/table";
+import { envolver, parseTable, delimiterFor } from "@terminus/chat";
 import { TEXT } from "@terminus/design";
 import type { FilePreview, TreeContent } from "@terminus/protocol";
 import { useLocalSearchParams } from "expo-router";

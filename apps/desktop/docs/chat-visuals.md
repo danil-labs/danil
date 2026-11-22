@@ -51,7 +51,7 @@ t3code. Fuera de esa carpeta, ocultos, enlaces y remotos quedan como están. Los
 topes son los de t3code: 10 MiB por imagen y 25 MiB la página armada. Las
 partes siguientes mandan la `revision` de la primera y salen de la misma página
 armada; si ya no está, el motor contesta `visual_changed` y el lector
-(`readVisualHtml` de `@terminus/chat/visual`, el mismo en la ventana y el
+(`readVisualHtml` de `packages/ui/src/lib/chat/visual.ts`, el mismo en la ventana y el
 teléfono) empieza otra vez una sola vez.
 
 Con un motor sin `chat_visual_part` —el proxy de la ventana lo niega mientras

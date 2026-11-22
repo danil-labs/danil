@@ -1,5 +1,5 @@
 import type { HistoryChunk, HistoryRef } from "@terminus/protocol";
-import { currentRef, readDetailText } from "@terminus/chat/historyDetail";
+import { currentRef, readDetailText } from "../../../../engine-client/src/historyDetail.ts";
 import { createResource, createSignal, For, Show, onCleanup, type JSX } from "solid-js";
 import { retainRowWhile } from "../model/threadRow";
 import { readTurns, readDetailChunk, type MachineOf } from "../queries";
