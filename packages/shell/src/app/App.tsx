@@ -1054,7 +1054,7 @@ export default function App() {
     scope: { workspace: workspaceActivo, machine: () => composerMachine(),
       machineOn: () => machines().find(machine => machine.id === composerMachine())?.on,
       connected, session: () => sessionId() },
-    workspaceMode, draftConfiguration: () => borrador().configuration,
+    workspaceMode, draftConfiguration: () => borrador().configuration, modoInicial, modoRecordado, recordarModo,
   });
   const { agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes,
     model, effort, modo, modos, skills, cliCommands, sideCommand } = composer;

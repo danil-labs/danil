@@ -1,12 +1,21 @@
 import { For, Show, createEffect, createMemo, createSignal, onMount } from "solid-js";
 import { errorCode } from "../../../../../apps/desktop/src/lib/errorCode";
-import { invoke } from "../../../../engine-client/src/client";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { Toast, ToastPortal } from "../../../../ui/src/Toast";
 import DeleteTaskMember from "../components/DeleteTaskMember";
-import { type DeleteMember, type DeletePreview, type DeleteResult, type DeleteTarget, failureText, type Integration, integrationChecks, memberKey as key } from "../queries/deleteTask";
+import {
+  type DeleteMember,
+  type DeletePreview,
+  type DeleteTarget,
+  failureText,
+  type Integration,
+  integrationChecks,
+  memberKey as key,
+  previewTaskLifecycle,
+  applyTaskLifecycle,
+} from "../queries";
 
 export type { DeleteTarget };
 
@@ -55,7 +64,7 @@ export default function DeleteTaskDialog(props: {
     if (!props.target.supported) { setError(t("projects.sessions.delete_unsupported")); setShown(true); return; }
     setBusy(true);
     try {
-      const seen = await invoke<DeletePreview>("task_lifecycle_preview", args(), props.target.options);
+      const seen = await previewTaskLifecycle(args(), props.target.options);
       setIntegration(await integrationChecks(seen.members, props.target.options));
       setPreview(seen);
     } catch (failure) { setError([message, failureText(failure)].filter(Boolean).join("\n")); setShown(true); }
@@ -76,7 +85,7 @@ export default function DeleteTaskDialog(props: {
         return;
       }
       const discard = seen.members.some(member => member.files.length > 0);
-      const result = await invoke<DeleteResult>("task_lifecycle_apply", { ...args(), consent: seen.consent, discard }, props.target.options);
+      const result = await applyTaskLifecycle({ ...args(), consent: seen.consent, discard }, props.target.options);
       props.onDeleted(result.applied.map(member => ({ ...member, id: props.target.panelId(member.id) })));
       if (result.status === "complete" && result.failures.length === 0) props.onClose();
       else { setInvalid(true); setShown(true); setError([t("projects.sessions.delete_partial"), ...result.failures.map(failure => `${props.target.folderName(failure.project)} / ${members().find(member => member.id === failure.id && member.project === failure.project)?.title || failure.id}: ${failureText(failure.error)}`)].join("\n")); }

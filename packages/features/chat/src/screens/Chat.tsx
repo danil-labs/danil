@@ -142,7 +142,7 @@ import SelectorDeModo from "../components/ModePicker";
 import { AltoMonotono } from "../components/MonotonicHeight";
 import { MARCA_SIN_ELEGIR } from "../model/marks";
 import { siguienteModo } from "../model/modes";
-import { interrumpible, seMandaSinSuperficie } from "../model/queue";
+import { interrumpible, seMandaSinSuperficie } from "../../../../ui/src/lib/queue.ts";
 import TarjetaDeTerminal, { type ComandoEnVivo } from "../components/ShellCard";
 import { HOLGURA, seguirElFondo } from "../model/paste";
 import YourMessages, { type InputMessage } from "../components/YourMessages";

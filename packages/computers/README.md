@@ -16,7 +16,9 @@ Exporta desde `src/index.ts`:
 - Conexiones WebSocket al servicio relay.
 
 ## Qué contratos toca
-- Rutas `/v1` del borde: referencias legadas a `/v1/computers`, `/v1/connections`, `/v1/connections/capabilities`.
+- Rutas `/v1` del borde: referencias legadas a:
+  - `/v1/computers`
+  - `/v1/connections`
 - Comandos RPC1 del motor: ninguno directo.
 
 ## Qué falta según la fase 2 del plan

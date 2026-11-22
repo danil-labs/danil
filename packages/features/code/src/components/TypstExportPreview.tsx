@@ -5,12 +5,12 @@ import CircleAlert from "lucide-solid/icons/circle-alert";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { treeTypstExport, treeShow } from "../queries";
 import { machineOf } from "../../../machines/src/queries/store";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { Spinner } from "../../../../ui/src/Spinner";
-import { type DiagnosticoTypst, type ExportacionTypst, lugarDe, pedirArreglo, principalElegido } from "../queries/typst";
+import { type DiagnosticoTypst, lugarDe, pedirArreglo, principalElegido } from "../queries/typst";
 
 const PdfDocument = lazy(() => import("../../../viewers/src/screens/Pdf"));
 
@@ -49,7 +49,7 @@ export default function VistaTypstExportada(props: {
     setCompilando(true);
     setFallo(null);
     try {
-      const x = await invoke<ExportacionTypst>("tree_typst_export", {
+      const x = await treeTypstExport({
         project: props.project,
         session: props.session,
         tree: props.arbol,
@@ -61,7 +61,7 @@ export default function VistaTypstExportada(props: {
       setSinPlugin(false);
       // Con errores no hay PDF nuevo: se queda el último que sí compiló.
       if (!x.pdf) return;
-      const c = await invoke<{ kind: string; pdf: string | null; truncated: boolean }>("tree_show", {
+      const c = await treeShow<{ kind: string; pdf: string | null; truncated: boolean }>({
         project: props.project,
         session: props.session,
         tree: props.arbol,

@@ -1,6 +1,6 @@
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client";
+import { callMcpAppTool, closeMcpApp } from "../queries";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
 import type { McpAppCall } from "../model/transcript";
@@ -67,11 +67,11 @@ export default function ExcalidrawMcpCanvas(props: { call: McpAppCall; connectio
     pending = undefined;
     if (!closed) setSaveState("saving");
     saving = saving.then(async () => {
-      const result = await invoke<ToolResult>("call_mcp_app_tool", {
-        connectionId: props.connectionId,
-        name: "save_checkpoint",
-        arguments: { id, data },
-      });
+      const result = await callMcpAppTool<ToolResult>(
+        props.connectionId,
+        "save_checkpoint",
+        { id, data },
+      );
       if (result.isError) throw new Error(result.content?.[0]?.text ?? "MCP");
       if (!closed && !pending) setSaveState("saved");
     }).catch((error) => {
@@ -87,11 +87,11 @@ export default function ExcalidrawMcpCanvas(props: { call: McpAppCall; connectio
   onMount(() => {
     void (async () => {
       if (!id) throw new Error(t("chat.mcp_app.missing_checkpoint"));
-      const result = await invoke<ToolResult>("call_mcp_app_tool", {
-        connectionId: props.connectionId,
-        name: "read_checkpoint",
-        arguments: { id },
-      });
+      const result = await callMcpAppTool<ToolResult>(
+        props.connectionId,
+        "read_checkpoint",
+        { id },
+      );
       const scene = sceneFrom(result);
       if (closed || !node) return;
       (window as Window & { EXCALIDRAW_ASSET_PATH?: string }).EXCALIDRAW_ASSET_PATH =
@@ -115,7 +115,7 @@ export default function ExcalidrawMcpCanvas(props: { call: McpAppCall; connectio
     closed = true;
     if (timer) clearTimeout(timer);
     dispose?.();
-    void flush().finally(() => invoke("close_mcp_app", { connectionId: props.connectionId }));
+    void flush().finally(() => closeMcpApp(props.connectionId));
   });
 
   return (

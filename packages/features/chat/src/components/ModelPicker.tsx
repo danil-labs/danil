@@ -7,7 +7,7 @@ import Star from "lucide-solid/icons/star";
 import { routerOfferState } from "@terminus/tasks";
 import { createMemo, createSignal, For, Show, lazy } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { listAccounts, getAccountLimits } from "../queries";
 import { left, type Query } from "../../../../../apps/desktop/src/lib/limits";
 import {
   agruparModelos,
@@ -25,7 +25,6 @@ import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
-import type { AccountList } from "../../../settings/src/queries/accounts-store";
 import { createFreeRouterConsent } from "../../../settings/src/components/free-router-consent";
 import { DANIL_CREDITS } from "../model/danil-credits";
 
@@ -162,10 +161,10 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
       const options = props.invokeOptions;
       setCupoGo(null);
       if (props.models.some((m) => m.proveedor.id === "opencode-go")) {
-        void invoke<AccountList>("list_accounts", { provider: OPENCODE }, options)
+        void listAccounts(OPENCODE, options)
           .then((accounts) => {
             if (!accounts.active) return null;
-            return invoke<Query>("account_limits", { provider: OPENCODE, id: accounts.active, force: false }, options);
+            return getAccountLimits(OPENCODE, accounts.active, false, options);
           })
           .then(setCupoGo)
           .catch(() => setCupoGo(null));

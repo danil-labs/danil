@@ -7,7 +7,9 @@ export class ReplyError extends Error {
 }
 
 /** Aceptación en cola; nunca una confirmación de entrega ni un mensaje local. */
-export function createMessaging(session: InboxSession, request: typeof fetch = fetch, prefix = '/terminus/alpha-api') {
+export function createMessaging(
+  session: InboxSession, request: typeof fetch = fetch, prefix = '/terminus/alpha-api'
+) {
   return {
     async reply(conversation: number, text: string, clientMessageId: string, signal?: AbortSignal): Promise<{ requiresTemplate: boolean; duplicate: boolean }> {
       if (!Number.isSafeInteger(conversation) || conversation <= 0 || !text.trim() || text.trim().length > 4096 || !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(clientMessageId)) throw new ReplyError('invalid_body');

@@ -52,7 +52,8 @@ export {
 } from "./machine.ts";
 export { type WorkspaceGroup, type WorkspaceRow, groupWorkspaces, hasAccountWorkspaces, registryProjects, withRegistry } from "./fleet.ts";
 export { callWorkspace, hasLinkedWorkspaces, linkedAttention, linkedEvent, linkedEvents, linkedListing, linkedWorkspaces, onlyLinked, organizationOf, serviceFeatures, unlinkedWorkspaces } from "./links.ts";
-export { type Compatibility, machineCompatibility, machineContracts } from "./compatibility.ts";
+export { type Compatibility, machineCompatibility } from "./compatibility.ts";
+export { machineContracts } from "./compatibility.ts";
 export {
   type ConnectHop,
   type ConnectProgress,

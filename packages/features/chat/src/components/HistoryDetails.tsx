@@ -2,22 +2,18 @@ import type { HistoryChunk, HistoryRef } from "@terminus/protocol";
 import { currentRef, readDetailText } from "@terminus/chat/historyDetail";
 import { createResource, createSignal, For, Show, onCleanup, type JSX } from "solid-js";
 import { retainRowWhile } from "../model/threadRow";
-import { invoke } from "../../../../engine-client/src/client";
+import { readTurns, readDetailChunk } from "../queries";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Markdown } from "../../../../ui/src/Markdown";
-import { machineOf } from "../../../machines/src/queries/store";
 import type { Session } from "../model/transcript";
 
 const REREADS = 5;
 const REREAD_MS = 150;
 
-const readTurns = (ref: HistoryRef) => (before: number) =>
-  invoke<Session>("load_session", { project: ref.project, id: ref.session, history_request: { version: 1, before, revision: null } }, machineOf(ref.session));
-
 /** El texto del mensaje es la respuesta misma: se trae al montar la fila y `render` lo pinta como cualquier otra. */
 function HistoryText(props: { reference: HistoryRef; turnId?: string; onUnavailable: () => void; render?: (text: string) => JSX.Element }) {
   const [text] = createResource(() => props.reference, (ref) => readDetailText<Session["turns"][number]>({
-    part: (current, offset) => invoke<HistoryChunk>("load_session", { project: ref.project, id: ref.session, history_request: { ...current, kind: "detail", offset } }, machineOf(ref.session)),
+    part: (current, offset) => readDetailChunk(ref, { ...current, kind: "detail", offset }),
     turns: readTurns(ref),
   }, ref, props.turnId).then((value) => {
     if (value === null) props.onUnavailable();
@@ -62,10 +58,7 @@ export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; ren
     const current = ++generation;
     setSelected(ref); setChunk(null); setFailed(false); setLoading(true);
     try {
-      const page = await invoke<HistoryChunk>("load_session", {
-        project: ref.project, id: ref.session,
-        history_request: { ...ref, kind: "detail", offset },
-      }, machineOf(ref.session));
+      const page = await readDetailChunk(ref, { ...ref, kind: "detail", offset });
       if (current !== generation) return;
       if (page.version !== 1 || page.offset !== offset || page.revision !== ref.revision || page.text.length > 131072 || (!page.done && page.next <= offset)) throw new Error("invalid history chunk");
       setChunk(page);

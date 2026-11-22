@@ -1,5 +1,5 @@
 import { batch, createEffect, createSignal, on, untrack } from "solid-js";
-import { guardable, type Encolado } from "../../../chat/src/index.ts";
+import { guardable, type Encolado } from "../../../../ui/src/lib/queue.ts";
 import { editMentions, type TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
 export type QueueScope = { workspace: string | null; generation: number; session: string | null; project: string };
 type Saved = { project: string; items: Encolado[] };
