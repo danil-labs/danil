@@ -1,4 +1,4 @@
-import { buildTaskTree, taskDescendants, taskIdentity } from "@terminus/tasks";
+import { buildTaskTree, taskDescendants, taskIdentity } from "../../../../ui/src/lib/tasks/index.ts";
 import type { SessionRow } from "../screens/Sessions";
 
 export type FiltroDeTareas = "all" | "running" | "waiting" | "done";

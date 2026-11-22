@@ -20,7 +20,7 @@ import { type createTaskWork } from "../../../features/projects/src/screens/Task
 import { type HandlerTarget } from "../../../features/projects/src/screens/HandlerPolicy";
 import { type Preview } from "../../../ui/src/lib/preview.ts";
 import { type SessionRow } from "../../../ui/src/lib/session-row.ts";
-import { launcherOf, taskDescendants } from "@terminus/tasks";
+import { launcherOf, taskDescendants } from "../../../ui/src/lib/tasks/index.ts";
 import { createEffect, createMemo, createResource, createSignal, onCleanup, type Accessor, type Setter } from "solid-js";
 
 

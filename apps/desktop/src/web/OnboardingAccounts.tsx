@@ -1,4 +1,4 @@
-import { isFreeRouterAgent, isRetiredAgent } from "../../../../packages/tasks/src/agents.ts";
+import { isFreeRouterAgent, isRetiredAgent } from "../../../../packages/ui/src/lib/tasks/agents.ts";
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { nombreDeAgente } from "../../../../packages/features/onboarding/src/queries/onboarding-store";
 import { Pantalla } from "../../../../packages/features/onboarding/src/components/Screen";
@@ -15,7 +15,7 @@ import { Input } from "../../../../packages/ui/src/Input";
 import { MarcaAgente } from "../../../../packages/ui/src/icons";
 
 /** Free Router rows and providers with an app of their own are never offered on a managed computer. */
-export const offered = (a: AgentOpt) => a.available && !a.sin_cuenta && !a.external_install_url && !isFreeRouterAgent(a.id) && !isRetiredAgent(a.id);
+const offered = (a: AgentOpt) => a.available && !a.sin_cuenta && !a.external_install_url && !isFreeRouterAgent(a.id) && !isRetiredAgent(a.id);
 
 /** One card per cloud provider installed on the computer, each connecting its account in this browser. */
 export function OnboardingAccounts(props: { workspace: string; onDone: () => void }) {

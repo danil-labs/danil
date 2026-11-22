@@ -23,7 +23,7 @@ export type Governed = {
   last_error?: string | null;
 };
 
-export type McpState = {
+type McpState = {
   id: string;
   name: string;
   url: string;
@@ -47,7 +47,7 @@ export type RemoteConnection = {
   status: string;
 };
 
-export type GovernanceSummary = {
+type GovernanceSummary = {
   sources: { id: string; name: string; role: string; files: number }[];
   skills: string[];
   agents: string[];
@@ -69,7 +69,7 @@ const [status, setStatus] = createSignal<GovernanceStatus | null>(null);
 let request = 0;
 let started = false;
 
-export async function reloadGovernance() {
+async function reloadGovernance() {
   const mine = ++request;
   try {
     const next = await invoke<GovernanceStatus>("radiant_governance_status");

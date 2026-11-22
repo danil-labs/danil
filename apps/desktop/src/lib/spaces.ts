@@ -1,4 +1,4 @@
-import { isSubtask, type LauncherRow } from "../../../../packages/tasks/src/flat.ts";
+import { isSubtask, type LauncherRow } from "../../../../packages/ui/src/lib/tasks/flat.ts";
 import { t } from "./i18n.ts";
 
 /**
@@ -21,7 +21,7 @@ export type Space = {
 
 export type SpaceRef = { id: string; name: string | null; deleted?: boolean };
 
-export type FileMark = { path: string; hash: string };
+type FileMark = { path: string; hash: string };
 
 export type TaskSeen = {
   folder: string;

@@ -12,10 +12,6 @@ import type { GroupReply } from "./treasury-config.ts";
  * que cada campo que leen está en el contrato con un tipo compatible. `price_pending` del plan y `edition` de la
  * organización no están en el contrato (hallazgo para danil-contracts): se leen opcionales, como antes.
  */
-export type {
-  Balance, Catalog, CatalogPlan, Checkout, CheckoutStatus, CheckoutUpgradeCreate, CreditPack, DisplayVariant, Money,
-  OrganizationBilling, PortalSession, Purchase, TransactionPage,
-} from "./generated/billing.ts";
 
 /** La ruta del saldo de Treasury en el borde. */
 export const CREDITS_BALANCE_PATH = "/v1/credits/balance";

@@ -10,7 +10,7 @@ import type { MachineState } from "./machine.ts";
 import { relayArgs } from "./mcp-block.ts";
 import { EventRecovery } from "./event-recovery.ts";
 import { SUBPROTOCOL, MACHINE_SESSION_PROTOCOL, OPEN, BACKOFF, PING_EVERY, MISSED_PINGS, CALL_TIMEOUT, REPLACED, REVOKED, ADMISSION_RENEW_BEFORE, ADMISSION_RENEW_WAIT, TICKET_CONTEXT_REVOKED, RENEW_BEFORE, RENEW_RETRY, sessionUrl, tokenExpiry, timeOf, requestId, defaultFactory, type RelayConfig, type Blocked, type EngineInfo, type RelayFailure, type Cached, type CallResult, type DeferredAction, type DeferredFrame, type EventsPage, type SocketLike, type SocketFactory, type Pending } from "./relay-frames.ts";
-export { SUBPROTOCOL, MACHINE_SESSION_PROTOCOL, CALL_TIMEOUT, WAKE_TIMEOUT, ADMISSION_RENEW_BEFORE, ADMISSION_RENEW_WAIT, TOKEN_EXPIRED, sessionUrl, tokenExpiry, requestId, cachedAt } from "./relay-frames.ts";
+export { SUBPROTOCOL, CALL_TIMEOUT, WAKE_TIMEOUT, TOKEN_EXPIRED, sessionUrl, tokenExpiry, requestId, cachedAt } from "./relay-frames.ts";
 export type { RelayConfig, Blocked, EngineInfo, RelayFailure, Cached, CallResult, DeferredAction, DeferredFrame, EventsPage, SocketLike, SocketFactory } from "./relay-frames.ts";
 
 export class RelaySession {

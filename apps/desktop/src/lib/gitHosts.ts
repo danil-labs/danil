@@ -9,7 +9,7 @@ import { t } from "./i18n.ts";
  */
 
 /** Cómo nombra cada servicio lo que propone integrar. Espeja `git_hosts::Vocabulary`. */
-export type GitHostVocabulary = {
+type GitHostVocabulary = {
   change: Frase;
   change_short: Frase;
   change_prefix: string;

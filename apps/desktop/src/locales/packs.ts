@@ -50,7 +50,7 @@ export type Paquete = {
  * ofrecer basta el manifiesto, y el catálogo entero son ~112 kB por lengua
  * cruzando el IPC cada vez que alguien abre el selector. Se leen al instalarla.
  */
-export type Disponible = {
+type Disponible = {
   codigo: string;
   manifiesto: Manifiesto | null;
   rechazo: string | null;
@@ -69,7 +69,7 @@ export type Disponible = {
  * traducido** — el texto del backend es otra fase, y este renglón se comporta
  * como los demás detalles de error de la app.
  */
-export type Rechazo =
+type Rechazo =
   | { por: "backend"; detalle: string }
   | { por: "formato"; formato: string }
   | { por: "empotrada" };
@@ -133,7 +133,7 @@ export async function cargarPaquetes(): Promise<LenguaInstalada[]> {
  * arrancar: dos caminos que decidan si un paquete sirve acabarían decidiendo
  * cosas distintas, y la diferencia se vería como «lo instalé y no aparece».
  */
-export function aplicar(paquete: Paquete): LenguaInstalada {
+function aplicar(paquete: Paquete): LenguaInstalada {
   const { codigo, manifiesto } = paquete;
   if (paquete.rechazo !== null || !manifiesto) {
     const detalle = paquete.rechazo ?? `${codigo}: sin manifiesto`;

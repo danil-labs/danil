@@ -1,6 +1,6 @@
-import { modelPresentation, providerMark } from "../../../../packages/tasks/src/model-presentation.ts";
+import { modelPresentation, providerMark } from "../../../../packages/ui/src/lib/tasks/model-presentation.ts";
 export { modelPresentation, providerMark };
-import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "../../../../packages/tasks/src/agents.ts";
+import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "../../../../packages/ui/src/lib/tasks/agents.ts";
 import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
 import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
@@ -104,7 +104,7 @@ export function opcionesDeModelos(
  * locale es la operación invariante de Unicode, que es exactamente lo que pide
  * comparar identificadores.
  */
-export function normalizarBusqueda(value: string) {
+function normalizarBusqueda(value: string) {
   return value
     .toLowerCase()
     .normalize("NFD")

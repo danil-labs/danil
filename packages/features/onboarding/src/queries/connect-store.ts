@@ -11,7 +11,7 @@ import { crearEntradaDeConexiones } from "./connect-login";
 import { crearEstadoDeConexiones } from "./connect-state";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
 
-export type { Fila, Modo, Paso } from "./connect-rows";
+export type { Fila, Paso } from "./connect-rows";
 export { AL_FINAL, explicar, nombreDeFila, openExternal, ordenDelMapa } from "./connect-rows";
 
 export function crearConexiones() {

@@ -15,7 +15,7 @@ export type AuditEntry = {
   support_grant_id: number | null;
 };
 
-export type AuditPage =
+type AuditPage =
   | { kind: "ok"; entries: AuditEntry[]; more: boolean }
   | { kind: "no_account" }
   | { kind: "forbidden" }

@@ -6,18 +6,16 @@ import {
   type SidebarStatusKey,
   type SidebarView,
   sanitizeSidebarView,
-} from "@terminus/tasks";
+} from "../../../../packages/ui/src/lib/tasks/index.ts";
 import { createRoot, createSignal } from "solid-js";
 import { t } from "./i18n.ts";
 import { escribirPref, leerPref } from "./prefs.ts";
 
-// La vista (filtrar, agrupar) es la misma en el teléfono: vive en `@terminus/tasks`.
+// La vista (filtrar, agrupar) es la misma en el teléfono: vive en `packages/ui/src/lib/tasks/index.ts`.
 export {
   type SidebarGroup,
   type SidebarGrouping,
-  type SidebarSection,
   type SidebarSort,
-  type SidebarStatusKey,
   type SidebarTask,
   type SidebarView,
   DEFAULT_SIDEBAR_VIEW,
@@ -27,7 +25,7 @@ export {
   groupKey,
   nonDefaultCount,
   sameAgent,
-} from "@terminus/tasks";
+} from "../../../../packages/ui/src/lib/tasks/index.ts";
 
 /** La vista se guarda por workspace y espacio, como la tira de pestañas. */
 export function sidebarViewKey(workspace: string | null, space: string | null): string {
@@ -93,11 +91,11 @@ export function scopeLabel(view: SidebarView, folderName: (id: string) => string
   return parts.join(" · ");
 }
 
-export function sectionLabel(_section: SidebarSection): string {
+function sectionLabel(_section: SidebarSection): string {
   return t("shell.sidebar.view.section_active");
 }
 
-export function statusGroupLabel(key: SidebarStatusKey): string {
+function statusGroupLabel(key: SidebarStatusKey): string {
   switch (key) {
     case "draft": return t("shell.sidebar.view.status_draft");
     case "review": return t("shell.sidebar.view.status_review");

@@ -12,7 +12,7 @@ import { t } from "./i18n.ts";
  * entrada total es la suma de los tres. `reasoning` es un **subconjunto de
  * `output`** — no se suma aparte, ya está contado dentro.
  */
-export type TokenBreakdown = {
+type TokenBreakdown = {
   input_uncached: number;
   cache_read: number;
   cache_write: number;
@@ -70,7 +70,7 @@ export type SessionUsage = { records: UsageRecord[] };
  * durante el turno; lo escrito en un archivo al terminar, no. No se pinta: es
  * dato del registro, no glosa de pantalla.
  */
-export type Medida = "stream" | "rollout" | "protocolo";
+type Medida = "stream" | "rollout" | "protocolo";
 
 /**
  * Lo que se sabe de la ventana de contexto de esta conversación. Se llama

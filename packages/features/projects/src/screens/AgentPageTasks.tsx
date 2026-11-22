@@ -1,4 +1,4 @@
-import { withTaskAncestors, taskIdentity } from "@terminus/tasks";
+import { withTaskAncestors, taskIdentity } from "../../../../ui/src/lib/tasks/index.ts";
 import Search from "lucide-solid/icons/search";
 import { type ComponentProps, createEffect, createMemo, createSignal, For, on, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

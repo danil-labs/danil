@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js";
-import { lastActivity } from "@terminus/tasks";
+import { lastActivity } from "../../../../ui/src/lib/tasks/index.ts";
 import { createProjectsStore, invoke } from "../queries/store.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";

@@ -1,4 +1,4 @@
-import { canonicalAgentId, OPENCODE } from "../../../tasks/src/agents.ts";
+import { canonicalAgentId, OPENCODE } from "./tasks/agents.ts";
 import type { AgentOpt } from "./accounts.ts";
 
 /** OpenCode 2 inicia sesión en el navegador; su clave de Go se agrega después. */

@@ -41,7 +41,7 @@ export function desplegable(fila: Fila) {
 export const verboVisible = (fila: Fila) => !esComando(fila);
 
 /** El comando real de una fila de comando de un paso, sin el intérprete que lo envuelve. */
-export function comandoReal(fila: Fila): string | null {
+function comandoReal(fila: Fila): string | null {
   const [uno] = fila.pasos;
   return esComando(fila) && fila.pasos.length === 1 && uno.objetivo ? comando(uno.objetivo) : null;
 }

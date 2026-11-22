@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { taskCard } from "../src/index.ts";
+import { taskCard } from "../../src/lib/tasks/index.ts";
 
 const row = { id: "t1", title: "Tarea", esperando: false, folder: "p1", agent: "Ada", last_message: "¿Borro la rama?" };
 
@@ -53,7 +53,7 @@ test("aprobar gana a todo y una entregada sin estado lleva su marca", () => {
 });
 
 test("group headers hide exactly the metadata they name, including folder loose rows", async () => {
-  const { groupCardOptions } = await import("../src/index.ts");
+  const { groupCardOptions } = await import("../../src/lib/tasks/index.ts");
   const cases = [
     [{ kind: "section", key: "active" }, false, false],
     [{ kind: "agent", key: "Ada" }, false, false],

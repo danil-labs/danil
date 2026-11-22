@@ -15,7 +15,7 @@ import { capabilities } from "../../../../host/src/platform";
 import { activeWorkspaceContext, workspaceContextOptions } from "../../../../../apps/desktop/src/lib/workspace-context.ts";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
 import type { RailWorkspace } from "../../../../ui/src/lib/rail-workspace";
-import type { Workspace, MemoriaProveedor, Run, Startup } from "../../../../ui/src/lib/workspace-startup.ts"; export type { Workspace, MemoriaProveedor, Run, Startup };
+import type { Workspace, MemoriaProveedor, Startup } from "../../../../ui/src/lib/workspace-startup.ts"; export type { Workspace, MemoriaProveedor, Startup };
 
 /**
  * Avisa al resto de la app de que cambió el workspace: lo que hay en pantalla

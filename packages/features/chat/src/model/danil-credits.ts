@@ -1,4 +1,4 @@
-import { DANIL_CREDITS_MODEL } from "../../../../tasks/src/danil-services.ts";
+import { DANIL_CREDITS_MODEL } from "../../../../ui/src/lib/tasks/danil-services.ts";
 
 // El engine anuncia este modelo solo con una delegación vigente del pagador.
 export const DANIL_CREDITS = Object.freeze({

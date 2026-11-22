@@ -4,4 +4,3 @@
  */
 export { seguirElFondo } from "./paste-follow.ts";
 export { HOLGURA } from "./paste-spring.ts";
-export { type Pegado } from "./paste-types.ts";

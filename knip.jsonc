@@ -1,0 +1,189 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  // Binarios del sistema que llaman los scripts de publicación y de prueba: no son paquetes npm.
+  "ignoreBinaries": ["jq", "hdiutil", "icacls", "lipo", "getent", "rustc", "ruby"],
+  "ignoreIssues": {
+    // Estas pruebas y scripts importan las rutas de apps/desktop/src de antes del move
+    // (src/features/*, src/lib/*, src/web/*). Arreglar esos imports es otra tarea; mientras
+    // tanto knip no cuenta lo que citan, así que no se borra nada por ellas.
+    "apps/desktop/tests/**": ["unresolved"],
+    "apps/desktop/scripts/terminal-indent.test.ts": ["unresolved"],
+    "apps/desktop/scripts/web-mobile.mjs": ["unresolved"],
+
+    // scripts/verify-parity se instala aparte con npm (su package.json trae playwright, pixelmatch
+    // y pngjs) y corre la build web con vite de apps/desktop; parity.sh deja ahí run.f2.mjs.
+    "scripts/verify-parity/**": ["unlisted", "binaries"],
+
+    // Generado de los OpenAPI vendorizados por packages/platform-client/scripts/generate.mjs:
+    // no se edita a mano, y trae todos los esquemas del contrato aunque el front lea solo unos.
+    "packages/platform-client/src/generated/**": ["exports", "types"],
+
+    // Los barriles src/model.ts y src/queries.ts de cada feature los pide 03-structure.md
+    // (R12: lo único que importa un cliente). Algunos todavía no los importa nadie.
+    "packages/features/*/src/{model,queries}.ts": ["files"],
+    // Lo que solo importa uno de esos barriles sin uso.
+    "packages/features/task-queues/src/queries/engine.ts": ["exports"],
+
+    // .tsx sin montar (con su modelo): borrarlos cambia JSX y el CSS generado, y move-gate lo
+    // prohíbe. Se van cuando se retire esa pantalla con su propia revisión de paridad.
+    "packages/features/settings/src/components/{AuditLog,BusinessBilling,BusinessBillingFiscal,BusinessBillingPlan}.tsx": ["files"],
+    "packages/features/settings/src/model/{business-billing,fiscal}.ts": ["files"],
+    "apps/desktop/src/web/audit-log.ts": ["types"],
+    "packages/shell/src/shell/OrganizationPositionMenu.tsx": ["files"],
+    "packages/shell/src/shell/SpaceBar.tsx": ["exports"],
+    // BARRA_DE_TERMINAL, TerminalName, TerminalCursor y TerminusMark: lo mismo (JSX y CSS).
+    "packages/ui/src/Terminal.tsx": ["exports"],
+    "packages/ui/src/toolMarks.tsx": ["exports"],
+
+    // De Alberto (workspaces, sesiones y máquinas, regla 4): no se tocan. Sin llamadores ya en dev
+    // antes del move: session-workspace-source.ts, setAddedSyncWeb, runOnOptions y accountWorkspace.
+    // workspace-added-sync.ts: outcomeOf y parsePreferences los cita tests/unit/workspace-added-sync.test.ts.
+    "packages/shell/src/shell/session-workspace-source.ts": ["files"],
+    "packages/shell/src/shell/workspace-added-wiring.ts": ["exports"],
+    "packages/shell/src/shell/workspace-added-sync.ts": ["exports"],
+    "packages/features/machines/src/queries/store.ts": ["exports"],
+    "packages/computers/src/api.ts": ["exports"],
+    // isManaged es el alias de wakes con nombre del dominio; lo prueba packages/computers/test/computers.test.ts.
+    "packages/computers/src/machine.ts": ["duplicates"],
+
+    // El setter sale en la misma desestructuración que la señal que sí se lee
+    // (`export const [x, setX] = createRoot(...)`): no se puede exportar solo una mitad.
+    "packages/shell/src/shell/account-return-state.ts": ["exports"],
+    "packages/shell/src/shell/session-groups.ts": ["exports"],
+
+    // Exports que solo importan las pruebas de apps/desktop/tests (por las rutas de antes del move,
+    // ver arriba). Cuando se arreglen esos imports, knip los volverá a contar como usados.
+    "apps/desktop/src/lib/project-block-types.ts": ["types"],        // HandoverState, createThreadsCore: provider-handover, question-card-r0
+    "apps/desktop/src/lib/sourceOrigin.ts": ["exports"],              // proveedorDe: models.test.ts
+    "packages/engine-client/src/client.ts": ["exports"],              // canRepeat, neverRan, retrying, WAITS, untilConnected: invoke-retry, early-startup
+    "packages/engine-client/src/retries.ts": ["exports"],             // WAITS, neverRan: invoke-retry.test.ts
+    "packages/features/chat/src/components/TaskChatPresentation.tsx": ["exports"], // TaskUserBubble: helpers/activity-header.tsx
+    "packages/features/chat/src/model/failures.ts": ["exports"],      // gestoDelFallo: turn-failure.test.ts
+    "packages/features/chat/src/model/handover.ts": ["exports"],      // handOverReason: provider-handover.test.ts
+    "packages/features/chat/src/model/inboxRows.ts": ["exports"],     // TOPE_DE_SALTOS: turn-failure.test.ts
+    "packages/features/chat/src/model/searchCards.ts": ["exports"],   // dayKey: search-cards.test.ts
+    "packages/features/chat/src/model/slashOutput.ts": ["exports"],   // soloEnSuTerminal: command-output.test.ts
+    "packages/features/chat/src/model/transcript-live.ts": ["exports"], // anexarDelta: chat-delta, chat-delegation-thread, streaming-parity, turn-model
+    "packages/features/chat/src/model/transcript-render.ts": ["exports"], // relevoDe: chat-delegation-thread.test.ts
+    "packages/features/code/src/model/diff-tramos.ts": ["exports"],   // tramosCambiados: diff-words.test.ts
+    "packages/features/code/src/model/tree.ts": ["exports"],          // estadoLocal: tree.test.ts
+    "packages/features/code/src/screens/FileViewer.tsx": ["exports"], // esMarkdown: command-output.test.ts
+    "packages/features/machines/src/index.ts": ["exports"],           // danilAvailableContext, readDanilContext: danil-source.test.ts
+    "packages/features/machines/src/model/wsl.ts": ["exports"],       // wslFailureCode, WSL_INSTALL, WSL_INSTALL_UBUNTU: wsl-detection.test.ts
+    "packages/features/machines/src/queries/cloud-machines.ts": ["exports"], // edgeFetch: cloud-machines, edge-client, organization-selection, mvp-contracts
+    "packages/features/machines/src/queries/connected-status.ts": ["exports"], // CONNECTED_MACHINES_FEATURE: connected-status.test.ts
+    "packages/features/machines/src/queries/danil-source.ts": ["exports"], // listedOf, noteListing, danilAvailableContext, readDanilContext: danil-source.test.ts
+    "packages/features/machines/src/queries/engine-workspaces.ts": ["exports"], // LIGHT_STATE_MACHINES_FEATURE: engine-workspaces.test.ts
+    "packages/features/machines/src/queries/router.ts": ["exports"],  // unconfirmedOpen: machine-router.test.ts
+    "packages/features/machines/src/queries/session-cloud.ts": ["exports"], // mergeContextMachines: connected-status, session-machines
+    "packages/features/onboarding/src/model/account-welcome.ts": ["exports"], // ACCOUNT_WELCOME_KEY: account-welcome.test.ts
+    "packages/features/projects/src/model/recent.ts": ["exports"],    // recentProjects: project-picker-recent.test.ts
+    "packages/features/projects/src/queries/taskGit.ts": ["exports"], // mergeRemoteGit, GIT_READ_DEADLINE: tabs.test.ts
+    "packages/features/settings/src/components/Accounts.tsx": ["exports"], // ESPERA_ANTES_DE_LA_TERMINAL_MS: helpers/ai-providers-accounts.tsx
+    "packages/features/settings/src/model/ai-providers-groups.ts": ["exports"], // idsDeGrupos, sinCuentas: ai-providers-groups.test.ts
+    "packages/features/settings/src/queries/free-router-platform.ts": ["exports"], // supportsPlatformFreeRouter: free-router-platform.test.ts
+    "packages/host/src/downloads.ts": ["exports"],                    // DESKTOP_DOWNLOADS, platformOf: account-welcome.test.ts
+    "packages/platform-client/src/client.ts": ["exports"],            // nextDelay: edge-client.test.ts
+    "packages/platform-client/src/identity.ts": ["exports"],          // selectOrganization: edge-client.test.ts
+    "packages/platform-client/src/workspaces.ts": ["exports"],        // selectWorkspace: edge-client.test.ts
+    "packages/session/src/person-session.ts": ["exports"],            // completeSignIn: person-session-bridge.test.ts
+    "packages/session/src/session-wait.ts": ["exports"],              // awaitingWorkspace, readWorkspaces: web-session-wait.test.ts
+    "packages/session/src/sessionRefresh.ts": ["exports"],            // reutilizar, conservarPorElFinal: session-refresh, push-history
+    "packages/shell/src/shell/GroupOrganizationWatch.tsx": ["exports"], // setWebOrganizationAttention: helpers/web-group-header.tsx
+    "packages/shell/src/shell/account-transfers.ts": ["types"],       // PendingUnion: account-transfers.test.ts
+    "packages/shell/src/shell/dockLayout.ts": ["exports"],            // dockSources: agent-dock.test.ts
+    "packages/shell/src/shell/engine-adoption.ts": ["exports"],       // ENGINE_ADOPTION_FEATURE, engineAdoptionOf: engine-adoption.test.ts
+    "packages/shell/src/shell/machineUsage.ts": ["exports"],          // forgetSamples: machine-usage.test.ts
+    "packages/shell/src/shell/personal-open.ts": ["exports"],         // personalOrgOf, openPersonal: first-login, select-busy
+    "packages/shell/src/shell/session-source.ts": ["exports"],        // registerEngineSessionSource: first-login.test.ts
+    "packages/ui/src/markdown-blocks.ts": ["exports"]                 // bloquesDeMarkdown: markdown, markdown-math, streaming-parity
+  },
+  "workspaces": {
+    ".": {
+      // Los gates del front (verify-front, verify-parity) se corren a mano desde la raíz.
+      "entry": ["scripts/**/*.mjs"],
+      "project": ["scripts/**/*.mjs"]
+    },
+    "apps/desktop": {
+      "entry": [
+        "src/web/bootstrap.ts",
+        "scripts/**/*.{mjs,ts}",
+        "tests/**/*.{ts,tsx,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx,css}",
+        "scripts/**/*.{mjs,ts}",
+        "tests/**/*.{ts,tsx,mjs}"
+      ],
+      "ignoreDependencies": [
+        // vite.config.ts copia sus fuentes desde node_modules/@excalidraw/excalidraw (ruta, no import).
+        "@excalidraw/excalidraw",
+        // Lo pide @tailwindcss/vite, el plugin de vite.config.ts (peer); el CSS que lo importa vive en packages/ui.
+        "tailwindcss",
+        // scripts/icons.mjs lee node_modules/material-icon-theme/dist/material-icons.json (ruta).
+        "material-icon-theme",
+        // El binario tsgo, que scripts/typescript.mjs busca en node_modules/.bin.
+        "@typescript/native-preview",
+        // Los importa eslint.solid.config.mjs, que no tiene el nombre que el plugin de ESLint de knip busca.
+        "eslint-plugin-solid",
+        "typescript-eslint"
+      ]
+    },
+    // apps/mobile está fuera del pnpm workspace (npm propio). Se analiza solo para que cuente lo
+    // que usa de packages/; sus propios hallazgos no son de esta tarea, y sin node_modules
+    // instalados sus dependencias y los plugins de Expo y Metro no se pueden resolver.
+    "apps/mobile": {
+      "entry": [
+        "src/app/**/*.tsx",
+        "src/**/*.{web,ios,android}.{ts,tsx}",
+        "scripts/*.{ts,mjs}",
+        "bridge/*.mjs"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "scripts/**/*.{ts,mjs}", "bridge/**/*.mjs"],
+      "metro": false,
+      "expo": false,
+      "typescript": false,
+      "ignore": ["**/*"]
+    },
+    "packages/*": {
+      "entry": ["test/**/*.ts"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"]
+    },
+    "packages/ui": {
+      "entry": [
+        "test/**/*.ts",
+        // Lo que reexportan los shims de apps/mobile (packages/design, packages/chat y packages/tasks,
+        // fuera del pnpm workspace, así que knip no los ve): es la API del teléfono.
+        "src/index.ts",
+        "src/lib/tasks/index.ts",
+        "src/toolMarksData.ts",
+        "src/lib/chat/{command,inlineVisual,links,nextSteps,sandbox,slash,steps,table,tools,visual}.ts",
+        // La hoja que carga apps/desktop/index.html con <link>, que knip no lee.
+        "src/styles/desktop.css"
+      ],
+      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts"]
+    },
+    "packages/engine-client": {
+      "entry": [
+        "test/**/*.ts",
+        // Lo que reexportan los shims packages/protocol y packages/chat para apps/mobile.
+        "src/index.ts",
+        "src/history.ts",
+        "src/historyDetail.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"]
+    },
+    "packages/features/*": {
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/features/machines": {
+      "entry": [
+        // Lo que reexporta el shim packages/carry para apps/mobile.
+        "src/model/carryTypes.ts",
+        "src/model/carryPlan.ts",
+        "src/queries/carryRun.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}"]
+    }
+  }
+}
