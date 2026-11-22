@@ -6,6 +6,8 @@ import { createFreeRouterConsent } from "../../../features/settings/src/componen
 
 /** Baja al abrirse: `pdfjs-dist` no entra en el arranque de la ventana. */
 const PdfDocument = lazy(() => import("../../../features/viewers/src/screens/Pdf"));
+const ZoomableImage = lazy(() => import("../../../features/viewers/src/screens/ImageViewer"));
+const DelimitedTable = lazy(() => import("../../../features/viewers/src/screens/CsvTable"));
 
 export { createFreeRouterConsent };
 
@@ -22,6 +24,14 @@ export function renderAvatar(props: {
 
 export function renderPdf(props: { base64: string; name: string }) {
   return <PdfDocument base64={props.base64} name={props.name} />;
+}
+
+export function renderImage(props: { src: string; alt: string }) {
+  return <ZoomableImage src={props.src} alt={props.alt} />;
+}
+
+export function renderTable(props: { text: string; delim: string }) {
+  return <DelimitedTable text={props.text} delim={props.delim} />;
 }
 
 export function folderIcon(project: { kind: string; cloud?: string | null }) {

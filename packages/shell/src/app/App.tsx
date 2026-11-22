@@ -85,7 +85,7 @@ const MachinesLicense = lazy(() =>
     ),
   })),
 );
-import { createFreeRouterConsent, folderIcon, renderAvatar, renderPdf } from "./chatSlots";
+import { createFreeRouterConsent, folderIcon, renderAvatar, renderImage, renderPdf, renderTable } from "./chatSlots";
 import { lastActivity, launcherOf, taskDescendants, withRemoteLaunchers } from "@terminus/tasks";
 import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, rememberedRunOn, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../../../features/machines/src/queries/store";
 import { createdTasks } from "../../../features/projects/src/model/agentPageFilters";
@@ -4012,7 +4012,7 @@ export default function App() {
                       {(a) => (
                         <Show
                           when={a().codigo}
-                          fallback={<VisorDeArtefacto path={a().path} rel={a().rel} kind={a().kind} session={a().session} />}
+                          fallback={<VisorDeArtefacto path={a().path} rel={a().rel} kind={a().kind} session={a().session} renderPdf={renderPdf} renderImage={renderImage} renderTable={renderTable} />}
                         >
                           <Suspense fallback={null}><VisorDeArchivo visores={visoresDeCodigo}
                             project={a().project}
