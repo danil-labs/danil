@@ -1,17 +1,21 @@
-import { type ObservedTurnActivity } from "../../../../../../apps/desktop/src/lib/activityObservation.ts";
-import { t } from "../../../../../../apps/desktop/src/lib/i18n";
-import { type SenderTask } from "../../../../../../apps/desktop/src/lib/recipients.ts";
-import { type ContentTab, type FileTab, type Tab } from "../../../../../../apps/desktop/src/lib/tabs.ts";
-import { esProvisional } from "../../../../../../apps/desktop/src/lib/taskDraft";
-import { type OlderState } from "../../model/history.ts";
-import { invoke } from "../../../../../engine-client/src/client.ts";
-import { claveDe } from "../../../../../ui/src/Failure";
-import { type ComandoEnVivo } from "../../components/ShellCard.tsx";
-import { type HandoverState } from "../../model/handover.ts";
-import { type Msg } from "../../model/messageTypes.ts";
-import { type ChatEvent, type Session, type TranscriptOrigin } from "../../model/transcript.ts";
-import { type PermissionRequest } from "../../screens/Chat.tsx";
-import { type LiveTurn } from "../sleepSession.ts";
+type PollRequest = any;
+type FilterSessions = any;
+type ServicePageData = any;
+type ServiceError = any;
+import { type ObservedTurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { type SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
+import { type ContentTab, type FileTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import { esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
+import { type OlderState } from "../model/history.ts";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { claveDe } from "../../../../ui/src/Failure";
+import { type ComandoEnVivo } from "../components/ShellCard.tsx";
+import { type HandoverState } from "../model/handover.ts";
+import { type Msg } from "../model/messageTypes.ts";
+import { type ChatEvent, type Session, type TranscriptOrigin } from "../model/transcript.ts";
+import { type PermissionRequest } from "../screens/Chat.tsx";
+import { type LiveTurn } from "./sleepSession.ts";
 import { createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 
 type ContextSource = any; // pendiente: el tipo llega de otra feature por el shell (R3)
@@ -58,11 +62,11 @@ export function createResync(deps: ResyncDeps) {
 
   const serviceStream = createServiceStream({
     ready: () => deps.serviceListenersReady,
-    read: (request: any) => invoke<ServicePage>("service_poll", request),
-    filter: (sessions: any) => invoke("service_filter", { sessions }),
+    read: (request: PollRequest) => invoke<ServicePage>("service_poll", request),
+    filter: (sessions: FilterSessions) => invoke("service_filter", { sessions }),
     visibleSessions: tareasQueSeVen,
     applyBatches: applyPushed,
-    applyPage: (page: any, recovered: any) => {
+    applyPage: (page: ServicePageData, recovered: boolean) => {
       if (page.reset || page.gap || page.resync || page.streams || recovered) window.dispatchEvent(new CustomEvent("harness:service-resync"));
       // Un stream de comando cortado (árbol, git) se relee, pero no es salida en vivo perdida.
       if (page.reset || page.gap || page.resync || page.streams) releerTrasHueco();
@@ -80,14 +84,14 @@ export function createResync(deps: ResyncDeps) {
       // esta guarda el aviso de hueco sale sin que nada se haya perdido.
       if (page.gap && !page.reset && affectedTurns) setError(t("chat.error.service_gap"));
     },
-    classifyFailure: (error: any) => {
+    classifyFailure: (error: ServiceError) => {
       const code = claveDe(error);
       if (code === "shell.service.machine_off" || code === "shell.service.machine_starting" || asleep(error)) return "sleep";
       if (code === "shell.service.engine_missing") return "missing";
       if (code === "shell.service.managed") return "managed";
       return code === "shell.service.engine_down" ? "down" : "unavailable";
     },
-    connectionStatus: (key: any) => setConnectionError(key === null ? null : t(key)),
+    connectionStatus: (key: string | null) => setConnectionError(key === null ? null : t(key)),
   });
   onMount(serviceStream.start);
   onCleanup(serviceStream.dispose);

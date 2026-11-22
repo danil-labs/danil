@@ -25,8 +25,8 @@ type Deps = {
 
 export function createContextSource(deps: Deps) {
   const { abrirBorradorDeAgente, adjuntas, aplicar, cambiarEscritorio, cola, composer, deLaTarea, drafts, engineCanDispatch, escritorio, excludedSourceIds, filaDe, hilos, leerTarea, loadResult, nuevaSesion, open, paneles, pestanas, project, projectCatalog, proyectoAbierto, refreshFolder, refreshSessions, releerCola, reloadSpaces, sessionId, setError, setFolder, setHablandoCon, setMentionSources, setProject, setProjectReadError, setProyectoAbierto, setSessionId, setVentana, sourceIds, spaces, taskQueues, threads, workspaceActivo, workspaceContext } = deps;
-  const restoreDraftConfiguration = ((...a: any[]) => deps.restoreDraftConfiguration(...a)) as typeof deps.restoreDraftConfiguration;
-  const restoreSessionConfiguration = ((...a: any[]) => deps.restoreSessionConfiguration(...a)) as typeof deps.restoreSessionConfiguration;
+  const restoreDraftConfiguration = (...a: Parameters<typeof deps.restoreDraftConfiguration>) => deps.restoreDraftConfiguration(...a);
+  const restoreSessionConfiguration = (...a: Parameters<typeof deps.restoreSessionConfiguration>) => deps.restoreSessionConfiguration(...a);
   /**
    * Lo que esta tarea le va a adjuntar al turno: lo que ya lee más lo que está
    * puesto en la caja y todavía no ha viajado.

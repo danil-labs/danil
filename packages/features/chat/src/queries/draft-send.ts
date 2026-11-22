@@ -1,5 +1,5 @@
-import { type OpcionDeModelo } from "../../../../../../apps/desktop/src/lib/models";
-import { type ContentTab, type FileTab, type Tab } from "../../../../../../apps/desktop/src/lib/tabs.ts";
+import { type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
+import { type ContentTab, type FileTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import { createEffect, createSignal, on, type Accessor, type Setter } from "solid-js";
 
 

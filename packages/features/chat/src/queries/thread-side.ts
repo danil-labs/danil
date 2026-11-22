@@ -1,10 +1,11 @@
-import { carpetaDeTrabajo } from "../../../../../../apps/desktop/src/lib/model";
-import { type Project } from "../../../../../../apps/desktop/src/lib/model.ts";
-import { listen } from "../../../../../../apps/desktop/src/lib/serviceEvents";
-import { accionDeAtajo, navegacionDePestanas, ventanaVecina } from "../../../../../../apps/desktop/src/lib/shortcuts";
-import { type NavegacionDePestanas } from "../../../../../../apps/desktop/src/lib/shortcuts.ts";
-import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../../../apps/desktop/src/lib/taskFiles.ts";
-import { capabilities } from "../../../../../host/src/platform";
+type Sidebar = any;
+import { carpetaDeTrabajo } from "../../../../../apps/desktop/src/lib/model";
+import { type Project } from "../../../../../apps/desktop/src/lib/model.ts";
+import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { accionDeAtajo, navegacionDePestanas, ventanaVecina } from "../../../../../apps/desktop/src/lib/shortcuts";
+import { type NavegacionDePestanas } from "../../../../../apps/desktop/src/lib/shortcuts.ts";
+import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../../apps/desktop/src/lib/taskFiles.ts";
+import { capabilities } from "../../../../host/src/platform";
 import { type ActivityEvent } from "@terminus/protocol";
 import { createEffect, createSignal, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 
@@ -12,7 +13,7 @@ type InicioDeCarpeta = any; // pendiente: el tipo llega de otra feature por el s
 type SearchFilter = any; // pendiente: el tipo llega del shell
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type ThreadSideDeps = { createSidebar: any; alta: Accessor<boolean>; archivosDeTarea: { panel: (task: string) => TaskFilesPanel; setOpen: (task: string, open: boolean) => void; present: (task: string, mode: TaskSideMode) => void; toggle: (task: string) => void; setExpanded: (task: string, expanded: boolean) => void; setTree: (task: string, tree: boolean) => void; setSide: (task: string, side: TaskFilesSide) => void; open: (task: string, file: { tree: string; path: string; changes: boolean; changed?: boolean; pinned?: boolean; }) => void; pin: (task: string, id: string) => void; activate: (task: string, id: string) => void; setDirty: (task: string, id: string, dirty: boolean) => void; close: (task: string, ids: string[]) => string[]; renamed: (task: string, tree: string, from: string, to: string) => void; removed: (task: string, tree: string, path: string) => void; dirtyOf: (task: string) => string[]; forget: (task: string) => void; }; closeActiveTab: () => void; irAPestanaDe: (nav: NavegacionDePestanas) => void; irAVentanaVecina: (salto: 1 | -1) => void; juntarLaActiva: () => void; llaveDeBorrador: (proyecto: string | undefined) => string; nuevaSesion: (enProyecto?: string) => void; partirLaActiva: () => void; project: Accessor<string>; projectList: Accessor<Project[]>; reabrirPestana: () => void; sessionId: Accessor<string | null>; setBuscando: Setter<SearchFilter | null>; workspaceActivo: Accessor<string | null> };
+export type ThreadSideDeps = { createSidebar: () => Sidebar; alta: Accessor<boolean>; archivosDeTarea: { panel: (task: string) => TaskFilesPanel; setOpen: (task: string, open: boolean) => void; present: (task: string, mode: TaskSideMode) => void; toggle: (task: string) => void; setExpanded: (task: string, expanded: boolean) => void; setTree: (task: string, tree: boolean) => void; setSide: (task: string, side: TaskFilesSide) => void; open: (task: string, file: { tree: string; path: string; changes: boolean; changed?: boolean; pinned?: boolean; }) => void; pin: (task: string, id: string) => void; activate: (task: string, id: string) => void; setDirty: (task: string, id: string, dirty: boolean) => void; close: (task: string, ids: string[]) => string[]; renamed: (task: string, tree: string, from: string, to: string) => void; removed: (task: string, tree: string, path: string) => void; dirtyOf: (task: string) => string[]; forget: (task: string) => void; }; closeActiveTab: () => void; irAPestanaDe: (nav: NavegacionDePestanas) => void; irAVentanaVecina: (salto: 1 | -1) => void; juntarLaActiva: () => void; llaveDeBorrador: (proyecto: string | undefined) => string; nuevaSesion: (enProyecto?: string) => void; partirLaActiva: () => void; project: Accessor<string>; projectList: Accessor<Project[]>; reabrirPestana: () => void; sessionId: Accessor<string | null>; setBuscando: Setter<SearchFilter | null>; workspaceActivo: Accessor<string | null> };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 1451–1516, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createThreadSide(deps: ThreadSideDeps) {

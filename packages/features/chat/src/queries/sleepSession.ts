@@ -42,11 +42,14 @@ export type LiveTurn = {
   shell?: { id: string; command: string };
 };
 
+export type SleepSessionDeps = {
+  machineOf: (session: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
+};
+
 // Sin botón todavía: expone `sleep_session` para el gesto «Dormir» que la
 // pantalla aún no ofrece.
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 341–345, tarea 2.5); `machineOf` es de machines y llega por `deps` (R3). */
-// biome-ignore lint/suspicious/noExplicitAny: llega del shell sin tipar.
-export function createSleepSession(deps: Record<string, any>) {
+export function createSleepSession(deps: SleepSessionDeps) {
   const { machineOf } = deps;
   async function sleepSession(project: string, session: string) {
     await invoke<void>("sleep_session", { project, session }, machineOf(session));
