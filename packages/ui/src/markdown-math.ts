@@ -157,7 +157,7 @@ const DOLARES: Construct = {
 
 const BARRAS: Construct = { name: TIPO, tokenize: tokenizarBarra };
 
-export const EXTENSION_MICROMARK: Extension = {
+const EXTENSION_MICROMARK: Extension = {
   flow: math().flow,
   text: { [DOLAR]: DOLARES, [BARRA]: BARRAS },
 };

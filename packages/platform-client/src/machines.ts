@@ -5,7 +5,7 @@
  *
  * - Lista, estado, `start` (202 con operación y su sondeo) y ticket del canal de datos.
  * - Un 404 o un 501 de la colección es `unavailable`: el servidor aún no la tiene y quien
- *   llama reintenta solo (`retryUnavailable`). Un 404 de una máquina es `missing`.
+ *   llama reintenta solo. Un 404 de una máquina es `missing`.
  * - El canal de datos va por `wss://` con el subprotocolo `ticket.*`, nunca `bearer.*`.
  *
  * Sin APIs del DOM: `fetch`, el reloj y la espera se inyectan.
@@ -31,7 +31,7 @@ export type { Machine, MachineList, MachineTicket, Operation } from "./generated
  * un relay con otro nombre se añade aquí. Nunca un comodín: otro subdominio de Danil no recibe el ticket.
  */
 export const DEFAULT_RELAY_ORIGINS: readonly string[] = ["wss://machines-session.danil.ai", "wss://connect.danil.ai"];
-export const OPERATION_TIMEOUT_MS = 330_000;
+const OPERATION_TIMEOUT_MS = 330_000;
 const POLL_FIRST_MS = 500;
 const POLL_MAX_MS = 4_000;
 const TERMINAL = new Set(["succeeded", "failed", "cancelled"]);
@@ -86,7 +86,7 @@ function operationOf(raw: unknown): Polled | null {
 }
 
 /** El ticket exige wss, origen configurado exacto y la ruta de su máquina, sin credenciales ni query. */
-export function admissionUrl(raw: unknown, machineId: string, origins: readonly string[]): string | null {
+function admissionUrl(raw: unknown, machineId: string, origins: readonly string[]): string | null {
   if (typeof raw !== "string") return null;
   let url: URL;
   try {
@@ -270,19 +270,6 @@ export function machinesClient(config: MachinesConfig) {
         ...(issued.value.protocol ? { protocol: issued.value.protocol } : {}), ...(issued.value.expires_at ? { expires_at: issued.value.expires_at } : {}) } };
     },
   };
-}
-
-/** Reintenta una lectura que contestó `unavailable` (el servidor aún no la tiene), con espera creciente, hasta que `stop()` o una respuesta distinta. */
-export async function retryUnavailable<T>(read: () => Promise<MachinesAnswer<T>>, opts: { sleep?: (ms: number) => Promise<void>; stop?: () => boolean; first?: number; max?: number; onUnavailable?: () => void } = {}): Promise<MachinesAnswer<T>> {
-  const sleep = opts.sleep ?? defaultSleep;
-  let wait = opts.first ?? 5_000;
-  for (;;) {
-    const answer = await read();
-    if (answer.kind !== "unavailable" || opts.stop?.()) return answer;
-    opts.onUnavailable?.();
-    await sleep(wait);
-    wait = Math.min(wait * 2, opts.max ?? 5 * 60_000);
-  }
 }
 
 /** Lo que la flota entiende de un encendido: encendida, no se pudo, o la nube no la enciende. */

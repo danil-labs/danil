@@ -9,7 +9,7 @@
  *
  * Sin red: `read` es quien llama al cliente.
  */
-export const SHARED_READ_FRESH_MS = 3_000;
+const SHARED_READ_FRESH_MS = 3_000;
 
 export type SharedReadOptions<T> = { freshMs?: number; keep?: (value: T) => boolean; now?: () => number };
 export type SharedRead<T> = { read(options?: { fresh?: boolean; signal?: AbortSignal }): Promise<T>; invalidate(): void };
