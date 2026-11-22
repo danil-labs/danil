@@ -201,9 +201,8 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         changed();
       } catch { failed = true; /* Un motor anterior conserva su riel; no ofrece crear sin capacidad anunciada. */ }
     },
-    /** Lo que el servidor creó para esta computadora (una petición de la CLI) queda sellado aquí. */
-    async createHere(org: string, accountId: string, id: string, name: string) {
-      if (!native || !extension || !local) return;
+    async materialize(org: string, accountId: string, id: string, name: string) {
+      if (!native || !extension || !local) throw { detail: "not_available_yet" };
       await invoke("create_account_workspace", { ...header(), id, name, account: { org, account_id: accountId } });
     },
     async create(group: Group, refresh: () => Promise<void>) {

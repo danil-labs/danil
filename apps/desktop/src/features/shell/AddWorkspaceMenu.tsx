@@ -1,133 +1,137 @@
+import { watchWorkspaceAddLinks } from "../../lib/native-workspace-add-link";
 import Eye from "lucide-solid/icons/eye";
+import FolderPlus from "lucide-solid/icons/folder-plus";
+import LogIn from "lucide-solid/icons/log-in";
 import Plus from "lucide-solid/icons/plus";
-import { type Component, createEffect, For, Show } from "solid-js";
+import Trash2 from "lucide-solid/icons/trash-2";
+import { type Component, createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { canRedeemPromo } from "../../lib/promo-role";
 import { capabilities } from "../../lib/platform";
-import { WebWorkspacePicker } from "./WebWorkspacePicker";
 import { t } from "../../lib/i18n";
 import { cn } from "../../lib/utils";
 import { SEPARADOR_DE_MENU, TITULO_DE_GRUPO } from "../../ui/ContextMenu";
-import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
+import { Popover, PopoverContent, PopoverTrigger } from "../../ui/Popover";
+import { CreateWorkspaceProDialog } from "./CreateWorkspaceProDialog";
 import { AccountReturnFeedback } from "./AccountReturnFeedback";
 import { createAddWorkspaceMenuState } from "./add-workspace-menu-state";
 import { type AttentionState, type TaskAttention, topState } from "./attention";
-import { DanilAddEntry, type DanilMenu, DanilStep, DanilSwitchRows } from "./DanilAddMenu";
-import { matchesName } from "./hidden-workspaces";
 import { menuArrows, showKeepingFocus } from "./menu-focus";
-import { SessionAddEntries, SessionAddStep, usesSessionMenu } from "./SessionAddMenu";
-import { SessionEmptyNotice } from "./SessionEmptyNotice";
+import { openHarnessWorkspaces, RAIL_MENU_ICON, RAIL_MENU_ITEM } from "./rail-menu";
+import { SessionAddStep } from "./SessionAddMenu";
 import type { sessionRail } from "./session-groups";
 import { openRequestedSessionMenu } from "./session-menu-open";
-import WorkspaceSearch, { SEARCH_FROM } from "./WorkspaceSearch";
+import { WebWorkspacePicker } from "./WebWorkspacePicker";
 
-export { menuArrows };
+import type { RailWorkspaceTarget } from "./remove-rail-workspace";
 
-type Hidden = { id: string; name: string };
-/** El «+» del riel: agregar uno de Danil y, debajo, los ocultos para abrirlos o devolverlos a la barra. */
 export default function AddWorkspaceMenu(props: {
-  danil: DanilMenu;
   sessions: ReturnType<typeof sessionRail>;
-  hidden: Hidden[];
+  hidden: RailWorkspaceTarget[];
   open: string | null;
+  activeContext?: string | null;
   tasksOf: (id: string) => TaskAttention[];
   badge: Component<{ state: AttentionState; class?: string }>;
-  /** Cómo se dice un estado junto al nombre, para quien no ve el distintivo. */
   labelOf: (state: AttentionState) => string;
   onOpen: (id: string, context?: string) => void;
-  onShow: (id: string) => void;
+  onShow: (workspace: RailWorkspaceTarget) => void;
+  onRemove: (workspace: RailWorkspaceTarget) => void;
 }) {
-  const picker = () => capabilities().webWorkspacePicker;
-  const resume = picker()?.resume() ?? null;
+  const picker = capabilities().webWorkspacePicker;
   const { open, setOpen, step, setStep, context, setContext, query, setQuery, close } = createAddWorkspaceMenuState();
-  if (resume) setOpen(true);
+  const [proOpen, setProOpen] = createSignal(false);
+  const [fromHarness, setFromHarness] = createSignal(picker?.takeHarnessWorkspace());
+  if (picker?.resume() || fromHarness()) { setStep("danil"); setOpen(true); }
   createEffect(() => openRequestedSessionMenu(props.sessions, { context: setContext, step: setStep, open: setOpen }));
-  /** Del «+» web: lo agrega a `added` de su contexto y lo abre con su sesión, sin escribir nada global. */
+  function add() {
+    if (picker) { setStep("danil"); return; }
+    close();
+    void props.sessions.sessions.addAccount().catch(() => {});
+  }
+  if (capabilities().nativeWindow) {
+    let mounted = true;
+    const stop = watchWorkspaceAddLinks((link) => {
+      if (!mounted) return;
+      void props.sessions.addFromHarness(link).then((target) => {
+        if (target) props.onOpen(target.id, target.context);
+        else add();
+      }).catch(() => add());
+    }).catch(() => undefined);
+    onCleanup(() => { mounted = false; void stop.then((unsubscribe) => unsubscribe?.()); });
+  }
   async function addPicked(row: { context: string; engine_workspace_id?: string | null }) {
     if (!row.engine_workspace_id) throw new Error("workspace_not_available");
     await props.sessions.addAdmitted(row.context, row.engine_workspace_id);
     props.onOpen(row.engine_workspace_id, row.context);
   }
-  const rows = () => props.hidden.filter((w) => matchesName(w.name, query()));
-  // El abierto ya enseña su distintivo en su cuadro; los de Danil sin agregar también avisan.
-  const waiting = () => topState([...props.hidden, ...(props.danil.toAdd ?? [])].filter((w) => w.id !== props.open).flatMap((w) => props.tasksOf(w.id)));
+  const waiting = () => topState(props.hidden.filter((w) => w.id !== props.open).flatMap((w) => props.tasksOf(w.id)));
   const label = () => {
     const state = waiting();
     return state ? t("shell.workspaces.add_hidden_state", { state: props.labelOf(state) }) : t("shell.workspaces.add");
   };
-  return (<>
+  const createOrganization = () => {
+    const eligible = (props.sessions.groups() ?? []).filter((group) =>
+      (group.plan === "pro" || group.plan === "team" || group.plan === "enterprise")
+      && !group.empty_reason && canRedeemPromo(group.role));
+    return (eligible.find((group) => group.context_id === props.activeContext) ?? eligible[0])?.org;
+  };
+  const canUpsell = () => !createOrganization() && props.sessions.groups()?.some((group) => group.plan === "free" && !group.empty_reason);
+  const entry = cn(RAIL_MENU_ITEM, "flex items-center gap-2");
+  return <>
+    <CreateWorkspaceProDialog open={proOpen()} close={() => setProOpen(false)} />
     <AccountReturnFeedback sessions={props.sessions} onOpen={props.onOpen} />
-    <Popover
-      open={open()}
-      onOpenChange={(value) => (value ? setOpen(true) : close())}
-      placement="right-start"
-      gutter={4}
-    >
-      <PopoverTrigger
-        type="button"
-        data-add-workspace=""
-        data-attention={waiting() ?? undefined}
-        class="relative mt-1 grid size-8 shrink-0 place-items-center rounded-md border border-dashed border-neutral-500 text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        aria-label={label()}
-        title={label()}
-      >
+    <Popover open={open()} onOpenChange={(value) => value ? setOpen(true) : close()} placement="right-start" gutter={4}>
+      <PopoverTrigger type="button" data-add-workspace="" data-attention={waiting() ?? undefined}
+        class="relative mt-1 grid size-8 shrink-0 place-items-center rounded-md border border-dashed border-neutral-500 text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:bg-neutral-200"
+        aria-label={label()} title={label()}>
         <Plus size={16} aria-hidden="true" />
         <Show when={waiting()}>{(s) => <Dynamic component={props.badge} state={s()} class="absolute -top-1 -right-1" />}</Show>
       </PopoverTrigger>
       <PopoverContent role="menu" class="w-64 p-1" onKeyDown={menuArrows}>
-        <Show when={picker()} fallback={<>
-        <SessionEmptyNotice sessions={props.sessions} />
-        <Show
-          when={step() === "menu"}
-          fallback={props.sessions.groups() !== null ? <SessionAddStep sessions={props.sessions} context={context()} query={query()} onQuery={setQuery} onClose={close} onOpen={props.onOpen} /> : <DanilStep danil={props.danil} query={query()} onQuery={setQuery} tasksOf={props.tasksOf} badge={props.badge} onClose={close} />}
-        >
-          <Show when={usesSessionMenu(props.sessions, props.danil.signedIn)} fallback={<DanilAddEntry danil={props.danil} web={!!picker()} onStep={() => (setContext(null), setStep("danil"))} />}><SessionAddEntries sessions={props.sessions} signedIn={props.danil.signedIn} onStep={() => (setContext(null), setStep("danil"))} onClose={close} /></Show>
-          <Show when={props.sessions.groups() === null}><DanilSwitchRows danil={props.danil} onClose={close} /></Show>
-          <Show when={props.hidden.length > 0}>
+        <Show when={step() === "menu"} fallback={picker
+          ? <WebWorkspacePicker picker={picker} fromHarness={fromHarness()} onHarnessAttempt={() => setFromHarness(null)} close={close} add={addPicked} />
+          : <SessionAddStep sessions={props.sessions} context={context()} query={query()} onQuery={setQuery} onClose={close} onOpen={props.onOpen} />}>
+          <button type="button" role="menuitem" class={entry} data-add-danil-step="" onClick={add}>
+            <LogIn size={15} aria-hidden="true" />
+            <span>{t("shell.workspaces.add_danil")}<small class="block text-caption text-neutral-500">{t("shell.workspaces.add_subtitle")}</small></span>
+          </button>
+          <Show when={createOrganization()}>{(organization) =>
+            <button type="button" role="menuitem" class={entry} onClick={() => { const org = organization(); close(); void openHarnessWorkspaces(org, true); }}>
+              <FolderPlus size={15} aria-hidden="true" />
+              <span>{t("shell.workspaces.create_in_harness")}<small class="block text-caption text-neutral-500">{t("shell.workspaces.harness_subtitle")}</small></span>
+            </button>
+          }</Show>
+          <Show when={canUpsell()}>
+            <button type="button" role="menuitem" class={entry} onClick={() => { close(); setProOpen(true); }}>
+              <FolderPlus size={15} aria-hidden="true" />
+              <span>{t("shell.workspaces.create_in_harness")}</span>
+              <span class="ml-auto rounded-full bg-primary/20 px-2 text-caption">{t("shell.workspaces.pro_badge")}</span>
+            </button>
+          </Show>
+          <Show when={props.hidden.length}>
             <span aria-hidden="true" class={cn(SEPARADOR_DE_MENU, "block")} />
             <p class={cn("m-0", TITULO_DE_GRUPO)}>{t("shell.workspaces.hidden_title")}</p>
-            <Show when={props.hidden.length >= SEARCH_FROM}>
-              <WorkspaceSearch value={query()} onInput={setQuery} />
-            </Show>
             <div class="max-h-64 overflow-y-auto p-0.5" data-hidden-workspaces="">
-              <For each={rows()}>
-                {(w) => {
-                  const state = () => (w.id === props.open ? null : topState(props.tasksOf(w.id)));
-                  const name = () => w.name || t("shell.directory.unnamed");
-                  return (
-                    <div class="flex items-center gap-0.5" data-hidden-workspace={w.id}>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        class={cn(ITEM_DE_MENU, "flex min-w-0 flex-1 items-center gap-2")}
-                        aria-label={state() ? t("shell.workspaces.tile_with_state", { name: name(), state: props.labelOf(state() as AttentionState) }) : name()}
-                        title={name()}
-                        onClick={() => {
-                          close();
-                          props.onOpen(w.id);
-                        }}
-                      >
-                        <span class="min-w-0 flex-1 truncate">{name()}</span>
-                        <Show when={state()}>{(s) => <Dynamic component={props.badge} state={s()} />}</Show>
-                      </button>
-                      <button
-                        type="button"
-                        class="grid size-7 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
-                        aria-label={t("shell.workspaces.show", { name: name() })}
-                        title={t("shell.workspaces.show", { name: name() })}
-                        data-show-workspace={w.id}
-                        onClick={(e) => showKeepingFocus(e.currentTarget.closest<HTMLElement>("[data-hidden-workspace]") as HTMLElement, () => props.onShow(w.id))}
-                      >
-                        <Eye size={13} aria-hidden="true" />
-                      </button>
-                    </div>
-                  );
-                }}
-              </For>
+              <For each={props.hidden}>{(workspace) => {
+                const name = () => workspace.name || t("shell.directory.unnamed");
+                return <div class="flex items-center gap-0.5 px-2 py-0.5" data-hidden-workspace={workspace.id}>
+                  <span class="min-w-0 flex-1 truncate text-ui" title={name()}>{name()}</span>
+                  <button type="button" role="menuitem" class={RAIL_MENU_ICON} aria-label={t("shell.workspaces.show", { name: name() })}
+                    title={t("shell.workspaces.show_in_rail")} data-show-workspace={workspace.id}
+                    onClick={(event) => {
+                      const row = event.currentTarget.parentElement;
+                      if (row) showKeepingFocus(row, () => props.onShow(workspace));
+                    }}><Eye size={13} aria-hidden="true" /></button>
+                  <button type="button" role="menuitem" class={cn(RAIL_MENU_ICON, "text-error-strong")} aria-label={t("shell.workspaces.remove_named", { name: name() })}
+                    title={t("shell.workspaces.remove_workspace")} onClick={() => { close(); props.onRemove(workspace); }}>
+                    <Trash2 size={13} aria-hidden="true" />
+                  </button>
+                </div>;
+              }}</For>
             </div>
           </Show>
         </Show>
-        </>}>{web => <WebWorkspacePicker picker={web()} close={close} add={addPicked} />}</Show>
       </PopoverContent>
-    </Popover></>
-  );
+    </Popover>
+  </>;
 }

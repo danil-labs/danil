@@ -3,16 +3,24 @@ import { children, createEffect, createSignal, For, type JSX, Show } from "solid
 import { t } from "../../lib/i18n";
 import { createNavigationReorder } from "../../lib/navigation-order";
 import { capabilities, type OtherAccount, type OtherWorkspace } from "../../lib/platform";
+import { deleteLayout, spacesWithLayout } from "../../lib/panels";
+import { createPref } from "../../lib/prefs";
+import { workspaceViewKey } from "../../lib/workspace-view-scope";
 import { cn } from "../../lib/utils";
-import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../ui/Popover";
+import { Popover, PopoverAnchor, PopoverContent } from "../../ui/Popover";
+import { Toast, ToastPortal } from "../../ui/Toast";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../ui/Tooltip";
 import type { RailWorkspace } from "../machines/engine-workspaces";
 import { taskLabel } from "../projects/TaskStatus";
 import { cerrarConEscape, createRail } from "../settings/workspaces-store";
 import { AccountHeader } from "./AccountHeader";
-import AddWorkspaceMenu, { menuArrows } from "./AddWorkspaceMenu";
+import AddWorkspaceMenu from "./AddWorkspaceMenu";
+import { menuArrows } from "./menu-focus";
+import { OrganizationAccountMenu } from "./OrganizationAccountMenu";
+import { RemoveWorkspaceDialog } from "./RemoveWorkspaceDialog";
+import { type RailWorkspaceTarget, removeRailWorkspace } from "./remove-rail-workspace";
 import { type AttentionState, topState, type WorkspaceAttention } from "./attention";
-import { columnDanil, danilMenuOf, tileLabel } from "./danil-rail";
+import { columnDanil, tileLabel } from "./danil-rail";
 import { createHiddenWorkspaces, keepSlots } from "./hidden-workspaces";
 import KeepAwake from "./KeepAwake";
 import { AttentionBadge, MarcaDeWorkspace } from "./WorkspaceMarks";
@@ -29,7 +37,6 @@ import { sessionVisible } from "./session-rail-view";
 
 export default function WorkspaceColumn(props: {
   attention: WorkspaceAttention[];
-  onManage: () => void;
   /** Ajustes, en su sección si se da. */
   onSettings: (panel?: string) => void;
   onReportarBug: () => void;
@@ -38,21 +45,82 @@ export default function WorkspaceColumn(props: {
 }) {
   const ws = createRail();
   const hidden = createHiddenWorkspaces();
-  const { danil, view: danilView, visible, hiddenRows } = columnDanil(hidden, ws);
-  // Los ocultos y los de Danil sin agregar solo se ven mientras están abiertos.
+  const { danil, visible } = columnDanil(hidden, ws);
+  const [legacyRemoved, setLegacyRemoved] = createPref<string[]>("workspaces.removed", []);
+  const [removing, setRemoving] = createSignal<RailWorkspaceTarget | null>(null);
+  const [revokeUnavailable, setRevokeUnavailable] = createSignal(false);
   const sessions = sessionRail(hidden.ids, (ids) => ids.forEach(hidden.show));
-  const visibles = () => sessions.groups() === null ? visible(ws.lista() ?? [], ws.activo() ?? null) : sessionVisible(ws.lista() ?? [], ws.activo() ?? null, hidden.ids(), sessions.groups() ?? [], sessions.known);
+  const groupOf = (context?: string) => sessions.groups()?.find((g) => g.context_id === context);
+  const hiddenKey = (id: string, context?: string) => {
+    const group = groupOf(context);
+    if (!group) return id;
+    const family = sessions.sessions.families().find((f) => f.family === group.family);
+    return JSON.stringify([family?.sub ?? group.email ?? group.family, group.org, id]);
+  };
+  const isHidden = (id: string, context?: string) => hidden.ids().has(hiddenKey(id, context));
+  const visibleGroups = () => (sessions.groups() ?? []).map((g) => ({
+    ...g, available: g.available?.filter((w) => !isHidden(w.id, g.context_id)) ?? null,
+  }));
+  const localRows = () => (ws.lista() ?? []).filter((w) => !legacyRemoved().includes(w.id));
+  const visibles = () => sessions.groups() === null
+    ? visible(localRows(), ws.activo() ?? null)
+    : sessionVisible(localRows(), ws.activo() ?? null, hidden.ids(), visibleGroups(), sessions.known);
+  const hiddenRows = (): RailWorkspaceTarget[] => [
+    ...localRows().filter((w) => !sessions.known.has(w.id) && isHidden(w.id)),
+    ...(sessions.groups() ?? []).flatMap((g) => (g.available ?? [])
+      .filter((w) => g.added?.has(w.id) && isHidden(w.id, g.context_id))
+      .map((w) => ({ id: w.id, name: w.name, context: g.context_id }))),
+  ];
+  const isActive = (target: RailWorkspaceTarget) => ws.activo() === target.id && ws.activoContexto() === (target.context ?? null);
+  async function moveAway(target: RailWorkspaceTarget) {
+    if (!isActive(target)) return;
+    const fallback = visibles().find((w) => w.id !== target.id && !sessions.known.has(w.id));
+    const next = organizationStartTarget(visibleGroups().map((g) => ({
+      ...g, available: g.available?.filter((w) => w.id !== target.id || g.context_id !== target.context) ?? null,
+    })), target.id, target.context ?? null, sessions.sessions.defaultContext());
+    await ws.cambiarA(next?.id ?? fallback?.id ?? null, next?.context);
+    if (isActive(target)) throw new Error("workspace_still_active");
+  }
+  function hide(target: RailWorkspaceTarget) {
+    void moveAway(target).then(() => hidden.hide(hiddenKey(target.id, target.context))).catch(() => {});
+  }
+  async function remove(target: RailWorkspaceTarget) {
+    const key = hiddenKey(target.id, target.context);
+    const forgetView = async () => {
+      await moveAway(target);
+      hidden.show(key);
+      const view = workspaceViewKey(target.id, target.context ?? null);
+      for (const space of spacesWithLayout(view)) deleteLayout(view, space);
+      if (!sessions.groups()?.some((g) => g.context_id !== target.context && g.added?.has(target.id))) {
+        ws.reorder(localRows().map((w) => w.id).filter((id) => id !== target.id));
+      }
+    };
+    if (!target.context) {
+      await forgetView();
+      setLegacyRemoved([...new Set([...legacyRemoved(), target.id])]);
+      if (danil.isDanil(target.id)) danil.remove(target.id);
+      return "unavailable" as const;
+    }
+    const group = groupOf(target.context);
+    if (!group?.added) throw new Error("workspace_preferences_unavailable");
+    await moveAway(target);
+    return removeRailWorkspace({
+      context: target.context, workspace: target.id, added: group.added, revoke: sessions.revoke,
+      removeAdded: (id) => sessions.remove(group.context_id, id),
+      forgetView, closeContext: (context) => sessions.sessions.close({ context }),
+    });
+  }
   createEffect(() => {
     const open = ws.activo();
     if (sessions.groups() === null || !open || !sessions.known.has(open)) return;
     const rows = visibles();
-    if (!rows.some((w) => w.id === open) || (ws.activoContexto() && !sessions.groups()?.some((group) => group.context_id === ws.activoContexto()))) { const target = organizationStartTarget(sessions.groups() ?? [], open, ws.activoContexto(), sessions.sessions.defaultContext()); void ws.cambiarA(target?.id ?? rows.find((row) => !sessions.known.has(row.id))?.id ?? null, target?.context); }
+    if (!rows.some((w) => w.id === open) || (ws.activoContexto() && !sessions.groups()?.some((group) => group.context_id === ws.activoContexto()))) { const target = organizationStartTarget(visibleGroups(), open, ws.activoContexto(), sessions.sessions.defaultContext()); void ws.cambiarA(target?.id ?? rows.find((row) => !sessions.known.has(row.id))?.id ?? null, target?.context); }
   });
   let sessionsSettled = false;
   // La web abre al arrancar el de la URL (W6) o el primero agregado, aunque ninguna máquina diga un activo.
   const asked = capabilities().nativeWindow ? "" : window.location.search;
   createEffect(() => {
-    const groups = sessions.groups();
+    const groups = sessions.groups() && visibleGroups();
     if (sessionsSettled || !groups?.length || groups.some((g) => !g.available || !g.added) || (!ws.activo() && capabilities().nativeWindow)) return;
     sessionsSettled = true;
     const open = ws.activo();
@@ -96,7 +164,7 @@ export default function WorkspaceColumn(props: {
             type="button"
             data-workspace-tile={p.w.id}
             data-attention={state() ?? undefined}
-            class={cn("marca-seleccion group relative grid h-10 w-full shrink-0 touch-none place-items-center outline-none select-none", reorder.source() === p.w.id && "cursor-grabbing opacity-40")}
+            class={cn("group relative grid h-10 w-full shrink-0 touch-none place-items-center outline-none select-none", reorder.source() === p.w.id && "cursor-grabbing opacity-40")}
             aria-current={active() ? "true" : undefined}
             aria-label={label()}
             onPointerDown={(e: PointerEvent) => reorder.start(p.w.id, e)}
@@ -119,11 +187,10 @@ export default function WorkspaceColumn(props: {
               aria-hidden="true"
               data-active={active() ? "" : undefined}
               class={cn(
-                danil.isDanil(p.w.id) && "danil-mark",
-                "relative grid size-8 place-items-center rounded-md border text-label font-semibold group-focus-visible:outline-solid group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-primary",
+                "relative grid size-8 place-items-center rounded-md text-label font-semibold group-focus-visible:bg-neutral-200",
                 active()
-                  ? "border-border-strong bg-surface-raised text-neutral-950"
-                  : "border-border bg-surface text-neutral-700 group-hover:bg-neutral-200 group-hover:text-neutral-950",
+                  ? "bg-neutral-200 text-neutral-950"
+                  : "bg-surface text-neutral-700 group-hover:bg-neutral-200 group-hover:text-neutral-950",
               )}
             >
               <span class="absolute inset-0 overflow-hidden rounded-[inherit]">
@@ -151,22 +218,22 @@ export default function WorkspaceColumn(props: {
             anchor?.focus();
           }}
         >
-          <p class="m-0 truncate px-2 pt-1 pb-1 text-caption font-medium text-neutral-500">{p.w.name}</p>
-          <button
-            role="menuitem"
-            class={ITEM_DE_MENU}
-            onClick={() => {
-              setMenuOf(null);
-              props.onManage();
+          <OrganizationAccountMenu
+            workspace={p.w.name} promo={false} send={sessions.sessions.sendOptional} onPromo={() => {}}
+            canMoveUp={visibles().findIndex((w) => w.id === p.w.id) > 0}
+            canMoveDown={visibles().findIndex((w) => w.id === p.w.id) < visibles().length - 1}
+            onOpen={() => { setMenuOf(null); void ws.cambiarA(p.w.id); }}
+            onHide={() => { setMenuOf(null); hide(p.w); }}
+            onRemove={() => { setMenuOf(null); setRemoving(p.w); }}
+            onMove={(step) => {
+              const ids = visibles().map((w) => w.id);
+              const from = ids.indexOf(p.w.id), to = from + step;
+              if (from < 0 || to < 0 || to >= ids.length) return;
+              [ids[from], ids[to]] = [ids[to], ids[from]];
+              ws.reorder(keepSlots(localRows().map((w) => w.id), ids));
             }}
-          >
-            {t("settings.workspaces.manage")}
-          </button>
-          <Show when={!active()}>
-            <button role="menuitem" class={ITEM_DE_MENU} onClick={() => (setMenuOf(null), danil.isDanil(p.w.id) ? danil.remove(p.w.id) : hidden.hide(p.w.id))}>
-              {danil.isDanil(p.w.id) ? t("shell.workspaces.remove") : t("shell.workspaces.hide")}
-            </button>
-          </Show>
+            onDismiss={() => setMenuOf(null)}
+          />
         </PopoverContent>
       </Popover>
     );
@@ -219,17 +286,18 @@ export default function WorkspaceColumn(props: {
         <Show when={accounts && others().length > 0}>
           <AccountHeader accounts={accounts} id={accounts!.current.user_id} email={accounts!.current.email} extra={accounts!.current.extra} signedIn />
         </Show>
-        <SessionWorkspaceRows sessions={sessions} rows={visibles()} render={(w) => <Tile w={w()} />} active={ws.activo() && ws.activoContexto() ? { workspace: ws.activo()!, context: ws.activoContexto()! } : null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} staleOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.stale ?? false} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void ws.cambiarA(id, context)} onManage={() => props.onManage()} />
+        <SessionWorkspaceRows sessions={sessions} rows={visibles()} render={(w) => <Tile w={w()} />} active={ws.activo() && ws.activoContexto() ? { workspace: ws.activo()!, context: ws.activoContexto()! } : null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} staleOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.stale ?? false} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void ws.cambiarA(id, context)} onHide={hide} onRemove={setRemoving} hidden={isHidden} />
         <AddWorkspaceMenu
           sessions={sessions}
-          hidden={hiddenRows(ws.lista() ?? [])}
-          danil={danilMenuOf(danil, danilView(), (id) => void ws.cambiarA(id))}
+          hidden={hiddenRows()}
           open={ws.activo() ?? null}
+          activeContext={ws.activoContexto()}
           tasksOf={tasksOf}
           badge={AttentionBadge}
           labelOf={(s) => taskLabel(s, true)}
           onOpen={(id, context) => void ws.cambiarA(id, context)}
-          onShow={hidden.show}
+          onShow={(w) => hidden.show(hiddenKey(w.id, w.context))}
+          onRemove={setRemoving}
         />
         <For each={others()}>
           {(account) => (
@@ -240,6 +308,8 @@ export default function WorkspaceColumn(props: {
           )}
         </For>
       </div>
+      <RemoveWorkspaceDialog workspace={removing()} onCancel={() => setRemoving(null)} onRemove={remove} onUnavailable={() => setRevokeUnavailable(true)} />
+      <ToastPortal><Show when={revokeUnavailable()}><Toast onDismiss={() => setRevokeUnavailable(false)}>{t("shell.workspaces.revoke_unavailable")}</Toast></Show></ToastPortal>
       <ColumnFoot tools={props.tools} open={ws.activo() ?? null} onSettings={props.onSettings} onReportarBug={props.onReportarBug} />
     </nav>
   );

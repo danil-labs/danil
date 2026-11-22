@@ -59,6 +59,7 @@ export type WebAccountsSource = {
 };
 
 export type Capabilities = import("./group-account").GroupAccountCapabilities & {
+  revokeWorkspaceAccess?: (context: string, workspace: string) => Promise<"revoked" | "unavailable">;
   webPromo?: (code: string, idempotencyKey: string) => Promise<{ machine?: { state?: string }; unavailable?: boolean }>;
   webWorkspacePicker?: import("../web/workspace-picker").WorkspacePicker;
   webReauth?: { needed: () => boolean; signIn: () => void; failed?: () => boolean };

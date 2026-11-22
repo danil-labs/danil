@@ -1,3 +1,4 @@
+import type { WorkspaceAddLink } from "../lib/workspace-add-link.ts";
 import { z } from "zod";
 import type { EdgeTransport } from "@terminus/computers";
 import { workspaceId } from "./platform-workspaces.ts";
@@ -41,7 +42,7 @@ function organizationName(org: string, name: string | null | undefined) {
   return name && name !== org ? name : "";
 }
 
-export function webWorkspacePicker(transport: EdgeTransport, options: { store: Storage; connect?: () => Promise<void>; signIn?: (organization: string) => void }) {
+export function webWorkspacePicker(transport: EdgeTransport, options: { store: Storage; takeHarnessWorkspace?: () => WorkspaceAddLink | null; connect?: () => Promise<void>; signIn?: (organization: string) => void }) {
   const subscribers = new Set<() => void>();
   async function catalog() {
     const body = directory.parse(await (await transport.call("identity/sessions/catalog")).json());
@@ -78,6 +79,7 @@ export function webWorkspacePicker(transport: EdgeTransport, options: { store: S
   }
   return {
     catalog,
+    takeHarnessWorkspace: () => options.takeHarnessWorkspace?.() ?? null,
     canConnect: Boolean(options.connect),
     async connect() {
       if (!options.connect) return;

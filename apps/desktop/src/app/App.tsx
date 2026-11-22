@@ -7576,7 +7576,6 @@ export default function App() {
         <div class="tab-veil window-frame relative flex min-h-0 flex-1 overflow-visible">
           <WorkspaceColumn
             attention={attention.list()}
-            onManage={() => setSettings("workspaces")}
             onSettings={(panel) => setSettings(panel ?? "")}
             onReportarBug={() => setInput(t("chat.composer.bug_report_starter"))}
             tools={<>

@@ -1,7 +1,6 @@
 /**
  * El primer arranque con sesión (plan de cuentas F1.2): la ventana entra al
- * workspace de la organización personal Free, el mismo que sella «+» con
- * `createFree`. La app no crea workspaces locales; solo la CLI crea.
+ * workspace personal Free que el catálogo ya asignó.
  *
  * El alta tapa el riel, así que no usa `sessionRail` (un singleton con las
  * funciones del riel): lee los contextos y el catálogo por su cuenta.
@@ -71,7 +70,7 @@ export async function sealFirstFreeWorkspace(invoke: ContextInvoke, { delays = F
 type Send = ReturnType<typeof createSessionContexts>["send"];
 
 /**
- * Lo mismo que `createFree` tras sellar (`session-groups.ts`): agregarlo a la
+ * Después de sellar, se agrega a la
  * lista de la persona, para que el riel lo muestre aunque ya tenga una lista
  * `added`. Lo pendiente queda en las preferencias y el riel lo termina de mandar.
  */

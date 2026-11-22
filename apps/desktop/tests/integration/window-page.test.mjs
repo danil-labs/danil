@@ -478,6 +478,7 @@ for (const scenario of ['one account with two organizations', 'two accounts', 'r
     const { pathname } = new URL(String(input));
     if (init?.method && init.method !== 'GET') writes.push(pathname);
     if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'QA', workspace: null, active_organization_id: null, organizations: [] });
+    if (pathname === '/v1/identity/sessions') return Response.json({ items: dirs });
     if (pathname === '/v1/identity/sessions/catalog') return Response.json({ version: 1, items: dirs });
     if (pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: [{ name: 'workspaces', version: 1, status: 'available' }] });
     return new Response(null, { status: 404 });
@@ -488,7 +489,12 @@ for (const scenario of ['one account with two organizations', 'two accounts', 'r
   } });
   const doc = app.w.document;
   await until(() => doc.querySelector('[data-add-workspace]'));
-  if (!returning) doc.querySelector('[data-add-workspace]').click();
+  if (!returning) {
+    doc.querySelector('[data-add-workspace]').click();
+    await until(() => doc.querySelector('[data-add-danil-step]'));
+    assert.equal(doc.querySelector('[data-web-workspace-picker]'), null);
+    doc.querySelector('[data-add-danil-step]').click();
+  }
   await until(() => doc.querySelectorAll('[data-picker-workspace]').length === (single ? 2 : 3));
   assert.deepEqual([...doc.querySelectorAll('[data-picker-workspace]')].map(w => w.textContent),
     single ? ['CatálogoDanil', 'EntregasAzul'] : ['CatálogoDanil · a@example.test', 'EntregasAzul', 'CatálogoDanil · b@example.test']);
@@ -519,6 +525,7 @@ test('the picker lists an organization that needs admission in the same list and
     if (pathname === '/v1/capabilities') return new Response(null, { status: 404 });
     if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'QA', workspace: null, active_organization_id: null, organizations: [] });
     if (pathname === '/v1/identity/organizations') return new Response(null, { status: 404 });
+    if (pathname === '/v1/identity/sessions') return Response.json({ items: [{ session_id: 's1', sub: 'user_A', email: 'a@example.test', contexts: contexts().filter((c) => c.context_id) }] });
     if (pathname === '/v1/identity/sessions/catalog') return Response.json({ version: 1, items: [{ session_id: 's1', sub: 'user_A', email: 'a@example.test', contexts: contexts() }] });
     if (pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
     if (pathname === '/v1/identity/contexts') { admitted = true; return Response.json({ context_id: 'c2', org: 'org_B' }); }
@@ -532,6 +539,8 @@ test('the picker lists an organization that needs admission in the same list and
   const doc = app.w.document;
   await until(() => doc.querySelector('[data-add-workspace]'));
   doc.querySelector('[data-add-workspace]').click();
+  await until(() => doc.querySelector('[data-add-danil-step]'));
+  doc.querySelector('[data-add-danil-step]').click();
   await until(() => doc.querySelector('[data-picker-organization="org_B"]'));
   assert.equal(doc.querySelectorAll('[data-picker-workspace]').length, 1, 'una sola lista: el admitido y la organización pendiente');
   assert.match(doc.querySelector('[data-picker-organization="org_B"]').textContent, /Azul.*Requiere admisión/);
