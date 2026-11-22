@@ -15,7 +15,6 @@ const PASOS = [0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2] as const;
 
 const [escala, guardar] = createPref("ui.scale", 1);
 
-export { escala };
 
 function fijar(valor: number) {
   guardar(valor);
@@ -35,15 +34,15 @@ function mover(pasos: number) {
   fijar(PASOS[Math.min(Math.max(desde + pasos, 0), PASOS.length - 1)]);
 }
 
-export function agrandar() {
+function agrandar() {
   mover(1);
 }
 
-export function achicar() {
+function achicar() {
   mover(-1);
 }
 
-export function escalaNormal() {
+function escalaNormal() {
   fijar(1);
 }
 

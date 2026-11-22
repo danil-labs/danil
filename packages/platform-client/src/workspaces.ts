@@ -12,16 +12,13 @@ import type { SelectWorkspaceResponse, WorkspaceList } from "./generated/types.t
  * `empty_reason` y `active_workspace_id` de la lista y `engine_workspace_id` de la fila no están en el contrato
  * (hallazgo para danil-contracts): llegan como campos aditivos y quien los lee los comprueba.
  */
-export type { SelectWorkspaceResponse, Workspace, WorkspaceList } from "./generated/types.ts";
+export type { WorkspaceList } from "./generated/types.ts";
 
 export const WORKSPACES_PATH = "/v1/workspaces";
 const WORKSPACES_SELECT_PATH = "/v1/workspaces/select";
 export const WORKSPACES_ADOPT_PATH = "/v1/workspaces/adopt";
 export const WORKSPACES_ADOPT_CHALLENGE_PATH = "/v1/workspaces/adopt/challenge";
 export const WORKSPACES_PROMO_REDEEM_PATH = "/v1/workspaces/promo/redeem";
-
-/** Las altas que llevan clave de idempotencia propia (`POST /v1/workspaces` y `/adopt`). */
-export const isWorkspaceCreationPath = (path: string) => path === WORKSPACES_PATH || path === WORKSPACES_ADOPT_PATH;
 
 /** Una página de `GET /v1/workspaces`. */
 export const workspacesPagePath = (cursor?: string | null) => `/v1/workspaces${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`;

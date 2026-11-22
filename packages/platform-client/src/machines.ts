@@ -23,7 +23,7 @@ export const CAPABILITIES_PATH = "/v1/capabilities";
 export const capabilitiesUrl = (endpoint: string) => `${endpoint}/capabilities`;
 
 /** Las respuestas del dominio salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7). */
-export type { Machine, MachineList, MachineTicket, Operation } from "./generated/types.ts";
+export type { Machine } from "./generated/types.ts";
 
 /**
  * Los relays que sirven a `edge.danil.ai`, por origen exacto (machine-session.v1, Apertura §2): el puente de

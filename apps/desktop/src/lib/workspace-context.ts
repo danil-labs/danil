@@ -8,7 +8,7 @@ export function rememberWorkspaceSnapshot<T>(value: T, context: string | null): 
   if (value && typeof value === "object") snapshots.set(value, context);
   return value;
 }
-export function snapshotWorkspaceContext(value: object): string | null {
+function snapshotWorkspaceContext(value: object): string | null {
   return snapshots.has(value) ? snapshots.get(value)! : (value as { context?: string }).context ?? null;
 }
 export const requestedWorkspaceSnapshot = (value: object) => snapshotWorkspaceContext(value) === activeWorkspaceContext();

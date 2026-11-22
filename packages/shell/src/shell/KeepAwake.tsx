@@ -16,7 +16,7 @@ interface Status {
   supported: boolean;
 }
 
-export const MODES: Mode[] = ["on", "agent", "off"];
+const MODES: Mode[] = ["on", "agent", "off"];
 
 function nameOf(mode: Mode): string {
   switch (mode) {

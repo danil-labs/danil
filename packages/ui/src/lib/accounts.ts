@@ -99,7 +99,7 @@ export type AccountStatus = {
  * llamarse «sesión iniciada» en vez de por su etiqueta, sin error y sin aviso.
  * Vive aquí, con los tipos que cruzan la frontera, y no en el componente.
  */
-export const SESION_INICIADA = "sesión iniciada";
+const SESION_INICIADA = "sesión iniciada";
 
 /**
  * Eventos de la conexión en curso, normalizados por Rust.

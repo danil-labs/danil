@@ -17,7 +17,7 @@ export const INSTALL_URL = "https://alfa-app.danil.ai/install.sh";
 export const APPEAR_WAIT = 11 * 60_000;
 /** Inscrita, lo que se espera a que el motor abra el relay. */
 export const ONLINE_WAIT = 90_000;
-export const POLL_EVERY = 3_000;
+const POLL_EVERY = 3_000;
 
 /** El comando a pegar en la terminal de la otra máquina. */
 export function installCommand(options: { name?: string | null; url?: string } = {}): string {

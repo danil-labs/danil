@@ -15,9 +15,7 @@ import { escribirPref, leerPref } from "./prefs.ts";
 export {
   type SidebarGroup,
   type SidebarGrouping,
-  type SidebarSection,
   type SidebarSort,
-  type SidebarStatusKey,
   type SidebarTask,
   type SidebarView,
   DEFAULT_SIDEBAR_VIEW,
@@ -93,11 +91,11 @@ export function scopeLabel(view: SidebarView, folderName: (id: string) => string
   return parts.join(" · ");
 }
 
-export function sectionLabel(_section: SidebarSection): string {
+function sectionLabel(_section: SidebarSection): string {
   return t("shell.sidebar.view.section_active");
 }
 
-export function statusGroupLabel(key: SidebarStatusKey): string {
+function statusGroupLabel(key: SidebarStatusKey): string {
   switch (key) {
     case "draft": return t("shell.sidebar.view.status_draft");
     case "review": return t("shell.sidebar.view.status_review");

@@ -13,10 +13,10 @@ import { WORKSPACES_PATH, workspaceAssetPath } from "../../../../packages/platfo
 import { platformFetch } from "../../../../packages/platform-client/src/client.ts";
 
 
-export type WorkspaceAssetKind = "logo" | "background";
+type WorkspaceAssetKind = "logo" | "background";
 
 /** The background setting the account keeps beside the image (`settings.chat_background`). */
-export type AccountChatBackground = { preset: string | null; veil: unknown };
+type AccountChatBackground = { preset: string | null; veil: unknown };
 
 export type WorkspaceAssetsSource = {
   /** The image as `data:`; `null` if the account has none; `undefined` if the account does not know (not linked, older control plane). */

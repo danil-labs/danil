@@ -5,7 +5,7 @@
  */
 const EDITABLE = 'input, textarea, [contenteditable=""], [contenteditable="true"]';
 
-export function keepsNativeMenu(target: EventTarget | null, selection: string): boolean {
+function keepsNativeMenu(target: EventTarget | null, selection: string): boolean {
   if (selection.trim() !== "") return true;
   return Boolean((target as Element | null)?.closest?.(EDITABLE));
 }

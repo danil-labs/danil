@@ -80,7 +80,7 @@ type AccountComputersProps = {
 };
 
 /** Las computadoras de la cuenta: tipo, estado y el nombre, que se edita en su sitio. */
-export function AccountComputers(props: AccountComputersProps) {
+function AccountComputers(props: AccountComputersProps) {
   const [list, setList] = createSignal<Computer[] | null>(null);
   const [failed, setFailed] = createSignal<"missing" | "failed" | null>(null);
   const [editing, setEditing] = createSignal<string | null>(null);

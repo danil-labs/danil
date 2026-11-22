@@ -52,7 +52,7 @@ export type MemoriaProveedor =
  * pinta, vive en `migrations.json`. El tipo se queda porque el contrato con
  * Rust lo trae: describirlo mal rompe el puente sin aviso.
  */
-export type Run = {
+type Run = {
   version: number;
   at: number;
   moved: { what: string; count: number }[];

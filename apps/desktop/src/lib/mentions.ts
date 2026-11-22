@@ -100,7 +100,7 @@ export function splitMentions(text: string): MentionChunk[] {
 }
 
 /** Cómo se escribe una referencia: entrecomillada solo si lo necesita. */
-export function mentionText(path: string): string {
+function mentionText(path: string): string {
   return /[\s"@]/.test(path) ? `@"${path}"` : `@${path}`;
 }
 

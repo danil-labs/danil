@@ -1,4 +1,4 @@
-export type AnsiStyle = {
+type AnsiStyle = {
   color: "default" | "red" | "green" | "yellow" | "blue" | "magenta" | "cyan";
   bold: boolean;
   dim: boolean;

@@ -2,11 +2,11 @@ import type { Trigger } from "./mentions.ts";
 import { slashTokens } from "../../../../packages/ui/src/lib/chat/slash.ts";
 
 /** Lo que la ventana vio de una tarea de otra máquina: el motor que no la tiene se la cuenta al agente con esto. */
-export type TaskAbout = { machine_name?: string; title?: string; branch?: string; folder_name?: string };
+type TaskAbout = { machine_name?: string; title?: string; branch?: string; folder_name?: string };
 /** `about` solo cuando la tarea vive en otra máquina que la que recibe el mensaje; el router lo vuelve `elsewhere`. */
 export type TaskTarget = { kind: "task"; projectId: string; sessionId: string; about?: TaskAbout };
-export type FolderTarget = { kind: "folder"; projectId: string };
-export type PortfolioTarget = { kind: "portfolio"; portfolioId: string };
+type FolderTarget = { kind: "folder"; projectId: string };
+type PortfolioTarget = { kind: "portfolio"; portfolioId: string };
 export type MentionTarget = TaskTarget | FolderTarget | PortfolioTarget;
 export type TaskMention = { target: MentionTarget; start: number; end: number; text: string; elsewhere?: TaskAbout & { machine: string } };
 export type PlaceCandidate = { target: FolderTarget; name: string; detail: string; updatedAt: number };

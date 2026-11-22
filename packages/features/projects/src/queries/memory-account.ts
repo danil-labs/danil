@@ -72,7 +72,7 @@ export type EntradaDeCuenta = MemoriaEntrada & { path: string; oid: string };
  * La carpeta del repo que corresponde a ese alcance: la primera que ya tiene
  * entradas (un encargado puede ser del proyecto o del workspace), o la primera.
  */
-export function carpetaDe(files: MemoryFileRef[], project: string, scope: MemoriaScope): string {
+function carpetaDe(files: MemoryFileRef[], project: string, scope: MemoriaScope): string {
   const dirs = memoryDirs(project, scope);
   return dirs.find((d) => entriesIn(files, d).length > 0) ?? (dirs[0] as string);
 }

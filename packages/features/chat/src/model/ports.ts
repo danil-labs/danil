@@ -115,7 +115,7 @@ type TaskQueuesPort = {
 };
 export type CreateTaskQueues = (deps: TaskQueuesDeps) => TaskQueuesPort;
 type Route = { headers: Record<string, string> } | undefined;
-export type EngineScope = { project: string; session: string; route?: Route };
+type EngineScope = { project: string; session: string; route?: Route };
 export type CreateEngineQueue = (env: {
   invoke: <T>(command: string, args: Record<string, unknown>, options?: Route) => Promise<T>;
   machines: () => readonly Machine[];

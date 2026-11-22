@@ -13,10 +13,6 @@ import { type CredentialSource, EdgeError, type EdgeTransport } from "@terminus/
  * `name`/`created_at` y los estados `signed_in`/`unsupported` de la máquina, `name`/`online`/
  * `service_features` del destinatario) es hallazgo para danil-contracts, no un campo aquí.
  */
-export type {
-  AccountCredential, AccountCredentialEnvelope, CredentialMachine, CredentialProviderList, CredentialRecipient,
-  GithubAuthorizeRequest, GithubAuthorizeResponse, GithubConnection, PutWorkspaceAccount, SealedCopy, WorkspaceAccounts,
-} from "./generated/types.ts";
 
 export function webCredentialSource(origin: string, transport: EdgeTransport): CredentialSource {
   const base = `${origin}/v1/`;

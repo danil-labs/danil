@@ -1,4 +1,4 @@
-export const CREATION_KEY = "danil.billing.creation";
+const CREATION_KEY = "danil.billing.creation";
 type Creation = { key: string; checkoutId?: string };
 function storedCreations(storage: Pick<Storage, "getItem">): Record<string, Creation> {
   try {

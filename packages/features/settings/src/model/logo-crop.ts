@@ -1,6 +1,6 @@
 /** El cuadrado que se arrastra. La salida es más grande para que el riel no se vea blando. */
 export const MARCO = 240;
-export const SALIDA = 512;
+const SALIDA = 512;
 /** El tope del logo en el motor y en la cuenta. */
 export const LOGO_MAX = 1024 * 1024;
 /** Lados de salida, de mayor a menor: a 384 px un PNG nunca llega a `LOGO_MAX`. */
@@ -13,7 +13,7 @@ export function bytesDeBase64(base64: string): number {
 }
 
 /** Escala con la que la imagen tapa el marco entero. Por debajo se verían bandas. */
-export function cubre(ancho: number, alto: number, marco = MARCO): number {
+function cubre(ancho: number, alto: number, marco = MARCO): number {
   if (ancho <= 0 || alto <= 0) return 1;
   return Math.max(marco / ancho, marco / alto);
 }

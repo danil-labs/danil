@@ -16,7 +16,7 @@ export async function readGroupBalance(send: GroupSend, group: GroupAccount): Pr
   } catch { return null; }
 }
 
-export const availableCredits = availableDanilCredits;
+const availableCredits = availableDanilCredits;
 
 export async function redeemGroupCode(send: GroupSend, group: GroupAccount, code: string, key: string) {
   const value = normalizePromoCode(code);

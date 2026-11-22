@@ -47,7 +47,7 @@ export function forgetRosters(): void {
 }
 
 /** Esperas entre intentos cuando la lista de una carpeta falla; después se queda con lo último. */
-export const ROSTER_RETRY_WAITS = [1000, 3000, 10000, 30000];
+const ROSTER_RETRY_WAITS = [1000, 3000, 10000, 30000];
 
 /**
  * Los agentes de una carpeta, dentro de un dueño reactivo. Un fallo devuelve lo

@@ -58,7 +58,7 @@ export function recipientLabel(name: string): string {
   return mentionLabel(name, "handler");
 }
 
-export function editRecipients(before: RecipientDraft, text: string, edit?: TextEdit): Recipient[] {
+function editRecipients(before: RecipientDraft, text: string, edit?: TextEdit): Recipient[] {
   return editSpans(before.text, before.recipients ?? [], text, edit);
 }
 

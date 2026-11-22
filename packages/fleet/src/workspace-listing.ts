@@ -1,4 +1,4 @@
-export type WorkspaceAccount = { org: string; account_id: string };
+type WorkspaceAccount = { org: string; account_id: string };
 export type ListedWorkspace = {
 	id: string;
 	name: string;
