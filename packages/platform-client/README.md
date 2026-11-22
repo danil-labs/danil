@@ -27,8 +27,11 @@ Exporta desde `src/client.ts` y módulos de dominio:
 - `contract/openapi.json`: copia literal de `platform/openapi.json` de `danil-labs/danil-contracts`; el commit está en `contract/PIN`.
 - `node packages/platform-client/scripts/generate.mjs` regenera `src/generated/types.ts` (esquemas de las operaciones de cada dominio de `DOMAINS`) y `src/generated/contract.ts` (`CONTRACT_HASH`, `OPERATIONS`). Con `--check` falla si están desactualizados.
 - Para subir el contrato: copia el archivo del nuevo commit, actualiza `PIN` y regenera. R7 (`verify-front`) falla si `CONTRACT_HASH` no es el sha256 del archivo.
+- `contract/billing-v2/`: copia literal de `platform/billing-v2/openapi/public.openapi.json` y de `platform/billing-v2/schemas/common.v1.schema.json` (sus `$defs`), del mismo commit de `PIN`. Generan `src/generated/billing.ts` aparte porque sus nombres chocan con los de platform; su hash es `BILLING_CONTRACT_HASH`.
 - Dominios generados: **machines** (`machines.ts` reexporta `Machine`, `MachineList`, `MachineTicket` y `Operation`). La configuración, el transporte y el sobre `MachinesAnswer` no son respuestas y viven en `machines-config.ts`.
+- **treasury** (`treasury.ts` reexporta `Catalog`, `OrganizationBilling`, `Balance`, `Checkout`, `CheckoutStatus`, `Purchase`, `PortalSession`, `TransactionPage`…). Los esquemas zod siguen validando lo que se lee; `fits<C>()` hace que no compilen si leen algo que no cabe en el contrato. El sobre `GroupReply` y `PlanChoice` (de `CheckoutUpgradeCreate`) viven en `treasury-config.ts`.
+- **credentials** (`credentials.ts` reexporta `WorkspaceAccounts`, `AccountCredential`, `CredentialMachine`, `CredentialRecipient`, `GithubConnection`…). La lectura normalizada sigue en `@terminus/computers`.
 
 ## Qué falta según la fase 2 del plan
 - Fase 2.3: consumirse únicamente desde los archivos `queries.ts` de las features (R12).
-- Fase 4.2: generar del OpenAPI los dominios que quedan (identidad, workspaces, treasury, credenciales); machines ya está.
+- Fase 4.2: machines, identidad, workspaces, treasury y credenciales ya se generan.

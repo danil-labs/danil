@@ -8,7 +8,8 @@ import { billingScopes, type BillingScope } from "./billing-v2-scopes";
 import { BillingPromotionField, promotionCodeInvalid } from "./BillingPromotionField";
 import { billingFingerprint } from "./billing-v2-idempotency";
 import { checkoutPlans } from "./billing-v2-plans";
-import type { billingV2, PlanChoice } from "../../../../packages/platform-client/src/treasury";
+import type { billingV2 } from "../../../../packages/platform-client/src/treasury";
+import type { PlanChoice } from "../../../../packages/platform-client/src/treasury-config";
 import { hostedCheckoutUrl, PAYMENT_URL_DEADLINE_MS, paymentInProgress, waitForPaymentUrl } from "./billing-v2-return";
 import { rememberBillingReturn } from "./billing-route";
 
