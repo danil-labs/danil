@@ -24,7 +24,7 @@ import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import { Input } from "../../../../ui/src/Input";
 import { Select } from "../../../../ui/src/Select";
-import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
+import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { ConnectionAccess } from "./ConnectionAccess";
 import { snippets } from "../model/orchestratorSnippets.ts";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";

@@ -1,3 +1,4 @@
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import { For, Match, Show, Suspense, Switch, createEffect, createSignal, lazy, on, onCleanup, onMount, type JSX } from "solid-js";
 import { checkEnvironment } from "../queries/engine-environment";
 import { attachRepo, cancelBrowserLogin, checkGitHost, connectGitHost, disconnectGitHost, finishBrowserLogin, gitHostAreas, gitHostAvailableAreas, gitHostProjects, installGh, selectGitHostArea, startBrowserLogin } from "../queries/engine-git";
@@ -20,7 +21,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "../../../../ui/src/DropdownMenu";
-import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "./layout";
+import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import type { GithubAccountState } from "./GithubAccount";
 import { ExternalLink } from "../../../../ui/src/ExternalLink";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
@@ -132,6 +133,7 @@ const rankOf = (id: string) => (ORDER.includes(id) ? ORDER.indexOf(id) : ORDER.l
 export type ProvidersProps = {
   solo?: string | string[];
   integraciones?: (p: { solo: string[]; onCambio: () => void }) => JSX.Element;
+  maquinas: MaquinasDeAjustes;
 };
 
 export default function Providers(props: ProvidersProps) {
@@ -143,7 +145,7 @@ export default function Providers(props: ProvidersProps) {
   });
   return (
     <Show when={generation()} keyed>
-      {(_generation) => <WorkspaceProviders solo={props.solo} integraciones={props.integraciones} />}
+      {(_generation) => <WorkspaceProviders solo={props.solo} integraciones={props.integraciones} maquinas={props.maquinas} />}
     </Show>
   );
 }
@@ -1209,7 +1211,7 @@ function WorkspaceProviders(props: ProvidersProps) {
                   <div class="mt-3">
                     <Suspense fallback={null}>
                       {Integraciones()({ solo: ["zotero"], onCambio: () => {} })}
-                      <LocalKeysBanner kinds={["zotero"]} />
+                      <LocalKeysBanner kinds={["zotero"]} maquinas={props.maquinas} />
                       <CredentialsInUse kinds={["zotero"]} title={t("danil.credentials.zotero_title")} />
                     </Suspense>
                   </div>

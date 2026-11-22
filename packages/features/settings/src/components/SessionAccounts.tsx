@@ -6,7 +6,7 @@ import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { KeyedList } from "../../../../ui/src/KeyedList";
 import { accountReturn, noteWebAccountMode, sessionRailState } from "../../../../shell/src/shell";
-import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "./layout";
+import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 type Row = GroupAccount & { email: string | null; family: string };
 export default function SessionAccounts() {

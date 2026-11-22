@@ -7,7 +7,7 @@
 import { cancelEdgeWrites } from "../../../../platform-client/src/client.ts";
 import { signOutPlatform } from "./free-router-session.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { forgetMachineNames } from "../../../machines/src/model/known-names.ts";
+import { forgetMachineNames } from "../../../../session/src/known-machine-names.ts";
 
 export type DanilConnectState = "disconnected" | "pending" | "connected" | "error";
 

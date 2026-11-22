@@ -13,7 +13,7 @@ import {
 import { instalarDelBundle, lenguasDelBundle } from "../../../../../apps/desktop/src/locales/packs";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import type { Startup } from "../queries/workspaces-store";
-import { SettingsRow } from "./layout";
+import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 
 /**
  * En qué lengua se pinta la app. Vale para dos sitios, y cambia qué escribe:

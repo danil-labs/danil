@@ -1,3 +1,4 @@
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { FREE_ROUTER_OPENCODE } from "@terminus/tasks";
@@ -14,7 +15,7 @@ import { rotuloDeMarca } from "../../../chat/src/model/marks";
 import Accounts from "./Accounts";
 import AddAccountPicker from "./AddAccountPicker";
 import DanilBlock from "./DanilBlock";
-import { SettingsPanel, SettingsSection } from "./layout";
+import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 /**
  * Proveedores de IA: el bloque Danil, un solo «Agregar cuenta» y un grupo por
@@ -24,7 +25,7 @@ import { SettingsPanel, SettingsSection } from "./layout";
  * login en curso. `For` sobre ids de proveedor (cadenas) une cada `Accounts` a
  * su proveedor aunque `list_surfaces` traiga objetos nuevos o cambie el orden.
  */
-export default function AIProviders(props: { superficies: Superficie[]; estado?: SurfacesState; onRetry?: () => void }) {
+export default function AIProviders(props: { superficies: Superficie[]; estado?: SurfacesState; onRetry?: () => void; maquinas: MaquinasDeAjustes }) {
   const vista = () => aiProvidersView(props.estado ?? { k: "ready" }, props.superficies.length);
   const [estados, setEstados] = createStore<Record<string, EstadoDeProveedor | undefined>>({});
   // Elegido en el selector y todavía sin estado que lo sostenga (descarga externa): se ve igual.
@@ -61,7 +62,7 @@ export default function AIProviders(props: { superficies: Superficie[]; estado?:
 
   return (
     <SettingsPanel>
-      <DanilBlock routers={routers(props.superficies, FREE_ROUTER_OPENCODE)} />
+      <DanilBlock routers={routers(props.superficies, FREE_ROUTER_OPENCODE)} maquinas={props.maquinas} />
       <SettingsSection
         title={t("settings.ai_providers.accounts")}
         aside={<AddAccountPicker opciones={sinLista() ? [] : opcionesDeAlta(props.superficies, estados)} nombre={nombre} onElegir={elegir} disabled={ids().length === 0} disparador={(el) => (disparador = el)} />}
@@ -98,9 +99,9 @@ export default function AIProviders(props: { superficies: Superficie[]; estado?:
           <For each={ids()}>
             {(id) => (
               <div onFocusIn={() => (focoEn = id)} onFocusOut={(e) => e.relatedTarget && (focoEn = null)} class={seVe(id) ? "grid min-w-0" : "hidden"} data-provider-slot={id}>
-                <Accounts agente={id} titulo={nombre(id)} marca={<Show when={porId().get(id)?.[0]}>{(s) => <Marca superficie={s()} />}</Show>} sinAgregar onEstado={(e) => avisar(id, e)} onControl={(c) => controles.set(id, c)}>
+                <Accounts agente={id} titulo={nombre(id)} marca={<Show when={porId().get(id)?.[0]}>{(s) => <Marca superficie={s()} />}</Show>} sinAgregar onEstado={(e) => avisar(id, e)} onControl={(c) => controles.set(id, c)} maquinas={props.maquinas}>
                   <For each={porId().get(id)?.slice(1).map((s) => s.id) ?? []}>
-                    {(sid) => <Show when={porId().get(id)?.find((s) => s.id === sid)}>{(s) => <Accounts agente={s().provider} nombre={rotuloDeSuperficie(s())} marca={<Marca superficie={s()} />} sinAgregar />}</Show>}
+                    {(sid) => <Show when={porId().get(id)?.find((s) => s.id === sid)}>{(s) => <Accounts agente={s().provider} nombre={rotuloDeSuperficie(s())} marca={<Marca superficie={s()} />} sinAgregar maquinas={props.maquinas} />}</Show>}
                   </For>
                 </Accounts>
               </div>

@@ -18,13 +18,13 @@ import { Button } from "../../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote, prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
 import { MarcaFuente, repoDe } from "../../../../ui/src/sources";
-import { machineName, machines } from "../../../machines/src/queries/store";
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import { SalidaDelAgente } from "./AgentOutput";
 import { CloseBehavior } from "./CloseBehavior";
 import { DefaultPermissions } from "../screens/DefaultPermissions";
 import { Governed } from "./Governed";
 import { Lengua } from "./Language";
-import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "./layout";
+import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import MaterialPicker from "./MaterialPicker";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
 
@@ -186,7 +186,8 @@ function SourceRow(props: {
   );
 }
 
-export default function General() {
+export default function General(props: { maquinas: MaquinasDeAjustes }) {
+  const { machineName, machines } = props.maquinas;
   const [directory, setDirectory] = createSignal<string | null>(null);
   const [savingDirectory, setSavingDirectory] = createSignal(false);
   const [directoryFailure, setDirectoryFailure] = createSignal<Failure | null>(null);

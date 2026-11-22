@@ -12,7 +12,7 @@ import { legible, type Query, type Read } from "../../../../../apps/desktop/src/
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { Failure } from "../../../../ui/src/Failure";
 import { detalleDe } from "../../../../ui/src/Failure";
-import { machineOf } from "../../../machines/src/queries/store";
+import type { MaquinasDeAjustes } from "../model/machines-port";
 
 export type Account = {
   id: string;
@@ -184,6 +184,7 @@ export function createAccountLimit(props: {
   orden: number;
   tras: number;
   enabled: boolean;
+  machineOf: MaquinasDeAjustes["machineOf"];
 }) {
   const [estado, setEstado] = createSignal<Query | undefined>();
   const [preguntando, setPreguntando] = createSignal(false);
@@ -197,7 +198,7 @@ export function createAccountLimit(props: {
         provider: props.agent,
         id: props.id,
         force,
-      }, machineOf(props.id));
+      }, props.machineOf(props.id));
       setEstado(r);
       const buena = legible(r);
       if (buena) setUltimo(buena);

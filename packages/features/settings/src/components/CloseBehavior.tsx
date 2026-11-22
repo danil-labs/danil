@@ -1,5 +1,5 @@
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { SettingsRow } from "./layout";
+import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
 
 export function CloseBehavior() {

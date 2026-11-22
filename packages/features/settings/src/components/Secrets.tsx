@@ -32,8 +32,8 @@ import { Skeleton } from "../../../../ui/src/Skeleton";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { CredentialMachines, LocalKeysBanner } from "./AccountCredentials";
 import { act, credentialsBackend, credentialsView, failureOf, reloadCredentials } from "../queries/credentials-store";
-import { SettingsBlock, SettingsPanel, SettingsSection } from "./layout";
-import { machines } from "../../../machines/src/queries/store";
+import { SettingsBlock, SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import { secretsRoute } from "../model/secrets-support";
 
 const NAME_PROBLEM = {
@@ -60,7 +60,7 @@ type SecretRow = { slot: string; folder: string | null; name: string; hint: stri
 
 const machineLabel = (m: Pick<CredentialMachine, "computer_id" | "name">) => m.name?.trim() || capabilities().machineName?.(m.computer_id) || m.computer_id;
 const viaEngine = () => credentialsBackend().where === "engine";
-const route = () => secretsRoute(credentialsBackend().where, machines());
+const routeOf = ({ machines }: MaquinasDeAjustes) => secretsRoute(credentialsBackend().where, machines());
 
 /** Lo que se escribe en el nombre: mayúsculas, y espacio o guion como `_`. */
 export const normalizeSecretName = (raw: string) => raw.toUpperCase().replace(/[\s-]/g, "_");
@@ -166,7 +166,8 @@ function SecretItem(props: { row: SecretRow; overrides: boolean; onChange: () =>
  * Añadir o cambiar. En la ventana va al motor; en la web se sella aquí para cada
  * máquina con `secrets_v1`. Con un nombre que ya existe, solo «Reemplazar» lo pisa.
  */
-function SecretDialog(props: { rows: SecretRow[]; folders: Project[]; initial: { name: string; folder: string | null } | null; onClose: () => void; onSaved: () => void }) {
+function SecretDialog(props: { rows: SecretRow[]; folders: Project[]; initial: { name: string; folder: string | null } | null; onClose: () => void; onSaved: () => void; maquinas: MaquinasDeAjustes }) {
+  const route = () => routeOf(props.maquinas);
   const [name, setName] = createSignal(props.initial?.name ?? "");
   const [value, setValue] = createSignal("");
   const [folder, setFolder] = createSignal<string | null>(props.initial?.folder ?? null);
@@ -327,7 +328,8 @@ function ModeLine() {
   );
 }
 
-export default function Secrets() {
+export default function Secrets(props: { maquinas: MaquinasDeAjustes }) {
+  const route = () => routeOf(props.maquinas);
   onMount(() => void reloadCredentials(false));
   const [editing, setEditing] = createSignal<{ name: string; folder: string | null } | null | undefined>(undefined);
   // El foco vuelve a quien abrió el diálogo: «Añadir secreto» o el «Cambiar» de su fila.
@@ -422,7 +424,7 @@ export default function Secrets() {
                 )}
               </Show>
               <Show when={credentialsView().kind === "ready"}>
-                <LocalKeysBanner kinds={["env_secret"]} />
+                <LocalKeysBanner kinds={["env_secret"]} maquinas={props.maquinas} />
               </Show>
               <Show
                 when={rows().length > 0}
@@ -461,6 +463,7 @@ export default function Secrets() {
           rows={rows()}
           folders={folders()}
           initial={editing() ?? null}
+          maquinas={props.maquinas}
           onSaved={reread}
           onClose={() => {
             setEditing(undefined);

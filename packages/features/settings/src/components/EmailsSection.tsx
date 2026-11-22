@@ -15,7 +15,7 @@ import {
   emailErrorText,
   emailRows,
 } from "../model/account-emails";
-import { SettingsSection } from "./layout";
+import { SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
 
 type Feedback = { kind: "success" | "error"; text: string } | null;

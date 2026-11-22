@@ -1,5 +1,5 @@
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { SettingsSection } from "./layout";
+import { SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 export default function HarnessInsights() {
   return <SettingsSection title={t("harness.insights.title")}>

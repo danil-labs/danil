@@ -33,7 +33,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "../../../../ui/src/sidebar";
-import { machines } from "../../../machines/src/queries/store";
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { ModelChoices } from "../../../projects/src/screens/NewAgent";
 import AIProviders from "../components/AIProviders";
 import type { SurfacesState } from "../model/ai-providers-view";
@@ -43,7 +43,7 @@ import Environment from "../components/Environment";
 import General from "../components/General";
 import Integrations from "../components/Integrations";
 import { PaquetesDeLengua } from "../components/LanguagePacks";
-import { SettingsPanel, SettingsSection } from "../components/layout";
+import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import type { ContextoDeProyectos } from "./ManageProjects";
 import type { Falla } from "../../../../ui/src/lib/bundled";
 import type { Failure } from "../../../../ui/src/Failure";
@@ -53,7 +53,7 @@ import Providers from "../components/Providers";
 import Skills from "../components/Skills";
 import { secretsRoute } from "../model/secrets-support";
 import { SETTINGS_ENTRIES, type SettingsEntryId, type SettingsGroup, settingsTarget } from "../model/settings-entries";
-import { ActivityLogs, Secrets } from "../settings-panels";
+import { Secrets } from "../settings-panels";
 import Workspaces from "../components/Workspaces";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
 
@@ -108,6 +108,7 @@ const pestanasDe = (
   proyectos: ContextoDeProyectos | undefined,
   workspace: () => string | null,
   activityMachine: () => string | null,
+  maquinas: MaquinasDeAjustes,
   avisoReparacion?: (p: {
     fallas: Falla[];
     reparando: boolean;
@@ -117,27 +118,28 @@ const pestanasDe = (
   }) => JSX.Element,
   integraciones?: (p: { solo: string[]; onCambio: () => void }) => JSX.Element,
 ): Record<string, Pestana | undefined> => {
+  const { ActivityLogs } = maquinas;
   const cuenta = capabilities().danilAccount || capabilities().accountProfile;
   const tab = (id: string, name: () => string, panel: Pestana["panel"]): Pestana => ({ id, get name() { return name(); }, panel });
   return {
-    "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.nav.danil_account"), () => <Suspense fallback={null}><DanilAccount part="profile" /></Suspense>) : undefined,
-    emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" /></Suspense>) : undefined,
+    "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.nav.danil_account"), () => <Suspense fallback={null}><DanilAccount part="profile" maquinas={maquinas} /></Suspense>) : undefined,
+    emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" maquinas={maquinas} /></Suspense>) : undefined,
     usage: capabilities().accountUsage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().accountUsage?.()) : undefined,
     plan: capabilities().nativeWindow || capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().nativeWindow ? <Suspense><DeskPlan workspace={workspace()} /></Suspense> : capabilities().personalAccount?.plan?.()) : undefined,
     security: tab("security", () => t("settings.tab.security"), null),
-    general: tab("general", () => t("settings.nav.general"), () => <General />),
-    appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} /></Suspense>),
+    general: tab("general", () => t("settings.nav.general"), () => <General maquinas={maquinas} />),
+    appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} /></Suspense>),
     notify: tab("notify", () => t("settings.tab.notify"), () => <SettingsPanel><SettingsSection title={t("settings.tab.notify")}><NotifyBehavior /></SettingsSection></SettingsPanel>),
     languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
-    workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces />),
+    workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces maquinas={maquinas} />),
     download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
-    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} />; }),
-    machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" /></Suspense>) : undefined,
+    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} />; }),
+    machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" maquinas={maquinas} /></Suspense>) : undefined,
     entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment avisoReparacion={avisoReparacion} />),
     activity: tab("activity", () => t("activity.title"), () => <Suspense fallback={null}><ActivityLogs workspace={workspace()} machine={activityMachine()} /></Suspense>),
     proyectos: tab("proyectos", () => t("settings.tab.folders"), proyectos ? () => { machineAction(); return <Suspense fallback={null}><ManageProjects contexto={proyectos} /></Suspense>; } : null),
-    fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers integraciones={integraciones} />; }),
-    secrets: tab("secrets", () => t("settings.tab.secrets"), capabilities().nativeWindow || capabilities().accountCredentials ? () => <Suspense fallback={null}><Secrets /></Suspense> : null),
+    fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers integraciones={integraciones} maquinas={maquinas} />; }),
+    secrets: tab("secrets", () => t("settings.tab.secrets"), capabilities().nativeWindow || capabilities().accountCredentials ? () => <Suspense fallback={null}><Secrets maquinas={maquinas} /></Suspense> : null),
     agentes: tab("agentes", () => t("settings.nav.agents"), () => (
       <Suspense fallback={null}>
         <Agents
@@ -148,7 +150,7 @@ const pestanasDe = (
       </Suspense>
     )),
     skills: tab("skills", () => t("settings.nav.skills"), () => <Skills />),
-    operation: tab("operation", () => t("settings.skills.tab_mcp"), () => <ConnectionsOperation />),
+    operation: tab("operation", () => t("settings.skills.tab_mcp"), () => <ConnectionsOperation maquinas={maquinas} />),
     plugins: tab("plugins", () => t("settings.tab.plugins"), () => <SettingsPanel><Integrations /></SettingsPanel>),
     memory: tab("memory", () => t("settings.tab.memory"), () => <SettingsPanel><ProveedorDeMemoria /></SettingsPanel>),
     external: cuenta ? tab("external", () => t("settings.tab.external"), () => <Suspense fallback={null}><Connections workspace={workspace()} /></Suspense>) : undefined,
@@ -242,6 +244,8 @@ export default function Settings(props: {
     onReiniciar: () => void;
   }) => JSX.Element;
   integraciones?: (p: { solo: string[]; onCambio: () => void }) => JSX.Element;
+  /** Lo de máquinas que usan las pestañas: lo enchufa el shell. */
+  maquinas: MaquinasDeAjustes;
 }) {
   // Lo que se puede elegir para trabajar, que es lo que decide qué proveedores
   // tienen pantalla. Con su estado: aquí no apaga nada, lo enseña.
@@ -326,13 +330,13 @@ export default function Settings(props: {
       setEstadoSuperficies({ k: "loading" });
       cargarSuperficies();
     },
-  }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null, props.avisoReparacion, props.integraciones);
+  }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null, props.maquinas, props.avisoReparacion, props.integraciones);
   const ENTRADAS = entradasDe(pestanas);
 
   // Sin soporte del motor activo, Secretos no se ofrece; su enlace directo sí abre el aviso.
   const [personal] = createResource(async () => (await capabilities().personalAccount?.isPersonal().catch(() => false)) ?? false);
   const dePersonal = (p: Pestana) => p.id === "support" || (p.id === "plan" && !capabilities().nativeWindow);
-  const pestanaVisible = (p: Pestana) => (dePersonal(p) ? personal() === true : p.id !== "secrets" || secretsRoute(capabilities().accountCredentials ? "worker" : "engine", machines()) !== "unsupported");
+  const pestanaVisible = (p: Pestana) => (dePersonal(p) ? personal() === true : p.id !== "secrets" || secretsRoute(capabilities().accountCredentials ? "worker" : "engine", props.maquinas.machines()) !== "unsupported");
   const pedido = settingsTarget(props.panel);
   const inicial = ENTRADAS.find((e) => e.id === pedido?.entry) ?? ENTRADAS[0];
   const [activo, setActivo] = createSignal<SettingsEntryId>(inicial.id);

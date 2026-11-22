@@ -4,7 +4,7 @@ import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote } from "../../../../ui/src/Failure";
 import { createFreeRouterConsent } from "./free-router-consent";
-import { SettingsRow } from "./layout";
+import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 
 /** El aviso de uso acompaña la política versionada del motor. */
 const AVISO_DE_USO = () => t("settings.accounts.free.warning");

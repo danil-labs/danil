@@ -9,7 +9,7 @@ import { invoke } from "../../../../engine-client/src/client";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
 import { failureCode } from "./danil-account";
-import { machines } from "../../../machines/src/queries/store";
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import {
   addAccount,
   connectedSessions,
@@ -24,9 +24,11 @@ import {
 
 /**
  * `workspace`: de cuál leer la cuenta. `"active"` es el abierto, y se relee al
- * cambiar de workspace; sin la opción no se lee ninguna.
+ * cambiar de workspace; sin la opción no se lee ninguna. `machines`: la lista de
+ * máquinas de la ventana (la enchufa el shell).
  */
-export function createDanilAccounts(options: { workspace?: (() => string | null | undefined) | "active" } = {}) {
+export function createDanilAccounts(options: { workspace?: (() => string | null | undefined) | "active"; machines: MaquinasDeAjustes["machines"] }) {
+  const { machines } = options;
   const [sessions, setSessions] = createSignal<DanilSessionInfo[] | null | undefined>(undefined);
   const [loadFailed, setLoadFailed] = createSignal(false);
   const [workspaceOf, setWorkspaceOf] = createSignal<string | null | undefined>();
