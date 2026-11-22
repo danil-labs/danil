@@ -5,11 +5,12 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { KeyedList } from "../../../../ui/src/KeyedList";
-import { accountReturn, noteWebAccountMode, sessionRailState } from "../../../../shell/src/shell";
+import type { SesionesDeAjustes } from "../model/sessions-port";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 type Row = GroupAccount & { email: string | null; family: string };
-export default function SessionAccounts() {
+export default function SessionAccounts(props: { sesiones: SesionesDeAjustes }) {
+  const { accountReturn, noteWebAccountMode, sessionRailState } = props.sesiones;
   const rail = sessionRailState;
   const addAccount = createAccountAddAction(capabilities().nativeWindow, () => rail()!.sessions.addAccount(), capabilities().webAccounts?.add ? () => { accountReturn.begin(rows().map((r) => r.context)); capabilities().webAccounts?.add?.(); } : undefined);
   const [web] = createResource(() => !capabilities().nativeWindow && capabilities().groupAccount, async (source) => { const group = source ? await source.current() : null; noteWebAccountMode(); return group; });

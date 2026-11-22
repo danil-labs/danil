@@ -18,6 +18,7 @@ import { requestAccessInBrowser, TerminusLicense } from "../screens/TerminusLice
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { createWorkspaces } from "../queries/workspaces-store";
 import WorkspaceAccount from "./WorkspaceAccount";
+import type { SesionesDeAjustes } from "../model/sessions-port";
 
 /**
  * `profile`: la persona y su sesión (Cuenta › Perfil); `machines`: sus máquinas
@@ -36,9 +37,9 @@ const renameFor = (id: string | null | undefined) => (name: string) => {
 };
 
 /** Configuración → Cuenta de Danil. Chunk aparte: solo lo carga quien abre esta sección. */
-export default function DanilAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
+export default function DanilAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes; sesiones: SesionesDeAjustes }) {
   const web = capabilities().accountProfile;
-  return web ? <WebAccount source={web} part={props.part} maquinas={props.maquinas} /> : <MachineAccount part={props.part} maquinas={props.maquinas} />;
+  return web ? <WebAccount source={web} part={props.part} maquinas={props.maquinas} /> : <MachineAccount part={props.part} maquinas={props.maquinas} sesiones={props.sesiones} />;
 }
 
 /** Los correos se administran en la web de alfa (vive en la raíz del dominio), con la sesión del navegador. */
@@ -90,7 +91,7 @@ function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPa
 }
 
 /** La cuenta se resuelve por el workspace, nunca por la sesión principal de la máquina. */
-function MachineAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
+function MachineAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes; sesiones: SesionesDeAjustes }) {
   const workspaces = createWorkspaces();
   const accounts = createDanilAccounts({ workspace: () => workspaces.actual()?.id, machines: props.maquinas.machines });
   const loadFailed = () => accounts.loadFailed() || Boolean(workspaces.fallo());
@@ -107,13 +108,13 @@ function MachineAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAj
           </SettingsRow>
         </SettingsPanel>
       }>
-        {(id) => <WorkspacePanel workspace={{ id, name: workspaces.actual()!.name }} accounts={accounts} part={props.part} maquinas={props.maquinas} />}
+        {(id) => <WorkspacePanel workspace={{ id, name: workspaces.actual()!.name }} accounts={accounts} part={props.part} maquinas={props.maquinas} sesiones={props.sesiones} />}
       </Show>
     </Show>
   );
 }
 
-function WorkspacePanel(props: { workspace: { id: string; name: string }; accounts: DanilAccounts; part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
+function WorkspacePanel(props: { workspace: { id: string; name: string }; accounts: DanilAccounts; part?: DanilAccountPart; maquinas: MaquinasDeAjustes; sesiones: SesionesDeAjustes }) {
   const { AccountComputersSection, ConnectMachineSection } = props.maquinas;
   const a = props.accounts;
   const [manage, setManage] = createSignal(false);
@@ -151,7 +152,7 @@ function WorkspacePanel(props: { workspace: { id: string; name: string }; accoun
           </SettingsRow>
           <Show when={manage()}>
             <SettingsBlock>
-              <WorkspaceAccount workspace={props.workspace.id} name={props.workspace.name} state={a} placement="section" maquinas={props.maquinas} onChanged={(problem) => { a.setProblem(problem); void a.reload(); }} />
+              <WorkspaceAccount workspace={props.workspace.id} name={props.workspace.name} state={a} placement="section" maquinas={props.maquinas} sesiones={props.sesiones} onChanged={(problem) => { a.setProblem(problem); void a.reload(); }} />
             </SettingsBlock>
           </Show>
         </Show>

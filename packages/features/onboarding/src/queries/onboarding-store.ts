@@ -1,6 +1,6 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { semillaDelAlta, t } from "../../../../../apps/desktop/src/lib/i18n";
-import { sealFirstFreeWorkspace } from "../../../../shell/src/shell";
+import type { SellarWorkspaceFree } from "../model/shell-port";
 /** Activa el workspace con la lengua del alta. La ventana entra al Free (F1.2); `add_workspace` solo en la web. */
 async function activar(w: { id: string; name: string }) {
   const semilla = semillaDelAlta(); // "sistema" no se guarda: sin lengua sigue al sistema.
@@ -10,7 +10,7 @@ async function activar(w: { id: string; name: string }) {
   return { ...w, nombre: w.name };
 }
 export const crearWorkspace = async (name: string) => activar({ ...(await invoke<{ id: string }>("add_workspace", { name })), name });
-export async function entrarAlWorkspaceFree() {
+export async function entrarAlWorkspaceFree(sealFirstFreeWorkspace: SellarWorkspaceFree) {
   const workspace = await sealFirstFreeWorkspace(invoke);
   return workspace ? activar(workspace) : null;
 }

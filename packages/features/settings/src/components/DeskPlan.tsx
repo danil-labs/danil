@@ -3,12 +3,13 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { openExternal } from "../queries/engine-open";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
-import { sessionRailState } from "../../../../shell/src/shell";
+import type { SesionesDeAjustes } from "../model/sessions-port";
 import { SettingsPanel } from "../../../../ui/src/SettingsLayout";
 
 const webOrigin = import.meta.env.VITE_DANIL_WEB_ORIGIN || "https://beta.danil.ai";
 
-export default function DeskPlan(props: { workspace: string | null }) {
+export default function DeskPlan(props: { workspace: string | null; sesiones: SesionesDeAjustes }) {
+  const { sessionRailState } = props.sesiones;
   const [organization, setOrganization] = createSignal<string>();
   const [failed, setFailed] = createSignal(false);
   const activeOrganization = () => {

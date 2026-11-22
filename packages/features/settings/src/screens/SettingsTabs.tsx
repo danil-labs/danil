@@ -17,6 +17,7 @@ import { type Superficie } from "../../../../../apps/desktop/src/lib/surfaces";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../../../../ui/src/sidebar";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { PiezasDeAjustes } from "../model/features-port";
+import type { SesionesDeAjustes } from "../model/sessions-port";
 import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
 import AIProviders from "../components/AIProviders";
 import type { SurfacesState } from "../model/ai-providers-view";
@@ -94,6 +95,7 @@ export const pestanasDe = (
   activityMachine: () => string | null,
   maquinas: MaquinasDeAjustes,
   piezas: PiezasDeAjustes,
+  sesiones: SesionesDeAjustes,
   avisoReparacion?: (p: {
     fallas: Falla[];
     reparando: boolean;
@@ -107,19 +109,19 @@ export const pestanasDe = (
   const cuenta = capabilities().danilAccount || capabilities().accountProfile;
   const tab = (id: string, name: () => string, panel: Pestana["panel"]): Pestana => ({ id, get name() { return name(); }, panel });
   return {
-    "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.nav.danil_account"), () => <Suspense fallback={null}><DanilAccount part="profile" maquinas={maquinas} /></Suspense>) : undefined,
-    emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" maquinas={maquinas} /></Suspense>) : undefined,
+    "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.nav.danil_account"), () => <Suspense fallback={null}><DanilAccount part="profile" maquinas={maquinas} sesiones={sesiones} /></Suspense>) : undefined,
+    emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" maquinas={maquinas} sesiones={sesiones} /></Suspense>) : undefined,
     usage: capabilities().accountUsage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().accountUsage?.()) : undefined,
-    plan: capabilities().nativeWindow || capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().nativeWindow ? <Suspense><DeskPlan workspace={workspace()} /></Suspense> : capabilities().personalAccount?.plan?.()) : undefined,
+    plan: capabilities().nativeWindow || capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().nativeWindow ? <Suspense><DeskPlan workspace={workspace()} sesiones={sesiones} /></Suspense> : capabilities().personalAccount?.plan?.()) : undefined,
     security: tab("security", () => t("settings.tab.security"), null),
     general: tab("general", () => t("settings.nav.general"), () => <General maquinas={maquinas} />),
-    appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} /></Suspense>),
+    appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} sesiones={sesiones} /></Suspense>),
     notify: tab("notify", () => t("settings.tab.notify"), () => <SettingsPanel><SettingsSection title={t("settings.tab.notify")}><NotifyBehavior /></SettingsSection></SettingsPanel>),
     languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
-    workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces maquinas={maquinas} />),
+    workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces maquinas={maquinas} sesiones={sesiones} />),
     download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
     "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} piezas={piezas} />; }),
-    machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" maquinas={maquinas} /></Suspense>) : undefined,
+    machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" maquinas={maquinas} sesiones={sesiones} /></Suspense>) : undefined,
     entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment avisoReparacion={avisoReparacion} />),
     activity: tab("activity", () => t("activity.title"), () => <Suspense fallback={null}><ActivityLogs workspace={workspace()} machine={activityMachine()} /></Suspense>),
     proyectos: tab("proyectos", () => t("settings.tab.folders"), proyectos ? () => { machineAction(); return <Suspense fallback={null}><ManageProjects contexto={proyectos} /></Suspense>; } : null),

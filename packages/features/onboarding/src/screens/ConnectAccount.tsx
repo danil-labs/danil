@@ -10,7 +10,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { createDanilSession, requestAccessInBrowser, TerminusLicense } from "../model/ports";
-import { noteFirstLoginSignedIn } from "../../../../shell/src/shell";
+import { noteFirstLoginSignedIn } from "../../../../session/src/first-login-run.ts";
 import { rememberAccountWelcome } from "../model/account-welcome";
 
 type Step = "choose" | "signing";

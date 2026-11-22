@@ -17,7 +17,7 @@ import { type AttentionStore } from "../../../features/projects/src/screens/work
 import { type Workspace } from "../../../features/settings/src/queries/workspaces-store.ts";
 import { ConexionesMenu } from "../../../features/settings/src/screens/Tools";
 import { capabilities } from "../../../host/src/platform";
-import { TitleBarSection } from "../shell";
+import { sealFirstFreeWorkspace, TitleBarSection } from "../shell";
 import AppTools from "../shell/AppTools";
 import GlobalSearch from "../shell/GlobalSearch";
 import { type SearchFilter } from "../shell/GlobalSearch.tsx";
@@ -26,6 +26,7 @@ import Sidebar from "../shell/Sidebar";
 import { type SidebarFilterProps } from "../shell/SidebarFilter.tsx";
 import SpaceMenu from "../shell/SpaceMenu";
 import WorkspaceColumn from "../shell/WorkspaceColumn";
+import ControlesDeVentana from "../shell/WindowControls";
 import { flattenTasks } from "../shell/sidebarTasks";
 import { createFreeRouterConsent } from "./chatSlots";
 import { MachinesLicense, Onboarding } from "./lazy-screens";
@@ -51,6 +52,8 @@ export function createColumnasDePrincipal(deps: ColumnasDePrincipalDeps) {
                 setAlta(false);
                 window.dispatchEvent(new CustomEvent("harness:workspace"));
               }}
+              sealFirstFreeWorkspace={sealFirstFreeWorkspace}
+              ControlesDeVentana={ControlesDeVentana}
             />
           </Suspense>
         }

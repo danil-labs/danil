@@ -6,7 +6,7 @@ import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { MarcaDeWorkspace } from "../../../../shell/src/shell/WorkspaceColumn";
+import type { SesionesDeAjustes } from "../model/sessions-port";
 import { LogoCrop } from "./LogoCrop";
 import { imagenInerte } from "../../../../../apps/desktop/src/lib/links";
 import { anunciarRenombrado, type Workspace } from "../queries/workspaces-store";
@@ -29,7 +29,9 @@ export function LogoDelWorkspace(props: {
   workspace: Workspace;
   onCambio: () => void;
   fila?: boolean;
+  sesiones: SesionesDeAjustes;
 }) {
+  const { MarcaDeWorkspace } = props.sesiones;
   const [guardando, setGuardando] = createSignal(false);
   const [fallo, setFallo] = createSignal<Failure | null>(null);
   const [recorte, setRecorte] = createSignal<string | null>(null);

@@ -12,6 +12,7 @@ import { Select } from "../../../../ui/src/Select";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../../../../ui/src/sidebar";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { PiezasDeAjustes } from "../model/features-port";
+import type { SesionesDeAjustes } from "../model/sessions-port";
 import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
 import type { ContextoDeProyectos } from "./ManageProjects";
 import type { Falla } from "../../../../ui/src/lib/bundled";
@@ -49,6 +50,8 @@ export default function Settings(props: {
   maquinas: MaquinasDeAjustes;
   /** Lo de projects y chat que pintan las pestañas: lo enchufa el shell. */
   piezas: PiezasDeAjustes;
+  /** Lo del riel de sesiones y de cuentas que leen las pestañas: lo enchufa el shell. */
+  sesiones: SesionesDeAjustes;
 }) {
   const { ENTRADAS } = createSuperficiesDeAjustes(props);
   // Sin soporte del motor activo, Secretos no se ofrece; su enlace directo sí abre el aviso.

@@ -10,7 +10,7 @@ import {
   TRAFFIC_LIGHT_PADDING,
   toggleMaximizeFromHeader,
 } from "../../../../host/src/window";
-import ControlesDeVentana from "../../../../shell/src/shell/WindowControls";
+import type { ControlesDeVentanaDelShell } from "../model/shell-port";
 
 /** Las dos fases del alta: preparar incluye conectar la IA; personalizar es la última pantalla. */
 export function Fases(props: { actual: number }) {
@@ -38,7 +38,8 @@ export function Fases(props: { actual: number }) {
 }
 
 /** La cabecera de las pantallas del alta: ocupan la ventana entera y siempre apartan el semáforo. */
-export function CabeceraDelAlta(props: { fase?: number }) {
+export function CabeceraDelAlta(props: { fase?: number; ControlesDeVentana: ControlesDeVentanaDelShell }) {
+  const { ControlesDeVentana } = props;
   const apartarSemaforo = needsTrafficLightPadding(() => true, createFullscreen());
   return (
     <header

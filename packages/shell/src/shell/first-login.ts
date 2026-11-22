@@ -8,10 +8,7 @@ export type AdoptionProgress = { org: string; finished: boolean; rows: { id: str
 type Status = { state?: string; email?: string | null; sessions?: { email?: string | null }[] } | null;
 export type FirstLoginPhase = { t: "hidden" } | { t: "sign_in" } | { t: "continue"; email: string } | { t: "linking" };
 
-let signedInThisRun = false;
-/** El alta de esta ventana ya pidió la sesión: la pantalla no la vuelve a pedir. */
-export const noteFirstLoginSignedIn = () => { signedInThisRun = true; };
-export const firstLoginSignedIn = () => signedInThisRun;
+export { firstLoginSignedIn, noteFirstLoginSignedIn } from "../../../session/src/first-login-run.ts";
 
 export function firstLoginPhase(input: { done: boolean; status: Status; signedInThisRun: boolean }): FirstLoginPhase {
   if (input.done) return { t: "hidden" };
