@@ -1,4 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { AgentProfile, CarryOriginLabel, CarryProgress, CarrySheet, DeleteSpace, DeleteTaskDialog, FuncionesAfectadas, HandoverDialog, Integraciones, MachinePicker, MachinesLicense, Onboarding, Screen, Settings, TaskFilesCard, TaskLocation, VisorDeArchivo, VistaDeProyecto } from "./lazy-screens";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import Columns2 from "lucide-solid/icons/columns-2";
 import {
@@ -10,7 +11,7 @@ import {
   For,
   Index,
   type JSX,
-  lazy,
+  
   Match,
   on,
   onCleanup,
@@ -46,7 +47,6 @@ import { createWorkspaceStore } from "../../../features/workspace/src";
 import { createContextSource } from "../../../features/workspaces/src";
 import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 
-const VisorDeArchivo = lazy(() => import("../../../features/code/src/screens/FileViewer"));
 
 import { avisarDeLosArboles } from "../../../features/code/src/queries/refresh";
 import TaskFilesRow, { taskFilesWidth } from "../../../features/code/src/screens/TaskFilesRow";
@@ -54,30 +54,12 @@ import { TaskSide, TaskSideShell } from "../../../features/code/src/screens/Task
 import { arbolesDe, contiene, ubicar } from "../../../features/code/src/queries/treeKind";
 import { moviendoHueco } from "../../../../apps/desktop/src/lib/sites";
 
-const DeleteTaskDialog = lazy(() => import("../../../features/projects/src/screens/DeleteTaskDialog"));
-const HandoverDialog = lazy(() => import("../../../features/chat/src/screens/HandoverDialog"));
-const TaskFilesCard = lazy(() => import("../../../features/code/src/screens/TaskFiles"));
 
 import { esDeCodigo } from "../../../ui/src/lib/workdirKind";
 import Observability from "../../../features/observability/src/screens/Observability";
 import AnadirCarpeta, { } from "../../../features/projects/src/screens/AddWorkdir";
 import AgentPageTasks from "../../../features/projects/src/screens/AgentPageTasks";
 
-// Chunk aparte: el perfil completo de un agente solo se carga al abrirlo.
-const AgentProfile = retryableLazy(() => import("../../../features/projects/src/screens/AgentProfile"));
-// El alta solo se abre sin workspace o al agregar otro: no entra en la carga inicial.
-const Onboarding = lazy(() => import("../../../features/onboarding/src/screens/Onboarding")), FuncionesAfectadas = lazy(() => import("../../../features/onboarding/src").then((m) => ({ default: m.FuncionesAfectadas }))), Integraciones = lazy(() => import("../../../features/onboarding/src/components/ToolCards").then((m) => ({ default: m.Integraciones })));
-const TaskLocation = lazy(() => import("../../../features/chat/src/screens/TaskLocation"));
-const Screen = lazy(() => import("../../../features/screen/src/screens/Screen"));
-// El aviso de licencia solo se baja si la flota lo pide (trae los textos de Danil).
-const MachinesLicense = lazy(() =>
-  import("../../../features/settings/src/screens/TerminusLicense").then((m) => ({
-    default: (props: { onRetry: () => void }) => (
-      // En el escritorio, el correo del sistema; en la web, el del navegador.
-      <m.TerminusLicense compact onRequest={capabilities().nativeWindow ? m.requestAccessInBrowser : m.requestAccessInPage} onRetry={props.onRetry} />
-    ),
-  })),
-);
 import { createFreeRouterConsent, folderIcon, importCarry, renderAvatar, renderImage, renderPdf, renderTable } from "./chatSlots";
 import { launcherOf, taskDescendants } from "@terminus/tasks";
 import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, rememberedRunOn, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../../../features/machines/src/queries/store";
@@ -86,17 +68,6 @@ import BaseBranchPicker from "../../../features/projects/src/screens/BaseBranchP
 import { watchHandlerStatus, watchHandlerStatuses } from "../../../features/projects/src/queries/handlerPresence";
 import { EmptyContext, ProjectPicker } from "../../../features/projects/src/screens/Projects";
 
-// Chunk aparte: solo lo carga quien crea una tarea, no la carga inicial.
-const MachinePicker = lazy(() =>
-  import("../../../features/machines/src/screens/MachinePicker").then((m) => ({ default: m.MachinePicker })),
-);
-// Llevar el trabajo a otra máquina: solo al enviar a una que no es la de la carpeta.
-const CarrySheet = lazy(() => import("../../../features/machines/src/screens/CarrySheet"));
-const CarryProgress = lazy(() => import("../../../features/machines/src/screens/CarryProgress"));
-const CarryOriginLabel = lazy(() =>
-  import("../../../features/machines/src/screens/CarryProgress").then((m) => ({ default: m.CarryOriginLabel })),
-);
-const VistaDeProyecto = lazy(() => import("../../../features/projects/src/screens/ProjectView"));
 import { workLabel } from "../../../ui/src/lib/workLabel.ts";
 import { DEFAULT_PROFILE, displayName, notifyProfiles, watchProfiles } from "../../../features/projects/src/queries/profiles";
 import RecentAgentChats from "../../../features/projects/src/screens/RecentAgentChats";
@@ -108,15 +79,12 @@ import {
   DEFAULT_PERMISSION_MODE_EVENT,
 } from "../../../features/settings/src/screens/DefaultPermissions";
 
-// Configuración solo se abre a pedido: no entra en la carga inicial.
-const Settings = lazy(() => import("./settingsSlots"));
 
 import { listaBasta, reconciliar } from "../../../features/settings/src/model/early-startup";
 import { createWorkspaces, type Startup } from "../../../features/settings/src/queries/workspaces-store";
 import { createAttention, topState } from "../shell/attention";
 import TaskNotifier from "../shell/TaskNotifier";
 
-const DeleteSpace = lazy(() => import("../shell/DeleteSpace"));
 import { openChatVisual, readChatVisual } from "../../../features/chat/src/queries/readVisual";
 import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../../../features/code/src/queries/typst";
 import { createConversationHandoff } from "../../../features/conversation-handoff/src";
@@ -211,7 +179,7 @@ import {
 } from "../../../host/src/window";
 import { Button } from "../../../ui/src/Button";
 import { prosaDe } from "../../../ui/src/Failure";
-import { LazyPart, retryableLazy } from "../../../ui/src/LazyPart";
+import { LazyPart } from "../../../ui/src/LazyPart";
 import { Toast, ToastStack } from "../../../ui/src/Toast";
 
 import { createSleepSession, createThreadStream, createThreadSide, createAttachments, createAttachmentsMount, createResync, createResyncCommands, createShellCommand, createDraftSend, createHandover, createSend, createSendGates, createSendNow, createPanelDeChat, createChatBackground } from "../../../features/chat/src";
