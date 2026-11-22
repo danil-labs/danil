@@ -1,4 +1,4 @@
-export * from "./queries/avatar-src.ts";
+export * from "../../../engine-client/src/previewFile.ts";
 export * from "./queries/deleteTask.ts";
 export * from "./queries/handlerPresence.ts";
 export * from "./queries/memory-account.ts";

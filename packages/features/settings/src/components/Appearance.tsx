@@ -20,7 +20,7 @@ import { elegirFondoDeChat, elegirVeloDeFondo, elegirVeloDePaneles, elegirVeloDe
 /** Guardar en el workspace va en su propio trozo: la carga inicial solo pinta. */
 const motor = () => import("../../../../../apps/desktop/src/lib/chat-background-engine");
 import { VELO_DE_PANELES_MAX, VELO_DE_PANELES_MIN, VELO_DE_PESTANAS_MAX, VELO_DE_PESTANAS_MIN } from "../../../../../apps/desktop/src/lib/chat-background";
-import type { Preview } from "../../../artifacts/src/components/Preview";
+import type { Preview } from "../../../../ui/src/lib/preview";
 import {
   apariencia,
   chooseDarkStyle,
@@ -35,12 +35,11 @@ import {
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { prosaDe } from "../../../../ui/src/Failure";
-import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
-import { displayName, notifyProfiles } from "../../../projects/src/queries/profiles";
 import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { LogoDelWorkspace } from "./Workspaces";
 import { createWorkspaces } from "../queries/workspaces-store";
 import type { MaquinasDeAjustes } from "../model/machines-port";
+import type { PiezasDeAjustes } from "../model/features-port";
 
 const IMAGES = ["png", "jpg", "jpeg", "webp"];
 
@@ -89,8 +88,9 @@ function proyectoDe(
  * El fondo de un agente sigue siendo el suyo: el de aquí solo pinta el chat
  * que no tiene uno. La imagen de la cara no entra al catálogo de cuerpos.
  */
-export default function Appearance(props: { proyecto: string; maquinas: MaquinasDeAjustes }) {
+export default function Appearance(props: { proyecto: string; maquinas: MaquinasDeAjustes; piezas: PiezasDeAjustes }) {
   const { machineOf } = props.maquinas;
+  const { AstroAvatar, displayName, notifyProfiles } = props.piezas;
   const [tema, setTema] = createSignal<Apariencia>(apariencia());
   const [estilo, setEstilo] = createSignal<DarkStyle>(darkStyle());
   const [estiloClaro, setEstiloClaro] = createSignal<LightStyle>(lightStyle());

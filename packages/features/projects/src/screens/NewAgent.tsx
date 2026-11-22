@@ -4,13 +4,11 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { createAgent, saveAgentProfile, setAgentModel } from "../queries";
 import type { CreatedHandler, HandlerScope } from "../../../../../apps/desktop/src/lib/model";
 import {
-  type CatalogosDeModelos,
   effortOptions,
   effortValue,
   type OpcionDeModelo,
   opcionesDeModelos,
 } from "../../../../../apps/desktop/src/lib/models";
-import type { Superficie } from "../../../../../apps/desktop/src/lib/surfaces";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";
@@ -25,8 +23,9 @@ import { agentId } from "../model/agentId";
 import { BodyPicker } from "../components/BodyPicker";
 import { DEFAULT_PROFILE, notifyProfiles } from "../queries/profiles";
 
-/** Lo que la caja de escritura ofrece para trabajar, para ofrecer lo mismo. */
-export type ModelChoices = { superficies: Superficie[]; catalogos: CatalogosDeModelos };
+import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
+
+export type { ModelChoices };
 
 /** Un agente de espacio alcanza todas las carpetas; el alcance inicial es el proyecto. */
 export default function NewAgent(props: {
