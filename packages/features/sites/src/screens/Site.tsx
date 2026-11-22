@@ -14,6 +14,7 @@ import { Button } from "../../../../ui/src/Button";
 import { aDireccion, corta, hayCapaEncima, seguirHueco, zonasEncima } from "../../../../../apps/desktop/src/lib/sites";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { prosaDe } from "../../../../ui/src/Failure";
+import { EstadosDeSitio, NavegacionDeSitio, type Estado } from "../components/SiteParts";
 
 /**
  * Un sitio dentro de la ventana. **Lo que este componente pinta es el hueco**;
@@ -55,9 +56,6 @@ import { prosaDe } from "../../../../ui/src/Failure";
 
 /** Cuánto se espera a que la página termine antes de dar la carga por perdida. */
 const PACIENCIA = 20_000;
-
-/** `inicio` es la pestaña de navegador recién abierta: no hay capa hasta que se teclea a dónde ir. */
-type Estado = "inicio" | "abriendo" | "cargando" | "listo" | "fallo";
 
 export default function Sitio(props: {
   url: string;
@@ -295,33 +293,7 @@ export default function Sitio(props: {
           fuera, un enlace te mueve y sin esto no sabes dónde estás ni cómo
           volver. */}
       <div class="flex items-center gap-1 border-b border-border bg-surface px-2 py-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-label={t("sites.back")}
-          title={t("sites.back")}
-          onClick={() => ir(-1)}
-        >
-          ←
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-label={t("sites.forward")}
-          title={t("sites.forward")}
-          onClick={() => ir(1)}
-        >
-          →
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-label={t("sites.reload")}
-          title={t("sites.reload")}
-          onClick={reintentar}
-        >
-          ⟳
-        </Button>
+        <NavegacionDeSitio ir={ir} reintentar={reintentar} />
         {/* En un sitio de tarea la dirección se enseña y no se edita: acompaña
             a una tarea, no es la barra de un navegador. Que se pueda leer
             entera es lo que dice si sigues donde creías. La pestaña del «+» sí
@@ -399,28 +371,7 @@ export default function Sitio(props: {
           blanco: mientras la capa no esté, esto es un hueco de la interfaz. */}
       <div ref={hueco} class="min-h-0 flex-1 bg-surface" />
 
-      <Show when={estado() === "abriendo"}>
-        <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span class="text-ui text-neutral-500">
-            {t("sites.opening", { site: corta(destino()) })}
-          </span>
-        </div>
-      </Show>
-
-      <Show when={estado() === "inicio"}>
-        <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span class="text-ui text-neutral-500">{t("sites.start")}</span>
-        </div>
-      </Show>
-
-      <Show when={estado() === "fallo"}>
-        <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 px-8 text-center">
-          <span class="max-w-[46ch] text-ui text-neutral-700">{fallo()}</span>
-          <Button variant="secondary" size="sm" onClick={reintentar}>
-            {t("sites.retry")}
-          </Button>
-        </div>
-      </Show>
+      <EstadosDeSitio estado={estado} destino={destino} fallo={fallo} reintentar={reintentar} />
     </div>
   );
 }
