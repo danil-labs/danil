@@ -7,6 +7,7 @@ import Cloud from "lucide-solid/icons/cloud";
 import { createEffect, createSignal, type JSX, on, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { createDanilSession } from "../../../settings/src/components/danil-session";
 import { requestAccessInBrowser, TerminusLicense } from "../../../settings/src/screens/TerminusLicense";
@@ -19,8 +20,7 @@ export type ConnectAccountResult = { connected: true };
 
 function Opcion(props: { icono: JSX.Element; titulo: string; efecto: string; disabled?: boolean; onClick: () => void; data: string }) {
   return (
-    <button
-      type="button"
+    <Pressable
       class="flex w-full items-start gap-3 rounded-lg border border-border bg-surface-raised px-4 py-3.5 text-left outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-50"
       disabled={props.disabled}
       onClick={() => props.onClick()}
@@ -31,7 +31,7 @@ function Opcion(props: { icono: JSX.Element; titulo: string; efecto: string; dis
         <span class="text-sm font-semibold text-neutral-950">{props.titulo}</span>
         <span class="text-xs text-neutral-500">{props.efecto}</span>
       </span>
-    </button>
+    </Pressable>
   );
 }
 

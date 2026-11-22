@@ -1,6 +1,7 @@
 import { For, Show } from "solid-js";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { Button } from "../../../../ui/src/Button";
+import { Pressable } from "../../../../ui/src/Pressable";
 import {
   cuando,
   mismaVersion,
@@ -84,8 +85,7 @@ export default function Versiones(props: {
 
                 return (
                   <li>
-                    <button
-                      type="button"
+                    <Pressable
                       aria-current={mirando() ? "true" : undefined}
                       onClick={() => props.onVer(esActual() ? null : v.referencia)}
                       class={`flex w-full items-baseline gap-2 rounded-sm px-2 py-1.5 text-left text-xs hover:bg-surface-muted ${
@@ -105,7 +105,7 @@ export default function Versiones(props: {
                           {t("artifacts.versions.is_current")}
                         </span>
                       </Show>
-                    </button>
+                    </Pressable>
                     {/* Lo que salió de esta versión. Va debajo de la versión y no
                         en una pantalla aparte porque es un hecho SOBRE ella: la
                         pregunta que contesta —qué se publicó y cuándo— solo tiene

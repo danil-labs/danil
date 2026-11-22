@@ -15,6 +15,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { asFailure, FailureNote, prosaDe } from "../../../../ui/src/Failure";
 import { Toast, ToastPortal } from "../../../../ui/src/Toast";
 import type { Conexiones } from "../queries/connect-store";
@@ -174,8 +175,7 @@ export default function Setup(props: SetupProps) {
               <div class="mt-2.5 flex gap-1.5">
                 <For each={consejos()}>
                   {(_, i) => (
-                    <button
-                      type="button"
+                    <Pressable
                       class={cn(
                         "size-[9px] cursor-pointer rounded-full outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                         i() === consejo() ? "bg-primary" : "bg-border-strong",

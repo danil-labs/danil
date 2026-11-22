@@ -1,5 +1,6 @@
 import { type Accessor, For, Show, createSignal } from "solid-js";
 import { SignalDot } from "../../../../ui/src/SignalDot";
+import { Pressable } from "../../../../ui/src/Pressable";
 import X from "lucide-solid/icons/x";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { removeMachineAccount } from "../queries";
@@ -48,23 +49,22 @@ export default function AccountMachines(props: AccountMachinesProps & { machines
               <Show
                 when={asking() === m.id}
                 fallback={
-                  <button
-                    type="button"
+                  <Pressable
                     class="grid size-4 place-items-center rounded-sm hover:bg-surface-muted hover:text-neutral-950"
                     aria-label={t("web.accounts.sign_out", { name: name() })}
                     title={t("web.accounts.sign_out", { name: name() })}
                     onClick={() => setAsking(m.id)}
                   >
                     <X size={11} aria-hidden="true" />
-                  </button>
+                  </Pressable>
                 }
               >
-                <button type="button" class="px-1 text-error-strong" data-sign-out-yes="" onClick={() => void signOut(m.id, m.machine)}>
+                <Pressable class="px-1 text-error-strong" data-sign-out-yes="" onClick={() => void signOut(m.id, m.machine)}>
                   {t("web.accounts.sign_out_yes")}
-                </button>
-                <button type="button" class="px-1" onClick={() => setAsking(null)}>
+                </Pressable>
+                <Pressable class="px-1" onClick={() => setAsking(null)}>
                   {t("web.accounts.sign_out_no")}
-                </button>
+                </Pressable>
               </Show>
             </span>
           );
