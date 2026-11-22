@@ -98,6 +98,7 @@ Inventario exhaustivo de todo el código en el front que consume o adapta sistem
 |  | Gate de feature legado | legacyOrganizationGate |  vía  |  |
 |  | Componente de menú legado | LegacyProfileMenu | «se borra» |  |
 |  | Componente de menú legado | LegacyProfileMenu | «se borra» |  |
+| `packages/shell/src/shell/ProfileMenuItems.tsx:12` | Comentario de las entradas comunes del menú del avatar (p2-2a ec20deb3) | LegacyProfileMenu | «se borra» con LegacyProfileMenu | Añadida por p2-2a después de 3.1 |
 |  | Componente de pie legado | LegacyDanilFooterEntry | «se borra» |  |
 |  | Propiedad legacy de cuenta de grupo | groupAccount.legacy | «se borra» |  |
 |  | Propiedad legacy de cuenta de grupo | groupAccount.legacy | «se borra» |  |
@@ -133,7 +134,7 @@ Patrones disjuntos y exactos para el gate de verificación  y :
 | /v1/workspaces/.../restore | /v1/workspaces/[^/]+/restore | Borde viejo restore | 0 | Borrado (3.4c): prueba muerta de `restoreWorkspace`, sin función en `src` ni uso en `origin/dev` |
 | /v1/workspaces/.../purge | /v1/workspaces/[^/]+/purge | Borde viejo purge | 0 | Borrado (3.4c): prueba muerta de `purgeWorkspace`, sin función en `src` ni uso en `origin/dev` |
 | legacyOrganizationGate | legacyOrganizationGate | Gate de organización legado | 3 | Se borra |
-| LegacyProfileMenu | LegacyProfileMenu | Menú de perfil legado | 2 | Se borra |
+| LegacyProfileMenu | LegacyProfileMenu | Menú de perfil legado | 3 | Se borra |
 | LegacyDanilFooterEntry | LegacyDanilFooterEntry | Footer legado | 1 | Se borra |
 | groupAccount.legacy | groupAccount.*legacy | groupAccount legado | 4 | Se borra |
 | machineCompatibility | machineCompatibility | Compatibilidad vieja de máquinas | 0 | Borrado (3.4) |
