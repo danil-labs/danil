@@ -1,6 +1,6 @@
 import { Show, createEffect, createSignal, onCleanup } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { ASTRO_BODIES, ASTRO_SHAPES, astroBody, type AstroBody, type AstroNode } from "@terminus/design";
+import { ASTRO_BODIES, ASTRO_SHAPES, astroBody, type AstroBody, type AstroNode } from "../../../../ui/src/index";
 import type { HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { generacionDeAvatar, urlDeAvatar } from "../queries";

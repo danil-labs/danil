@@ -2,7 +2,7 @@
  * La familia visible de una tarea: lo que el riel esconde bajo una sola entrada
  * sin esconder lo que pide atención. Escritorio y teléfono la derivan igual.
  */
-import { rolledOutcome, type TaskActivity } from "../../design/src/index.ts";
+import { rolledOutcome, type TaskActivity } from "../../ui/src/index.ts";
 import { buildTaskTree, type TaskBranch, type TaskTreeRow } from "./tree.ts";
 
 /** De cada tarea, los ids de toda su familia debajo de ella. */

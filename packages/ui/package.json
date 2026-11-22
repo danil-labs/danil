@@ -8,7 +8,6 @@
     "@tauri-apps/api": "^2.12.4",
     "@terminus/chat": "workspace:*",
     "@terminus/computers": "workspace:*",
-    "@terminus/design": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "embla-carousel-solid": "^8.6.0",
     "katex": "^0.18.10",

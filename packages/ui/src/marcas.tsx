@@ -1,8 +1,8 @@
 import { createSignal, Show, type JSX } from "solid-js";
-import type { ToolMark, ToolMarkId } from "@terminus/design";
+import type { ToolMark, ToolMarkId } from "./toolMarkNames";
 
 /**
- * Pinta una marca de servicio con los trazos de `@terminus/design`.
+ * Pinta una marca de servicio con los trazos de `packages/ui`.
  *
  * **Los trazos se piden al pintar la primera marca, no al arrancar.** Son ~35 KB
  * de trazos y casi ninguna pantalla pinta una: en la carga inicial pesaban de
@@ -17,7 +17,7 @@ const [marcas, setMarcas] = createSignal<Record<ToolMarkId, ToolMark> | null>(ta
 function pedir() {
   if (tabla || pedido) return;
   pedido = true;
-  void import("@terminus/design/toolMarksData").then((m) => {
+  void import("./toolMarksData").then((m) => {
     tabla = m.TOOL_MARKS;
     setMarcas(tabla);
   });

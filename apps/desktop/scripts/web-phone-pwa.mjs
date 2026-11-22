@@ -32,7 +32,7 @@ export function phoneManifest(base) {
     scope: "/",
     display: "standalone",
     orientation: "portrait",
-    // `surface` de los temas de `@terminus/design`: el de la barra de arriba de la app.
+    // `surface` de los temas de `packages/ui`: el de la barra de arriba de la app.
     theme_color: "#ffffff",
     background_color: "#ffffff",
     icons: PHONE_ICONS.map((icon) => ({ ...icon, src: `${phone}${icon.src}` })),

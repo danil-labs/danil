@@ -1,11 +1,11 @@
 import { Match, Show, Switch, type JSX } from "solid-js";
-import { toolMarkId, toolMonogram } from "@terminus/design";
+import { toolMarkId, toolMonogram } from "./toolMarkNames";
 import type { ToolSource } from "@terminus/chat/tools";
 import { MarcaServicio } from "./marcas";
 
 /**
  * Marcas de las herramientas que se integran y de los plugins. Los trazos viven
- * en `@terminus/design` (`TOOL_MARKS`), que el teléfono pinta igual; aquí solo
+ * en `packages/ui` (`TOOL_MARKS`), que el teléfono pinta igual; aquí solo
  * se elige cuál.
  *
  * AgentsView no está ahí: su marca es una baldosa con sus iniciales, no un

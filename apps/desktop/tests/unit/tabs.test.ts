@@ -396,7 +396,7 @@ test("la tira guardada por la versión anterior se lee entera", () => {
   assert.equal(p.session, "s9");
 });
 
-const { markedState, taskPriority } = await import("../../../../packages/design/src/taskState.ts");
+const { markedState, taskPriority } = await import("../../../../packages/ui/src/taskState.ts");
 const { compactGitKind, UNKNOWN_GIT, mergeRemoteGit, retainGitObservation } = await import("../../src/features/projects/taskGit.ts");
 
 test("la atención gana a trabajo y fallo; fin de turno no significa tarea terminada", () => {

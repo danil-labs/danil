@@ -1,7 +1,7 @@
 import { createUniqueId, For, type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import GitBranch from "lucide-solid/icons/git-branch";
-import { AGENT_MARKS, type AgentMark, agentMarkId } from "@terminus/design";
+import { AGENT_MARKS, type AgentMark, agentMarkId } from "./agentMarks";
 import { MarcaServicio } from "./marcas";
 
 /**
@@ -68,7 +68,7 @@ export function Print(props: { size?: number }) {
 }
 
 /**
- * Las marcas de los servicios se pintan desde `@terminus/design`, que el
+ * Las marcas de los servicios se pintan desde `packages/ui`, que el
  * teléfono pinta igual; `MarcaServicio` pide los trazos cuando se ve la primera
  * y aquí solo se elige cuál.
  */
@@ -106,7 +106,7 @@ function NotionMark(props: { size?: number }) {
 
 /**
  * Las marcas de los proveedores de IA: los trazos y colores viven en
- * `@terminus/design` (`AGENT_MARKS`), que el teléfono pinta igual. Relleno
+ * `packages/ui` (`AGENT_MARKS`), que el teléfono pinta igual. Relleno
  * `null` es `currentColor`; una marca con variante oscura lleva dos `<svg>` y
  * el tema elige.
  */

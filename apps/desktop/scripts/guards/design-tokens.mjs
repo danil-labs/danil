@@ -2,14 +2,14 @@
 /**
  * Un tamaño de letra con token se escribe con el token (`text-caption`, no
  * `text-[0.6875rem]`), y los que aún no tienen escalón solo pueden bajar. La
- * escala vive en `packages/design/src/scale.ts`.
+ * escala vive en `packages/ui/src/scale.ts`.
  */
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
-const { TEXT } = await import(pathToFileURL(join(ROOT, "../../packages/design/src/scale.ts")).href);
+const { TEXT } = await import(pathToFileURL(join(ROOT, "../../packages/ui/src/scale.ts")).href);
 
 /** Baja cuando un valor suelto pasa a la escala; no sube para aceptar uno nuevo. */
 const TECHO_SUELTOS = 73;
