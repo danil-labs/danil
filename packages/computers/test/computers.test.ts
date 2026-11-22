@@ -14,10 +14,7 @@ import {
   systemOf,
   wakes,
   listComputers,
-  listWorkspacesWithDeleted,
   powerOf,
-  purgeWorkspace,
-  restoreWorkspace,
   sessionProbe,
   sessionUrl,
   startComputer,
@@ -310,26 +307,6 @@ test("cada `hello` del motor llega como `engine` con su contrato", async () => {
   assert.deepEqual(seen, ["old", "new"]);
   assert.deepEqual(relay.engine(), { contract: "new", host_version: "0.2.86" });
   relay.close();
-});
-
-test("lápidas: la lista con borrados, restaurar, purgar y el 409 con su código", async () => {
-  const asked: [string, string | undefined][] = [];
-  const reply = (status: number, body: unknown) => async (url: string, init?: { method?: string }) => {
-    asked.push([url, init?.method]);
-    return { status, ok: status < 300, json: async () => body };
-  };
-  const both = await listWorkspacesWithDeleted("https://c.example", "t", reply(200, { workspaces: [{ id: "w", name: "W", projects: [], computers: ["c"] }], deleted: [{ id: "w9", name: "Viejo", projects: [], computers: [], deleted_at: "2026-10-22T10:00:00Z" }] }));
-  assert.equal(both.kind, "ok");
-  if (both.kind === "ok") assert.deepEqual([both.value.workspaces.map((w) => w.id), both.value.deleted.map((w) => [w.id, w.deleted_at])], [["w"], [["w9", "2026-10-22T10:00:00Z"]]]);
-  assert.equal(asked[0][0], "https://c.example/v1/workspaces?include_deleted=1");
-  const restored = await restoreWorkspace("https://c.example", "t", "w9", reply(200, { id: "w9", name: "Viejo", projects: [], computers: [] }));
-  assert.equal(restored.kind === "ok" && restored.value?.id, "w9");
-  assert.equal((await purgeWorkspace("https://c.example", "t", "w9", reply(204, null))).kind, "ok");
-  assert.deepEqual(asked.slice(1), [
-    ["https://c.example/v1/workspaces/w9/restore", "POST"],
-    ["https://c.example/v1/workspaces/w9/purge", "POST"]
-  ]);
-  assert.deepEqual(await purgeWorkspace("https://c.example", "t", "w", reply(409, { error: "workspace_not_deleted" })), { kind: "error", status: 409, code: "workspace_not_deleted" });
 });
 
 test("sin licencia la sesión se detiene con nombre, sin reintentar en bucle, hasta «Reintentar»", async () => {

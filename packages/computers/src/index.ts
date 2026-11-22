@@ -14,7 +14,6 @@ export {
   startedOf,
 } from "./api.ts";
 export {
-  type AuditEntry,
   type Connection,
   type ConnectionCapabilities,
   type ConnectionMachine,
@@ -22,7 +21,6 @@ export {
   type ConnectionState,
   type UpdatedConnection,
   PERMISSION_MODES,
-  connectionAudit,
   connectionCapabilities,
   listConnections,
   mcpUrl,
