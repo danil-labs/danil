@@ -1,5 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { AgentProfile, CarryOriginLabel, CarryProgress, CarrySheet, DeleteSpace, DeleteTaskDialog, FuncionesAfectadas, HandoverDialog, Integraciones, MachinePicker, MachinesLicense, Onboarding, Screen, Settings, TaskFilesCard, TaskLocation, VisorDeArchivo, VistaDeProyecto } from "./lazy-screens";
+import { createColumnasDePrincipal } from "./principal-columns";
+import { createPrincipal } from "./principal";
+import { AgentProfile, CarryOriginLabel, CarryProgress,       MachinePicker,   Screen,  TaskFilesCard, TaskLocation, VisorDeArchivo, VistaDeProyecto } from "./lazy-screens";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import Columns2 from "lucide-solid/icons/columns-2";
 import {
@@ -28,7 +30,7 @@ import Chat, {
 import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedDescendants, DelegatedPanel } from "../../../features/chat/src/screens/DelegatedTasks";
 import { agentSwitchBlocked, MACHINE_UNANNOUNCED } from "../../../features/chat/src/model/handover";
 import SearchPanel from "../../../features/chat/src/components/SearchPanel";
-import McpSignInNotice, { noteMcpSignIn } from "../../../features/settings/src/screens/McpSignInNotice";
+import { noteMcpSignIn } from "../../../features/settings/src/screens/McpSignInNotice";
 import PreviousAgentChat from "../../../features/chat/src/screens/PreviousAgentChat";
 import { ThreadSearch } from "../../../features/chat/src/screens/ThreadSearch";
 import TranscriptSource from "../../../features/chat/src/screens/TranscriptSource";
@@ -57,7 +59,6 @@ import { moviendoHueco } from "../../../../apps/desktop/src/lib/sites";
 
 import { esDeCodigo } from "../../../ui/src/lib/workdirKind";
 import Observability from "../../../features/observability/src/screens/Observability";
-import AnadirCarpeta, { } from "../../../features/projects/src/screens/AddWorkdir";
 import AgentPageTasks from "../../../features/projects/src/screens/AgentPageTasks";
 
 import { createFreeRouterConsent, folderIcon, importCarry, renderAvatar, renderImage, renderPdf, renderTable } from "./chatSlots";
@@ -83,7 +84,6 @@ import {
 import { listaBasta, reconciliar } from "../../../features/settings/src/model/early-startup";
 import { createWorkspaces, type Startup } from "../../../features/settings/src/queries/workspaces-store";
 import { createAttention, topState } from "../shell/attention";
-import TaskNotifier from "../shell/TaskNotifier";
 
 import { openChatVisual, readChatVisual } from "../../../features/chat/src/queries/readVisual";
 import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../../../features/code/src/queries/typst";
@@ -92,27 +92,16 @@ import { createDraftsStore } from "../../../features/drafts/src";
 import { asleep, withLastAnswer } from "../../../features/machines/src/queries/lastAnswer";
 import { unconfirmedOpen } from "../../../features/machines/src/model/unconfirmedOpen";
 import { createBatchDelivery, createServiceStream } from "../../../features/service-stream/src";
-import { ConexionesMenu } from "../../../features/settings/src/screens/Tools";
-import { TitleBarSection } from "../shell";
-import AppTools from "../shell/AppTools";
-import CloseGuard from "../shell/CloseGuard";
-import AvisoDeCarpeta from "../shell/FolderNotice";
-import GlobalSearch, { type SearchFilter } from "../shell/GlobalSearch";
+import { type SearchFilter } from "../shell/GlobalSearch";
 import PantallaDeBloqueo from "../shell/LockScreen";
-import AvisoDeMaterial from "../shell/MaterialNotice";
 import Paneles from "../shell/Panels";
-import Sidebar, { createSidebar } from "../shell/Sidebar";
+import { createSidebar } from "../shell/Sidebar";
 import type { SidebarFilterProps } from "../shell/SidebarFilter";
-import ColumnaLateral from "../shell/SideColumn";
-import SpaceMenu from "../shell/SpaceMenu";
-import { flattenTasks } from "../shell/sidebarTasks";
 import { materialDeProyecto, visoresDeCodigo } from "../featureSlots";
 import UsageTool, { UsagePanel } from "../shell/UsageTool";
 import { createUsage } from "../shell/usage";
-import AvisoDeVersion from "../shell/VersionNotice";
-import WorkspaceColumn from "../shell/WorkspaceColumn";
 import Sitio from "../../../features/sites/src/screens/Site";
-import { DragOverlay, UnsavedCloseDialog } from "../../../features/tabs/src";
+import { DragOverlay } from "../../../features/tabs/src";
 import { createEngineQueue, createTaskQueues } from "../../../features/task-queues/src";
 import { VELO_DE_FONDO } from "../../../../apps/desktop/src/lib/chat-background";
 import { fondoDeChat, imagenDelWorkspace, veloDeFondo } from "../../../../apps/desktop/src/lib/chat-background-store";
@@ -143,11 +132,10 @@ import {
   type NavegacionDePestanas,
 } from "../../../../apps/desktop/src/lib/shortcuts";
 import { comandosConAlMargen } from "../../../../apps/desktop/src/lib/side-question";
-import { sidebarViewKey } from "../../../../apps/desktop/src/lib/sidebarView";
 import { createSpaceNavigationOrder } from "../../../../apps/desktop/src/lib/space-navigation-order";
 import {
   type Space,
-  spaceName,
+  
 } from "../../../../apps/desktop/src/lib/spaces";
 import {
   type ArtifactTab,
@@ -180,7 +168,6 @@ import {
 import { Button } from "../../../ui/src/Button";
 import { prosaDe } from "../../../ui/src/Failure";
 import { LazyPart } from "../../../ui/src/LazyPart";
-import { Toast, ToastStack } from "../../../ui/src/Toast";
 
 import { createSleepSession, createThreadStream, createThreadSide, createAttachments, createAttachmentsMount, createResync, createResyncCommands, createShellCommand, createDraftSend, createHandover, createSend, createSendGates, createSendNow, createPanelDeChat, createChatBackground } from "../../../features/chat/src";
 
@@ -2668,399 +2655,9 @@ export default function App() {
   const { proyectosDelRiel, sesionesDelRiel, opcionesDeMover } = createRailSessions({ activeSpace, escritorio, multipleSpaces, permissions, projectList, remoteChildScope, sesiones, sesionesConEstado, spaces, vivas, });
 
 
-  const Principal = () => (
-    // UNA superficie continua, no tres tarjetas flotando: las columnas
-    // pegan con el chat y se separan con hairline y divisor arrastrable
-    // (shells → surfaces → components).
+  const { ColumnasDePrincipal } = createColumnasDePrincipal({ Conversacion, abrirLlevarCarpeta, abrirObservabilidad, abrirProyecto, abrirSesion, abrirSitio, abrirTraer, activeSpace, alta, arrastrando, arrastrarTarea, attention, bordeDeLaBarra, borrarProyecto, buscando, busy, cambiarEscritorio, clonEnCurso, createSpace, deleteTask, enCache, enLaMaquinaDelGrupo, escritorio, etaparSesion, fijarSesion, hablandoCon, hablarConEncargado, medirBordeDeLaBarra, modelosParaAgentes, moveToSpace, moverSesion, multipleSpaces, nuevaSesion, opcionesDeMover, openAgentProfile, permissions, pestanaActiva, project, projectList, proyectoAbierto, proyectosDelRiel, removeFromActiveSpace, renameSpace, renombrarProyecto, renombrarSesion, senalDe, sesiones, sesionesConPestana, sesionesDelRiel, sessionId, setAlta, setAnadiendoCarpeta, setBuscando, setDeletingSpace, setHablandoCon, setInput, setSettings, setSidebarFilter, sidebar, sidebarFilter, spaces, tabDrag, tiraDeLaVentana, vivas, workspaceActivo, workspaceActual });
 
-    // Continua no quiere decir de un solo tono: los rieles llevan `bg`
-    // y el chat `surface` (`ColumnaLateral`), y lo que la regla prohíbe
-    // —hueco, sombra, esquina redondeada— sigue prohibido.
-
-    // Sin cabecera y sin título de app, como Claude: la ventana ya se
-    // llama Terminus.
-    <div
-      class="relative isolate flex h-full flex-col overflow-hidden bg-surface"
-      // `.tab-active` repite este fondo dentro de la pestaña para fundirse con su panel.
-      style={{
-        "--window-image": imagenDeVentana() ? `url("${imagenDeVentana()}")` : "none",
-        "--window-veil": String(veloDeVentana()),
-      }}
-    >
-      <CloseGuard title={(id) => filaDe(id)?.title} />
-      <ToastStack>
-        {/* Aquí y no en Configuración: ahí no entra nadie a buscar
-            actualizaciones. El panel de «Estado del entorno» dice lo
-            mismo para quien va a mirar; esto es para quien no va a ir. */}
-        <AvisoDeVersion />
-        {/* Debajo del de versión y con la misma forma: los dos son avisos
-            que no interrumpen. Si coinciden, el de versión queda arriba:
-            reiniciar afecta a lo que estés haciendo, y traer material no. */}
-        <AvisoDeMaterial />
-        <AvisoDeCarpeta project={project()} session={sessionId()} />
-        <McpSignInNotice session={sessionId()} />
-        <Show when={activityNotice()}>{notice => <Toast onDismiss={() => setActivityNotice(null)}>
-          <div class="grid min-w-0 flex-1 gap-2">
-          <p class="m-0 text-sm font-medium">{notice().title}</p>
-          <p class="m-0 text-xs text-neutral-500">{t(`activity.state.${notice().state}`)} · {notice().machine ? machineName(notice().machine!) : t("activity.this_machine")}</p>
-          <Button variant="ghost" size="compact" onClick={() => { setActivityMachine(notice().machine ?? null); setSettings("activity"); setActivityNotice(null); }}>{t("activity.view")}</Button>
-          </div>
-        </Toast>}</Show>
-        <TaskNotifier
-          attention={attention.list()}
-          workspace={workspaceActivo()}
-          inView={(id) =>
-            !proyectoAbierto() &&
-            (id === sessionId() ||
-              ventanas().some((sitio) => {
-                const tab = pestanas.open().find((p) => p.id === paneles.activeTabAt(sitio));
-                return !!tab && isTaskTab(tab) && tab.session === id;
-              }))}
-          title={(id) => filaDe(id)?.title}
-          open={(project, id) => void abrirSesion(project, id)}
-        />
-        {/* Una lectura que falló va a la pila y no al riel: encima de «Nueva
-            tarea» se quedaba fija tras un gesto fallido. La conexión no tiene
-            cruz: se quita sola al volver el motor. */}
-        <Show when={startupReadError() ?? draftProjectError() ?? projectReadError() ?? connectionError()}>{failure => {
-          const lectura = () => !!(startupReadError() || draftProjectError() || projectReadError());
-          return <Toast data-read-status="" onDismiss={lectura() ? () => { setStartupReadError(null); setDraftProjectError(null); setProjectReadError(null); } : undefined}>
-            <Show when={lectura()}><p class="m-0 text-xs font-medium text-neutral-950">{t("shell.read.failed")}</p></Show>
-            <Show when={!lectura() || failure() !== t("shell.service.failed")}><p class="m-0 break-words text-xs text-neutral-500">{failure()}</p></Show>
-            <Show when={lectura()}><div><Button variant="outline" size="compact" onClick={() => {
-              setReadRevision(n => n + 1);
-              if (startupReadError()) void retryStartupRead();
-              else if (!draftProjectError()) void recargarMaterial();
-            }}>{t("common.part.retry")}</Button></div></Show>
-          </Toast>;
-        }}</Show>
-        {/* El error del último gesto, y no caduca solo: uno que se va a los
-            segundos no se llega a leer. Lo quita su cruz o el cambio de
-            workspace. */}
-        <Show when={errorVisible()}>
-          {(e) => (
-            <Toast data-toast-error="" tone="error" onDismiss={() => setError(null)}>
-              <p class="m-0 break-words text-xs text-error-strong">{e()}</p>
-            </Toast>
-          )}
-        </Show>
-        <Show when={aviso()}>
-          {(a) => (
-            <Toast data-space-toast="" onDismiss={() => setAviso(null)}>
-              <p class="m-0 break-words text-xs text-neutral-950">{a().texto}</p>
-              <Show when={a().ir}>
-                {(ir) => (
-                  <div>
-                    <Button variant="outline" size="compact" onClick={() => { setAviso(null); ir()(); }}>
-                      {a().boton}
-                    </Button>
-                  </div>
-                )}
-              </Show>
-            </Toast>
-          )}
-        </Show>
-      </ToastStack>
-
-      <Show when={spaces().find((i) => i.id === deletingSpace())}>
-        {(i) => (
-          <DeleteSpace
-            space={i()}
-            proyectos={projectList()}
-            onCerrar={() => setDeletingSpace(null)}
-            onAbrir={(folder, task) => {
-              setDeletingSpace(null);
-              void abrirSesion(folder, task);
-            }}
-            onEliminada={(n) => spaceDeleted(i(), n)}
-            onTocadas={(folders) => void refreshSessions(folders)}
-          />
-        )}
-      </Show>
-
-      <Show when={deleteTarget()}>{target => (
-        <DeleteTaskDialog target={target()} dirty={dirtyTaskFiles}
-          prepare={async ids => { for (const id of ids) await apagarVistasDe(id); }}
-          isCurrent={() => target().workspace === workspaceActivo()}
-          lock={ids => setDeletingEditors(ids.length ? { workspace: target().workspace, ids } : null)}
-          onDeleted={members => { if (target().workspace === workspaceActivo()) deletedTaskMembers(members); }}
-          onClose={() => setDeleteTarget(null)} />
-      )}</Show>
-
-      <Show when={cierreSinGuardar()}>{(c) => (
-        <UnsavedCloseDialog
-          files={c().archivos}
-          onCancel={() => setCierreSinGuardar(null)}
-          onDiscard={() => void resolverCierre("descartar")}
-          onSave={() => void resolverCierre("guardar")}
-        />
-      )}</Show>
-
-      {/* El traspaso de proveedor se confirma una vez y se guarda como
-          intento: viaja en el turno siguiente, no al elegir el modelo. */}
-      <Show when={traspasoPendiente()}>{(pedido) => (
-        <HandoverDialog
-          from={agents().find((a) => a.id === pedido().desde)?.label ?? pedido().desde}
-          to={agents().find((a) => a.id === pedido().opcion.agent)?.label ?? pedido().opcion.agent}
-          onCancel={() => setTraspasoPendiente(null)}
-          onConfirm={confirmarTraspaso}
-        />
-      )}</Show>
-
-      {/* Sin workspace no hay carpeta donde escribir: aquí sí se tapa
-          todo, riel incluido. Es la única pantalla que lo hace —el
-          estado vacío de contexto se puede usar; esto no tiene dónde
-          guardar nada. */}
-      <Show
-        when={!alta()}
-        fallback={
-          <Suspense fallback={null}>
-            <Onboarding
-              /* Por el mismo evento que usa el selector de workspace: quien acaba
-                 de crear el primero no tiene por qué saber cómo se recarga esta
-                 pantalla. */
-              onListo={() => {
-                setAlta(false);
-                window.dispatchEvent(new CustomEvent("harness:workspace"));
-              }}
-            />
-          </Suspense>
-        }
-      >
-        {/* El chasis se monta SIEMPRE, tenga o no fuente de contexto:
-            detrás de `contextRoot`, un workspace recién creado no tenía
-            riel lateral ni forma de escribir hasta señalar una carpeta,
-            y eso contradecía el modelo —un proyecto dejó de ser un
-            repo. */}
-
-        {/* Las dos columnas son hermanas de ancho propio y usan
-            `ColumnaLateral`, que documenta sus límites. */}
-        <TitleBarSection
-          border={bordeDeLaBarra()}
-          sidebarCollapsed={sidebar.colapsado()}
-          onToggleSidebar={sidebar.alternar}
-          spaceMenu={<Show when={spaces().length > 0}>
-            <SpaceMenu
-              workspace={workspaceActual()?.name ?? ""}
-              spaces={spaces()}
-              activa={escritorio()}
-              proyectos={projectList()}
-              senal={(id) => senalDe(id)}
-              onElegir={cambiarEscritorio}
-              onCrear={createSpace}
-              onRenombrar={renameSpace}
-              onEliminar={(id) => setDeletingSpace(id)}
-            />
-          </Show>}
-          sidebarExtra={capabilities().sidebarExtra?.()}
-          searchOpen={buscando() !== null}
-          onSearch={() => setBuscando("all")}
-          onAddProject={() => setAnadiendoCarpeta(true)}
-          filter={sidebarFilter()}
-          tabs={tiraDeLaVentana()}
-        />
-        <GlobalSearch
-          open={buscando()}
-          onClose={() => setBuscando(null)}
-          tasks={buscando() === null ? [] : flattenTasks(sesionesDelRiel(), true)}
-          folders={proyectosDelRiel()}
-          projects={projectList()}
-          spaces={spaces()}
-          onOpenTask={(p, id) => { setHablandoCon(null); void abrirSesion(p, id); }}
-          onOpenFolder={abrirProyecto}
-          onNewTask={(id) => nuevaSesion(id)}
-        />
-        {/* El velo del marco cubre la columna y el hueco alrededor de la caja: un solo tono también en la esquina. */}
-        <div class="tab-veil window-frame relative flex min-h-0 flex-1 overflow-visible">
-          <WorkspaceColumn
-            attention={attention.list()}
-            onManage={() => setSettings("workspaces")}
-            onSettings={(panel) => setSettings(panel ?? "")}
-            onReportarBug={() => setInput(t("chat.composer.bug_report_starter"))}
-            tools={<>
-            <ConexionesMenu triggerClass="size-8 rounded-md" onManage={() => setSettings("mcp")} />
-            <AppTools
-              workspace={workspaceActivo()}
-              busy={busy()}
-              onAbrirSitio={(url, proyecto, session) => void abrirSitio(url, proyecto, session)}
-              onObservability={abrirObservabilidad}
-              trabajando={vivas()}
-              conPestana={sesionesConPestana()}
-              onAbrirTarea={(proyecto, session) => void abrirSesion(proyecto, session)}
-              lookup={(session) => {
-                for (const [id, rows] of Object.entries(sesiones())) {
-                  const row = rows.find((r) => r.id === session);
-                  if (row) return { title: row.title, project: projectList().find((p) => p.id === id)?.name };
-                }
-                return undefined;
-              }}
-            />
-            </>}
-          />
-          {/* La superficie: barra, ventana y panel derecho, una caja redondeada que flota sobre el marco. */}
-          <div class="relative mr-1 mb-1 flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[10px] bg-surface" data-surface="">
-          {/* Los topes los pone quien monta: el ancho por debajo del
-              cual algo deja de caber solo lo sabe su contenido. Por
-              debajo de 220 los títulos del historial dejan de caber; por
-              encima de 420 la barra empieza a comer la conversación. */}
-          <ColumnaLateral
-            lado="left"
-            colapsada={sidebar.colapsado()}
-            clave="sidebar.width"
-            ancho={260}
-            min={220}
-            max={420}
-            etiqueta={t("shell.column.sidebar_width")}
-          >
-            <div class="relative h-full min-h-0 w-full min-w-0">
-            {/* Las otras máquinas se ven por el relay, que es de pago: si la flota lo
-                detuvo por la licencia, el aviso de Terminus (el pago vive en la web). */}
-            <Show when={capabilities().machinesLicense?.() === "license_required" && !sidebar.colapsado()}>
-              <div class="absolute inset-x-2 bottom-2 z-10 rounded-md border border-border bg-surface-raised p-3 shadow-sm" data-machines-license="">
-                <MachinesLicense onRetry={() => capabilities().retryMachines?.()} />
-              </div>
-            </Show>
-            <div
-              class="flex h-full min-h-0 w-full min-w-0 flex-col"
-              ref={(el) => createEffect(() => el.toggleAttribute("inert", enCache()))}
-              aria-busy={enCache() || undefined}
-              data-shell-cache={enCache() ? "" : undefined}
-            >
-            <div class="min-h-0 flex-1">
-            <Sidebar
-              projects={proyectosDelRiel()}
-              modelos={modelosParaAgentes()} createFreeRouterConsent={createFreeRouterConsent}
-              sessions={sesionesDelRiel()}
-              viewKey={sidebarViewKey(workspaceActivo(), escritorio())}
-              filterRef={(filter, released) => setSidebarFilter((actual) => filter ?? (actual === released ? null : actual))}
-              onHablarCon={hablarConEncargado}
-              onAgentProfile={openAgentProfile}
-              escritorio={activeSpace() ? spaceName(activeSpace()) : null}
-              spaces={opcionesDeMover()}
-              onMoveToSpace={(p, id, i) => void moveToSpace(p, id, i)}
-              onBringHere={(p, id) => void abrirTraer(p, id)}
-              onCarryFolder={machines().length > 1 ? (id, machine) => void abrirLlevarCarpeta(id, machine) : undefined}
-              current={sessionId()}
-              vivas={vivas()}
-        /* Qué tareas esperan que apruebes algo, aparte de `vivas`: pesa
-           más, una que trabaja no necesita nada de ti, y una parada
-           esperando tu aprobación no avanza hasta que vayas. */
-        aprobando={permissions().map((p) => p.session)}
-              collapsed={sidebar.colapsado()}
-              onToggle={sidebar.alternar}
-              draggedTask={arrastrando()}
-              dragFolder={tabDrag.destination()?.folder}
-              onDrag={arrastrarTarea}
-              onPick={(p, id) => {
-                // Abrir una tarea suelta la marca del agente: su fila no
-                // puede seguir señalada cuando ya se mira otra cosa.
-                setHablandoCon(null);
-                void abrirSesion(p, id);
-              }}
-              onNew={() => nuevaSesion()}
-              onRenombrarProyecto={(id, name) =>
-                void renombrarProyecto(id, name)
-              }
-              onBorrarProyecto={borrarProyecto}
-              onRemoveFromSpace={multipleSpaces() ? removeFromActiveSpace : undefined}
-              clon={clonEnCurso()}
-              onAbrirClon={() => setAnadiendoCarpeta(true)}
-              proyectoAbierto={proyectoAbierto()}
-              carpetaDelBorrador={!proyectoAbierto() && pestanaActiva() === null && !sessionId() && !hablandoCon() ? project() || null : null}
-              onAbrirProyecto={(id, machine) => { abrirProyecto(id); enLaMaquinaDelGrupo(machine); }}
-              /* El proyecto viaja en el mismo gesto que abre el borrador. */
-              onNuevaTareaEn={(id, machine) => { nuevaSesion(id); enLaMaquinaDelGrupo(machine); }}
-              onDelete={(p, id, members) => deleteTask(p, id, members)}
-              onMove={(p, id, a) => void moverSesion(p, id, a)}
-              onEtapa={(p, id, etapa) => void etaparSesion(p, id, etapa)}
-              onPin={fijarSesion}
-              onRenombrar={(p, id, title) =>
-                renombrarSesion(p, id, title)
-              }
-              onSettings={(panel) => setSettings(panel ?? "")}
-            />
-            </div>
-            </div>
-            </div>
-          </ColumnaLateral>
-
-          {/* 30rem es lo que cabe en la caja sin partir el modelo ni el modo.
-              Las columnas laterales encogen mil veces más rápido, hasta su
-              mínimo; un factor menor que 1 aquí dejaría desbordar la fila. */}
-          <div ref={medirBordeDeLaBarra} class={"min-h-0 min-w-0 flex-[1_1_30rem] overflow-hidden work-background"} data-conversacion>
-            <Conversacion />
-          </div>
-
-          </div>
-        </div>
-      </Show>
-
-
-      <AnadirCarpeta machines={machines} runOn={runOn} machineName={machineName}
-        abierto={anadiendoCarpeta()}
-        workspace={workspaceActivo()}
-        space={escritorio()}
-        inicio={inicioDeCarpeta()}
-        onClon={setClonEnCurso}
-        onCerrar={() => batch(() => {
-          setAnadiendoCarpeta(false);
-          setInicioDeCarpeta(null);
-        })}
-        onHecho={async (p, activate) => {
-          await projectCatalog.changed();
-          // El backend ya la fijó en el escritorio desde el que se pidió: un
-          // clon en segundo plano termina cuando la ventana puede mirar otro.
-          await reloadSpaces();
-          // Se sigue en «Nueva tarea» dentro de ella; su página queda a un clic en su nombre.
-          if (activate) nuevaSesion(p.id);
-        }}
-      />
-
-      <Show when={hojaDeLlevar()} keyed>
-        {(hoja) => (
-          <Suspense fallback={null}>
-            <CarrySheet
-              check={hoja.check}
-              busy={hoja.busy}
-              onCancel={() => setHojaDeLlevar(null)}
-              onConfirm={(choice, state) => {
-                const { key, check } = hoja;
-                const mod = carryModule();
-                mod?.planCarry(key, check, mod.jobFor(check, choice), state);
-                setHojaDeLlevar(null);
-                if (check.task) {
-                  despuesDeTraer.set(key, choice.next);
-                  void traer(key);
-                } else if (claveAbierta() === key) void mandar(archivos());
-              }}
-            />
-          </Suspense>
-        )}
-      </Show>
-
-      {/* El nombre del workspace ya no se deduce de la ruta: lo lee el propio
-          menú de la cabecera, que es quien sabe cuál está activo. */}
-
-      <Show when={settings() !== null}>
-        <Suspense fallback={null}>
-          <Settings
-            workspace={workspaceActivo()}
-            activityMachine={activityMachine()}
-            panel={settings() || undefined}
-            modelos={modelosParaAgentes()}
-            proyecto={proyectoAbierto() ?? project()}
-            agentesEnUso={agentesEnUso()}
-            onClose={cerrarAjustes}
-            proyectos={proyectosEnAjustes} avisoReparacion={(p) => <Suspense fallback={null}><FuncionesAfectadas {...p} /></Suspense>} integraciones={(p) => <Suspense fallback={null}><Integraciones {...p} /></Suspense>}
-            onAgentProfile={(enProyecto, name) => {
-              cerrarAjustes();
-              openAgentProfile(enProyecto, name);
-            }}
-          />
-        </Suspense>
-      </Show>
-    </div>
-  );
+  const { Principal } = createPrincipal({ ColumnasDePrincipal, abrirSesion, activityMachine, activityNotice, agentesEnUso, agents, anadiendoCarpeta, archivos, attention, aviso, carryModule, cerrarAjustes, cierreSinGuardar, claveAbierta, confirmarTraspaso, connectionError, deleteTarget, deletedTaskMembers, deletingSpace, despuesDeTraer, dirtyTaskFiles, draftProjectError, errorVisible, escritorio, filaDe, hojaDeLlevar, imagenDeVentana, inicioDeCarpeta, mandar, modelosParaAgentes, nuevaSesion, openAgentProfile, paneles, pestanas, project, projectCatalog, projectList, projectReadError, proyectoAbierto, proyectosEnAjustes, recargarMaterial, refreshSessions, reloadSpaces, resolverCierre, retryStartupRead, sessionId, setActivityMachine, setActivityNotice, setAnadiendoCarpeta, setAviso, setCierreSinGuardar, setClonEnCurso, setDeleteTarget, setDeletingEditors, setDeletingSpace, setDraftProjectError, setError, setHojaDeLlevar, setInicioDeCarpeta, setProjectReadError, setReadRevision, setSettings, setStartupReadError, setTraspasoPendiente, settings, spaceDeleted, spaces, startupReadError, traer, traspasoPendiente, veloDeVentana, ventanas, workspaceActivo });
 
   // **La ventana que no puede abrir estos datos no pinta la app,
   // la sustituye.** Un aviso encima dejaría debajo una app usable sobre la
