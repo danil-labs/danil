@@ -40,7 +40,7 @@ import { Skeleton } from "../../../../ui/src/Skeleton";
 import { Terminal, TerminalBody } from "../../../../ui/src/Terminal";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import AccountCard, { accountPresentation } from "../screens/AccountCard";
-import { accountKeyUrl, addBlockedByExternal } from "../model/account-auth";
+import { accountKeyUrl, addBlockedByExternal } from "../../../../ui/src/lib/account-auth.ts";
 import {
   type Account,
   type AccountList,

@@ -1,4 +1,6 @@
 import type { JSX } from "solid-js";
+import type { FreeModelPolicy } from "../../../../apps/desktop/src/lib/free-model-policy.ts";
+import type { Frase } from "../../../../apps/desktop/src/lib/prose";
 
 /** Lo que el selector de modelos usa del consentimiento de Router IA gratis. */
 export type FreeRouterConsent = {
@@ -15,3 +17,5 @@ export type FreeRouterConsent = {
 export type CreateFreeRouterConsent = (
   opts: { agente: () => string; despues?: () => Promise<void> | void },
 ) => FreeRouterConsent;
+
+export type Consentimiento = { lineas: Frase[]; version: number; policy: FreeModelPolicy };
