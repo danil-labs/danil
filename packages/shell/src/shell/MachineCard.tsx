@@ -11,7 +11,7 @@ import { Pressable } from "../../../ui/src/Pressable";
 import { Metric, NOTE, NOTE_INFO, SEG_TASKS, taskTitle, type TaskLookup, type When } from "./machine-card-parts";
 import { RefreshSpinner } from "../../../ui/src/Spinner";
 
-export { taskTitle, type TaskLookup, type When } from "./machine-card-parts";
+export { type TaskLookup, type When } from "./machine-card-parts";
 export { MemoryTab } from "./machine-memory-tab";
 
 /** Encendida, apagada, encendiéndose (si la flota lo sabe) o sin contestar. */

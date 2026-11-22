@@ -2,8 +2,6 @@ import { displayWorkspaceContext } from "../../../../../apps/desktop/src/lib/wor
 import { createContextViews } from "../../../../../apps/desktop/src/lib/workspace-view-scope.ts";
 import { createThreadsCore } from "./threads-store-core.ts";
 
-export type { MachineWait } from "./threads-store-core.ts";
-
 const contexts = new WeakMap<object, string | null>();
 
 export function createThreadsStore(deps: Parameters<typeof createThreadsCore>[0]) {

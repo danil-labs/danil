@@ -6,7 +6,7 @@ export type Tramo = [number, number];
 const TOKEN = /[\p{L}\p{N}_]+|\s+|[^\p{L}\p{N}_\s]/gu;
 
 /** Por debajo, marcar los tramos pinta casi toda la línea y no dice nada que no diga ya su fondo. */
-export const PARECIDO_MINIMO = 0.4;
+const PARECIDO_MINIMO = 0.4;
 
 /** Tope de la tabla de comparación por par, para que una línea minificada no congele la ventana. */
 const CELDAS_MAXIMAS = 10_000;

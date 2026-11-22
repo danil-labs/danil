@@ -17,7 +17,7 @@ export type Programar = (run: () => void) => () => void;
  * no corre con la ventana oculta, y el reloj de respaldo cubre la que se oculta
  * con el cuadro ya pedido.
  */
-export const porCuadro: Programar = (run) => {
+const porCuadro: Programar = (run) => {
   const visible = typeof requestAnimationFrame === "function" && document.visibilityState !== "hidden";
   const cuadro = visible ? requestAnimationFrame(run) : null;
   const reloj = setTimeout(run, visible ? 1000 : 50);

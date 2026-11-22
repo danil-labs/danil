@@ -2,7 +2,7 @@ import { probeIdentityMe } from "../../../platform-client/src/identity.ts";
 import { addSessionAccount } from "./add-session-account.ts";
 import { createSessionEmptyState, refusalEmptyReason } from "./session-empty.ts";
 
-export type { ContextGroup, ContextInvoke, ContextReply, SessionContext, SessionFamily, SessionStatus } from "./session-context-types.ts";
+export type { ContextGroup, ContextInvoke, ContextReply, SessionStatus } from "./session-context-types.ts";
 
 import type { ContextGroup, ContextInvoke, ContextReply, SessionFamily, SessionStatus } from "./session-context-types.ts";
 import { WORKSPACES_ADOPT_PATH } from "../../../platform-client/src/workspaces.ts";

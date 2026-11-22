@@ -4,7 +4,7 @@
  * presentación: [`comandoDeTerminal`] la quita antes de correr el comando.
  */
 
-export const SANGRIA = "\t";
+const SANGRIA = "\t";
 
 export type Sangrado = { text: string; caret: number };
 

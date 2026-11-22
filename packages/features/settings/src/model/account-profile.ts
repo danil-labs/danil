@@ -29,7 +29,7 @@ export type PreparedPhoto = { dataUrl: string; blob: Blob; type: string };
 export const PROFILE_CHANGED = "terminus:account-profile";
 
 /** El mismo límite que la cuenta: el plano de control rechaza más. */
-export const PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+const PHOTO_MAX_BYTES = 2 * 1024 * 1024;
 export const PHOTO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 /** Lado del cuadrado que se sube: basta para el pie y Configuración, y pesa poco. */
 const PHOTO_SIDE = 256;

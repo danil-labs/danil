@@ -35,7 +35,7 @@ export { unconfirmedOpen } from "../model/unconfirmedOpen.ts";
 
 export type { RouterConfig } from "../model/router-config.ts";
 
-export function createRouterCore(config: RouterConfig) {
+function createRouterCore(config: RouterConfig) {
   const { self, fleet } = config;
   const rawNative: Invoke = config.native ?? (() => Promise.reject(new FleetError("unknown_machine", null)));
   const native: Invoke = (command, args, options) => rawNative(command, args, withoutHeader(options, "x-terminus-machine"));

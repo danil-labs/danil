@@ -13,7 +13,7 @@ import {
 import type { ControlesDeVentanaDelShell } from "../model/shell-port";
 
 /** Las dos fases del alta: preparar incluye conectar la IA; personalizar es la última pantalla. */
-export function Fases(props: { actual: number }) {
+function Fases(props: { actual: number }) {
   const fases = () => [t("onboarding.phases.prepare"), t("onboarding.phases.personalize")];
   return (
     <nav class="flex gap-5" aria-label={t("onboarding.phases.label")}>

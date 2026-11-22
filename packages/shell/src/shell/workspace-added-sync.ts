@@ -25,7 +25,7 @@ export type AddedRecord = { local: string[] | null; pending: PendingOp[] };
 export type AddedStore = { read(key: string): AddedRecord | null; write(key: string, record: AddedRecord): void };
 
 const ENGINE_ID = /^[A-Za-z0-9_-]{1,128}$/;
-export const RETRY_MS = 30_000;
+const RETRY_MS = 30_000;
 const MAX = 500;
 
 type Outcome = "ok" | "local" | "refused" | "conflict";

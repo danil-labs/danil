@@ -1,27 +1,7 @@
 /**
- * Lo que la ventana sabe de WSL: los tipos que devuelve `wsl_detect` y cómo se
- * leen sus estados, que `wsl.exe` escribe en el idioma de Windows.
+ * Lo que la ventana sabe de WSL: cómo se leen los estados de `wsl_detect`, que
+ * `wsl.exe` escribe en el idioma de Windows.
  */
-
-export type WslDistro = {
-  name: string;
-  state: string;
-  version: number | null;
-  default: boolean;
-};
-
-export type WslStatus = {
-  default_distro: string | null;
-  default_version: number | null;
-  kernel: string | null;
-};
-
-export type WslDetection = {
-  distros: WslDistro[];
-  default_distro: string | null;
-  default_version: number | null;
-  status: WslStatus | null;
-};
 
 export type WslTone = "success" | "error" | "warning" | "neutral" | "off" | "working";
 export type WslState = "running" | "stopped" | "installing" | "other" | "unknown";
@@ -86,7 +66,7 @@ export type WslCatalogItem = { name: string; label: string; url: string; sha256:
 
 export type WslDistroUser = { uid: number; user: string; home: string };
 
-export type WslJobError = { code: string; detail: string };
+type WslJobError = { code: string; detail: string };
 
 /** Lo que se está haciendo (`guest-job`): lo guarda la ventana, no la pantalla. */
 export type WslJob = {
@@ -109,7 +89,7 @@ export type WslJob = {
 
 export type WslDistroRow = { name: string; state: string; version: number | null; default: boolean; system: boolean; child: WslChild | null };
 
-export type WslResume = { name: string; label: string; url: string; sha256: string; user: string };
+type WslResume = { name: string; label: string; url: string; sha256: string; user: string };
 
 /** Todo lo que muestra «Linux en esta PC» (`wsl_state`). */
 export type WslLinuxState = {

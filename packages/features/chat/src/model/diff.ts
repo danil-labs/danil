@@ -52,7 +52,7 @@ function lineas(s: string): string[] {
  * puso y no qué había, así que todo es alta. No se asume que el archivo estuviera
  * vacío — eso pintaría un archivo nuevo donde pudo haber uno pisado.
  */
-export function comparar(antes: string | null, despues: string): Linea[] {
+function comparar(antes: string | null, despues: string): Linea[] {
   const b = lineas(despues);
   if (antes === null)
     return b.map((texto, i) => ({ tipo: "pone", texto, a: null, b: i + 1 }));

@@ -47,7 +47,7 @@ const IMAGENES = ["png", "jpg", "jpeg", "gif", "webp", "svg"];
 const extensionDe = (ruta: string) => ruta.slice(ruta.lastIndexOf(".") + 1).toLowerCase();
 
 /** `destino` escrito desde `archivo`, los dos relativos a la carpeta de la tarea. */
-export function rutaRelativa(archivo: string, destino: string): string {
+function rutaRelativa(archivo: string, destino: string): string {
   const desde = archivo.split("/").slice(0, -1);
   const hasta = destino.split("/");
   let comunes = 0;

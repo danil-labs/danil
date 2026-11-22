@@ -9,7 +9,7 @@ import { hasSessionGroups } from "./session-groups";
 import { Pressable } from "../../../ui/src/Pressable";
 
 /** Lo mismo que un `createSignal` sobre el store, sin que el store dependa de Solid. */
-export function useOrganizations(selection: OrganizationSelection) {
+function useOrganizations(selection: OrganizationSelection) {
   const [state, setState] = createSignal<OrganizationState>(selection.state());
   const [needed, setNeeded] = createSignal(selection.needed());
   onCleanup(selection.subscribe(() => {

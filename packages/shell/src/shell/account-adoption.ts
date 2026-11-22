@@ -3,7 +3,7 @@ import { accountId as asAccountId, type PendingUnions } from "./account-transfer
 import { WORKSPACES_ADOPT_CHALLENGE_PATH, WORKSPACES_ADOPT_PATH, workspacesPagePath } from "../../../platform-client/src/workspaces.ts";
 
 /** Un workspace local que se puede adoptar en la organización personal (`adoption_candidates`). */
-export type AdoptionCandidate = { id: string; name: string; created_at?: number; adoptable?: boolean; reason?: string };
+type AdoptionCandidate = { id: string; name: string; created_at?: number; adoptable?: boolean; reason?: string };
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 type Send = (context: string, method: string, path: string, body?: unknown, key?: string) => Promise<{ status: number; body?: unknown; empty_reason?: unknown }>;
 export type AdoptionMemory = { key: (id: string) => string; skip: (org: string, id: string) => boolean; refuse: (org: string, id: string) => void; forget?: () => void };
