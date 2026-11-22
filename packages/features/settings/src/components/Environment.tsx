@@ -36,6 +36,7 @@ import { capabilities } from "../../../../host/src/platform";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { SettingsBlock, SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
+import { Pressable } from "../../../../ui/src/Pressable";
 import {
   Table,
   TableBody,
@@ -359,8 +360,7 @@ export default function Environment(props?: EnvironmentProps) {
                             </span>
                             <Show when={d.dependency}>
                               {(dependency) => (
-                                <button
-                                  type="button"
+                                <Pressable
                                   class="grid size-5 shrink-0 place-items-center rounded-sm text-neutral-500 opacity-0 outline-none focus-visible:opacity-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary hover:bg-surface-muted hover:text-neutral-950 group-hover:opacity-100 group-focus-within:opacity-100"
                                   aria-label={t("settings.environment.reveal_location", {
                                     label: d.label,
@@ -369,7 +369,7 @@ export default function Environment(props?: EnvironmentProps) {
                                   onClick={() => void revelar(dependency())}
                                 >
                                   <SquareArrowOutUpRight size={12} />
-                                </button>
+                                </Pressable>
                               )}
                             </Show>
                           </span>

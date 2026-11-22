@@ -7,6 +7,7 @@ import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Spinner, RefreshSpinner } from "../../../../ui/src/Spinner";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
 import { accountPresentation, inferAuthenticated, StatusTag } from "./AccountCardStatus";
 
@@ -356,7 +357,7 @@ export default function AccountCard(props: {
               </span>
             </Show>
             <Show when={props.onRefreshLimits || props.onRecheckStatus}>
-              <button
+              <Pressable
                 class="ml-auto grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 hover:bg-surface hover:text-neutral-950 disabled:opacity-60"
                 disabled={busy() || waitMinutes() > 0}
                 aria-label={t("settings.account_card.refresh_account")}
@@ -367,7 +368,7 @@ export default function AccountCard(props: {
                   size={13}
                   spinning={busy()}
                 />
-              </button>
+              </Pressable>
             </Show>
           </div>
         </div>

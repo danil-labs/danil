@@ -6,6 +6,7 @@ import { MarcaProveedor } from "../../../../ui/src/icons";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { Badge } from "../../../../ui/src/Badge";
+import { Pressable } from "../../../../ui/src/Pressable";
 import type { createHerramientas } from "./ToolsState";
 import { estado, autorizaElMotor, MOTOR } from "./ToolsModel";
 
@@ -172,7 +173,7 @@ export function createListaDeHerramientas(herramientas: ReturnType<typeof create
                   >
                     <For each={formas}>
                       {(f) => (
-                        <button
+                        <Pressable
                           role="radio"
                           aria-checked={c().id === f.id}
                           disabled={ocupado() !== null || bloqueado()}
@@ -184,7 +185,7 @@ export function createListaDeHerramientas(herramientas: ReturnType<typeof create
                           onClick={() => void elegir(formas, f)}
                         >
                           {f.via ? prosa(f.via) : ""}
-                        </button>
+                        </Pressable>
                       )}
                     </For>
                   </div>

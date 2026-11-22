@@ -113,24 +113,61 @@ function generate(source) {
     return lines.length ? `{\n${lines.join("\n")}\n${"  ".repeat(indent)}}` : "Record<string, never>";
   }
 
-  const types = [head(source.file), `// Dominios: ${Object.keys(source.domains).join(", ")}.\n`];
+  const top = [head(source.file), `// Dominios: ${Object.keys(source.domains).join(", ")}.\n`];
+  const entries = [];
   for (const name of [...used.keys()].sort()) {
     const s = used.get(name);
-    if (s.description) types.push(`/** ${s.description.replace(/\*\//g, "*\\/").replace(/\s+/g, " ")} */`);
-    types.push(`export type ${name} = ${tsOf(s, 0)};\n`);
+    const lines = [];
+    if (s.description) lines.push(`/** ${s.description.replace(/\*\//g, "*\\/").replace(/\s+/g, " ")} */`);
+    lines.push(`export type ${name} = ${tsOf(s, 0)};\n`);
+    entries.push({ name, text: lines.join("\n") });
   }
+  const types = [...top, ...entries.map((e) => e.text)];
   const hash = createHash("sha256").update(raw);
   for (const rel of Object.values(source.external ?? {})) hash.update(readFileSync(join(ROOT, rel)));
   const ops = operations.filter((o) => wanted.has(o.op.operationId))
     .map((o) => `  ${o.op.operationId}: { method: ${lit(o.method.toUpperCase())}, path: ${lit(o.path)} },`);
-  return { types: types.join("\n"), hash: hash.digest("hex"), version: spec.info?.version ?? "", ops };
+  return { types: types.join("\n"), top, entries, hash: hash.digest("hex"), version: spec.info?.version ?? "", ops };
 }
 
 const [platform, billing] = SOURCES.map(generate);
 const contract = `${head(SOURCES[0].file)}// source: ../../contract/openapi.json\n\n/** sha256 del openapi.json vendorizado (R7): si no coincide, se regenera. */\nexport const CONTRACT_HASH = ${lit(platform.hash)};\nexport const CONTRACT_VERSION = ${lit(platform.version)};\n\n/** Método y ruta de cada operación generada. */\nexport const OPERATIONS = {\n${platform.ops.join("\n")}\n} as const;\n`
   + `\n/** sha256 de billing-v2 (public.openapi.json y luego common.v1.schema.json); si no coincide, se regenera. */\nexport const BILLING_CONTRACT_HASH = ${lit(billing.hash)};\nexport const BILLING_CONTRACT_VERSION = ${lit(billing.version)};\n\n/** Método y ruta de cada operación de billing-v2 generada. */\nexport const BILLING_OPERATIONS = {\n${billing.ops.join("\n")}\n} as const;\n`;
 
-const out = { [SOURCES[0].out]: platform.types, [SOURCES[1].out]: billing.types, "src/generated/contract.ts": contract };
+/**
+ * Un archivo de tipos de más de `MAX_LINES` líneas sale en partes (tope R6 de 400): `x.ts` con las
+ * primeras y `x-2.ts`, `x-3.ts`… con las demás, en el mismo orden. `x.ts` reexporta las partes,
+ * así que quien importa no cambia; cada parte importa de las otras solo los tipos que nombra.
+ */
+const MAX_LINES = 400;
+function split(rel, gen) {
+  const text = gen.types;
+  if (text.split("\n").length <= MAX_LINES) return { [rel]: text };
+  const base = rel.replace(/\.ts$/, ""), stem = base.split("/").pop();
+  const parts = [[]];
+  let n = gen.top.join("\n").split("\n").length + 12;
+  for (const e of gen.entries) {
+    const len = e.text.split("\n").length + 1;
+    if (n + len > MAX_LINES - 12 && parts.at(-1).length) { parts.push([]); n = 8; }
+    parts.at(-1).push(e); n += len;
+  }
+  const file = (i) => (i === 0 ? `${stem}.ts` : `${stem}-${i + 1}.ts`);
+  const owner = new Map(parts.flatMap((p, i) => p.map((e) => [e.name, i])));
+  const files = {};
+  parts.forEach((p, i) => {
+    const code = p.map((e) => e.text.replace(/\/\*\*[\s\S]*?\*\//g, "")).join("\n");
+    const needs = new Map();
+    for (const [name, j] of owner) if (j !== i && new RegExp(`\\b${name}\\b`).test(code)) (needs.get(j) ?? needs.set(j, []).get(j)).push(name);
+    const imports = [...needs].sort(([a], [b]) => a - b).map(([j, names]) => `import type { ${names.join(", ")} } from "./${file(j)}";`);
+    const reexports = i === 0 ? parts.slice(1).map((q, k) => `export type { ${q.map((e) => e.name).join(", ")} } from "./${file(k + 1)}";`) : [];
+    const lead = i === 0 ? gen.top : [gen.top[0], `// Parte ${i + 1} de ${parts.length} de \`${stem}.ts\`, que la reexporta.\n`];
+    const glue = [...imports, ...reexports];
+    files[`${base}${i === 0 ? "" : `-${i + 1}`}.ts`] = [...lead, ...(glue.length ? [glue.join("\n") + "\n"] : []), ...p.map((e) => e.text)].join("\n");
+  });
+  return files;
+}
+
+const out = { ...split(SOURCES[0].out, platform), ...split(SOURCES[1].out, billing), "src/generated/contract.ts": contract };
 const check = process.argv.includes("--check");
 let stale = false;
 for (const [rel, text] of Object.entries(out)) {
