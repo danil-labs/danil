@@ -1,5 +1,5 @@
-import { bareCommand, classify, fileName, type StepKind } from "@terminus/chat/steps";
-import { toolSource, type ToolSource } from "@terminus/chat/tools";
+import { bareCommand, classify, fileName, type StepKind } from "../../../../packages/ui/src/lib/chat/steps.ts";
+import { toolSource, type ToolSource } from "../../../../packages/ui/src/lib/chat/tools.ts";
 
 /** Qué clase de acto fue. Decide el verbo y el ícono de la fila. */
 export type Clase =

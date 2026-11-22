@@ -1,7 +1,5 @@
 import { STATUS_LABELS, TEXT } from "@terminus/design";
-import { stepCounts } from "@terminus/chat/steps";
-import { commandSummary } from "@terminus/chat/command";
-import { commandSource, readableToolName, toolSource, type CommandSource, type ToolSource } from "@terminus/chat/tools";
+import { stepCounts, commandSummary, commandSource, readableToolName, toolSource, type CommandSource, type ToolSource } from "@terminus/chat";
 import { type ComponentRef, type ReactNode, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { OPENED, type Follow, type Metrics, measuredFollow, shouldStick } from "../../lib/follow";

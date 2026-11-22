@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { bareCommand, commandMarkProgram, commandProgram, commandSummary } from "../src/command.ts";
+import { bareCommand, commandMarkProgram, commandProgram, commandSummary } from "../src/lib/chat/command.ts";
 
 const summary = (command: string) => commandSummary(command);
 const program = (command: string) => commandProgram(command);

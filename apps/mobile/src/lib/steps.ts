@@ -3,8 +3,7 @@
  * y `features/chat/transcript.ts`): sus avances, las herramientas que usó (qué leyó,
  * qué ejecutó) y la respuesta. Sin React Native: se prueba en Node.
  */
-import { bareCommand, classify, fileName, isQuestionFile, joinableStep, joinSteps, type StepKind } from "@terminus/chat/steps";
-import { commandSource, isMcpTool, type CommandSource } from "@terminus/chat/tools";
+import { bareCommand, classify, fileName, isQuestionFile, joinableStep, joinSteps, type StepKind, commandSource, isMcpTool, type CommandSource } from "@terminus/chat";
 import type { HistoryRef, Turn, TurnTool } from "@terminus/protocol";
 import { quotaResolves, type QuotaChange, type TurnFailure } from "./failureNotice.ts";
 

@@ -413,7 +413,7 @@ test("la línea de estado no repite un comando cuya fila ya se ve", async () => 
 
 test("la línea de estado pone la marca del servicio delante del comando que nombra", async () => {
   const { statusCommandMark } = await import("../src/lib/steps.ts");
-  const { commandSummary } = await import("@terminus/chat/command");
+  const { commandSummary } = await import("@terminus/chat");
   const step = (target: string) => ({ kind: "run" as const, name: "Bash", target, ok: null, running: true });
   assert.equal(statusCommandMark(step("git fetch --all --prune"), false)?.mark, "git", "pie del chat: «Ejecutando [Git] git fetch …»");
   const cli = step('"$DANIL_CLI" task show --task x --json');
@@ -426,7 +426,7 @@ test("la línea de estado pone la marca del servicio delante del comando que nom
 
 test("cada llamada MCP va en su propia fila con su marca; las lecturas siguen juntas", async () => {
   const { groupSteps } = await import("../src/lib/steps.ts");
-  const { toolSource } = await import("@terminus/chat/tools");
+  const { toolSource } = await import("@terminus/chat");
   const { toolMonogram } = await import("@terminus/design");
   const step = (name: string, kind: "read" | "other" = "other", target: string | null = null) => ({ kind, name, target, ok: true, running: false });
   const mcp = ["mcp__github__create_issue", "mcp__claude_ai_Slack__send_message", "mcp__figma__get_file", "mcp__supabase__execute_sql", "mcp__claude_ai_Google_Drive__search", "mcp__linear__list_issues"].map((n) => step(n));

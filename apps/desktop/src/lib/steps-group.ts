@@ -1,5 +1,5 @@
-import { joinableStep, joinSteps, stepCounts, type CountedStep, type StepCount } from "@terminus/chat/steps";
-import { isMcpTool } from "@terminus/chat/tools";
+import { joinableStep, joinSteps, stepCounts, type CountedStep, type StepCount } from "../../../../packages/ui/src/lib/chat/steps.ts";
+import { isMcpTool } from "../../../../packages/ui/src/lib/chat/tools.ts";
 import { manifiesto, t } from "./i18n.ts";
 import { CLASE, type Clase, type Paso } from "./steps-model.ts";
 

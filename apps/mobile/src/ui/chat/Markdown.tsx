@@ -1,6 +1,5 @@
 import { RADIUS } from "@terminus/design";
-import { destinoAbrible, imagenInerte, imagenLocal, internalTaskLink, localFilePath } from "@terminus/chat/links";
-import { MAX_CHAT_VISUALS, parseVisualDirective } from "@terminus/chat/visual";
+import { destinoAbrible, imagenInerte, imagenLocal, internalTaskLink, localFilePath, MAX_CHAT_VISUALS, parseVisualDirective } from "@terminus/chat";
 import * as Clipboard from "expo-clipboard";
 import { type Token, type Tokens, marked } from "marked";
 import { type ReactNode, memo, useMemo, useState } from "react";
@@ -23,7 +22,7 @@ type Ctx = { theme: Theme; scope: ChatScope | null; streaming: boolean; visuals:
  * GFM con tablas y casillas, código con copiar, ```mermaid como diagrama,
  * imágenes (`data:` del mensaje o rutas de la máquina), tarjetas de archivo,
  * enlaces a tareas y `::terminus-visual{…}` sola en su párrafo. El HTML crudo
- * se queda como texto; las URLs pasan por los mismos filtros (`@terminus/chat/links`).
+ * se queda como texto; las URLs pasan por los mismos filtros (`packages/ui/src/lib/chat/links.ts`).
  */
 export const Markdown = memo(function Markdown({ text, streaming = false, size = 15 }: { text: string; streaming?: boolean; size?: number }) {
   const theme = useTheme();

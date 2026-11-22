@@ -12,7 +12,7 @@ Exporta desde `src/index.ts`:
 
 ## Qué consume
 - `@danil/engine-client` y `@danil/ui`.
-- Paquetes legados `@terminus/chat/inlineVisual` y `@terminus/chat/sandbox` (en proceso de retiro).
+- `packages/ui/src/lib/chat` (`inlineVisual` y `sandbox`; antes `@terminus/chat`, 3.6d).
 - `apps/desktop` (utilidades).
 
 ## Qué contratos toca
@@ -20,6 +20,6 @@ Exporta desde `src/index.ts`:
 - Comandos RPC1 del motor: `artifact_history`, `artifact_read_part`, `download_artifact`, `open_external`, `prepare_print`, `preview_file`, `publications_of`, `read_version`, `record_export`, `restore_version`.
 
 ## Qué falta según la fase 2 del plan
-- Fase 2.1: retirar imports de `@terminus/chat` (inlineVisual y sandbox) reemplazándolos por componentes visuales de `packages/ui`.
+- Fase 2.1: hecha en 3.6d (inlineVisual y sandbox viven en `packages/ui/src/lib/chat`).
 - Fase 2.3: centralizar todas las invocaciones RPC1 exclusivamente en `queries.ts`.
 - Fuente y detalle: [INVENTORY.md](./INVENTORY.md).

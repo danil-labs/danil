@@ -4,7 +4,7 @@
  *
  * El motor que corre dentro del marco —diapositivas, orden de tablas, edición y
  * el puente con la app— tiene que inyectarse dentro del documento del agente, y
- * por eso es una cadena en `packages/chat/src/sandbox-runtime.ts` (la comparten la ventana y el teléfono). Su CSS igual. Nada de lo que
+ * por eso es una cadena en `packages/ui/src/lib/chat/sandbox-runtime.ts` (la comparten la ventana y el teléfono). Su CSS igual. Nada de lo que
  * hay ahí dentro lo mira `tsc`: para el compilador son dos literales.
  *
  * Escribirlo así tiene dos trampas, y la que duele no es la ruidosa:
@@ -41,7 +41,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // El CSS y el runtime viven en `sandbox-runtime.ts` desde que `sandbox.ts` se partió (R6).
-const RUTA = fileURLToPath(new URL("../../../../packages/chat/src/sandbox-runtime.ts", import.meta.url));
+const RUTA = fileURLToPath(new URL("../../../../packages/ui/src/lib/chat/sandbox-runtime.ts", import.meta.url));
 const fuente = readFileSync(RUTA, "utf8");
 
 const failures = [];
@@ -67,7 +67,7 @@ function literal(nombre, texto = fuente) {
 
 const CSS = literal("CSS_BASE");
 const JS = literal("JS_RUNTIME");
-const inline = readFileSync(fileURLToPath(new URL("../../../../packages/chat/src/inlineVisual.ts", import.meta.url)), "utf8");
+const inline = readFileSync(fileURLToPath(new URL("../../../../packages/ui/src/lib/chat/inlineVisual.ts", import.meta.url)), "utf8");
 const inlineCss = literal("CSS_INLINE", inline);
 const inlineJs = literal("JS_INLINE", inline);
 
@@ -79,7 +79,7 @@ for (const [nombre, l] of [
 ]) {
   if (!l) {
     failures.push(
-      `No encuentro \`const ${nombre} = String.raw\`…\`\` en packages/chat/src/.\n` +
+      `No encuentro \`const ${nombre} = String.raw\`…\`\` en packages/ui/src/lib/chat/.\n` +
         `  Ahí vive lo que corre dentro del contenedor; sin ello este chequeo no mira nada.`,
     );
     continue;

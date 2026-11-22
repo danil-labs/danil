@@ -12,7 +12,7 @@ import { esProvisional } from "../../../../apps/desktop/src/lib/taskDraft";
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
 import { type PlaceCandidate, type TaskCandidate, type TaskMention, type TextEdit } from "../../../../apps/desktop/src/lib/taskMentions.ts";
 import { type Ventana } from "../../../../apps/desktop/src/lib/usage.ts";
-import { type OlderState } from "../../../chat/src/history.ts";
+import { type OlderState } from "../../../engine-client/src/history.ts";
 import { capabilities } from "../../../host/src/platform";
 import { Button } from "../../../ui/src/Button";
 import { prosaDe } from "../../../ui/src/Failure";
