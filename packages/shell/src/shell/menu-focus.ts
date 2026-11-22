@@ -1,8 +1,8 @@
 /** Flechas arriba y abajo entre las filas de un menú; el buscador cuenta como la primera. */
 export function menuArrows(e: KeyboardEvent) {
-  if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+  if (e.altKey || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return;
   const menu = e.currentTarget as HTMLElement;
-  const items = [...menu.querySelectorAll<HTMLElement>('input[type="search"], [role="menuitem"]:not(:disabled), [data-show-workspace]')];
+  const items = [...menu.querySelectorAll<HTMLElement>('input[type="search"], [role="menuitem"]:not(:disabled)')];
   if (!items.length) return;
   e.preventDefault();
   const at = items.indexOf(document.activeElement as HTMLElement);

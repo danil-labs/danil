@@ -1,3 +1,5 @@
+import { workspaceCatalog } from "../../../platform-client/src/workspaces.ts";
+import type { WorkspaceAddLink } from "../../../../apps/desktop/src/lib/workspace-add-link.ts";
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { bridgePersonSession } from "../../../session/src/person-session.ts";
@@ -5,7 +7,7 @@ import { capabilities } from "../../../host/src/platform.ts";
 import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
 import { listen } from "../../../../apps/desktop/src/lib/serviceEvents.ts";
 import { danilAvailable, danilAvailableContext, readDanilContext } from "../../../features/machines/src/index.ts";
-import { type CreatedNotice, createAccountRequests } from "./account-requests.ts";
+import { createAccountRequests } from "./account-requests.ts";
 import { engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, retryEngineAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";
 import { createPersonalOpener } from "./personal-open.ts";
@@ -36,8 +38,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   const [laterContext, setLaterContext] = createSignal<string | null>(null);
   const [organizationNotice, setOrganizationNotice] = createSignal(false);
   const [menuNotice, setMenuNotice] = createSignal(false);
-  const [agentCreated, setAgentCreated] = createSignal<CreatedNotice | null>(null);
-  const requests = createAccountRequests(invoke, { groups: () => sessions.groups(), send: sessions.sendOptional, createHere: accounts.createHere }, (notice) => { setAgentCreated(notice); void refreshAccounts(); });
+  const requests = createAccountRequests(invoke, { groups: sessions.groups });
   let seenRemoved = 0;
   createEffect(() => {
     revision();
@@ -170,40 +171,58 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       if (document.visibilityState === "visible") returned();
     });
   }
+  async function addAdmitted(context: string, id: string) {
+    for (let attempt = 0; attempt < 40 && !records.get(context)?.person; attempt++) {
+      if (!active(context) && attempt % 5 === 0) await sessions.refresh();
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    const record = records.get(context);
+    if (!active(context) || !record?.person) throw { detail: "session_not_in_set" };
+    record.sync.add(id);
+    await record.sync.sync();
+    await catalog?.refresh();
+  }
   return {
-    agentCreated, clearAgentCreated: () => setAgentCreated(null),
     adoptionReport: () => accounts.adoptionReport() ?? handedReport(), clearAdoptionReport: () => { accounts.clearAdoptionReport(); handAdoptionReport(null); },
     retryAdoption: () => { if (engineAdopts) return void retryEngineAdoption(invoke); accounts.clearAdoptionUnavailable(); void adoption.retry(); },
     adoptionProgress: accounts.adoptionProgress, personalOutcome: accounts.personalOutcome, sealedElsewhere: (org: string) => (revision(), accounts.sealedElsewhere(org)), hasAdoptionCandidates: accounts.hasAdoptionCandidates,
     organizationNotice, clearOrganizationNotice: () => setOrganizationNotice(false), notifyOrganization: () => { setOrganizationNotice(true); setMenuNotice(true); },
     sessions, groups: rows, known, menuNotice, acknowledgeNotice: () => setMenuNotice(false), emptyReason: () => (revision(), sessions.emptyReason()), removed: () => (revision(), sessions.removed()), laterContext, acknowledgeLater: () => setLaterContext(null), ready: () => (revision(), sessions.ready()), connected: () => (revision(), sessions.connected()),
-    createFree: async (context: string) => {
+    materializeFree: async (context: string) => {
       const group = active(context);
       if (!group) throw { detail: "no_session" };
       const id = await accounts.create(group, refreshAccounts);
       if (!active(context)) throw { detail: "no_session" };
-      await records.get(context)?.sync.add(id);
+      records.get(context)?.sync.add(id);
       return id;
     },
-    add: (context: string, id: string) => records.get(context)?.sync.add(id),
-    /**
-     * Agrega un workspace de un contexto recién admitido. Espera a que el riel lea su persona
-     * (`GET /v1/identity/me` del contexto): un intento cada 150 ms durante 6 s, el plazo de una
-     * lectura del borde, y el conjunto se relee solo mientras el contexto aún no está.
-     */
-    addAdmitted: async (context: string, id: string) => {
-      for (let attempt = 0; attempt < 40 && !records.get(context)?.person; attempt++) {
-        if (!active(context) && attempt % 5 === 0) await sessions.refresh();
-        await new Promise((resolve) => setTimeout(resolve, 150));
+    addAdmitted,
+    addFromHarness: async (target: WorkspaceAddLink) => {
+      await sessions.refresh();
+      const matches = (groups() ?? []).filter((g) => g.org === target.organization
+        && (!target.person || sessions.families().find((f) => f.family === g.family)?.sub === target.person));
+      if (matches.length !== 1) return null;
+      const group = matches[0];
+      const context = group.context_id;
+      const rows = await workspaceCatalog(sessions.send, context);
+      const row = rows.find((item) => item !== null && typeof item === "object" && "id" in item && String(item.id) === target.accountId) as { id: string; name?: string; engine_workspace_id?: unknown; placement?: { kind?: unknown } } | undefined;
+      const id = row?.engine_workspace_id;
+      if (typeof id !== "string" || !id || (target.workspace && target.workspace !== id)) return null;
+      if (row.placement?.kind === "member_computer" && !accounts.known().includes(id)) {
+        await accounts.materialize(group.org, target.accountId, id, typeof row.name === "string" ? row.name : id);
+        await refreshAccounts();
       }
-      const record = records.get(context);
-      if (!record?.person) throw { detail: "session_not_in_set" };
-      record.sync.add(id);
-      // Lo agregado queda en la cola local y se sube con reintentos (workspace-added-sync): no se pierde.
-      await record.sync.sync();
-      await catalog?.refresh();
+      await addAdmitted(context, id);
+      await readDanilContext(group.org, context, true);
+      return { id, context };
     },
-    remove: (context: string, id: string) => records.get(context)?.sync.remove(id),
+    remove: async (context: string, id: string) => {
+      const record = records.get(context);
+      if (!active(context) || !record?.person) throw { detail: "session_not_in_set" };
+      record.sync.remove(id);
+      await record.sync.sync();
+    },
+    revoke: capabilities().revokeWorkspaceAccess,
     refreshContext: (context: string) => { const group = active(context); return group ? readDanilContext(group.org, context, true) : Promise.resolve(); },
     refresh: () => { void refreshAccounts(); for (const g of groups() ?? []) void readDanilContext(g.org, g.context_id); },
   };

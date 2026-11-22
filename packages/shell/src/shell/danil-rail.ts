@@ -1,7 +1,6 @@
 import { createEffect } from "solid-js";
-import type { DanilMenu } from "./DanilAddMenu";
-import { railHidden, railVisible } from "./hidden-workspaces.ts";
-import { type DanilRail, danilRail, setRailShown } from "./workspace-added-wiring.ts";
+import { railVisible } from "./hidden-workspaces.ts";
+import { danilRail, setRailShown } from "./workspace-added-wiring.ts";
 
 export type DanilView = { available: readonly { id: string; name: string }[] | null; added: ReadonlySet<string> | null };
 
@@ -26,20 +25,6 @@ export function danilToAdd(danil: DanilView): readonly { id: string; name: strin
   return danil.available.filter((w) => !added.has(w.id));
 }
 
-/** Lo que el «+» necesita de los de Danil; agregar uno también lo abre. */
-export function danilMenuOf(danil: DanilRail, view: DanilView, open: (id: string) => void): DanilMenu {
-  return {
-    signedIn: danil.signedIn(),
-    organization: danil.organization(),
-    toAdd: danilToAdd(view),
-    others: danil.others(),
-    onList: danil.refresh,
-    onAdd: (id) => (danil.add(id), open(id)),
-    onSwitch: danil.switchTo,
-  };
-}
-
-/** Lo que la columna del riel usa de los de Danil, sobre sus ocultos locales. */
 /**
  * Al entrar, el abierto no puede ser uno de Danil que la persona no agregó (el motor de la
  * organización lo propone por su cuenta): pasa al primer agregado del riel o, si no hay, al
@@ -78,8 +63,6 @@ export function columnDanil(hidden: { ids: () => ReadonlySet<string>; show: (id:
     danil,
     view,
     visible: <T extends { id: string; name: string; logo: string | null }>(list: readonly T[], open: string | null) => railWithDanil<T | ReturnType<typeof make>>(list, hidden.ids(), open, view(), make),
-    /** Los ocultos del «+»: solo los locales; un workspace de Danil se quita, no se oculta. */
-    hiddenRows: <T extends { id: string }>(list: readonly T[]) => railHidden(list, hidden.ids()).filter((w) => !danil.isDanil(w.id)),
   };
 }
 
