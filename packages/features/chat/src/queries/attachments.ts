@@ -182,14 +182,17 @@ export function createAttachments(deps: AttachmentsDeps) {
   // conversación y deja la anterior abandonada, sin error y sin aviso. Para
   // eso está `recargarMaterial`.
 
+  let altaMostrada = false;
   async function aplicar(a: Startup) {
     if (!requestedWorkspaceSnapshot(a)) return;
     guardarCache.flush();
     const activo = a.workspaces.find((w: { id: string }) => w.id === a.active);
-  // Sin workspace se abre el alta. Si ya estaba abierta no se toca: el paso 1
-  // acaba de crear uno, y volver a mirar aquí la cerraría a mitad.
-  // En la web el workspace lo crea la plataforma al darse de alta: la ventana espera sin pedirlo.
-    if (a.active === null && capabilities().localSetup) setAlta(true);
+    // El alta se ofrece una vez. Con una sesión válida puede terminar sin
+    // seleccionar un workspace, y el siguiente repaso deja abierto el riel.
+    if (a.active === null && capabilities().localSetup && !altaMostrada) {
+      altaMostrada = true;
+      setAlta(true);
+    }
     const transition = workspaceContext.beginTransition(a);
   // La lengua es del workspace, y cambia al cambiar de cliente: eso es lo que
   // se pidió, no un efecto secundario. `null` hereda la de la máquina.

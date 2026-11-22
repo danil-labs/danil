@@ -214,6 +214,24 @@ test("a computer that chose «local» before is asked for the session again", as
   }
 });
 
+test("a paid session can finish setup and keep the rail open without an active workspace", async () => {
+  const family = { ...FAMILY, contexts: [{ ...FAMILY.contexts[0], plan: "enterprise" }] };
+  const e = engine({ status: { ...CONNECTED, sessions: [family] } });
+  try {
+    const app = await boot("listo", "account-welcome-paid", e.table, undefined, { [KEY]: "connected" });
+    await sleep(2300);
+    assert.ok(app.w.document.querySelector("[data-workspace-column]"), "the rail is available after setup");
+    app.w.dispatchEvent(new app.w.CustomEvent("harness:workspace"));
+    await sleep(300);
+    assert.ok(app.w.document.querySelector("[data-workspace-column]"), "refreshing the workspace keeps the rail open");
+    assert.equal(e.state.active, null);
+    assert.deepEqual(e.state.sealed, []);
+    assertNoLocalWorkspace(app, e.state);
+  } finally {
+    e.restore();
+  }
+});
+
 test("answered «connected» but without a session: no local workspace, and only the sign in is shown", async () => {
   const e = engine();
   try {
