@@ -228,6 +228,9 @@ importers:
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
+      solid-js:
+        specifier: ^1.9.17
+        version: 1.9.17
     devDependencies:
       '@types/node':
         specifier: ^26.4.0
