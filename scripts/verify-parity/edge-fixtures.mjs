@@ -185,12 +185,16 @@ export async function handleEdgeRoute(route) {
         default_context: "ctx_personal",
       }) });
     }
+    // Borde real (~/work/terminus-workspace/repos/edge/src/web-session.ts 259-343): devuelve el cuerpo de identity
+    // sin `carrier`. La forma pública es la de identity `docs/contracts/session-set.v1.json` (`catalog.example`):
+    // `version: 1`, y cada workspace con su `account_id` (el id numérico de la cuenta) y `engine_workspace_id`.
     if (pathname === "/v1/identity/sessions/catalog") {
-      const of = (org) => mockData.workspaces.filter(w => w.org === org).map(w => ({ engine_workspace_id: `ws_${w.id}`, name: w.name, account_id: null }));
+      const of = (org) => mockData.workspaces.filter(w => w.org === org).map(w => ({ account_id: w.id, engine_workspace_id: `ws_${w.id}`, name: w.name }));
       return route.fulfill({ status: 200, headers: jsonHeaders, body: JSON.stringify({
+        version: 1,
         items: [{ session_id: "fam_ana", sub: "user_ana_perez", email: "ana@danil.ai", contexts: [
-          { context_id: "ctx_personal", org: "org_personal", catalog_state: "listed", workspaces: of("org_personal") },
-          { context_id: "ctx_danil", org: "org_danil", catalog_state: "listed", workspaces: of("org_danil") },
+          { context_id: "ctx_personal", org: "org_personal", org_name: "Personal", catalog_state: "listed", workspaces: of("org_personal") },
+          { context_id: "ctx_danil", org: "org_danil", org_name: "Danil", catalog_state: "listed", workspaces: of("org_danil") },
         ] }],
       }) });
     }
