@@ -8,7 +8,7 @@ import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { mb } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { checkIntegration, installIntegration, listIntegrations, setIntegrationEnabled, typstLiveStop, uninstallIntegration, updateIntegration } from "../queries/engine-integrations";
 import { isMac } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
@@ -101,7 +101,7 @@ export default function Integrations() {
       setFailure(null);
     }
     try {
-      const result = await invoke<Catalog>("list_integrations");
+      const result = await listIntegrations<Catalog>();
       if (current === request && !disposed) setCatalog(result);
     } catch (error) {
       if (current === request && !disposed) setFailure(asFailure(error));
@@ -116,12 +116,12 @@ export default function Integrations() {
     try {
       // Un Tinymist vivo bloquea en Windows la carpeta que actualizar o desinstalar borra.
       if (id === "typst" && (operation === "update" || operation === "uninstall"))
-        await invoke("typst_live_stop", { key: null, session: null }).catch(() => {});
-      if (operation === "install") await invoke("install_integration", { id });
-      else if (operation === "update") await invoke("update_integration", { id });
-      else if (operation === "uninstall") await invoke("uninstall_integration", { id });
-      else if (operation === "check") setReadiness(await invoke<Readiness>("check_integration", { id }));
-      else await invoke("set_integration_enabled", { id, workspace, enabled });
+        await typstLiveStop({ key: null, session: null }).catch(() => {});
+      if (operation === "install") await installIntegration({ id });
+      else if (operation === "update") await updateIntegration({ id });
+      else if (operation === "uninstall") await uninstallIntegration({ id });
+      else if (operation === "check") setReadiness(await checkIntegration<Readiness>({ id }));
+      else await setIntegrationEnabled({ id, workspace, enabled });
     } catch (error) {
       if (!disposed && catalog()?.workspace === workspace) setFailure(asFailure(error));
     } finally {

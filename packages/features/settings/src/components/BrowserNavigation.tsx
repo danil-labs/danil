@@ -1,7 +1,7 @@
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { peso } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { cancelInstall, installSize, installTool } from "../queries/engine-environment";
 import { capabilities } from "../../../../host/src/platform";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { Button } from "../../../../ui/src/Button";
@@ -20,7 +20,7 @@ export default function BrowserNavigation(props: { requirement?: Requirement; on
   const [failure, setFailure] = createSignal<Failure | null>(null);
   const [progress, setProgress] = createSignal({ done: 0, bytes: 0 });
   onMount(() => {
-    void invoke<number>("install_size", { operation: "tool:browser-navigation" })
+    void installSize<number>({ operation: "tool:browser-navigation" })
       .then((bytes) => { if (!running()) setProgress((p) => ({ ...p, bytes })); })
       .catch(() => {});
     const events = listen<{ operation: string; done: number; bytes: number }>("install", (e) => {
@@ -40,7 +40,7 @@ export default function BrowserNavigation(props: { requirement?: Requirement; on
     setFailure(null);
     setProgress((p) => ({ ...p, done: 0 }));
     try {
-      await invoke("install_tool", { tool: allowSandbox ? "browser-navigation-sandbox" : "browser-navigation" });
+      await installTool({ tool: allowSandbox ? "browser-navigation-sandbox" : "browser-navigation" });
       setReady(true);
       await props.onPrepared();
     } catch (e) {
@@ -55,7 +55,7 @@ export default function BrowserNavigation(props: { requirement?: Requirement; on
   async function cancel() {
     setCancelling(true);
     try {
-      await invoke("cancel_install", { operation: "tool:browser-navigation" });
+      await cancelInstall({ operation: "tool:browser-navigation" });
     } catch (e) {
       setFailure(asFailure(e));
       setCancelling(false);

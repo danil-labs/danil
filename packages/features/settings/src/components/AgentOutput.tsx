@@ -1,5 +1,6 @@
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { listLanguagePacks, setWorkspaceOutputLanguage } from "../queries/engine-language";
+import { listWorkspaces } from "../queries/engine-workspaces";
 import { Select } from "../../../../ui/src/Select";
 import { t, type Manifiesto } from "../../../../../apps/desktop/src/lib/i18n";
 import { instalarDelBundle, lenguasDelBundle, type Paquete } from "../../../../../apps/desktop/src/locales/packs";
@@ -25,7 +26,7 @@ export function SalidaDelAgente() {
 
   function cargarInstalados() {
     void Promise.all([
-      invoke<Paquete[]>("list_language_packs"),
+      listLanguagePacks<Paquete[]>(),
       lenguasDelBundle(),
     ]).then(([paquetes, disponibles]) => {
       const perfilesIncluidos = new Map(
@@ -58,7 +59,7 @@ export function SalidaDelAgente() {
    * preguntar.
    */
   function cargarTodo() {
-    void invoke<Startup>("list_workspaces").then((s) => {
+    void listWorkspaces<Startup>().then((s) => {
       const activo = s.workspaces.find((w) => w.id === s.active);
       if (!activo) {
         setInstalados([]);
@@ -93,7 +94,7 @@ export function SalidaDelAgente() {
           return siguiente;
         });
       }
-      await invoke("set_workspace_output_language", { id, lengua: codigo || null });
+      await setWorkspaceOutputLanguage({ id, lengua: codigo || null });
       setValor(codigo);
     } catch {
       if (control instanceof HTMLInputElement && control.type === "checkbox") {

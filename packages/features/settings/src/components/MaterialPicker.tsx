@@ -1,5 +1,5 @@
 import { For, Match, Show, Switch, createSignal, onMount } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { addFolder, addRepoUrl, attachRepo, gitHostAreas, gitHostProjects, repoBranches } from "../queries/engine-git";
 import { open } from "@tauri-apps/plugin-dialog";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import FolderOpen from "lucide-solid/icons/folder-open";
@@ -118,7 +118,7 @@ export default function MaterialPicker(props: {
     try {
       const ruta = await open({ directory: true, multiple: false });
       if (typeof ruta !== "string") return;
-      await traer(() => invoke<{ id: string }>("add_folder", { locator: ruta }));
+      await traer(() => addFolder<{ id: string }>({ locator: ruta }));
     } catch (e) {
       setFallo(asFailure(e));
     }
@@ -150,7 +150,7 @@ export default function MaterialPicker(props: {
     setArea(null);
     setRepos(null);
     try {
-      const as = await invoke<Area[]>("git_host_areas", { id });
+      const as = await gitHostAreas<Area[]>({ id });
       setAreas(as);
       if (as.length === 1) void verRepos(id, as[0].key);
     } catch (e) {
@@ -163,7 +163,7 @@ export default function MaterialPicker(props: {
     setRepos(null);
     setBusca("");
     try {
-      setRepos(await invoke<RepoRemoto[]>("git_host_projects", { id, area: a }));
+      setRepos(await gitHostProjects<RepoRemoto[]>({ id, area: a }));
     } catch (e) {
       setFallo(asFailure(e));
     }
@@ -217,7 +217,7 @@ export default function MaterialPicker(props: {
     setFallo(null);
     try {
       setRamas(
-        await invoke<RamasRemotas>("repo_branches", {
+        await repoBranches<RamasRemotas>({
           cloneUrl: objetivo.cloneUrl,
           gitHost: objetivo.provider,
           defaultBranch: objetivo.defaultBranch,
@@ -261,7 +261,7 @@ export default function MaterialPicker(props: {
         onSubmit={(e) => {
           e.preventDefault();
           void traer(() =>
-            invoke<{ id: string }>("add_repo_url", {
+            addRepoUrl<{ id: string }>({
               cloneUrl: url(),
               branch: elegidas()[url()] || undefined,
             }),
@@ -584,7 +584,7 @@ export default function MaterialPicker(props: {
                           disabled={ocupado()}
                           onClick={() =>
                             void traer(() =>
-                              invoke<{ id: string }>("attach_repo", {
+                              attachRepo<{ id: string }>({
                                 project: "",
                                 gitHost: proveedor(),
                                 cloneUrl: r.clone_url,

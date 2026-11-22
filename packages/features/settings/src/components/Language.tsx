@@ -1,5 +1,6 @@
 import { For, Show, createSignal, onMount } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { setWorkspaceLanguage } from "../queries/engine-language";
+import { listWorkspaces } from "../queries/engine-workspaces";
 import { Select } from "../../../../ui/src/Select";
 import {
   aplicarLenguaDeWorkspace,
@@ -66,7 +67,7 @@ export function Lengua(props: { row?: boolean }) {
     // Se pregunta en vez de recibirlo por props porque este componente lo monta
     // `General`, que no conoce el workspace, y el paso 1 del alta, donde no
     // existe. Preguntar aquí deja a los dos montarlo sin saber nada.
-    void invoke<Startup>("list_workspaces")
+    void listWorkspaces<Startup>()
       .then((s) => {
         const activo = s.workspaces.find((w) => w.id === s.active);
         if (!activo) return;
@@ -123,7 +124,7 @@ export function Lengua(props: { row?: boolean }) {
     // Se pinta ya y se guarda después: esperar al disco para cambiar de lengua
     // deja el desplegable diciendo una cosa y la pantalla otra.
     aplicarLenguaDeWorkspace(codigo === "" ? null : codigo);
-    void invoke("set_workspace_language", { id, lengua: codigo === "" ? null : codigo }).then(
+    void setWorkspaceLanguage({ id, lengua: codigo === "" ? null : codigo }).then(
       // Cambiar la interfaz cambia lo que `SalidaDelAgente` puede ofrecer, y el
       // backend además apaga la salida que deja de corresponder. Sin este aviso
       // su casilla queda marcada sobre un ajuste que ya no existe.

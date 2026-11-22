@@ -1,5 +1,5 @@
 import { For, Match, Show, Switch, createSignal, onMount } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { addSkillSource, listSkillSources, removeSkillSource, setSkillSourceEnabled, skillSourceFreshness, updateSkillSource } from "../queries/engine-skills";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
@@ -76,7 +76,7 @@ export function FuentesDeSkills() {
   const [url, setUrl] = createSignal("");
 
   async function recargar() {
-    const l = await invoke<Listado>("list_skill_sources");
+    const l = await listSkillSources<Listado>();
     setFuentes(l.fuentes);
     setRotas(l.rotas);
   }
@@ -90,7 +90,7 @@ export function FuentesDeSkills() {
    */
   async function comprobar() {
     try {
-      const rs = await invoke<Frescura[]>("skill_source_freshness");
+      const rs = await skillSourceFreshness<Frescura[]>();
       setFrescura(Object.fromEntries(rs.map((r) => [r.id, r])));
     } catch {
       // Un fallo aquí no es un fallo de la pantalla: sin conexión es lo normal,
@@ -108,7 +108,7 @@ export function FuentesDeSkills() {
     setFallo(null);
     setAviso(null);
     try {
-      await invoke("add_skill_source", { url: donde, rotulo: "organizacion" });
+      await addSkillSource({ url: donde, rotulo: "organizacion" });
       setUrl("");
       await recargar();
       await comprobar();
@@ -133,7 +133,7 @@ export function FuentesDeSkills() {
     setTrabajando(id);
     setFallo(null);
     try {
-      await invoke("update_skill_source", { id });
+      await updateSkillSource({ id });
     } catch (e) {
       setFallo({ ...asFailure(e), what: t("settings.skills.error_update") });
     } finally {
@@ -160,8 +160,7 @@ export function FuentesDeSkills() {
     setFallo(null);
     setAviso(null);
     try {
-      const r = await invoke<{ projects: number; sessions: number }>(
-        "remove_skill_source",
+      const r = await removeSkillSource<{ projects: number; sessions: number }>(
         { id },
       );
       if (r.projects > 0) {
@@ -180,7 +179,7 @@ export function FuentesDeSkills() {
     setTrabajando(id);
     setFallo(null);
     try {
-      await invoke("set_skill_source_enabled", { id, enabled });
+      await setSkillSourceEnabled({ id, enabled });
       await recargar();
       window.dispatchEvent(new CustomEvent("harness:sources"));
     } catch (e) {

@@ -16,7 +16,8 @@ import {
 } from "solid-js";
 import { connected } from "../../../../../apps/desktop/src/lib/engineConnection";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { checkEnvironment, installTool, prepareRuntime, restartApp, servicePoll, setupRequired } from "../queries/engine-environment";
+import { listWorkspaces } from "../queries/engine-workspaces";
 import { anotarFalta, SIN_ESPACIO, textoSinEspacio } from "../../../../../apps/desktop/src/lib/no-space";
 import { capabilities } from "../../../../host/src/platform";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
@@ -213,7 +214,7 @@ export default function Setup(props: { children: JSX.Element }) {
   async function readSetupEvents() {
     if (streamClosed || seguir() || mostrar() === false) return;
     try {
-      const page = await invoke<{ cursor: number | null; runtime: string; reset?: boolean }>("service_poll", {
+      const page = await servicePoll<{ cursor: number | null; runtime: string; reset?: boolean }>({
         cursor: streamCursor, workspace: null, runtime: streamRuntime, replay: false, setup: true,
       });
       streamCursor = page.cursor;
@@ -249,7 +250,7 @@ export default function Setup(props: { children: JSX.Element }) {
   async function consultar(joinOnly = true) {
     let corrida: Preparacion | null = null;
     try {
-      corrida = await invoke<Preparacion | null>("prepare_runtime", { joinOnly });
+      corrida = await prepareRuntime<Preparacion | null>({ joinOnly });
     } catch (e) {
       // Sin parar de preguntar: un servicio que vuelve retoma la corrida y borra el aviso.
       setFalloDelServicio(prosaDe(e));
@@ -265,7 +266,7 @@ export default function Setup(props: { children: JSX.Element }) {
     try {
       // Instalar ya tiró el reporte (`env::olvidar`), y lo instalado estrena
       // archivo: la huella no acierta y se vuelve a sondear solo eso.
-      const r = await invoke<EnvReport>("check_environment", { force: false });
+      const r = await checkEnvironment<EnvReport>({ force: false });
       setReporte(r);
       setBloqueado(r?.blocked === true);
     } catch {
@@ -282,7 +283,7 @@ export default function Setup(props: { children: JSX.Element }) {
   );
 
   function contarEspacios() {
-    invoke<{ workspaces: { id: string; name: string }[]; active: string | null }>("list_workspaces")
+    listWorkspaces<{ workspaces: { id: string; name: string }[]; active: string | null }>()
       .then((s) => {
         setHayEspacio(s.workspaces.length > 0);
         const activo = s.workspaces.find((w) => w.id === s.active);
@@ -305,11 +306,11 @@ export default function Setup(props: { children: JSX.Element }) {
     const optimista = mostrar() === null && !connected() && conFoto;
     if (optimista) setMostrar(false);
     // A la vez: el reporte no depende de si hace falta la preparación.
-    const reporteEnCurso = invoke<EnvReport>("check_environment", { force: false });
+    const reporteEnCurso = checkEnvironment<EnvReport>({ force: false });
     reporteEnCurso.catch(() => {});
     let primera = false;
     try {
-      primera = await invoke<boolean>("setup_required");
+      primera = await setupRequired<boolean>();
     } catch (e) {
       setFallo(prosaDe(e));
       if (!optimista) setMostrar(true);
@@ -405,12 +406,12 @@ export default function Setup(props: { children: JSX.Element }) {
     setReparando(true);
     setFalloDeReparar(null);
     try {
-      await invoke("install_tool", { tool: "bundled-work-tools" });
+      await installTool({ tool: "bundled-work-tools" });
     } catch (e) {
       setFalloDeReparar({ ...asFailure(e), what: t("setup.functions.repair_failed") });
     }
     try {
-      const r = await invoke<EnvReport>("check_environment", { force: true });
+      const r = await checkEnvironment<EnvReport>({ force: true });
       setReporte(r);
       setBloqueado(r?.blocked === true);
       if (etapas().some((s) => s.state === "failed")) await preparar();
@@ -495,7 +496,7 @@ export default function Setup(props: { children: JSX.Element }) {
             reparando={reparando()}
             error={falloDeReparar()}
             onReparar={() => void reparar()}
-            onReiniciar={() => void invoke("restart_app")}
+            onReiniciar={() => void restartApp()}
           />
           </Suspense>
         </div>

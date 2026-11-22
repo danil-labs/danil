@@ -7,7 +7,9 @@ import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { df } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { updateSource } from "../queries/engine-environment";
+import { setRoot } from "../queries/engine-misc";
+import { getProfile, getProjectDirectory, listSources, removeSource, setProfile, setProjectDirectory, sourceDetail, sourceFreshness } from "../queries/engine-workspaces";
 import { abbreviateHomePath, remoteHost, remotePathLabel } from "../../../../../apps/desktop/src/lib/remote-path";
 import type { Source } from "../../../../../apps/desktop/src/lib/model";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
@@ -217,7 +219,7 @@ export default function General() {
   async function checkFreshness() {
     setChecking(true);
     try {
-      const rs = await invoke<Freshness[]>("source_freshness");
+      const rs = await sourceFreshness<Freshness[]>();
       setFreshness(Object.fromEntries(rs.map((r) => [r.id, r])));
       await countBehind(rs.filter((r) => r.estado === "atrasada").map((r) => r.id));
     } catch (e) {
@@ -231,7 +233,7 @@ export default function General() {
   async function countBehind(ids: string[]) {
     const rs = await Promise.all(
       ids.map((id) =>
-        invoke<SourceDetail>("source_detail", { id, mirar: true }).catch(() => null),
+        sourceDetail<SourceDetail>({ id, mirar: true }).catch(() => null),
       ),
     );
     setDetail((before) => {
@@ -246,7 +248,7 @@ export default function General() {
     setUpdating(id);
     setFailure(null);
     try {
-      await invoke<string>("update_source", { id });
+      await updateSource<string>({ id });
     } catch (e) {
       setFailure(asFailure(e));
     }
@@ -259,7 +261,7 @@ export default function General() {
 
   async function loadContext() {
     try {
-      setSources(await invoke<Source[]>("list_sources"));
+      setSources(await listSources<Source[]>());
       setFailure(null);
     } catch (e) {
       setSources([]);
@@ -269,10 +271,10 @@ export default function General() {
 
   onMount(() => {
     void loadContext().then(() => checkFreshness());
-    void invoke<string>("get_project_directory")
+    void getProjectDirectory<string>()
       .then(setDirectory)
       .catch((e) => setDirectoryFailure(asFailure(e)));
-    invoke<{ name: string; account_name?: string | null }>("get_profile")
+    getProfile<{ name: string; account_name?: string | null }>()
       .then((p) => {
         setName(p.name);
         setStoredName(p.name);
@@ -293,12 +295,12 @@ export default function General() {
   }
 
   const remove = (id: string) =>
-    void run(() => invoke("remove_source", { source: id }));
+    void run(() => removeSource({ source: id }));
 
   async function save() {
     if (name() === storedName()) return;
     try {
-      const p = await invoke<{ name: string }>("set_profile", { name: name() });
+      const p = await setProfile<{ name: string }>({ name: name() });
       setName(p.name);
       setStoredName(p.name);
       setNameFailure(null);
@@ -318,7 +320,7 @@ export default function General() {
         title: t("settings.general.directory.title"),
       });
       if (!resetDirectory && typeof selectedDirectory !== "string") return;
-      setDirectory(await invoke<string>("set_project_directory", { directory: selectedDirectory }));
+      setDirectory(await setProjectDirectory<string>({ directory: selectedDirectory }));
     } catch (e) {
       setDirectoryFailure(asFailure(e));
     } finally {
@@ -471,7 +473,7 @@ export default function General() {
                 onListo={async (source: string) => {
                   setAddingSource(false);
                   // Este selector elige la raíz del workspace; el del chat solo adjunta material a una tarea.
-                  await run(() => invoke("set_root", { source }));
+                  await run(() => setRoot({ source }));
                 }}
               />
             </div>
