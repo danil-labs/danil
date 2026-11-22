@@ -14,7 +14,7 @@ import { appendFileSync, cpSync, existsSync, readFileSync, writeFileSync } from 
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PHONE_DIR, phoneHeaders, phoneManifest, phoneWorker } from "./web-phone-pwa.mjs";
-import { webRelayOrigins, webSessionDeployment } from "../src/web/session-config.ts";
+import { webRelayOrigins, webSessionDeployment } from "../../../packages/session/src/session-config.ts";
 
 const env = process.env;
 const mobile = fileURLToPath(new URL("../../mobile/", import.meta.url));
@@ -63,7 +63,7 @@ if (run.status !== 0) process.exit(run.status ?? 1);
 
 // Las caras de los agentes Business y sus versiones planas: los mismos SVG del
 // escritorio, servidos junto al teléfono (`AgentAvatar` los pide por URL).
-cpSync(fileURLToPath(new URL("../src/features/projects/business-icons/", import.meta.url)), join(out, "agent-icons"), { recursive: true });
+cpSync(fileURLToPath(new URL("../../../packages/features/projects/src/screens/business-icons/", import.meta.url)), join(out, "agent-icons"), { recursive: true });
 // Un aviso de «inicia sesión» abre la entrada del propio teléfono (`signin.web.tsx`).
 writeFileSync(join(out, "sw.js"), phoneWorker(readFileSync(join(out, "sw.js"), "utf8"), `${base}${PHONE_DIR}/signin`, base));
 writeFileSync(join(out, "manifest.webmanifest"), `${JSON.stringify(phoneManifest(base), null, 2)}\n`);
