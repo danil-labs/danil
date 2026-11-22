@@ -24,10 +24,10 @@ export const CREATE = new Set(["send_message", "run_shell_command", "create_proj
 export const WITH_SPACE = new Set([...CREATE, "create_empty_session", "move_task_to_space", "set_task_archived"]);
 
 /** De esta computadora por definición: sus cuentas de IA, su sesión de Danil, Radiant. */
-export const OF_THIS_MACHINE = /(^|_)accounts?($|_)|login|^radiant_|^danil_|^account_relay_token$/;
+const OF_THIS_MACHINE = /(^|_)accounts?($|_)|login|^radiant_|^danil_|^account_relay_token$/;
 
 /** Las credenciales de la cuenta son del workspace: van a la máquina que lo atiende, como las demás órdenes con `scope`. */
-export const ACCOUNT_CREDENTIALS = /^account_credentials?_|^github_account_/;
+const ACCOUNT_CREDENTIALS = /^account_credentials?_|^github_account_/;
 
 export const ofThisMachine = (command: string) => OF_THIS_MACHINE.test(command) && !ACCOUNT_CREDENTIALS.test(command);
 
@@ -35,7 +35,7 @@ export const ofThisMachine = (command: string) => OF_THIS_MACHINE.test(command) 
 export const OF_THIS_WINDOW = /^radiant_|^danil_|^account_relay_token$|^agents_session_/;
 
 /** Las órdenes con canal pierden el canal por el relay: vuelve solo la respuesta final. */
-export const CHANNELS: Record<string, string> = { clone_project: "progress", list_session_git: "progress", watch_task_tree: "changes" };
+const CHANNELS: Record<string, string> = { clone_project: "progress", list_session_git: "progress", watch_task_tree: "changes" };
 
 export const UNKNOWN = new Set(["command", "unsupported", "command_not_allowed"]);
 

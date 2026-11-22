@@ -116,7 +116,7 @@ export const RENEW_BEFORE = 45_000;
 
 export const RENEW_RETRY = 10_000;
 
-export const CONTRACT = /^[A-Za-z0-9._-]{1,64}$/;
+const CONTRACT = /^[A-Za-z0-9._-]{1,64}$/;
 
 export function sessionUrl(endpoint: string, computerId: string, contracts: readonly string[] = []): string {
   const base = /^[a-z]+:\/\//i.test(endpoint) ? endpoint : `wss://${endpoint}`;
