@@ -384,6 +384,9 @@ export async function attachFixtures(page) {
   await page.route("https://edge.danil.ai/**", handleEdgeRoute);
 
   let cursor = 0;
+  // Lo que la persona mandó en esta página (`send_message`, receta tarea-enviar): `load_session` lo relee como el
+  // motor, que lo persiste. Sin envío la tarea es la misma de siempre.
+  const sent = [];
   await page.routeWebSocket("**/v1/machines/**", (ws) => {
     ws.send(JSON.stringify({ type: "state", state: "online" }));
     ws.send(JSON.stringify({ type: "engine", contract: "1", host_version: "1.0.0" }));
@@ -416,7 +419,8 @@ export async function attachFixtures(page) {
             permission_mode: null,
             turns: [
               { role: "user", id: "u1", at: 1, text: "Primera tarea" },
-              { role: "assistant", id: "a1", at: 2, text: "Respuesta del agente" }
+              { role: "assistant", id: "a1", at: 2, text: "Respuesta del agente" },
+              ...sent
             ]
           };
         } else if (msg.command === "list_surfaces") {
@@ -425,6 +429,27 @@ export async function attachFixtures(page) {
           value = { provider: "codex", models: [{ id: "gpt-5.6", label: "GPT-5.6", gratis: null, note: null, efforts: [], default_effort: null }], fallback: false };
         } else if (msg.command === "list_providers") {
           value = [{ id: "codex", label: "Codex", available: true, driver: true }];
+        } else if (msg.workspace === "ws_2" && msg.command === "list_accounts" && msg.args?.provider === "codex") {
+          // Solo el workspace Beta (ws_2) tiene cuentas conectadas: una de Codex y GitHub con la cuenta de Danil.
+          // Las recetas de antes no pasan por Beta, así que lo que ven no cambia (configuracion-cuentas-ia-conectada
+          // y configuracion-control-codigo-github).
+          value = { provider: "codex", env_var: "CODEX_HOME", shared_credential: null, secret_note: null, active: "acc_codex_1",
+            accounts: [{ id: "acc_codex_1", label: "Cuenta 1", created_at: 1000, identity: "ana@danil.ai", authenticated_at: 1000 }] };
+        } else if (msg.workspace === "ws_2" && msg.command === "account_status" && msg.args?.id === "acc_codex_1") {
+          value = { id: "acc_codex_1", authenticated: true, detail: "ana@danil.ai · Plus" };
+        } else if (msg.workspace === "ws_2" && msg.command === "list_git_hosts") {
+          const frase = (clave) => ({ clave });
+          value = [{ id: "github", name: "GitHub", summary: frase("providers.github.summary"),
+            vocabulary: { change: frase("providers.github.change"), change_short: frase("providers.github.change_short"), change_prefix: "#", checks: frase("providers.github.checks") },
+            select_area: true, setup_url: null, fields: [], token_label: frase("providers.github.token_label"), token_help: frase("providers.github.token_help"),
+            token_url: "https://github.com/settings/tokens", area_label: frase("providers.github.area_label"), areas_label: frase("providers.github.areas_label"),
+            area_help: frase("providers.github.area_help"), browser_login: true, login_help: frase("providers.github.login_help.browser"),
+            connected: { selected_area: { key: "danil-labs", installation_id: 1, repository_ids: null }, selected_areas: [{ key: "danil-labs", installation_id: 1, repository_ids: null }],
+              data: {}, workspace: "ws_2", identity: { user: "ana-perez", name: "Ana Pérez" }, connected_at: 1000 },
+            source: "account", unverified: null }];
+        } else if (msg.command === "send_message") {
+          sent.push({ role: "user", id: `u${sent.length + 2}`, at: 3 + sent.length, text: msg.args?.prompt ?? "" });
+          value = "t1";
         } else if (msg.command === "task_history") {
           value = { history: { archived: false, events: [], recovery: null }, branch: null, path: "/lab", available: true, owned: false, restorable: false, recreatable: false, incomplete: false };
         }
