@@ -74,7 +74,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   const askPerson = () => {
     if (!native || asking || person() || !sessions.ready() || !sessions.connected() || sessions.groups() !== null) return;
     asking = true;
-    fetchIdentityMe<{ id?: unknown }>(edgeFetch)
+    fetchIdentityMe(edgeFetch)
       .then((r) => {
         const id = r.status === 200 ? r.body?.id : null;
         if (typeof id === "string" && id) setPerson(id);

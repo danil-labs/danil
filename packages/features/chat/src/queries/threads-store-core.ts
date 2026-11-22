@@ -1,5 +1,10 @@
 import { batch, createMemo, createSignal, type Setter, untrack } from "solid-js";
-import { anexarDeltas, type ChatEvent, type HandoverState, HistoryPager, hasOlder, hasRecentGap, lotesDeDeltas, type Msg, mensajesDelHilo, type OlderState, type Session, type TranscriptOrigin, transcripcion, vivoTrasLeer } from "../../../chat/src/index.ts";
+import { anexarDeltas, type ChatEvent, mensajesDelHilo, type Session, type TranscriptOrigin, transcripcion } from "../model/transcript.ts";
+import type { HandoverState } from "../model/handover.ts";
+import { HistoryPager, hasOlder, hasRecentGap, type OlderState } from "../model/history.ts";
+import { lotesDeDeltas } from "../model/deltaFrames.ts";
+import type { Msg } from "../screens/Chat.tsx";
+import { vivoTrasLeer } from "../model/threadOrder.ts";
 import { createActivityProjection } from "../model/activity.ts";
 import { createAssistantHistory, idsDeTurnos } from "../model/assistant-history.ts";
 import { createOptimisticHistory, hasUnsettledPrefix, type OptimisticHistoryState } from "../model/optimistic-history.ts";

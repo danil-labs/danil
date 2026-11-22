@@ -5,8 +5,8 @@ import { loadFreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-mo
 import { textoDeFalta } from "../../../../../apps/desktop/src/lib/no-space";
 import type { Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
 import { prosaDe } from "../../../../ui/src/Failure";
-import { accountKeyUrl } from "../../../settings/src/model/account-auth";
-import { ORIGEN_SISTEMA } from "../../../settings/src/model/environment-store";
+import { accountKeyUrl } from "../../../../ui/src/lib/account-auth.ts";
+import { ORIGEN_SISTEMA } from "../../../../ui/src/lib/bundled.ts";
 import { canonicalAgentId, isFreeRouterAgent, isRetiredAgent } from "../../../../tasks/src/agents.ts";
 import { CLAVES, EN_CURSO, explicar, type Fila, fueCancelada, type Modo, type Paso, posicion } from "./connect-rows";
 import { type Agente, cuentaConectada } from "./connect-login";

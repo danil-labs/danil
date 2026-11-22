@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
-import type { Consentimiento } from "../../../settings/src/components/free-router-consent";
+import type { Consentimiento } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import type { Fila, Paso } from "./connect-rows";
 
 /** Lo que el mapa y el panel leen de las conexiones: las filas, el paso de cada una y sus errores. */
