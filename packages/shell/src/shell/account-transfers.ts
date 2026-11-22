@@ -1,3 +1,4 @@
+import type { Workspace } from "../../../platform-client/src/workspaces.ts";
 /** Un workspace de esta computadora que el servidor trasladó de una cuenta a otra (plan de cuentas § 8, A12). */
 export type AccountMove = { id: string; context: string; from: { org: string; account_id: string }; to: { org: string; account_id: string } };
 /** Una unión del Free router que falta tras un traslado: se reintenta en cada repaso hasta que el motor la acepte. */
@@ -32,7 +33,7 @@ function origin(value: unknown): { org: string | null; account_id: string } | nu
 export function movesFor(local: readonly Local[], org: string, context: string, items: readonly unknown[]): AccountMove[] {
   const moves: AccountMove[] = [];
   for (const raw of items) {
-    const item = raw as { id?: unknown; org?: unknown; engine_workspace_id?: unknown; moved_from?: unknown; archived?: unknown };
+    const item = raw as Workspace;
     const engine = typeof item.engine_workspace_id === "string" && item.engine_workspace_id ? item.engine_workspace_id : null;
     const id = accountId(item.id);
     const from = origin(item.moved_from);

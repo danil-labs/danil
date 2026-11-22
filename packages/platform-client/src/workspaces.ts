@@ -8,11 +8,10 @@ import { cancelEdgeWrites, edgeUntil, type EdgeMethod, type EdgeReply, type Pati
 import type { SelectWorkspaceResponse, WorkspaceList } from "./generated/types.ts";
 
 /**
- * Las respuestas del dominio salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7). `next_cursor`,
- * `empty_reason` y `active_workspace_id` de la lista y `engine_workspace_id` de la fila no están en el contrato
- * (hallazgo para danil-contracts): llegan como campos aditivos y quien los lee los comprueba.
+ * Las respuestas del dominio salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7), que ya declara
+ * `next_cursor`, `empty_reason` y `active_workspace_id` de la lista y `engine_workspace_id` de la fila.
  */
-export type { WorkspaceList } from "./generated/types.ts";
+export type { Workspace, WorkspaceList } from "./generated/types.ts";
 
 export const WORKSPACES_PATH = "/v1/workspaces";
 const WORKSPACES_SELECT_PATH = "/v1/workspaces/select";

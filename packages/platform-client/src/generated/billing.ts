@@ -1,5 +1,5 @@
 // GENERADO por packages/platform-client/scripts/generate.mjs desde contract/billing-v2/openapi/public.openapi.json. No editar a mano.
-// repo: danil-labs/danil-contracts; commit: 76173608d54571782453c165d1cfcacf612a6ea1; path: platform/openapi.json; billing-v2: platform/billing-v2/openapi/public.openapi.json platform/billing-v2/schemas/common.v1.schema.json (mismo commit; copiados en contract/billing-v2/)
+// repo: danil-labs/danil-contracts; commit: 23b351f70eb03f241047d339510a8f1b5caef2d0; path: platform/openapi.json; billing-v2: platform/billing-v2/openapi/public.openapi.json platform/billing-v2/schemas/common.v1.schema.json (mismo commit; copiados en contract/billing-v2/)
 
 // Dominios: treasury.
 

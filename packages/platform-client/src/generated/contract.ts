@@ -1,9 +1,9 @@
 // GENERADO por packages/platform-client/scripts/generate.mjs desde contract/openapi.json. No editar a mano.
-// repo: danil-labs/danil-contracts; commit: 76173608d54571782453c165d1cfcacf612a6ea1; path: platform/openapi.json; billing-v2: platform/billing-v2/openapi/public.openapi.json platform/billing-v2/schemas/common.v1.schema.json (mismo commit; copiados en contract/billing-v2/)
+// repo: danil-labs/danil-contracts; commit: 23b351f70eb03f241047d339510a8f1b5caef2d0; path: platform/openapi.json; billing-v2: platform/billing-v2/openapi/public.openapi.json platform/billing-v2/schemas/common.v1.schema.json (mismo commit; copiados en contract/billing-v2/)
 // source: ../../contract/openapi.json
 
 /** sha256 del openapi.json vendorizado (R7): si no coincide, se regenera. */
-export const CONTRACT_HASH = "88fa77dbb0c5d43d72b7c77e4fcb7fcb3d53ca0e7289951c1b1f87ae9b56bf30";
+export const CONTRACT_HASH = "9a5642ac2330ee2f7cf57f621739752e65f51e0ec2608af9d00d6b94fd16dc93";
 export const CONTRACT_VERSION = "0.1.0-draft";
 
 /** Método y ruta de cada operación generada. */

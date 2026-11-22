@@ -1,4 +1,5 @@
 import { sessionWorkspaceCatalog, workspaceCatalog } from "../../../platform-client/src/workspaces.ts";
+import type { Workspace } from "../../../platform-client/src/workspaces.ts";
 import type { WorkspaceAddLink } from "../../../../apps/desktop/src/lib/workspace-add-link.ts";
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
@@ -62,7 +63,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       if (!items || active(context)?.org !== group.org) return;
       // El directorio puede incluir otras membresías de la persona.
       deskLists.set(context, items.flatMap((item) => {
-        const row = item as { org?: unknown; engine_workspace_id?: unknown; name?: unknown } | null;
+        const row = item as Workspace | null;
         const id = row?.engine_workspace_id;
         return row?.org === group.org && typeof id === "string" && id
           ? [{ id, name: typeof row.name === "string" ? row.name : id }]
@@ -228,7 +229,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       const group = matches[0];
       const context = group.context_id;
       const rows = await workspaceCatalog(sessions.send, context);
-      const row = rows.find((item) => item !== null && typeof item === "object" && "org" in item && item.org === group.org && "id" in item && String(item.id) === target.accountId) as { id: string; name?: string; engine_workspace_id?: unknown; placement?: { kind?: unknown } } | undefined;
+      const row = rows.find((item) => item !== null && typeof item === "object" && "org" in item && item.org === group.org && "id" in item && String(item.id) === target.accountId) as Workspace | undefined;
       const id = row?.engine_workspace_id;
       if (typeof id !== "string" || !id || (target.workspace && target.workspace !== id)) return null;
       if (row.placement?.kind === "member_computer" && !accounts.known().includes(id)) {

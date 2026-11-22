@@ -6,7 +6,7 @@ import { engineOwnsAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";
 import type { AdoptionProgress } from "./first-login.ts";
 import type { PersonalOpener, PersonalOutcome } from "./personal-open.ts";
-import { workspaceCatalog, workspacesPagePath } from "../../../platform-client/src/workspaces.ts";
+import { workspaceCatalog, workspacesPagePath, type WorkspaceList } from "../../../platform-client/src/workspaces.ts";
 
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
 export type FreeWorkspace = { id: string; name: string; account_id: string };
@@ -173,7 +173,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
             const reply = await send(group.context_id, "GET", workspacesPagePath(cursor));
             if (epoch !== version) return;
             if (reply.status !== 200) { failed = true; break; }
-            const body = reply.body as { items?: { id?: unknown; org?: unknown; name?: unknown; engine_workspace_id?: unknown }[]; next_cursor?: string | null };
+            const body = reply.body as WorkspaceList;
             const row = body.items?.find((w) => w.org === group.org && typeof w.id === "string" && typeof w.engine_workspace_id === "string" && !!w.engine_workspace_id);
             if (row) { next.set(group.context_id, { id: row.engine_workspace_id as string, name: typeof row.name === "string" ? row.name : row.engine_workspace_id as string, account_id: row.id as string }); break; }
             cursor = typeof body.next_cursor === "string" ? body.next_cursor : null;

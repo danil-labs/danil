@@ -18,7 +18,7 @@ export const desktopCredits: DanilCreditsSource = {
     const patience = () => ({ signal, retryBudgetMs: Math.max(0, deadline - Date.now()) });
     const transport = { send: edgeFetch };
     const directory = await getWorkspaces(patience(), transport);
-    // El contrato deja `items` opcional y no trae `engine_workspace_id` (hallazgo para danil-contracts); se lee igual que antes.
+    // El contrato deja `items` opcional; se lee igual que antes.
     const bound = directory.body.items!.find((row) => row.engine_workspace_id === active);
     if (!bound?.org || signal.aborted) return null;
 
