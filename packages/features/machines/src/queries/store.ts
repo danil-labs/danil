@@ -1,25 +1,16 @@
-import { type MachineState, type SystemId } from "@terminus/computers";
 import { SEP } from "@terminus/fleet";
 import { REMOTE_CHILD_FEATURE, type RemoteScope } from "@terminus/tasks";
 import { createRoot, createSignal } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { createPref, escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
-import { knownMachineName } from "../model/known-names";
+import { knownMachineName } from "../../../../session/src/known-machine-names";
 import { isMac } from "../../../../host/src/window";
 import { capabilities } from "../../../../host/src/platform";
 
 import { runsWorkspace } from "../model/runs-workspace"; export { runsWorkspace };
 
-/**
- * `machine_list`: `hosts` es si tiene el workspace abierto (`null`, que no se sabe
- * sin encenderla); `materializes`, si puede hacerlo suyo con el mismo id al crear ahí;
- * `refuses`, que el relay no la deja usarlo (no tiene permiso ahí).
- * `wakes`: VM administrada. `os` solo si se sabe; si falta, no se inventa.
- * `features`: lo que su motor anuncia (`status.service_features`). `power`, lo que
- * sabe la flota (`starting`: encendiéndose); `version`, su `host_version`, también apagada.
- */
-export type Machine = { id: string; local: boolean; active: boolean; on: boolean; connection?: MachineState; power?: "on" | "off" | "starting" | "outdated"; version?: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean; wakes?: boolean; os?: SystemId; features?: readonly string[] };
+import type { Machine } from "../../../../ui/src/lib/machine"; export type { Machine };
 
 /** Lo que el picker sabe del proyecto de la tarea nueva: las máquinas con su carpeta y su remoto. */
 export type ProjectPlace = { name: string; machines?: string[]; remote_url?: string | null } | null | undefined;
@@ -111,25 +102,7 @@ export function senderTaskId(machine: string, task: string): string {
   return remoteChildScope().idOf(machine, task.slice(task.lastIndexOf(SEP) + 1));
 }
 
-/** La máquina de la fila de una tarea del riel; la registra `App.tsx`, que es quien tiene las filas. */
-let taskRowMachine: (id: string) => string | null | undefined = () => null;
-
-export function setTaskRowMachine(lookup: (id: string) => string | null | undefined) {
-  taskRowMachine = lookup;
-}
-
-/**
- * Las opciones de una orden sobre algo con id de panel (una tarea, un space, una
- * cuenta de IA): en la máquina que lo guarda. De una tarea manda su fila; si aún
- * no la hay, su prefijo.
- */
-export function machineOf(id: string | null | undefined) {
-  // En la web no hay motor local: sin fila ni prefijo, lo que pide la pantalla (una cuenta de IA, por ejemplo)
-  // va a la máquina de la ventana (la VM de la nube), no a un «local» que no existe.
-  const web = !capabilities().nativeWindow;
-  const machine = id ? (taskRowMachine(id) ?? capabilities().taskMachine?.(id) ?? (web ? capabilities().windowMachine?.()?.id : null) ?? null) : null;
-  return machine ? { headers: { "x-terminus-machine": machine } } : undefined;
-}
+export { machineOf, setTaskRowMachine } from "../../../../host/src/machine";
 
 /** «Traer a esta Mac» o «a esta PC»: solo donde hay motor local, el escritorio. */
 export const bringHereLabel = () => (isMac() ? t("shell.machines.bring_here_mac") : t("shell.machines.bring_here_pc"));

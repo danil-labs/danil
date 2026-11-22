@@ -1,3 +1,4 @@
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import { For, Show, Suspense, createSignal, lazy, onCleanup, onMount } from "solid-js";
 import { SignalDot } from "../../../../ui/src/SignalDot";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
@@ -168,7 +169,7 @@ function estado(
   return { texto: t("settings.tools.state.connected"), tono: "active" };
 }
 
-export default function Herramientas(props: { solo?: string | string[] }) {
+export default function Herramientas(props: { solo?: string | string[]; maquinas: MaquinasDeAjustes }) {
   const [conocidos, setConocidos] = createSignal<Conocido[]>([]);
   const [puestos, setPuestos] = createSignal<Puesto[]>([]);
   const [ocupado, setOcupado] = createSignal<string | null>(null);
@@ -918,7 +919,7 @@ export default function Herramientas(props: { solo?: string | string[] }) {
 
       <Show when={!props.solo}>
         <Suspense fallback={null}>
-          <LocalKeysBanner kinds={["mcp_secret"]} />
+          <LocalKeysBanner kinds={["mcp_secret"]} maquinas={props.maquinas} />
           <CredentialsInUse kinds={["mcp_secret"]} title={t("danil.credentials.mcp_title")} />
         </Suspense>
       </Show>

@@ -7,7 +7,7 @@ import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, detalleDe, type Failure, FailureNote, prosaDe } from "../../../../ui/src/Failure";
 import type { Requirement } from "../model/environment-store";
-import { SettingsBlock, SettingsSection } from "./layout";
+import { SettingsBlock, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
 
 export default function BrowserNavigation(props: { requirement?: Requirement; onPrepared: () => Promise<void> }) {

@@ -8,7 +8,7 @@ import { downloadsFor, DOWNLOAD_PAGE, type DesktopPlatform } from "../../../../h
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { ENLACE } from "../../../../ui/src/ExternalLink";
-import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
+import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 const platformName = (p: DesktopPlatform) => t(`web.download.platform.${p}`);
 

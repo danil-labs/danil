@@ -38,7 +38,7 @@ import { Input } from "../../../../ui/src/Input";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { Skeleton } from "../../../../ui/src/Skeleton";
 import { Terminal, TerminalBody } from "../../../../ui/src/Terminal";
-import { machineOf } from "../../../machines/src/queries/store";
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import AccountCard, { accountPresentation } from "../screens/AccountCard";
 import { accountKeyUrl, addBlockedByExternal } from "../model/account-auth";
 import {
@@ -51,7 +51,7 @@ import {
   type LoginEvent,
 } from "../queries/accounts-store";
 import { LoginCodeForm } from "../screens/LoginCodeForm";
-import { SettingsBlock, SettingsRow, SettingsSection } from "./layout";
+import { SettingsBlock, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { ExternalLink as EnlaceExterno } from "../../../../ui/src/ExternalLink";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
@@ -93,7 +93,10 @@ export default function Accounts(props: {
   desplegado?: boolean;
   /** Para la pantalla (`ai-providers-groups.ts`): lo que decide si el grupo se ve, el mismo `agregar()` del botón para su selector, y sin botón propio. */
   onEstado?: (e: EstadoDeProveedor) => void; onControl?: (c: { agregar: () => void }) => void; sinAgregar?: boolean;
+  /** Lo de máquinas: a qué máquina va cada orden. */
+  maquinas: MaquinasDeAjustes;
 }) {
+  const { machineOf } = props.maquinas;
   const [agentes, setAgentes] = createSignal<AgentOpt[]>([]);
   const [agente] = createSignal(props.agente);
   const [lista, setLista] = createSignal<AccountList | null>(null);
@@ -995,7 +998,7 @@ export default function Accounts(props: {
 
       <Show when={claveDe()}>
         <Suspense fallback={null}>
-          <LocalKeysBanner kinds={["api_key"]} />
+          <LocalKeysBanner kinds={["api_key"]} maquinas={props.maquinas} />
         </Suspense>
       </Show>
 
@@ -1011,6 +1014,7 @@ export default function Accounts(props: {
               <li class="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-2">
               <CuentaConfigurada
                 account={a}
+                maquinas={props.maquinas}
                 agent={agente()}
                 agentLabel={etiqueta()}
                 active={activa()}
@@ -1434,6 +1438,7 @@ function Paso(props: { numero: number; titulo: string; children: JSX.Element }) 
 
 function CuentaConfigurada(props: {
   account: Account;
+  maquinas: MaquinasDeAjustes;
   agent: string;
   agentLabel: string;
   active: boolean;
@@ -1482,6 +1487,7 @@ function CuentaConfigurada(props: {
     get enabled() {
       return props.supportsLimits;
     },
+    machineOf: props.maquinas.machineOf,
   });
 
   // Si el proveedor sí contestó con límites, la cuenta funciona aunque el CLI

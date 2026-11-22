@@ -8,7 +8,7 @@ import GitBranch from "lucide-solid/icons/git-branch";
 import Plus from "lucide-solid/icons/plus";
 import SquarePen from "lucide-solid/icons/square-pen";
 import X from "lucide-solid/icons/x";
-import { createEffect, createMemo, createSignal, createUniqueId, For, lazy, on, onCleanup, Show, Suspense } from "solid-js";
+import { createEffect, createMemo, createSignal, createUniqueId, For, lazy, on, onCleanup, Show, Suspense, type JSX } from "solid-js";
 import { rememberRoster } from "../../../../../apps/desktop/src/lib/handlerRoster";
 import { createCopied } from "../../../../host/src/clipboard";
 import { machineAction } from "../../../../host/src/machine-action";
@@ -45,8 +45,7 @@ import {
   PopoverTrigger,
 } from "../../../../ui/src/Popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../../ui/src/Tabs";
-import WorkdirIcon from "../../../code/src/components/WorkdirIcon";
-import MaterialPicker from "../../../settings/src/components/MaterialPicker";
+import WorkdirIcon from "../../../../ui/src/WorkdirIcon";
 import { agentsWithDifferentReaders } from "../model/agentReaders";
 import { AstroAvatar } from "./AstroAvatar";
 import BaseBranchPicker from "./BaseBranchPicker";
@@ -233,6 +232,7 @@ export default function VistaDeProyecto(props: {
   onCarpetaEditable: (dir: string | null) => void | Promise<void>;
   /** Lo que se ofrece como modelo por defecto al crear un agente. */
   modelos: ModelChoices;
+  material: (entrada: { onCancelar: () => void; onListo: (source: string) => Promise<void> | void }) => JSX.Element;
   createFreeRouterConsent: CreateFreeRouterConsent;
 }) {
   // Abrir el proyecto es una acción de la persona: su VM se enciende si está apagada.
@@ -678,19 +678,17 @@ export default function VistaDeProyecto(props: {
                 <PopoverContent class="w-[360px] p-2">
                   <Show
                     when={!trayendo()}
-                    fallback={
-                      <MaterialPicker
-                        onCancelar={() => setTrayendo(false)}
-                        onListo={(source: string) => {
-                          setTrayendo(false);
-                          setAnadiendo(false);
-                          void props.onAdjuntar(source);
-                          // El material entró al workspace: lo recarga todo lo
-                          // que lo lee, no solo esta pantalla.
-                          window.dispatchEvent(new CustomEvent("harness:sources"));
-                        }}
-                      />
-                    }
+                    fallback={props.material({
+                      onCancelar: () => setTrayendo(false),
+                      onListo: (source: string) => {
+                        setTrayendo(false);
+                        setAnadiendo(false);
+                        void props.onAdjuntar(source);
+                        // El material entró al workspace: lo recarga todo lo
+                        // que lo lee, no solo esta pantalla.
+                        window.dispatchEvent(new CustomEvent("harness:sources"));
+                      },
+                    })}
                   >
                     {/* Lo que ya está en el workspace primero: adjuntarlo no
                         copia nada ni pide red, y es el caso normal cuando ya se

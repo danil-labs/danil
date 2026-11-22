@@ -36,7 +36,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
-import { SettingsBlock, SettingsPanel, SettingsSection } from "./layout";
+import { SettingsBlock, SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import {
   Table,
   TableBody,

@@ -37,10 +37,10 @@ import { Button } from "../../../../ui/src/Button";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
 import { displayName, notifyProfiles } from "../../../projects/src/queries/profiles";
-import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
+import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { LogoDelWorkspace } from "./Workspaces";
 import { createWorkspaces } from "../queries/workspaces-store";
-import { machineOf } from "../../../machines/src/queries/store";
+import type { MaquinasDeAjustes } from "../model/machines-port";
 
 const IMAGES = ["png", "jpg", "jpeg", "webp"];
 
@@ -89,7 +89,8 @@ function proyectoDe(
  * El fondo de un agente sigue siendo el suyo: el de aquí solo pinta el chat
  * que no tiene uno. La imagen de la cara no entra al catálogo de cuerpos.
  */
-export default function Appearance(props: { proyecto: string }) {
+export default function Appearance(props: { proyecto: string; maquinas: MaquinasDeAjustes }) {
+  const { machineOf } = props.maquinas;
   const [tema, setTema] = createSignal<Apariencia>(apariencia());
   const [estilo, setEstilo] = createSignal<DarkStyle>(darkStyle());
   const [estiloClaro, setEstiloClaro] = createSignal<LightStyle>(lightStyle());

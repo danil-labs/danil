@@ -12,6 +12,7 @@ import { GroupAvatar } from "./GroupAvatar";
 import { webOrganizationAttention, webOrganizationName } from "./GroupOrganizationWatch";
 import { HeaderAccountDetails } from "./HeaderAccountDetails";
 import { menuArrows } from "./menu-focus";
+import { Pressable } from "../../../ui/src/Pressable";
 
 const monogram = (name: string) => name.trim().slice(0, 1).toUpperCase() || "?";
 /** La cuenta de un grupo: la inicial de su organización o correo; su menú la quita o vuelve a entrar. */
@@ -56,12 +57,12 @@ export const AccountHeader = (p: { id: string; email: string | null; extra: bool
             <p class="m-0 px-2 pb-1 text-caption text-neutral-500">{t("shell.workspaces.stale")}</p>
           </Show>
           <Show when={!p.signedIn && !!accounts()?.add}>
-            <button role="menuitem" class={ITEM_DE_MENU} onClick={() => (setAccountMenu(null), accounts()?.add?.(p.email))}>
+            <Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => (setAccountMenu(null), accounts()?.add?.(p.email))}>
               {t("shell.workspaces.sign_in_again")}
-            </button>
+            </Pressable>
           </Show>
           <Show when={p.extra}>
-            <button
+            <Pressable
               role="menuitem"
               class={ITEM_DE_MENU}
               onClick={() => {
@@ -70,7 +71,7 @@ export const AccountHeader = (p: { id: string; email: string | null; extra: bool
               }}
             >
               {t("shell.workspaces.remove_account")}
-            </button>
+            </Pressable>
           </Show>
           </Show>
         </PopoverContent>

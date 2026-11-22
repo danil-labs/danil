@@ -22,7 +22,7 @@ import { Button } from "../../../../ui/src/Button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../../ui/src/DropdownMenu";
 import { FailureNote, type Failure } from "../../../../ui/src/Failure";
 import { Skeleton } from "../../../../ui/src/Skeleton";
-import { SettingsBlock, SettingsRow } from "./layout";
+import { SettingsBlock, SettingsRow } from "../../../../ui/src/SettingsLayout";
 import { accountPathDown, githubAccountCode, githubAccountFailureOf, notHere, silent } from "../model/github-account-failures.ts";
 import { ENLACE } from "../../../../ui/src/ExternalLink";
 

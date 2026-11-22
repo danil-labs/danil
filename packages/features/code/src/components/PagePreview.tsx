@@ -1,5 +1,5 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
-import { SANDBOX_ARTEFACTO } from "../../../artifacts/src/model/sandbox";
+import { SANDBOX_ARTEFACTO } from "../../../../ui/src/lib/sandbox";
 
 /**
  * La dirección de un `.html` de la tarea en `terminus-page` (`page_preview.rs`),

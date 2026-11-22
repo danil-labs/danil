@@ -4,7 +4,7 @@ import { Select } from "../../../../ui/src/Select";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { Startup, Workspace } from "../queries/workspaces-store";
-import { SettingsRow } from "../components/layout";
+import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 
 /** Avisa a la ventana, que arranca con esto la caja en blanco de este workspace. */
 export const DEFAULT_PERMISSION_MODE_EVENT = "harness:default-permission-mode";

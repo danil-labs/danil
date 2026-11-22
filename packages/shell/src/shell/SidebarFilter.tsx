@@ -16,6 +16,7 @@ import { Button } from "../../../ui/src/Button";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import { FolderSquare } from "../../../features/projects/src/screens/FolderChip";
+import { Pressable } from "../../../ui/src/Pressable";
 
 export type SidebarFilterFolder = { id: string; name: string; count: number };
 /** `installed` falso: ya no está instalado, pero tiene tareas. */
@@ -67,13 +68,13 @@ function Opcion(props: {
   aside?: JSX.Element;
 }) {
   return (
-    <button type="button" role={props.role} aria-checked={props.on} class={renglon} onClick={() => props.onSelect()}>
+    <Pressable role={props.role} aria-checked={props.on} class={renglon} onClick={() => props.onSelect()}>
       <Show when={props.role === "menuitemcheckbox"} fallback={<Radio on={props.on} />}>
         <Casilla on={props.on} />
       </Show>
       <span class="flex min-w-0 items-center gap-1.5 truncate">{props.children}</span>
       <span class="text-caption text-neutral-500 tabular-nums">{props.aside}</span>
-    </button>
+    </Pressable>
   );
 }
 
@@ -94,13 +95,12 @@ export function SidebarFilterSections(props: SidebarFilterProps) {
         <div class={titulo}>
           <span>{t("shell.sidebar.view.folders")}</span>
           <Show when={props.view.folders.length > 0}>
-            <button
-              type="button"
+            <Pressable
               class="ml-auto rounded-sm px-1 text-neutral-500 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
               onClick={() => set({ folders: [] })}
             >
               {t("shell.sidebar.view.all")}
-            </button>
+            </Pressable>
           </Show>
         </div>
         <Opcion role="menuitemcheckbox" on={props.view.folders.length === 0} onSelect={() => set({ folders: [] })} aside={total()}>

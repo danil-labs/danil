@@ -15,8 +15,8 @@ import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
-import { machineName, machines } from "../../../machines/src/queries/store";
-import { SettingsBlock } from "./layout";
+import type { MaquinasDeAjustes } from "../model/machines-port";
+import { SettingsBlock } from "../../../../ui/src/SettingsLayout";
 import { act, credentialsView, failureOf, reloadCredentials } from "../queries/credentials-store";
 
 const nameOf = (m: Pick<CredentialMachine, "computer_id" | "name">) => m.name?.trim() || capabilities().machineName?.(m.computer_id) || m.computer_id;
@@ -262,7 +262,7 @@ export function CredentialsInUse(props: { kinds?: CredentialKind[]; match?: (c: 
 const [dismissed, setDismissed] = createSignal<ReadonlySet<string>>(new Set());
 
 /** Dónde corre el motor que contesta: esta máquina, salvo que el workspace viva en otra. */
-function whereName(): string | null {
+function whereName({ machines, machineName }: MaquinasDeAjustes): string | null {
   const lead = machines().find((m) => m.active);
   return lead && !lead.local ? machineName(lead.id, false) : null;
 }
@@ -271,7 +271,7 @@ function whereName(): string | null {
  * «Tienes N claves solo en esta máquina. ¿Subirlas a tu cuenta?». La persona
  * elige cuáles; nada se sube sin que lo pida.
  */
-export function LocalKeysBanner(props: { kinds: CredentialKind[] }) {
+export function LocalKeysBanner(props: { kinds: CredentialKind[]; maquinas: MaquinasDeAjustes }) {
   onMount(() => void reloadCredentials(false));
   const local = () => {
     const v = credentialsView();
@@ -300,8 +300,8 @@ export function LocalKeysBanner(props: { kinds: CredentialKind[] }) {
     <Show when={local().length > 0}>
       <div class="grid gap-2 rounded-md border border-border bg-surface-raised px-3 py-2.5" data-local-keys-banner="">
         <p class="m-0 text-ui font-semibold">
-          {whereName()
-            ? t("danil.credentials.local.title_on", { count: local().length, machine: whereName()! })
+          {whereName(props.maquinas)
+            ? t("danil.credentials.local.title_on", { count: local().length, machine: whereName(props.maquinas)! })
             : t("danil.credentials.local.title", { count: local().length })}
         </p>
         <p class="m-0 text-xs text-neutral-500">{t("danil.credentials.local.help")}</p>

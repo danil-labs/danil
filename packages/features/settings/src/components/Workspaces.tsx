@@ -1,3 +1,4 @@
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup, onMount, splitProps, type JSX } from "solid-js";
 import { deleteProject, listProjects, previewFile, removeWorkspace, renameProject, renameWorkspace, setWorkspaceLogo, setWorkspaceLogoPng, setWorkspaceWorktreesRoot } from "../queries/engine-workspaces";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -11,7 +12,7 @@ import { Input } from "../../../../ui/src/Input";
 import type { Project } from "../../../../../apps/desktop/src/lib/model";
 import { PROJECT_NAME_MAX_LENGTH } from "../../../../../apps/desktop/src/lib/projectNames";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
-import { SettingsRow } from "./layout";
+import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 import { Skeleton } from "../../../../ui/src/Skeleton";
 import { enfocar, enfocarYSeleccionar } from "../../../../../apps/desktop/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -342,7 +343,7 @@ export function LogoDelWorkspace(props: {
   );
 }
 
-export default function Workspaces() {
+export default function Workspaces(props: { maquinas: MaquinasDeAjustes }) {
   const ws = createWorkspaces();
 
   const [editando, setEditando] = createSignal<string | null>(null);
@@ -542,7 +543,7 @@ export default function Workspaces() {
 
                     <Show when={capabilities().danilAccount}>
                       <Suspense fallback={null}>
-                        <WorkspaceAccount workspace={w.id} name={w.name} />
+                        <WorkspaceAccount workspace={w.id} name={w.name} maquinas={props.maquinas} />
                       </Suspense>
                     </Show>
 

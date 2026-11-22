@@ -5,7 +5,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { TriangleAlert } from "lucide-solid";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { Button } from "../../../../ui/src/Button";
-import { SettingsBlock, SettingsRow, SettingsSection } from "./layout";
+import { SettingsBlock, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { lengua, t } from "../../../../../apps/desktop/src/lib/i18n";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";

@@ -14,7 +14,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { Toggle } from "../../../../ui/src/Toggle";
-import { SettingsRow, SettingsSection } from "./layout";
+import { SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 type Plugin = "agentsview" | "libreoffice" | "drawio" | "computer-use" | "typst";
 type IntegrationStatus = {

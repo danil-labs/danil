@@ -23,7 +23,7 @@ import {
 } from "../../../../ui/src/DropdownMenu";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { WithMentions } from "../../../chat/src/components/WithMentions";
-import { IconoDeArchivo } from "../../../code/src/components/FileIcon";
+import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
 import { colorDeMarca, describirEstado, localDe } from "../../../code/src/queries/localStatus";
 import { AstroAvatar } from "./AstroAvatar";
 import { displayName, watchProfiles } from "../queries/profiles";

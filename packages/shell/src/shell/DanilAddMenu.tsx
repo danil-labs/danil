@@ -7,6 +7,7 @@ import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import { type AttentionState, type TaskAttention, topState } from "./attention";
 import { matchesName } from "./hidden-workspaces";
 import WorkspaceSearch, { SEARCH_FROM } from "./WorkspaceSearch";
+import { Pressable } from "../../../ui/src/Pressable";
 
 type Named = { id: string; name: string };
 
@@ -27,8 +28,7 @@ const NOTE = "m-0 px-2 py-1.5 text-caption text-neutral-500";
 export function DanilAddEntry(props: { danil: DanilMenu; web?: boolean; onStep: () => void }) {
   return (
     <Show when={props.web || props.danil.signedIn}>
-      <button
-        type="button"
+      <Pressable
         role="menuitem"
         class={ITEM_DE_MENU}
         data-add-danil-step=""
@@ -38,7 +38,7 @@ export function DanilAddEntry(props: { danil: DanilMenu; web?: boolean; onStep: 
         }}
       >
         {t("shell.workspaces.add_danil")}
-      </button>
+      </Pressable>
     </Show>
   );
 }
@@ -48,9 +48,9 @@ export function DanilSwitchRows(props: { danil: DanilMenu; onClose: () => void }
   return (
     <For each={props.danil.signedIn ? props.danil.others : []}>
       {(o) => (
-        <button type="button" role="menuitem" class={ITEM_DE_MENU} data-switch-organization={o.id} onClick={() => (props.onClose(), props.danil.onSwitch(o.id))}>
+        <Pressable role="menuitem" class={ITEM_DE_MENU} data-switch-organization={o.id} onClick={() => (props.onClose(), props.danil.onSwitch(o.id))}>
           {t("shell.workspaces.switch_to", { name: o.name })}
-        </button>
+        </Pressable>
       )}
     </For>
   );
@@ -81,8 +81,7 @@ export function DanilStep(props: {
                   {(w) => {
                     const state = () => topState(props.tasksOf(w.id));
                     return (
-                      <button
-                        type="button"
+                      <Pressable
                         role="menuitem"
                         data-add-danil={w.id}
                         class={cn(ITEM_DE_MENU, "flex min-w-0 items-center gap-2")}
@@ -95,7 +94,7 @@ export function DanilStep(props: {
                         <span class="min-w-0 flex-1 truncate">{w.name}</span>
                         <Show when={state()}>{(s) => <Dynamic component={props.badge} state={s()} />}</Show>
                         <span class="shrink-0 text-caption text-neutral-500">{t("shell.workspaces.add_row")}</span>
-                      </button>
+                      </Pressable>
                     );
                   }}
                 </For>

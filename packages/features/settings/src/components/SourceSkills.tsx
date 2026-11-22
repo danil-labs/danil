@@ -9,7 +9,7 @@ import { Input } from "../../../../ui/src/Input";
 import { Toggle } from "../../../../ui/src/Toggle";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import Search from "lucide-solid/icons/search";
-import { SettingsRow, SettingsSection } from "./layout";
+import { SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { lockedBy } from "../../../../../apps/desktop/src/lib/governance";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Governed } from "./Governed";

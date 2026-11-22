@@ -1,11 +1,5 @@
 import { type JSX, Match, Show, Switch } from "solid-js";
-import SearchPanel from "../../../chat/src/components/SearchPanel";
-import { DelegatedPanel, type DelegatedPanelModel } from "../../../chat/src/screens/DelegatedTasks";
-import type { SearchSurface } from "../../../chat/src/screens/ThreadSearch";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { TaskSideMode } from "../../../../../apps/desktop/src/lib/taskFiles";
-import { UsagePanel } from "../../../../shell/src/shell/UsageTool";
-import type { Usage } from "../../../../shell/src/shell/usage";
 
 /** The files window frame. Search, usage and delegated tasks reuse it instead of a second box. */
 export function TaskSideShell(props: { mode: TaskSideMode; side: JSX.Element; children: JSX.Element }) {
@@ -26,22 +20,20 @@ export function TaskSideShell(props: { mode: TaskSideMode; side: JSX.Element; ch
 
 export function TaskSide(props: {
   mode: TaskSideMode;
-  search: SearchSurface | undefined;
-  usage: { usage: Usage; agent: string; onManage: () => void };
-  delegated: () => DelegatedPanelModel | undefined;
+  searchSlot: JSX.Element;
+  usageSlot: JSX.Element;
+  delegatedSlot: JSX.Element;
 }) {
   return (
     <Switch>
-      <Match when={props.mode === "search" && props.search}>
-        <SearchPanel surface={props.search!} />
+      <Match when={props.mode === "search"}>
+        {props.searchSlot}
       </Match>
       <Match when={props.mode === "usage"}>
-        <UsagePanel usage={props.usage.usage} agent={props.usage.agent} onManage={props.usage.onManage} />
+        {props.usageSlot}
       </Match>
       <Match when={props.mode === "delegated"}>
-        <Show when={props.delegated()} fallback={<p class="m-0 px-3 py-3 text-xs text-neutral-500">{t("chat.delegation.none")}</p>}>
-          <DelegatedPanel model={props.delegated} />
-        </Show>
+        {props.delegatedSlot}
       </Match>
     </Switch>
   );

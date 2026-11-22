@@ -1,4 +1,4 @@
-import { SettingsPanel } from "./layout";
+import { SettingsPanel } from "../../../../ui/src/SettingsLayout";
 import { FuentesDeSkills } from "./SkillSources";
 import { SkillsDeFuentes } from "./SourceSkills";
 

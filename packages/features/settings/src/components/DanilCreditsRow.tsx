@@ -3,7 +3,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { createDanilCreditsBalance } from "../../../chat/src/queries/store";
-import { SettingsRow } from "./layout";
+import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 
 /**
  * Danil Credits como fila de Configuración. El saldo sale del mismo

@@ -12,7 +12,7 @@ import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
 import NewAgent, { type ModelChoices } from "../../../projects/src/screens/NewAgent";
 import { createFreeRouterConsent } from "./free-router-consent";
 import { displayName, notifyProfiles } from "../../../projects/src/queries/profiles";
-import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
+import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 export default function Agents(props: {
   modelos: ModelChoices;

@@ -1,4 +1,4 @@
-import { borrarPref, escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
+import { borrarPref, escribirPref, leerPref } from "../../../apps/desktop/src/lib/prefs.ts";
 
 /**
  * El último nombre conocido de cada máquina de la flota (id → nombre), para

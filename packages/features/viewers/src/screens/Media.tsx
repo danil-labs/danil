@@ -1,12 +1,12 @@
-import { readTreeFile, type TreePart } from "@terminus/protocol";
+import { readTreeFile } from "@terminus/protocol";
 import { Show, createResource, createSignal, onCleanup } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { peso } from "../../../../../apps/desktop/src/lib/format";
 import { FailureNote, asFailure } from "../../../../ui/src/Failure";
+import { descargar, type LeerParte } from "../../../../host/src/tree-download";
 
-/** Lo que se lee del árbol de la tarea, una parte cada vez (`tree_read_part`). */
-export type LeerParte = (offset: number, size: number, revision?: string) => Promise<TreePart>;
+export { descargar, type LeerParte };
 
 /**
  * Un `blob:` en la web, que es lo que Safari reproduce, y un `data:` en la
@@ -87,17 +87,4 @@ export default function Reproductor(props: { ruta: string; tipo: "video" | "audi
       </Show>
     </div>
   );
-}
-
-/** Lo baja al equipo de quien mira: en la web, «Abrir afuera» abriría el archivo en la otra máquina. */
-export async function descargar(nombre: string, leer: LeerParte) {
-  const { bytes, mime } = await readTreeFile(leer);
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: mime }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nombre.slice(nombre.lastIndexOf("/") + 1);
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }

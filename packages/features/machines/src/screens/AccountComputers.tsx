@@ -14,7 +14,7 @@ import { capabilities, type AccountComputersSource } from "../../../../host/src/
 import { isMac } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
-import { SettingsBlock, SettingsRow, SettingsSection } from "../../../settings/src/components/layout";
+import { SettingsBlock, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { workspaceComputersSource } from "../queries/workspace-computers";
 import { machineNamesChanged } from "../queries/store";
 import { createCloudMachines } from "../queries/cloud-machines";

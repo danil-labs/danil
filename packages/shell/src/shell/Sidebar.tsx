@@ -50,6 +50,7 @@ import { machineName, machines } from "../../../features/machines/src/queries/st
 // Solo al crear un encargado: fuera de la carga inicial.
 import { LazyPart, retryableLazy } from "../../../ui/src/LazyPart";
 import { Spinner } from "../../../ui/src/Spinner";
+import { Pressable } from "../../../ui/src/Pressable";
 const NewAgent = retryableLazy(() => import("../../../features/projects/src/screens/NewAgent"));
 
 // Fuera de la carga inicial: el botón y el dock llegan un instante después de la lista.
@@ -524,7 +525,7 @@ export default function Sidebar(props: {
    * lista y se relanza creyendo que no pasó nada.
    */
   const FilaDeClon = (pp: { clon: ClonEnCurso }) => (
-    <button
+    <Pressable
       class="grid min-w-0 grid-cols-[22px_minmax(0,1fr)] items-center gap-0.5 rounded-sm px-2 py-1 text-left outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       onClick={() => props.onAbrirClon()}
     >
@@ -554,7 +555,7 @@ export default function Sidebar(props: {
               }`}
         </span>
       </span>
-    </button>
+    </Pressable>
   );
 
   const Grupo = (p: { grupo: SidebarGroup<SessionRow> }) => {
@@ -581,7 +582,7 @@ export default function Sidebar(props: {
                 <Rotulo
                   tono={necesita() ? "need" : undefined}
                   accion={g().kind === "folder" && !g().key ? (
-                    <button
+                    <Pressable
                       class="mr-1 grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 opacity-0 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:opacity-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary group-hover:opacity-100 group-focus-within:opacity-100"
                       data-loose-task=""
                       aria-label={t("shell.sidebar.new_loose_task")}
@@ -589,7 +590,7 @@ export default function Sidebar(props: {
                       onClick={() => { props.onNuevaTareaEn(""); setDesplegado(false); }}
                     >
                       <Plus size={15} aria-hidden="true" />
-                    </button>
+                    </Pressable>
                   ) : undefined}
                 >
                   <Show when={g().kind === "agent" && g().key}>

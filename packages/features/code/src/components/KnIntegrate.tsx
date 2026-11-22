@@ -1,6 +1,6 @@
 import { For, Show, createSignal } from "solid-js";
 import { knPending, knFinish, knUpdate } from "../queries";
-import { machineOf } from "../../../machines/src/queries/store";
+import { machineOf } from "../../../../host/src/machine";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";

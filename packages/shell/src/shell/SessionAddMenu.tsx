@@ -11,6 +11,7 @@ import type { sessionRail } from "./session-groups";
 import { freeSessionRow } from "./session-rail-view";
 import WorkspaceSearch, { SEARCH_FROM } from "./WorkspaceSearch";
 import { WorkspaceSourceStatus } from "./WorkspaceSourceStatus";
+import { Pressable } from "../../../ui/src/Pressable";
 
 type Rail = ReturnType<typeof sessionRail>;
 const NOTE = "m-0 px-2 py-1.5 text-caption text-neutral-500";
@@ -24,12 +25,12 @@ const errorKey = (e: unknown) => {
 export function SessionAddEntries(props: { sessions: Rail; signedIn: boolean; onStep: () => void; onClose: () => void }) {
   const run = () => { props.onClose(); void props.sessions.sessions.addAccount().catch(() => {}); };
   return <>
-    <button type="button" role="menuitem" class={ITEM_DE_MENU} data-add-danil-step="" onClick={() => {
+    <Pressable role="menuitem" class={ITEM_DE_MENU} data-add-danil-step="" onClick={() => {
       if (props.sessions.groups()?.length || props.signedIn) { props.onStep(); props.sessions.refresh(); }
       else run();
-    }}>{t("shell.workspaces.add_danil")}</button>
+    }}>{t("shell.workspaces.add_danil")}</Pressable>
     <Show when={props.sessions.groups()?.some((g) => (g.available_contexts ?? 0) > 0)}><p role="status" class={NOTE}>{t("shell.workspaces.new_available")}</p></Show>
-      <button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={run}>{t("shell.workspaces.add_session")}</button>
+      <Pressable role="menuitem" class={ITEM_DE_MENU} onClick={run}>{t("shell.workspaces.add_session")}</Pressable>
   </>;
 }
 
@@ -52,9 +53,9 @@ export function SessionAddStep(props: { sessions: Rail; context?: string | null;
       <KeyedList each={groups()} by={(g) => g.context_id}>{(g) => <div data-session-context={g().context_id}>
         <p class={cn("m-0", TITULO_DE_GRUPO)}>{g().email} · {g().org_name ?? g().org}</p>
         <Show when={g().empty_reason}>{(reason) => <p role="status" class={NOTE}>{t(emptyReasonKey(reason()))}</p>}</Show>
-        <Show when={!g().added?.has(g().free?.id ?? "") && freeSessionRow(g())}><button type="button" role="menuitem" class={ITEM_DE_MENU} disabled={creating()} onClick={() => void createFree(g().context_id)}>{t("shell.workspaces.free_workspace")}</button></Show>
+        <Show when={!g().added?.has(g().free?.id ?? "") && freeSessionRow(g())}><Pressable role="menuitem" class={ITEM_DE_MENU} disabled={creating()} onClick={() => void createFree(g().context_id)}>{t("shell.workspaces.free_workspace")}</Pressable></Show>
         <Show when={g().available} fallback={<WorkspaceSourceStatus organization={g().org_name ?? g().org} available={g().available} onRetry={() => props.sessions.refreshContext(g().context_id)} />}>
-          <For each={(g().available ?? []).filter((w) => w.id !== freeSessionRow(g())?.id && !g().added?.has(w.id) && matchesName(w.name, props.query))}>{(w) => <button type="button" role="menuitem" class={cn(ITEM_DE_MENU, "flex min-w-0 items-center gap-2")} aria-label={t("shell.workspaces.add_named", { name: w.name })} data-add-danil={w.id} onClick={() => { props.sessions.add(g().context_id, w.id); props.onClose(); props.onOpen(w.id, g().context_id); }}><span class="min-w-0 flex-1 truncate">{w.name}</span><span class="shrink-0 text-caption text-neutral-500">{t("shell.workspaces.add_row")}</span></button>}</For>
+          <For each={(g().available ?? []).filter((w) => w.id !== freeSessionRow(g())?.id && !g().added?.has(w.id) && matchesName(w.name, props.query))}>{(w) => <Pressable role="menuitem" class={cn(ITEM_DE_MENU, "flex min-w-0 items-center gap-2")} aria-label={t("shell.workspaces.add_named", { name: w.name })} data-add-danil={w.id} onClick={() => { props.sessions.add(g().context_id, w.id); props.onClose(); props.onOpen(w.id, g().context_id); }}><span class="min-w-0 flex-1 truncate">{w.name}</span><span class="shrink-0 text-caption text-neutral-500">{t("shell.workspaces.add_row")}</span></Pressable>}</For>
         </Show>
       </div>}</KeyedList>
     </div>

@@ -5,7 +5,7 @@ import { Select } from "../../../../ui/src/Select";
 import { t, type Manifiesto } from "../../../../../apps/desktop/src/lib/i18n";
 import { instalarDelBundle, lenguasDelBundle, type Paquete } from "../../../../../apps/desktop/src/locales/packs";
 import type { Startup } from "../queries/workspaces-store";
-import { SettingsRow } from "./layout";
+import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 
 /**
  * El perfil que pide en qué lengua contesta el agente. Solo se ofrece la
