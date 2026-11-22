@@ -8,8 +8,8 @@
  * Cada paso deja su resultado en `CarryState`: reintentar sigue desde la parte
  * que falló y no repite lo hecho.
  */
-import { partAt, partsOf, type Selection } from "./plan.ts";
-import type { CarryEngine, Exported, Imported } from "./types.ts";
+import { partAt, partsOf, type Selection } from "../model/carryPlan.ts";
+import type { CarryEngine, Exported, Imported } from "../model/carryTypes.ts";
 
 export type CarryStep = "wake" | "clone" | "copy" | "ready";
 

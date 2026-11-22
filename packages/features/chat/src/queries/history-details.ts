@@ -1,4 +1,4 @@
-import type { HistoryChunk, HistoryRef } from "@terminus/protocol";
+import type { HistoryChunk, HistoryRef } from "../../../../engine-client/src/index.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import type { Session } from "../model/transcript";
 

@@ -31,7 +31,7 @@ import VistaPreviaDeTarea from "../components/TaskPreview";
 import VisorDeArchivo, { type Visores } from "./FileViewer";
 import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
 import { alMoverseElArbol } from "../queries/refresh";
-import type { TreePart } from "@terminus/protocol";
+import type { TreePart } from "../../../../engine-client/src/index.ts";
 import { Pressable } from "../../../../ui/src/Pressable";
 
 const nameOf = (path: string) => path.split("/").pop() ?? path;

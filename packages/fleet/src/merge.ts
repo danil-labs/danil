@@ -9,7 +9,7 @@
  * está su rebanada.
  */
 import { arrangeSpaces, spaceOrder, type AccountRowLike, type AccountWorkspace, groupAccounts, registryProjects } from "../../computers/src/index.ts";
-import { mergeAttention } from "../../protocol/src/index.ts";
+import { mergeAttention } from "../../engine-client/src/index.ts";
 import { wrap } from "./ids.ts";
 import type { Slice } from "./slices.ts";
 

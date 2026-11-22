@@ -1,5 +1,5 @@
 /** Lo que se guarda de un turno y de una tarea, tal como lo lee la ventana. */
-import type { HistoryRef } from "@terminus/protocol";
+import type { HistoryRef } from "../../../../engine-client/src/index.ts";
 import type { CodeRange } from "../../../../../apps/desktop/src/lib/model.ts";
 import type { Recipient, ReplyTo, SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
 import type {

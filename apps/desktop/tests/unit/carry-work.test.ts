@@ -8,23 +8,9 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
-import {
-  type CarryEngine,
-  type CarryProgress,
-  CarryError,
-  PART_ATTEMPTS,
-  cancelCarry,
-  carryWork,
-  initialSelection,
-  needsSheet,
-  newState,
-  sizeVerdict,
-  type WorkStatus,
-  bringBranch,
-  bringSelection,
-  keyVerdict,
-  withoutRemote,
-} from "../../../../packages/carry/src/index.ts";
+import { type CarryEngine, type WorkStatus } from "../../../../packages/features/machines/src/model/carryTypes.ts";
+import { type CarryProgress, CarryError, PART_ATTEMPTS, cancelCarry, carryWork, newState } from "../../../../packages/features/machines/src/queries/carryRun.ts";
+import { initialSelection, needsSheet, sizeVerdict, bringBranch, bringSelection, keyVerdict, withoutRemote } from "../../../../packages/features/machines/src/model/carryPlan.ts";
 
 const status = (extra: Partial<WorkStatus> = {}): WorkStatus => ({
   branch: "feat/run-on-bundle",

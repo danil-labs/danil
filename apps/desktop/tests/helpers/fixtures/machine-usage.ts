@@ -1,4 +1,4 @@
-import type { MachineResources, MachineTaskUsage } from "@terminus/protocol";
+import type { MachineResources, MachineTaskUsage } from "../../../../../packages/engine-client/src/index.ts";
 
 /**
  * «Máquinas» sin motor: vm-alberto con su medición real (4 vCPU, 15,6 GB) y

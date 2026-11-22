@@ -36,8 +36,8 @@ which is not here.
 | `packages/attention` | The Inbox, channels and customization of the phone, over the same-origin BFF. | — |
 | `packages/computers` | Danil Machines from any client: control-plane API, relay session (WebSocket injected) and wake rules. The `/v1/machines` client is not here: it lives in `packages/platform-client/src/machines.ts`. | — |
 | `packages/fleet` | Several machines behind one panel: the call envelope (the machine comes only from it), a slice with its status per machine, bounded waits and the merge. | — |
-| `packages/carry` | Carrying work between machines: what travels, the copy in parts and the base the new task starts on. | — |
-| `packages/protocol` | The closed list of commands the mobile app sends to a machine (relay or bridge) and their answers. | — |
+| `packages/carry` | Shim for `apps/mobile` only: re-exports carry (what travels, the copy in parts, the base of the new task), which now lives in `packages/features/machines/src` (`model/carryTypes.ts`, `model/carryPlan.ts`, `queries/carryRun.ts`) (3.6c). | — |
+| `packages/protocol` | Shim for `apps/mobile` only: re-exports the closed list of commands and their answers, which now live in `packages/engine-client/src` (3.6c). | — |
 
 Read the guide of the area before editing it.
 

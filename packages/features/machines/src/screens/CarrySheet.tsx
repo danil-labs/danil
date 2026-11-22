@@ -1,22 +1,8 @@
 import { For, Show, createEffect, createSignal, on, onCleanup } from "solid-js";
 import ArrowRight from "lucide-solid/icons/arrow-right";
 import Lock from "lucide-solid/icons/lock";
-import {
-  type CarryState,
-  type Selection,
-  CarryError,
-  cancelCarry,
-  bringBranch,
-  bringSelection,
-  carriesNothing,
-  choosable,
-  etaSeconds,
-  initialSelection,
-  newState,
-  prepare,
-  sizeVerdict,
-  takenAtMs,
-} from "@terminus/carry";
+import { type CarryState, CarryError, cancelCarry, carriesNothing, newState, prepare } from "../queries/carryRun.ts";
+import { type Selection, bringBranch, bringSelection, choosable, etaSeconds, initialSelection, sizeVerdict, takenAtMs } from "../model/carryPlan.ts";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { Button } from "../../../../ui/src/Button";
 import { Toggle } from "../../../../ui/src/Toggle";
