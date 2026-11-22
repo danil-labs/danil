@@ -16,7 +16,7 @@ import { prosa, type Frase } from "../../../../../apps/desktop/src/lib/prose";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { Badge } from "../../../../ui/src/Badge";
 import { lockedBy } from "../../../../../apps/desktop/src/lib/governance";
-import { GovernedNotice } from "../components/Governed";
+import { GovernedNotice } from "../../../../ui/src/Governed";
 import { maskServerSource } from "../../../../../apps/desktop/src/lib/secretScan";
 
 // Fuera de la carga inicial: este archivo también da el vistazo del riel.

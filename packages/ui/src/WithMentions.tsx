@@ -1,8 +1,8 @@
 import { For, Show } from "solid-js";
-import { splitMentions } from "../../../../../apps/desktop/src/lib/mentions";
-import { capabilities } from "../../../../host/src/platform";
-import { mentionedSession, type MentionTarget, type TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { splitMentions } from "../../../apps/desktop/src/lib/mentions";
+import { capabilities } from "../../host/src/platform";
+import { mentionedSession, type MentionTarget, type TaskMention } from "../../../apps/desktop/src/lib/taskMentions";
+import { cn } from "../../../apps/desktop/src/lib/utils";
 
 /**
  * Pinta un texto tratando sus menciones como entidades, no como subcadenas que

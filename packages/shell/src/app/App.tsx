@@ -46,7 +46,7 @@ import {
 import { createComposerStore } from "../../../features/composer/src";
 import { createProjectsStore, activeTaskCounts, activityByProject, type HiddenProjects, hiddenIn, type PickedAt, picksIn, rememberPick, setHidden, storedPicks, taskCountOf } from "../../../features/projects/src";
 import type { DeleteTarget } from "../../../features/projects/src/screens/DeleteTaskDialog";
-import type { HandlerTarget } from "../../../features/settings/src/screens/HandlerPolicy";
+import type { HandlerTarget } from "../../../features/projects/src/screens/HandlerPolicy";
 import { createThreadsStore } from "../../../features/threads/src";
 import { createWorkspaceStore } from "../../../features/workspace/src";
 import { createContextSource } from "../../../features/workspaces/src";
