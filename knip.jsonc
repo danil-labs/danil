@@ -148,9 +148,10 @@
     "packages/ui": {
       "entry": [
         "test/**/*.ts",
-        // Lo que reexportan los shims de apps/mobile (packages/design y packages/chat, fuera del
-        // pnpm workspace, así que knip no los ve): es la API del teléfono.
+        // Lo que reexportan los shims de apps/mobile (packages/design, packages/chat y packages/tasks,
+        // fuera del pnpm workspace, así que knip no los ve): es la API del teléfono.
         "src/index.ts",
+        "src/lib/tasks/index.ts",
         "src/toolMarksData.ts",
         "src/lib/chat/{command,inlineVisual,links,nextSteps,sandbox,slash,steps,table,tools,visual}.ts",
         // La hoja que carga apps/desktop/index.html con <link>, que knip no lee.

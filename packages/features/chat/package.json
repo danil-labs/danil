@@ -10,7 +10,6 @@
     "@tanstack/solid-virtual": "3.13.51",
     "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-dialog": "^2.8.4",
-    "@terminus/tasks": "workspace:*",
     "lucide-solid": "^1.31.0",
     "mdast-util-from-markdown": "2.0.3",
     "react": "19.0.0",

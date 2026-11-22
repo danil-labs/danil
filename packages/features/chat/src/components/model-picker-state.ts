@@ -1,5 +1,5 @@
-import { FREE_ROUTER_MODEL, FREE_ROUTER_OPENCODE, OPENCODE } from "@terminus/tasks";
-import { routerOfferState } from "@terminus/tasks";
+import { FREE_ROUTER_MODEL, FREE_ROUTER_OPENCODE, OPENCODE } from "../../../../ui/src/lib/tasks/index.ts";
+import { routerOfferState } from "../../../../ui/src/lib/tasks/index.ts";
 import { createMemo, createSignal } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { listAccounts, getAccountLimits } from "../queries";

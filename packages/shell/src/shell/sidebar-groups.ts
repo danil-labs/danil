@@ -1,4 +1,4 @@
-import { workStateOf } from "@terminus/tasks";
+import { workStateOf } from "../../../ui/src/lib/tasks/index.ts";
 import { createEffect, createMemo, mapArray, on, onCleanup } from "solid-js";
 import { recordarCarpetas } from "../../../../apps/desktop/src/lib/folderKinds";
 import { createPref } from "../../../../apps/desktop/src/lib/prefs";

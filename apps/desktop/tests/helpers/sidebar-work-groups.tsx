@@ -2,7 +2,7 @@ import "../../src/locales/catalogs";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { encode, type MergeContext } from "@terminus/fleet";
-import { UNKNOWN_TASK_GIT, type SidebarGrouping, type TaskGitStatus } from "@terminus/tasks";
+import { UNKNOWN_TASK_GIT, type SidebarGrouping, type TaskGitStatus } from "../../../../packages/ui/src/lib/tasks/index.ts";
 import Sidebar from "../../src/features/shell/Sidebar";
 import type { SessionRow } from "../../src/features/projects/Sessions";
 import { setMachineRoute } from "../../src/lib/invoke";

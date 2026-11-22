@@ -31,7 +31,6 @@
     "@tauri-apps/api": "^2.12.4",
     "@terminus/computers": "workspace:*",
     "@terminus/fleet": "workspace:*",
-    "@terminus/tasks": "workspace:*",
     "clsx": "^2.1.1",
     "katex": "^0.18.10",
     "lucide-solid": "^1.31.0",

@@ -6,8 +6,8 @@ import { isTaskTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { type SessionUsage, ventanaDe } from "../../../../../apps/desktop/src/lib/usage.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { canonicalAgentId } from "../../../../tasks/src/agents.ts";
-import { chipModel as modeloDeSubtarea } from "../../../../tasks/src/surfaces.ts";
+import { canonicalAgentId } from "../../../../ui/src/lib/tasks/agents.ts";
+import { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { batch, createEffect, createMemo, on, onCleanup } from "solid-js";
 
