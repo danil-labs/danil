@@ -1,5 +1,5 @@
 import type { Component } from "solid-js";
-import type { GroupReply } from "../../../../platform-client/src/treasury.ts";
+import type { GroupReply } from "../../../../platform-client/src/treasury-config.ts";
 
 /** Una fila del riel de sesiones: lo que Configuración lee de cada contexto. */
 type GrupoDelRiel = {
