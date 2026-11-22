@@ -32,13 +32,10 @@ import Chat, {
 import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies } from "../../../features/chat/src/screens/DelegatedTasks";
 import { agentSwitchBlocked, canHandOverTask, type HandoverPending, handoverInForce, handoverMatches, MACHINE_UNANNOUNCED, shellCli } from "../../../features/chat/src/model/handover";
 import McpSignInNotice, { noteMcpSignIn } from "../../../features/chat/src/screens/McpSignInNotice";
-import type { Encolado } from "../../../features/chat/src/components/MessageQueue";
-import {
-  MODO_AUTOMATICO,
-} from "../../../features/chat/src/model/modes";
+import { MODO_AUTOMATICO, modoInicial, modoRecordado, recordarModo } from "../../../features/chat/src/model/modes";
 import PreviousAgentChat from "../../../features/chat/src/screens/PreviousAgentChat";
 import type { AlmacenDePreguntas, PreguntasAMedias, Respuesta, RespuestaEnviada } from "../../../features/chat/src/components/Questions";
-import { contestaALaTerminal, ENTREGA_SIN_CONFIRMAR, esDeLaTerminal, interrumpible, inyectable, type RazonDeRetencion } from "../../../features/chat/src/model/queue";
+import { contestaALaTerminal, ENTREGA_SIN_CONFIRMAR, esDeLaTerminal, interrumpible, inyectable, type Encolado, type RazonDeRetencion } from "../../../ui/src/lib/queue.ts";
 import type { ComandoEnVivo } from "../../../features/chat/src/components/ShellCard";
 import type { AlMargen } from "../../../features/chat/src/components/SideQuestion";
 import { comandoEscrito } from "../../../features/chat/src/model/slashOutput";
@@ -1142,7 +1139,7 @@ export default function App() {
     scope: { workspace: workspaceActivo, machine: () => composerMachine(),
       machineOn: () => machines().find(machine => machine.id === composerMachine())?.on,
       connected, session: () => sessionId() },
-    workspaceMode, draftConfiguration: () => borrador().configuration,
+    workspaceMode, draftConfiguration: () => borrador().configuration, modoInicial, modoRecordado, recordarModo,
   });
   const { agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes,
     model, effort, modo, modos, skills, cliCommands, sideCommand } = composer;
