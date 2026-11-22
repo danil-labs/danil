@@ -27,3 +27,4 @@ export { createThreadStream } from "./queries/thread-stream.ts";
 export { createChatEvents } from "./queries/chat-events.ts";
 export { createThreadsStore } from "./queries/threads-store.ts";
 export { createActivityProjection, activityElapsed, type TurnActivity } from "./model/activity.ts";
+export { createPanelDeChatState } from "./queries/panel-state.ts";

@@ -6,7 +6,8 @@ import type { Draft, createDraftsStore } from "../../../drafts/src";
 import type * as carry from "../../../machines/src/queries/carry";
 import type { machines, runOn } from "../../../machines/src/queries/store";
 import type { MachinePicker } from "../../../machines/src/screens/MachinePicker";
-import type { PickedAt, createProjectsStore } from "../../../projects/src";
+import type { HandlerTarget, PickedAt, createCloneFolder, createDeskStrip, createNewTask, createProjectsStore, createSessionMutations, createTaskWork, createWorkspaceSession } from "../../../projects/src";
+import type { Preview } from "../../../artifacts/src";
 import type { watchProfiles } from "../../../projects/src/queries/profiles";
 import type { InicioDeCarpeta } from "../../../projects/src/screens/AddWorkdir";
 import type { ProjectPicker } from "../../../projects/src/screens/Projects";
@@ -23,7 +24,7 @@ import type { createContextSource } from "../../../workspaces/src";
 
 export type {
   ConversationScope, DefaultPermissionModeChange, Draft, InicioDeCarpeta, MachinePicker, PickedAt, ProjectPicker, ServicePage, SessionRow, Startup, TabStrip,
-  createBatchDelivery, createComposerStore, createContextSource, createConversationHandoff, createDraftsStore, createEngineQueue, createProjectsStore,
+  HandlerTarget, Preview, createBatchDelivery, createCloneFolder, createSessionMutations, createTaskWork, createComposerStore, createDeskStrip, createNewTask, createWorkspaceSession, createContextSource, createConversationHandoff, createDraftsStore, createEngineQueue, createProjectsStore,
   createServiceStream, createTaskQueues, createThreadsStore, createWorkspaceStore, listaBasta, machines, reconciliar, runOn, watchProfiles,
 };
 export type CarryModule = typeof carry;

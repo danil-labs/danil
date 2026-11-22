@@ -1,6 +1,6 @@
 import { taskPriority } from "@terminus/design";
 import { delegatedAttention } from "@terminus/tasks";
-import type { SessionRow } from "../../../projects/src/screens/Sessions";
+import type { SessionRow } from "../queries/types.ts";
 
 export { delegatedAttention };
 
