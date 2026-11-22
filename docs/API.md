@@ -18,11 +18,11 @@ No existen `apps/workspace`, `apps/auth` ni `apps/desk`, aunque `pnpm-workspace.
 
 | Qué | Dónde |
 |---|---|
-| Desk llama al borde con el comando RPC1 `danil_edge_fetch`: el token lo pone Rust, nunca JS. | `src/client.ts:1-6`, `:80-85` |
-| `edgeUntil` reintenta **404, 429, 501 y 503** con backoff (×2, tope 60 s, respeta `retry_after_ms`) y repite la misma `Idempotency-Key` en las escrituras. Un 404 con `code` `not_found` o `*_not_found` no se reintenta. | `src/client.ts:30-33`, `:44`, `:91-121` |
-| `cancelEdgeWrites()` aborta las escrituras en curso al cambiar de organización o workspace. | `src/client.ts:24-27`; lo llaman `selectOrganization` (`src/identity.ts:45-46`) y `selectWorkspace` (`src/workspaces.ts:34-35`) |
-| Web: `platformFetch` añade `X-Danil-Session` (el grupo activo, `setEdgeContext`) a toda ruta `/v1/` con organización. | `src/client.ts:140-163` |
-| Rutas sin organización (no llevan `X-Danil-Session`). | `contextFree`, `src/client.ts:130-138` |
+| Desk llama al borde con el comando RPC1 `danil_edge_fetch`: el token lo pone Rust, nunca JS. | `src/client.ts:1-6`, `:81-86` |
+| `edgeUntil` reintenta **404, 429, 501 y 503** con backoff (×2, tope 60 s, respeta `retry_after_ms`) y repite la misma `Idempotency-Key` en las escrituras. Un 404 con `code` `not_found` o `*_not_found` no se reintenta. | `src/client.ts:31-34`, `:45`, `:92-122`; la llave sale de `newIdempotencyKey` (`:95`) |
+| `cancelEdgeWrites()` aborta las escrituras en curso al cambiar de organización o workspace. | `src/client.ts:25-28`; lo llaman `selectOrganization` (`src/identity.ts:28-29`) y `selectWorkspace` (`src/workspaces.ts:68-69`) |
+| Web: `platformFetch` añade `X-Danil-Session` (el grupo activo, `setEdgeContext`) a toda ruta `/v1/` con organización. | `src/client.ts:142-164` |
+| Rutas sin organización (no llevan `X-Danil-Session`). | `contextFree`, `src/client.ts:131-140` |
 | Lectura compartida: una lectura en curso, o de hace menos de 3 s, sirve a todos; un fallo no se guarda; `invalidate()` tras escribir. | `src/shared-read.ts` (`SHARED_READ_FRESH_MS`, `sharedRead`, `sharedReads`) |
 
 **No hay** `createPlatformClient`, `usePlatform()`, `src/http.ts`, `contract/openapi.json` ni `src/generated/`.
@@ -35,16 +35,15 @@ Generar el cliente del OpenAPI de `danil-contracts` es **propuesta** (plan front
 
 | Método y ruta | Función | Línea |
 |---|---|---|
-| `GET /v1/identity/me` | `me`, `fetchIdentityMe`, `sendIdentityMe`, `probeIdentityMe`, `handleIdentityMe`, `fetchWebIdentityMe` | 40, 56-60, 63-68, 82-87, 122-129, 199-201 |
-| `GET /v1/identity/organizations` | `fetchEdgeOrganizations`, `fetchWebOrganizations` | 42-43, 98-100, 157-161 |
-| `POST /v1/identity/organizations/select` | `selectOrganization`, `selectOrganizationWithContext`, `selectEdgeOrganization`, `selectWebOrganization` | 45-53, 71-79, 103-109, 164-176 |
-| `GET /v1/identity/sessions/catalog` | `fetchSessionsCatalog` (por `danil_edge_fetch`) | 112-119 |
-| `GET /v1/identity/sessions` | `fetchWebSessions` | 192-196 |
-| `POST /v1/identity/contexts` | `admitWebContext` (`{ organization, session_id }`) | 179-189 |
-| `GET /v1/identity/login` | `IDENTITY_LOGIN_PATH`, `getIdentityLoginUrl` (`return_to`, `organization_id`) | 143-154 |
+| `GET /v1/identity/me` | `me`, `fetchIdentityMe`, `sendIdentityMe`, `probeIdentityMe` | 26, 39-43, 46-51, 65-70 |
+| `GET /v1/identity/organizations` | `fetchEdgeOrganizations` | 81-83 |
+| `POST /v1/identity/organizations/select` | `selectOrganization`, `selectOrganizationWithContext`, `selectEdgeOrganization` | 28-36, 54-62, 86-92 |
+| `GET /v1/identity/sessions/catalog` | `fetchSessionsCatalog` (por `danil_edge_fetch`) | 95-102 |
 
-`SESSION_ROUTES` (132-137) y `SHARED_SESSION_READS` (140: `me` y `sessions/catalog`) marcan qué rutas
-no son de una organización y cuáles se comparten en una carga.
+`identity.ts` ya no escribe `GET /v1/identity/sessions`, `POST /v1/identity/contexts` ni
+`GET /v1/identity/login`: la web los pide desde `apps/desktop/src/web/` y `packages/computers/src/edge.ts:100`
+(ver la deuda de R11 más abajo). `SESSION_ROUTES` (105-110) y `SHARED_SESSION_READS` (113: `me` y
+`sessions/catalog`) marcan qué rutas no son de una organización y cuáles se comparten en una carga.
 
 #### workspaces (`src/workspaces.ts`)
 
@@ -95,16 +94,32 @@ el registro del plan (front-req-1).
 
 Las respuestas se validan con `zod` (15-28). `billingV2` recibe el transporte de la web y añade el `/v1/`.
 
+#### idempotency (`src/idempotency.ts`)
+
+| Qué | Línea |
+|---|---|
+| `newIdempotencyKey()`: una llave nueva (`crypto.randomUUID()`) por operación lógica. La usan `edgeUntil` (`src/client.ts:95`) y `wake` de `src/machines.ts`, que la guarda para todo su bucle. | 7 |
+| `withIdempotencyKey(headers, key?)`: añade `Idempotency-Key` (la de `key` o una nueva) salvo que ya venga en las cabeceras, sin distinguir mayúsculas. La usan `src/credentials.ts:30`, `src/machines.ts` y `src/treasury.ts`. | 10-12 |
+
+Quien reintenta una escritura guarda la llave y la vuelve a pasar; no hay reintento que estrene otra.
+
 #### credentials (`src/credentials.ts`)
 
-`webCredentialSource` (9-30) adapta el transporte de la web (cookie y CSRF) a la `CredentialSource`
+`webCredentialSource` (18-39) adapta el transporte de la web (cookie y CSRF) a la `CredentialSource`
 de `@terminus/computers`. **Las rutas no están aquí**: las escribe `packages/computers/src/credentials.ts`.
 
 | Método y ruta | Dónde |
 |---|---|
-| `GET` · `PUT /v1/credentials/workspaces/{ws}/accounts` | `packages/computers/src/credentials.ts:203`, `:212`, `:219` (sellar con `PUT` es solo de Desk, `src/credentials.ts:4`) |
-| `DELETE …/accounts/{credential}` | `packages/computers/src/credentials.ts:224` |
-| `DELETE …/accounts/{credential}/machines/{machine}` · `POST …/restore` | `packages/computers/src/credentials.ts:229`, `:234` |
+| `GET` · `PUT /v1/credentials/workspaces/{ws}/accounts` | `packages/computers/src/credentials.ts:203`, `:211-212`, `:221-225` (sellar con `PUT` es solo de Desk, `src/credentials.ts:4`) |
+| `DELETE …/accounts/{credential}` | `packages/computers/src/credentials.ts:228-229` |
+| `DELETE …/accounts/{credential}/machines/{machine}` · `POST …/restore` | `packages/computers/src/credentials.ts:233-234`, `:238-239` |
+
+Las cuatro escrituras (`PUT`, los dos `DELETE` y `POST …/restore`) mandan la cabecera `Idempotency-Key`:
+`putCredential`, `deleteCredential`, `removeCredentialMachine` y `restoreCredentialMachine` aceptan `key`
+(el llamador que reintenta pasa la misma) y, si no viene, estrenan una por operación
+(`packages/computers/src/credentials.ts:221-239`); `call` la pone en `init.headers` (`:109-110`) y
+`webCredentialSource` la respeta con `withIdempotencyKey` (`src/credentials.ts:30`). Prueba:
+`test/idempotency.test.ts`.
 
 ### Rutas `/v1` escritas fuera de `platform-client` (deuda de R11)
 

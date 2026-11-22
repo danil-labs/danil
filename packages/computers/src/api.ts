@@ -72,9 +72,9 @@ export function errorCodeOf(body: unknown): string | undefined {
 export type BearerSource = { endpoint: string; getToken: () => Promise<string>; fetch?: Fetch };
 
 /** La llamada con su token y el cuerpo ya leído; `null` si no hubo red o token. Cada cliente decide qué significa cada estado. */
-export async function bearerCall(source: BearerSource, method: string, path: string, body?: unknown) {
+export async function bearerCall(source: BearerSource, method: string, path: string, body?: unknown, extra: Record<string, string> = {}) {
   try {
-    const headers: Record<string, string> = { authorization: `Bearer ${await source.getToken()}` };
+    const headers: Record<string, string> = { ...extra, authorization: `Bearer ${await source.getToken()}` };
     if (body !== undefined) headers["content-type"] = "application/json";
     const response = await (source.fetch ?? globalFetch)(apiUrl(source.endpoint, path), { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
     return { status: response.status, ok: response.ok, json: await response.json().catch(() => null) };
