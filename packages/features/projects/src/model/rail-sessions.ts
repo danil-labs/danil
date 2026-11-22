@@ -6,7 +6,18 @@ import type { Project } from "../../../../../apps/desktop/src/lib/model.ts";
 import type { PermissionRequest } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { SessionRow } from "../screens/Sessions.tsx";
 
-export type RailSessionsDeps = { activeSpace: Accessor<Space | null>; escritorio: Accessor<string | null>; multipleSpaces: () => boolean; permissions: Accessor<PermissionRequest[]>; projectList: Accessor<Project[]>; remoteChildScope: () => RemoteScope; sesiones: Accessor<Record<string, SessionRow[]>>; sesionesConEstado: () => Record<string, SessionRow[]>; spaces: Accessor<Space[]>; vivas: Accessor<string[]>; };
+export type RailSessionsDeps = {
+  activeSpace: Accessor<Space | null>;
+  escritorio: Accessor<string | null>;
+  multipleSpaces: () => boolean;
+  permissions: Accessor<PermissionRequest[]>;
+  projectList: Accessor<Project[]>;
+  remoteChildScope: () => RemoteScope;
+  sesiones: Accessor<Record<string, SessionRow[]>>;
+  sesionesConEstado: () => Record<string, SessionRow[]>;
+  spaces: Accessor<Space[]>;
+  vivas: Accessor<string[]>;
+};
 
 export function createRailSessions(deps: RailSessionsDeps) {
   const { activeSpace, escritorio, multipleSpaces, permissions, projectList, remoteChildScope, sesiones, sesionesConEstado, spaces, vivas } = deps;

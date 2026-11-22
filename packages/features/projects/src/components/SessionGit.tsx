@@ -18,7 +18,7 @@ import { Dynamic } from "solid-js/web";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { changeNumber, changeShort, checksName } from "../../../../../apps/desktop/src/lib/gitHosts";
-import { workLabel } from "../model/branchLabel";
+import { workLabel } from "../../../../ui/src/lib/workLabel.ts";
 import { type CheckState, compactGitKind, type GitStatus, gitReviewSignals, type KnState, type ReviewState } from "../queries/taskGit";
 
 function knLabel(state: KnState) {

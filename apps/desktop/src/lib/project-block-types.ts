@@ -29,5 +29,5 @@ export { type ChatExportado } from "../../../../packages/features/chat/src/model
 export { type ContextoDeProyectos } from "../../../../packages/features/settings/src/screens/ManageProjects.tsx";
 export { type Capabilities } from "../../../../packages/host/src/platform.ts";
 export { type SearchFilter } from "../../../../packages/shell/src/shell/GlobalSearch.tsx";
-export function clave(turno: string, pregunta: string) { return JSON.stringify([turno, pregunta]); }
+export { clave } from "../../../../packages/features/chat/src/model/transcript.ts";
 export { threadPreview } from "./nextSteps.ts";

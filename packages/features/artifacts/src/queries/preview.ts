@@ -2,15 +2,8 @@ import type { InvokeOptions } from "@tauri-apps/api/core";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import type { VersionRef } from "./history.ts";
 
-export type Preview = {
-  rel: string;
-  kind: "html" | "image" | "text" | "pdf" | "binary" | string;
-  text: string | null;
-  data_url: string | null;
-  pdf: string | null;
-  bytes: number;
-  truncated: boolean;
-};
+import type { Preview } from "../../../../ui/src/lib/preview.ts";
+export type { Preview };
 
 type previewResult = Preview;
 

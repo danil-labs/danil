@@ -8,7 +8,36 @@ import type { AttentionStore, WorkspaceStore } from "../screens/workspace-sessio
 import type { ClonEnCurso } from "../screens/AddWorkdir.tsx";
 import type { SessionRow } from "../screens/Sessions.tsx";
 
-export type CloneFolderDeps = { attention: AttentionStore; avisarDeLosArboles: (session: string) => void; claveDelHilo: () => string; colaSuelta: Accessor<Readonly<Record<string, Msg[]>>>; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; draftOptions: () => { headers: { "x-terminus-machine": string } } | undefined; esperandoFila: Set<string>; grupos: Accessor<string[]>; hiloAbierto: Accessor<OptimisticHistoryState & { base: Msg[]; vivo: Msg[]; guardados?: ReadonlySet<string> }>; hilos: Accessor<Record<string, OptimisticHistoryState & { base: Msg[]; vivo: Msg[]; guardados?: ReadonlySet<string> }>>; leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machines: Accessor<Machine[]>; msgs: Accessor<Msg[]>; naciendo: Accessor<{ project: string; row: SessionRow }[]>; pedidas: Map<string, Set<string>>; pestanas: TabsStore; project: Accessor<string>; remoteChildScope: () => RemoteScope; retoques: Accessor<Record<string, { cambio: Partial<SessionRow>; n: number }>>; sesiones: Accessor<Record<string, SessionRow[]>>; sesionesConPestana: Accessor<string[]>; sessionId: Accessor<string | null>; setSesiones: Setter<Record<string, SessionRow[]>>; unconfirmedOpen: (rows: unknown) => readonly string[]; vivas: Accessor<string[]>; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceStore; };
+export type CloneFolderDeps = {
+  attention: AttentionStore;
+  avisarDeLosArboles: (session: string) => void;
+  claveDelHilo: () => string;
+  colaSuelta: Accessor<Readonly<Record<string, Msg[]>>>;
+  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
+  draftOptions: () => { headers: { "x-terminus-machine": string } } | undefined;
+  esperandoFila: Set<string>;
+  grupos: Accessor<string[]>;
+  hiloAbierto: Accessor<OptimisticHistoryState & { base: Msg[]; vivo: Msg[]; guardados?: ReadonlySet<string> }>;
+  hilos: Accessor<Record<string, OptimisticHistoryState & { base: Msg[]; vivo: Msg[]; guardados?: ReadonlySet<string> }>>;
+  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>;
+  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void;
+  machines: Accessor<Machine[]>;
+  msgs: Accessor<Msg[]>;
+  naciendo: Accessor<{ project: string; row: SessionRow }[]>;
+  pedidas: Map<string, Set<string>>;
+  pestanas: TabsStore;
+  project: Accessor<string>;
+  remoteChildScope: () => RemoteScope;
+  retoques: Accessor<Record<string, { cambio: Partial<SessionRow>; n: number }>>;
+  sesiones: Accessor<Record<string, SessionRow[]>>;
+  sesionesConPestana: Accessor<string[]>;
+  sessionId: Accessor<string | null>;
+  setSesiones: Setter<Record<string, SessionRow[]>>;
+  unconfirmedOpen: (rows: unknown) => readonly string[];
+  vivas: Accessor<string[]>;
+  workspaceActivo: Accessor<string | null>;
+  workspaceContext: WorkspaceStore;
+};
 
 export function createCloneFolder(deps: CloneFolderDeps) {
   const { attention, avisarDeLosArboles, claveDelHilo, colaSuelta, deLaTarea, draftOptions, esperandoFila, grupos, hiloAbierto, hilos, leerTarea, loadResult, machines, msgs, naciendo, pedidas, pestanas, project, remoteChildScope, retoques, sesiones, sesionesConPestana, sessionId, setSesiones, unconfirmedOpen, vivas, workspaceActivo, workspaceContext } = deps;

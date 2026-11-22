@@ -2,6 +2,7 @@ export { createProjectsStore, type ProjectsScope } from "./queries/store.ts";
 export { activeTaskCounts, activityByProject, type HiddenProjects, hiddenIn, type PickedAt, picksIn, rememberPick, setHidden, storedPicks, taskCountOf } from "./model/recent.ts";
 export { createWorkspaceSession, type WorkspaceSessionDeps } from "./screens/workspace-session.ts";
 export { createDeskStrip, type DeskStripDeps } from "./queries/desk-strip.ts";
+export { createSpaceOps, type SpaceOpsDeps } from "./queries/space-ops.ts";
 export { createCloneFolder, type CloneFolderDeps } from "./queries/clone-folder.ts";
 export { createNewTask, type NewTaskDeps } from "./queries/new-task.ts";
 export { createSessionMutations, type SessionMutationsDeps } from "./queries/session-mutations.ts";

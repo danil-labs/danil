@@ -18,6 +18,7 @@ import { Input } from "../../../../ui/src/Input";
 import { Select } from "../../../../ui/src/Select";
 import { Textarea } from "../../../../ui/src/Textarea";
 import SelectorDeModelo from "../../../chat/src/components/ModelPicker";
+import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import { GovernedNotice } from "../../../settings/src/components/Governed";
 import { AstroAvatar, type Cuerpo } from "./AstroAvatar";
 import { agentId } from "../model/agentId";
@@ -35,6 +36,7 @@ export default function NewAgent(props: {
   project: string;
   workspaceOnly?: boolean;
   modelos: ModelChoices;
+  createFreeRouterConsent: CreateFreeRouterConsent;
   onCreado: () => void;
   /** Con esto se puede elegir dónde nace; `project` es la elegida al abrir.
    *  El riel no lo pasa: ahí nace en la carpeta de su fila. */
@@ -231,6 +233,7 @@ export default function NewAgent(props: {
                 <span class="text-xs text-neutral-500">{t("projects.agents.profile_model")}</span>
                 <div class="flex items-center gap-2">
                   <SelectorDeModelo
+                    createFreeRouterConsent={props.createFreeRouterConsent}
                     models={opciones()}
                     superficie={modelo()?.superficie ?? ""}
                     model={modelo()?.model.id ?? ""}
