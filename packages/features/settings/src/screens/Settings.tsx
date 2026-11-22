@@ -12,7 +12,7 @@ import Sparkles from "lucide-solid/icons/sparkles";
 import { createResource, createSignal, For, type JSX, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { listSurfaces } from "../queries/engine-workspaces";
 import { capabilities } from "../../../../host/src/platform";
 import { machineAction } from "../../../../host/src/machine-action";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
@@ -247,7 +247,7 @@ export default function Settings(props: {
    * igual.
    */
   const cargarSuperficies = () => {
-    void invoke<Superficie[]>("list_surfaces")
+    void listSurfaces<Superficie[]>()
       .then((s) => {
         setSuperficies((antes) =>
           JSON.stringify(antes) === JSON.stringify(s) ? antes : s,

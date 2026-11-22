@@ -2,7 +2,7 @@ import { handlerMutation, handlerOperationRunning, pendingHandlerOperation, resu
 import "../../../../../apps/desktop/src/locales/handlerPhrases";
 import "../../../../../apps/desktop/src/locales/failurePhrases";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { handlerAction } from "../queries/engine-consent";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { detalleDe } from "../../../../../apps/desktop/src/lib/failure";
 import type { HandlerApproval, HandlerMemory, HandlerRelease, HandlerRequests } from "../../../../../apps/desktop/src/lib/model";
@@ -26,7 +26,7 @@ export type HandlerTarget = string;
 
 function handlerActions(scope: HandlerTarget): HandlerPolicyActions {
   const [workspace, project, name, headers] = JSON.parse(scope) as [string, string, string, Record<string, string>];
-  const call = <T,>(request: Record<string, unknown>) => invoke<T>("handler_action", { input: { workspace, project, request } }, { headers });
+  const call = <T,>(request: Record<string, unknown>) => handlerAction<T>({ input: { workspace, project, request } }, { headers });
   return {
     scope,
     resume: operation => call<HandlerRequests | HandlerRelease>({ action: "resume", operation }),

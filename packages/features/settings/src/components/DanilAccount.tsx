@@ -1,7 +1,7 @@
 import ExternalLink from "lucide-solid/icons/external-link";
 import { createEffect, createSignal, Match, on, Show, Switch } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client";
+import { openExternal } from "../queries/engine-open";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
@@ -50,7 +50,7 @@ const EMAILS_URL = "https://alfa-app.danil.ai/?settings=emails";
 function ManageEmailsRow(props: { web?: boolean }) {
   const open = () => {
     if (props.web) window.open(EMAILS_URL, "_blank", "noopener");
-    else void invoke("open_external", { target: EMAILS_URL }).catch(() => {});
+    else void openExternal({ target: EMAILS_URL }).catch(() => {});
   };
   return (
     <SettingsRow label={t("danil.emails.manage_label")} description={t("danil.emails.manage_description")} data-account-emails-link="">

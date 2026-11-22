@@ -1,5 +1,5 @@
 import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup, onMount, splitProps, type JSX } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { deleteProject, listProjects, previewFile, removeWorkspace, renameProject, renameWorkspace, setWorkspaceLogo, setWorkspaceLogoPng, setWorkspaceWorktreesRoot } from "../queries/engine-workspaces";
 import { open } from "@tauri-apps/plugin-dialog";
 import Cloud from "lucide-solid/icons/cloud";
 import ImagePlus from "lucide-solid/icons/image-plus";
@@ -128,7 +128,7 @@ function CarpetaDeCopias(props: { workspace: Workspace; onCambio: () => void }) 
             title: t("settings.workspaces.worktrees_root.title"),
           });
       if (!restablecer && typeof root !== "string") return;
-      await invoke("set_workspace_worktrees_root", { id: props.workspace.id, root });
+      await setWorkspaceWorktreesRoot({ id: props.workspace.id, root });
       props.onCambio();
     } catch (e) {
       setFallo(asFailure(e));
@@ -218,7 +218,7 @@ export function LogoDelWorkspace(props: {
     setFallo(null);
     try {
       if (!(cuenta && (await cuenta.remove(props.workspace.id, "logo"))))
-          await invoke("set_workspace_logo", { id: props.workspace.id, source: null });
+          await setWorkspaceLogo({ id: props.workspace.id, source: null });
       cambiado();
     } catch (e) {
       setFallo(asFailure(e));
@@ -232,7 +232,7 @@ export function LogoDelWorkspace(props: {
     setFallo(null);
     try {
       if (!(cuenta && (await cuenta.put(props.workspace.id, "logo", pngDeBase64(pngBase64)))))
-        await invoke("set_workspace_logo_png", { id: props.workspace.id, pngBase64 });
+        await setWorkspaceLogoPng({ id: props.workspace.id, pngBase64 });
       setRecorte(null);
       cambiado();
     } catch (e) {
@@ -262,7 +262,7 @@ export function LogoDelWorkspace(props: {
     setGuardando(true);
     setFallo(null);
     try {
-      const visto = await invoke<{ data_url: string | null }>("preview_file", {
+      const visto = await previewFile<{ data_url: string | null }>({
         path: chosen,
         rel: chosen,
       });
@@ -360,7 +360,7 @@ export default function Workspaces() {
     setEditando(null);
     if (!name || name === w.name) return;
     try {
-      await invoke("rename_workspace", { id: w.id, name });
+      await renameWorkspace({ id: w.id, name });
       // Se relee en vez de parchear la fila: el conteo de tareas se deriva del
       // disco.
       await ws.cargar();
@@ -417,7 +417,7 @@ export default function Workspaces() {
   async function borrar(id: string) {
     setPorBorrar(null);
     try {
-      await invoke("remove_workspace", { id });
+      await removeWorkspace({ id });
       await ws.cargar();
       anunciarMudanza();
     } catch (e) {
@@ -604,7 +604,7 @@ function Proyectos(props: { onCambio: () => void }) {
 
   async function cargar() {
     try {
-      setLista(await invoke<Project[]>("list_projects"));
+      setLista(await listProjects<Project[]>());
     } catch (e) {
       setFallo(asFailure(e));
     }
@@ -633,7 +633,7 @@ function Proyectos(props: { onCambio: () => void }) {
           {(p) => {
             const renombrar = () =>
               void hacer(() =>
-                invoke("rename_project", { id: p.id, name: borrador() }),
+                renameProject({ id: p.id, name: borrador() }),
               );
 
             return (
@@ -686,7 +686,7 @@ function Proyectos(props: { onCambio: () => void }) {
                     size="sm"
                     class="shrink-0"
                     onClick={() =>
-                      void hacer(() => invoke("delete_project", { id: p.id }))
+                      void hacer(() => deleteProject({ id: p.id }))
                     }
                   >
                     {p.sessions === 0

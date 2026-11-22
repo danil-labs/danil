@@ -1,4 +1,4 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { listSourceSkills, setSourceSkill, uninstallSourceSkill } from "../queries/engine-skills";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -108,14 +108,14 @@ export function SkillsDeFuentes() {
   );
 
   async function refrescar() {
-    setSkills(await invoke<SkillDeFuente[]>("list_source_skills"));
+    setSkills(await listSourceSkills<SkillDeFuente[]>());
   }
 
   async function alternar(s: SkillDeFuente) {
     setOcupada(clave(s));
     setFallo(null);
     try {
-      await invoke("set_source_skill", {
+      await setSourceSkill({
         source: s.source,
         skill: s.name,
         on: !s.enabled,
@@ -143,7 +143,7 @@ export function SkillsDeFuentes() {
     setOcupada(clave(s));
     setFallo(null);
     try {
-      await invoke("uninstall_source_skill", { source: s.source, skill: s.name });
+      await uninstallSourceSkill({ source: s.source, skill: s.name });
       await refrescar();
     } catch (error) {
       setFallo({ ...asFailure(error), what: t("settings.skills.error_uninstall") });
@@ -162,7 +162,7 @@ export function SkillsDeFuentes() {
     setFallo(null);
     try {
       for (const s of objetivo) {
-        await invoke("set_source_skill", { source: s.source, skill: s.name, on });
+        await setSourceSkill({ source: s.source, skill: s.name, on });
       }
       await refrescar();
     } catch (error) {
