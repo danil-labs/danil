@@ -8,7 +8,6 @@ export * from "./queries/free-router-adapters";
 export * from "./queries/free-router-desk";
 export * from "./queries/free-router-platform";
 export * from "./queries/free-router-session";
-export * from "./queries/handlerOperations";
 export * from "./queries/workspaces-store";
 export { accountStatus, addAccount as addProviderAccount, cancelLogin, discardAccount, installProvider, listAccounts, listProviders, loginAccount, removeAccount, resumeAwaitingQuota, setActiveAccount, setApiKey, setMemoryProvider, submitLoginCode, tasksAwaitingQuota } from "./queries/engine-accounts";
 export * from "./queries/engine-agents";

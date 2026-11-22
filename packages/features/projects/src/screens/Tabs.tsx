@@ -22,9 +22,9 @@ import {
   DropdownMenuTrigger,
 } from "../../../../ui/src/DropdownMenu";
 import { MarcaAgente } from "../../../../ui/src/icons";
-import { WithMentions } from "../../../chat/src/components/WithMentions";
+import { WithMentions } from "../../../../ui/src/WithMentions";
 import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
-import { colorDeMarca, describirEstado, localDe } from "../../../code/src/queries/localStatus";
+import { colorDeMarca, describirEstado, localDe } from "../model/ports";
 import { AstroAvatar } from "./AstroAvatar";
 import { displayName, watchProfiles } from "../queries/profiles";
 import SessionGit, { sessionGitDescription } from "../components/SessionGit";
