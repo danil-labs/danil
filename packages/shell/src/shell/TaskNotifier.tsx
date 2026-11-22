@@ -10,7 +10,7 @@ import type { AttentionState, WorkspaceAttention } from "./attention";
 import { Dynamic } from "solid-js/web";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { stateColor, stateIcon } from "../../../features/projects/src/screens/TaskStatus";
-import type { ChatEvent } from "@terminus/protocol";
+import type { ChatEvent } from "../../../engine-client/src/index.ts";
 import { NOTIFY_PREF, type NotifyChoice } from "../../../features/settings/src/model/notify-pref";
 
 const NEEDS_YOU: AttentionState[] = ["approving", "asked", "failed"];

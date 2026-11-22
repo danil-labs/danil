@@ -1,4 +1,4 @@
-import type { EngineUpdate, MachineResources, MachineTaskUsage } from "@terminus/protocol";
+import type { EngineUpdate, MachineResources, MachineTaskUsage } from "../../../engine-client/src/index.ts";
 
 /**
  * Lo que el panel «Máquinas» lee de `machine_resources`, sin pantalla: cuándo

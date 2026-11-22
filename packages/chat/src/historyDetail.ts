@@ -1,4 +1,4 @@
-import type { HistoryChunk, HistoryRef } from "../../protocol/src/types.ts";
+import type { HistoryChunk, HistoryRef } from "../../engine-client/src/types.ts";
 import type { HistoryRead } from "./history.ts";
 
 const WHOLE_DETAIL_BYTES = 2 * 1024 * 1024;

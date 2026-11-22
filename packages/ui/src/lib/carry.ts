@@ -1,4 +1,5 @@
-import type { CarryFailure, CarryJob, CarryProgress, CarryResult, CarryState, WorkStatus } from "../../../carry/src";
+import type { CarryFailure, CarryJob, CarryProgress, CarryResult, CarryState } from "../../../features/machines/src/queries/carryRun.ts";
+import type { WorkStatus } from "../../../features/machines/src/model/carryTypes.ts";
 import type { Project } from "../../../../apps/desktop/src/lib/model";
 
 /** Lo que se sabe al enviar: de dónde a dónde, qué hay sin subir y si el destino ya tiene el proyecto. */

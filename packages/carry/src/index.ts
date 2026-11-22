@@ -1,4 +1,7 @@
-export type { CarryEngine, ExportArgs, Exported, ImportArgs, Imported, Part, SizedPath, WorkStatus } from "./types.ts";
+// Solo para apps/mobile, que está fuera del pnpm workspace y enlaza `@terminus/carry`
+// con `file:`. Llevar trabajo vive en packages/features/machines (tarea 3.6c); se borra
+// cuando el teléfono importe esos archivos directamente.
+export type { CarryEngine, ExportArgs, Exported, ImportArgs, Imported, Part, SizedPath, WorkStatus } from "../../features/machines/src/model/carryTypes.ts";
 export {
   type Selection,
   type SizeVerdict,
@@ -20,7 +23,7 @@ export {
   sizeVerdict,
   takenAtMs,
   withoutRemote,
-} from "./plan.ts";
+} from "../../features/machines/src/model/carryPlan.ts";
 export {
   type CarryFailure,
   type CarryHooks,
@@ -39,4 +42,4 @@ export {
   prepare,
   PART_ATTEMPTS,
   transient,
-} from "./run.ts";
+} from "../../features/machines/src/queries/carryRun.ts";

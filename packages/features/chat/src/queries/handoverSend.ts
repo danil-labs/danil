@@ -1,4 +1,4 @@
-import { sessionModelArgs } from "@terminus/protocol";
+import { sessionModelArgs } from "../../../../engine-client/src/index.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 
 export type HandoverSend<T> = {

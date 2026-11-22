@@ -22,3 +22,9 @@ Exporta desde `src/client.ts`:
 ## Qué falta según la fase 2 del plan
 - Fase 2.3: garantizar que sea consumido exclusivamente por los archivos `queries.ts` de cada feature (regla R12).
 - Fase 4.2: tipos generados automáticamente a partir del manifiesto de comandos del motor (reglas R2 y R7).
+
+## Protocolo (3.6c)
+`src/index.ts` es el antiguo `@terminus/protocol`: la lista cerrada de comandos (`commands.ts`), los
+tipos de intercambio (`types.ts`, `activity.ts`) y sus reglas puras (adjuntos, traspaso, modelo de
+sesión, partes del árbol, soporte, fondo del chat, atención). Sin red. `apps/mobile` lo sigue
+importando por el shim `packages/protocol`.

@@ -1,4 +1,4 @@
-import type { MachineResources, MachineTaskUsage } from "@terminus/protocol";
+import type { MachineResources, MachineTaskUsage } from "../../../engine-client/src/index.ts";
 import { For, Show, createSignal } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { peso } from "../../../../apps/desktop/src/lib/format";

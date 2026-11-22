@@ -8,7 +8,7 @@ import { canHandOverTask, handoverMatches, shellCli, type HandoverPending } from
 import { type HandoverState } from "../model/handover.ts";
 import { MODO_AUTOMATICO } from "../model/modes";
 import { type Session } from "../model/transcript";
-import { PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
+import { PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "../../../../engine-client/src/index.ts";
 import { batch, type Accessor, type Setter } from "solid-js";
 import type { ComposerPort, Draft, DraftsPort, MachinesPort, SessionRow, createThreadsStore } from "./types.ts";
 import type { createPanels } from "../../../../../apps/desktop/src/lib/panels.ts";
