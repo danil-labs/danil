@@ -36,7 +36,7 @@ Generar el cliente del OpenAPI de `danil-contracts` es **propuesta** (plan front
 | Método y ruta | Función | Línea |
 |---|---|---|
 | `GET /v1/identity/me` | `me`, `fetchIdentityMe`, `sendIdentityMe`, `probeIdentityMe`, `handleIdentityMe`, `fetchWebIdentityMe` | 40, 56-60, 63-68, 82-87, 122-129, 199-201 |
-| `GET /v1/identity/organizations` | `organizations`, `fetchEdgeOrganizations`, `fetchWebOrganizations` | 42-43, 98-100, 157-161 |
+| `GET /v1/identity/organizations` | `fetchEdgeOrganizations`, `fetchWebOrganizations` | 42-43, 98-100, 157-161 |
 | `POST /v1/identity/organizations/select` | `selectOrganization`, `selectOrganizationWithContext`, `selectEdgeOrganization`, `selectWebOrganization` | 45-53, 71-79, 103-109, 164-176 |
 | `GET /v1/identity/sessions/catalog` | `fetchSessionsCatalog` (por `danil_edge_fetch`) | 112-119 |
 | `GET /v1/identity/sessions` | `fetchWebSessions` | 192-196 |
@@ -56,8 +56,6 @@ no son de una organización y cuáles se comparten en una carga.
 | `/v1/workspaces/{account}/transfers`, `/v1/workspaces/transfers/{id}/accept` | `workspaceTransfersPath`, `workspaceTransferAcceptPath` | 23, 25 |
 | `/v1/workspaces/{account}/free-router` | `workspaceFreeRouterPath` | 27 |
 | `/v1/workspaces/{workspace}/{kind}` (logo, fondo) | `workspaceAssetPath` | 29 |
-
-`isWorkspaceCreationPath` (18) dice qué altas llevan su propia clave de idempotencia.
 
 #### machines (`src/machines.ts`)
 

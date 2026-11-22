@@ -11,7 +11,7 @@ El front web y Desk no lo usan; está prohibido por la regla R8.
 ## Qué expone
 No tiene `index.ts`; su punto de entrada configurado en `package.json` es `src/inbox.ts`:
 - Tipos y funciones de bandeja: `createInbox`, `InboxSession`, `Conversation`, `Message`, `AccountPermissions`, `Account`, `ConversationCounts`, `Page`, `InboxFilter`, `INBOX_FILTERS`, `ConversationLabel`, `normalizeProvider`, `formatPhoneNumber`, `contactIdentifier`, `contactDisplayName`, `contactSubIdentifier`, `humanHasReplied`, `needsHuman`, `conversationLabels`, `matchesFilter`.
-- Módulos adicionales alcanzables por ruta directa: `channels.ts`, `customization.ts`, `workspace-account.ts`.
+- Módulos adicionales alcanzables por ruta directa: `channels.ts`, `customization.ts`.
 - `messaging.ts`, `broadcasts.ts`, `broadcast-panel.ts`, `support-access.ts` y `service.ts` se borraron en 3.4b: el teléfono no los importa.
 
 ## Qué consume
