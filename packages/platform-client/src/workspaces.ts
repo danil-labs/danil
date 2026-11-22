@@ -20,6 +20,26 @@ export const isWorkspaceCreationPath = (path: string) => path === WORKSPACES_PAT
 /** Una página de `GET /v1/workspaces`. */
 export const workspacesPagePath = (cursor?: string | null) => `/v1/workspaces${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`;
 
+/** El `send` de quien lee con su propio contexto (sesión de grupo). */
+export type CatalogSend = (context: string, method: string, path: string) => Promise<{ status: number; body?: unknown }>;
+
+/** Las filas del catálogo de una organización, página a página. Un error corta y devuelve lo leído. */
+export async function workspaceCatalog(send: CatalogSend, context: string): Promise<unknown[]> {
+  const items: unknown[] = [];
+  const seen = new Set<string>();
+  let cursor: string | null = null;
+  do {
+    const reply = await send(context, "GET", workspacesPagePath(cursor)).catch(() => null);
+    if (!reply || reply.status !== 200) break;
+    const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
+    items.push(...(body.items ?? []));
+    cursor = typeof body.next_cursor === "string" ? body.next_cursor : null;
+    if (cursor && seen.has(cursor)) break;
+    if (cursor) seen.add(cursor);
+  } while (cursor);
+  return items;
+}
+
 export const workspaceTransfersPath = (accountId: string) => `/v1/workspaces/${encodeURIComponent(accountId)}/transfers`;
 
 export const workspaceTransferAcceptPath = (transfer: string) => `/v1/workspaces/transfers/${transfer}/accept`;

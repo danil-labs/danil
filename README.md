@@ -1,5 +1,7 @@
 # Danil
 
+[Contrato de API, relaciones y estado](docs/API.md).
+
 Danil is a desktop agentic development environment. It runs terminal agents
 (Claude Code, Codex and others) against your organization's repositories and
 answers in plain language — for people who need those answers but don't write
@@ -126,7 +128,7 @@ apps/mobile/              the iOS and Android app (Expo) and its dev bridge
 packages/design           task states, marks, words, colors and the type scale both apps share
 packages/tasks            the task list both apps derive: flat list, filter, two-line card, agents dock
 packages/chat             how every client reads an agent message: links, visuals, next steps, tool steps
-packages/attention        Inbox, channels, customization and support access from any client
+packages/attention        Inbox, channels and customization of the phone
 packages/computers        Danil Machines client: control-plane API, relay session, wake rules
 packages/fleet            several machines behind one panel: envelope, per-machine slices, merge
 packages/carry            carrying work between machines: what travels, parts, base of the new task

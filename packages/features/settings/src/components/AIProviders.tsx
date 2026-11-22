@@ -1,4 +1,5 @@
 import type { MaquinasDeAjustes } from "../model/machines-port";
+import type { PiezasDeAjustes } from "../model/features-port";
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { FREE_ROUTER_OPENCODE } from "@terminus/tasks";
@@ -11,7 +12,7 @@ import { grupos, idsDeProveedor, opcionesDeAlta, routers, visible, visibles, typ
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { rotuloDeSuperficie, type Superficie } from "../../../../../apps/desktop/src/lib/surfaces";
 import { Badge } from "../../../../ui/src/Badge";
-import { rotuloDeMarca } from "../../../chat/src/model/marks";
+import { rotuloDeMarca } from "../../../../ui/src/lib/surfaceMarks";
 import Accounts from "./Accounts";
 import AddAccountPicker from "./AddAccountPicker";
 import DanilBlock from "./DanilBlock";
@@ -25,7 +26,7 @@ import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayou
  * login en curso. `For` sobre ids de proveedor (cadenas) une cada `Accounts` a
  * su proveedor aunque `list_surfaces` traiga objetos nuevos o cambie el orden.
  */
-export default function AIProviders(props: { superficies: Superficie[]; estado?: SurfacesState; onRetry?: () => void; maquinas: MaquinasDeAjustes }) {
+export default function AIProviders(props: { superficies: Superficie[]; estado?: SurfacesState; onRetry?: () => void; maquinas: MaquinasDeAjustes; piezas: PiezasDeAjustes }) {
   const vista = () => aiProvidersView(props.estado ?? { k: "ready" }, props.superficies.length);
   const [estados, setEstados] = createStore<Record<string, EstadoDeProveedor | undefined>>({});
   // Elegido en el selector y todavía sin estado que lo sostenga (descarga externa): se ve igual.
@@ -62,7 +63,7 @@ export default function AIProviders(props: { superficies: Superficie[]; estado?:
 
   return (
     <SettingsPanel>
-      <DanilBlock routers={routers(props.superficies, FREE_ROUTER_OPENCODE)} maquinas={props.maquinas} />
+      <DanilBlock routers={routers(props.superficies, FREE_ROUTER_OPENCODE)} maquinas={props.maquinas} piezas={props.piezas} />
       <SettingsSection
         title={t("settings.ai_providers.accounts")}
         aside={<AddAccountPicker opciones={sinLista() ? [] : opcionesDeAlta(props.superficies, estados)} nombre={nombre} onElegir={elegir} disabled={ids().length === 0} disparador={(el) => (disparador = el)} />}

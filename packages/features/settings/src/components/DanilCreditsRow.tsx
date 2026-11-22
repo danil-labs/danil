@@ -2,7 +2,7 @@ import { Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
-import { createDanilCreditsBalance } from "../../../chat/src/queries/store";
+import type { PiezasDeAjustes } from "../model/features-port";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 
 /**
@@ -10,8 +10,8 @@ import { SettingsRow } from "../../../../ui/src/SettingsLayout";
  * `createDanilCreditsBalance` que la tarjeta de Consumo (`DanilCredits.tsx`),
  * que no cambia. Sin recarga no hay botón ni hueco.
  */
-export default function DanilCreditsRow() {
-  const balance = createDanilCreditsBalance();
+export default function DanilCreditsRow(props: { piezas: PiezasDeAjustes }) {
+  const balance = props.piezas.createDanilCreditsBalance();
   const recharge = () => capabilities().danilCredits?.recharge;
   return (
     <SettingsRow

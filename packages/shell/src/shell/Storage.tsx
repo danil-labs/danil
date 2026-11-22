@@ -25,12 +25,7 @@ import Folder from "lucide-solid/icons/folder";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import SquareArrowOutUpRight from "lucide-solid/icons/square-arrow-out-up-right";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
-import {
-  RETARDO_TOOLTIP,
-  TooltipContent,
-  TooltipRoot,
-  TooltipTrigger,
-} from "../../../ui/src/Tooltip";
+import { TooltipAction } from "../../../ui/src/TooltipAction";
 import { Badge } from "../../../ui/src/Badge";
 import { ProgressBar } from "../../../ui/src/ProgressBar";
 import { type Machine, machineName, machines as fleetMachines } from "../../../features/machines/src/queries/store";
@@ -571,37 +566,19 @@ export default function Almacenamiento(props: {
     children: JSX.Element;
   }) {
     return (
-      <TooltipRoot openDelay={RETARDO_TOOLTIP} placement="bottom">
-        <TooltipTrigger
-          as={(p: object) => (
-            <Pressable
-              {...p}
-              type="button"
-              class={cn(
+      <TooltipAction
+        class={cn(
                 "flex size-6 shrink-0 items-center justify-center rounded-sm outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary disabled:opacity-60",
                 props2.tono === "aviso"
                   ? "text-warning-strong"
                   : "text-neutral-500 hover:text-neutral-950",
               )}
-              disabled={props2.disabled}
-              aria-label={props2.etiqueta}
-              // Reenvía el clic del disparador antes de hacer lo suyo: Kobalte
-              // no compone manejadores como hacía Radix con `asChild`, así que
-              // un `onClick` encima del `{...p}` borra el que cierra el globo.
-              // Lo comprueba `tests/unit/triggers.test.mjs`.
-              onClick={(e: MouseEvent) => {
-                (p as { onClick?: (e: MouseEvent) => void }).onClick?.(e);
-                props2.onClick();
-              }}
-            >
-              {props2.children}
-            </Pressable>
-          )}
-        />
-        <TooltipContent class="whitespace-nowrap">
-          {props2.etiqueta}
-        </TooltipContent>
-      </TooltipRoot>
+        etiqueta={props2.etiqueta}
+        onClick={props2.onClick}
+        disabled={props2.disabled}
+      >
+        {props2.children}
+      </TooltipAction>
     );
   }
 

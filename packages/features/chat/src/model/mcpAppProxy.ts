@@ -1,17 +1,4 @@
-const VIEW_CSP = [
-  "default-src 'none'",
-  "script-src 'unsafe-inline'",
-  "style-src 'unsafe-inline'",
-  "img-src data:",
-  "font-src data:",
-  "media-src data:",
-  "connect-src 'none'",
-  "form-action 'none'",
-  "frame-src 'none'",
-  "base-uri 'none'",
-  "object-src 'none'",
-  "worker-src 'none'",
-].join("; ");
+import { CSP_VISOR as VIEW_CSP } from "../../../../ui/src/lib/sandbox.ts";
 
 export const PROXY = `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; frame-src 'self'; connect-src 'none'; object-src 'none'"><style>html,body{margin:0;width:100%;height:100%}iframe{width:100%;height:100%;border:0}</style></head><body><script>
 let view;
