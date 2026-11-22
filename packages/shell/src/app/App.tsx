@@ -172,7 +172,7 @@ import type { SidebarFilterProps } from "../shell/SidebarFilter";
 import ColumnaLateral from "../shell/SideColumn";
 import SpaceMenu from "../shell/SpaceMenu";
 import { flattenTasks } from "../shell/sidebarTasks";
-import { visoresDeCodigo } from "../featureSlots";
+import { materialDeProyecto, visoresDeCodigo } from "../featureSlots";
 import UsageTool, { UsagePanel } from "../shell/UsageTool";
 import { createUsage } from "../shell/usage";
 import AvisoDeVersion from "../shell/VersionNotice";
@@ -6750,7 +6750,7 @@ export default function App() {
             data-ventana={`${paneles.activeSite().col},${paneles.activeSite().fila}`}
           >
             <Suspense fallback={<div class="flex flex-1 items-center justify-center text-sm text-neutral-500" role="status">{t("projects.view.opening")}</div>}>
-            <VistaDeProyecto
+            <VistaDeProyecto material={materialDeProyecto}
               proyecto={p()}
               materialPedido={materialPedido() === p().id}
               onMaterialVisto={() => setMaterialPedido(null)}
@@ -7366,7 +7366,7 @@ export default function App() {
       </Show>
 
 
-      <AnadirCarpeta
+      <AnadirCarpeta machines={machines} runOn={runOn} machineName={machineName}
         abierto={anadiendoCarpeta()}
         workspace={workspaceActivo()}
         space={escritorio()}

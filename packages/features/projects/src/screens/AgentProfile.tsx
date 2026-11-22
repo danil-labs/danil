@@ -20,7 +20,6 @@ import { AstroAvatar } from "./AstroAvatar";
 import { BodyPicker } from "../components/BodyPicker";
 import { DEFAULT_PROFILE, notifyProfiles } from "../queries/profiles";
 import { TelegramSection } from "../components/TelegramSection";
-import type { HandlerTarget } from "../../../settings/src/screens/HandlerPolicy";
 import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
 const HandlerPolicy = retryableLazy(() => import("../../../settings/src/screens/HandlerPolicy"));
 
@@ -56,7 +55,7 @@ export default function AgentProfile(props: {
   onModelChosen?: (agent: string | null, model: string | null) => void;
   /** Que quien lista los encargados relea: el borrado no deja fila que mirar. */
   onDeleted?: () => void;
-  handlerPolicy?: HandlerTarget;
+  handlerPolicy?: string;
   onClose: () => void;
 }) {
   const [name, setName] = createSignal(props.profile.display_name ?? "");
