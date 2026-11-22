@@ -42,9 +42,7 @@ export type LiveTurn = {
   shell?: { id: string; command: string };
 };
 
-export type SleepSessionDeps = {
-  machineOf: (session: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
-};
+export type SleepSessionDeps = { machineOf: (session: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; };
 
 // Sin botón todavía: expone `sleep_session` para el gesto «Dormir» que la
 // pantalla aún no ofrece.

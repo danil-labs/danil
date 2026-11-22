@@ -1,24 +1,36 @@
-import { type ObservedTurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
+
 import { pasoDe } from "../../../../../apps/desktop/src/lib/steps";
 import { type Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
-import { type TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
-import { type OlderState } from "../model/history.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure";
-import { type Encolado } from "../components/MessageQueue.tsx";
 import { type ComandoEnVivo } from "../components/ShellCard";
-import { type HandoverState } from "../model/handover.ts";
-import { contestaALaTerminal } from "../model/queue";
+import { contestaALaTerminal } from "../../../../ui/src/lib/queue.ts";
 import { type Turn } from "../model/transcript";
-import { type ChatEvent, type Session, type TranscriptOrigin } from "../model/transcript.ts";
 import { type Msg, type PermissionRequest } from "../screens/Chat";
-import { type TerminalLanzada } from "./sleepSession.ts";
-import { batch, createSignal, type Accessor, type Setter } from "solid-js";
-import type { Hilo, IdsDeTurnos, MachineWait, Pendientes, Perm, Saved, TranscriptMetadata } from "./types.js";
+import { batch, createSignal, type Accessor } from "solid-js";
+import type { createThreadsStore } from "./types.js";
+import type { createAttachmentsMount } from "./attachments-mount.ts";
+import type { createSendGates } from "./send-gates.ts";
+import type { createSendNow } from "./send-now.ts";
+import type { createSend } from "./send.ts";
+import type { createShellCommand } from "./shell-command.ts";
+import type { createThreadStream } from "./thread-stream.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type ResyncCommandsDeps = { adoptarComando: (runId: string, session: string) => boolean; advanceTurn: (id: string) => number; cola: Accessor<Encolado[]>; comandosDeLaCola: Map<string, string>; contestarALaTerminal: (session: string, lanzado: TerminalLanzada) => Promise<void>; detenidos: Set<string>; engineCanDispatch: (session: string | null | undefined) => boolean; finishedTurns: Map<string, boolean | null | undefined>; lanzados: Map<string, TerminalLanzada>; marcarViva: (id: string, desde?: number, startConfirmed?: boolean) => void; opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; pendientesDe: (session: string, workspace?: string | null) => Promise<Pendientes>; pendingStarts: Map<string, symbol>; reanudarCola: (id: string) => Promise<void>; reponerGates: (session: string, workspace?: string | null) => Promise<void>; retenidaPorElMotor: () => boolean; sessionId: Accessor<string | null>; setCarpetasDeTerminal: Setter<Record<string, string>>; setPermissionError: Setter<string | null>; setPermissions: Setter<PermissionRequest[]>; setRespondiendoPermiso: Setter<boolean>; setSettlingTurns: Setter<string[]>; setTerminales: Setter<Record<string, ComandoEnVivo>>; settleTurn: (session: string, ok?: boolean | null, unsaved?: boolean) => Promise<void>; superficies: Accessor<Superficie[] | null>; taskQueues: { items: Accessor<Encolado[]>; owner: Accessor<string | null>; editing: Accessor<boolean>; saved: (session: string) => Readonly<Saved> | undefined; openSession: (session: string, project: string, isCurrent?: () => boolean, fromEngine?: boolean) => Promise<void>; detach: () => void; remove: (id: string, session?: string | null) => void; persist: (session: string, project: string, queued: Encolado[]) => Promise<unknown>; adopt: (session: string) => string; editMode: (value: boolean) => boolean; enqueue: (message: Encolado, front?: boolean) => Encolado[]; edit: (id: string, text: string, mentions?: TaskMention[]) => Encolado[]; prioritize: (id: string) => Encolado[]; workspaceChanged: () => void; dispose: () => void; }; terminales: Accessor<Record<string, ComandoEnVivo>>; threads: { read: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; acceptSession: (id: string, session: Session, clear: boolean, generation: number, latest?: boolean | undefined) => boolean; activities: (id: string, visible: readonly Msg[]) => ObservedTurnActivity<Msg>[]; beginActivity: (id: string, startedAt: number | null, startConfirmed?: boolean) => void; finishActivity: (id: string, workspace?: string | null) => void; rows: Accessor<Record<string, Hilo>>; current: Accessor<Hilo>; messages: Accessor<Msg[]>; loading: Accessor<string | null>; origins: Accessor<Readonly<Record<string, TranscriptOrigin | null>>>; offline: Accessor<Readonly<Record<string, string>>>; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>; handovers: Accessor<Readonly<Record<string, HandoverState>>>; olderAvailable: Accessor<Readonly<Record<string, boolean>>>; recentAvailable: Accessor<Readonly<Record<string, boolean>>>; olderStatus: Accessor<Readonly<Record<string, OlderState>>>; recentTail: Accessor<Readonly<Record<string, Msg[]>>>; appendLive: (session: string, messages: Msg[], workspace?: string | null) => void; appendPersisted: (session: string, messages: Msg[]) => void; appendOptimistic: (session: string, messages: Msg[]) => void; acknowledgeOptimistic: (session: string, messages: Msg[]) => void; commitUniqueTurn: (session: string, message: Msg) => void; replaceTurn: (session: string, message: Msg) => void; reviseOptimistic: (session: string, target: Msg, patch: Pick<Msg, "respuestas" | "author">) => void; rejectOptimistic: (session: string, messages: Msg[]) => void; question: (session: string, fields: Pick<Msg, "turno" | "preguntas" | "questionRequestId" | "agent">, workspace?: string | null) => void; replay: (session: string, workspace?: string | null, replayId?: string) => void; finishSteps: (session: string) => void; event: (payload: ChatEvent, metadata: TranscriptMetadata) => void; older: (project: string, id: string) => Promise<(() => void) | null>; latest: (id: string) => Promise<void>; replaceHistory: (session: string, leida: Msg[], vaciarVivo: boolean, antepuesta?: boolean, guardados?: IdsDeTurnos, cola?: IdsDeTurnos, readRevision?: number) => void; saveWorkspace: (previous: string | null) => void; activateWorkspace: (workspace: string | null) => void; resetService: () => void; adoptDraft: (id: string) => void; dropSaved: (workspace: string, id: string) => void; flush: () => void; markMachineWait: (id: string, wait: MachineWait | null) => void; markAwake: (id: string) => void; startLoading: (id: string) => void; finishLoading: (id: string) => void; reading: (id: string, active: boolean) => void; drop: (session: string) => void; dispose: () => void; }; workspaceActivo: Accessor<string | null> };
+export type ResyncCommandsDeps = { adoptarComando: ReturnType<typeof createShellCommand>["adoptarComando"]; advanceTurn: ReturnType<typeof createThreadStream>["advanceTurn"];
+  cola: ReturnType<typeof createThreadStream>["cola"]; comandosDeLaCola: ReturnType<typeof createThreadStream>["comandosDeLaCola"];
+  contestarALaTerminal: ReturnType<typeof createShellCommand>["contestarALaTerminal"]; detenidos: ReturnType<typeof createThreadStream>["detenidos"];
+  engineCanDispatch: ReturnType<typeof createThreadStream>["engineCanDispatch"]; finishedTurns: ReturnType<typeof createThreadStream>["finishedTurns"];
+  lanzados: ReturnType<typeof createThreadStream>["lanzados"]; marcarViva: ReturnType<typeof createThreadStream>["marcarViva"];
+  opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; pendientesDe: ReturnType<typeof createSend>["pendientesDe"];
+  pendingStarts: ReturnType<typeof createThreadStream>["pendingStarts"]; reanudarCola: ReturnType<typeof createSendNow>["reanudarCola"];
+  reponerGates: ReturnType<typeof createSendGates>["reponerGates"]; retenidaPorElMotor: ReturnType<typeof createThreadStream>["retenidaPorElMotor"]; sessionId: Accessor<string | null>;
+  setCarpetasDeTerminal: ReturnType<typeof createThreadStream>["setCarpetasDeTerminal"]; setPermissionError: ReturnType<typeof createThreadStream>["setPermissionError"];
+  setPermissions: ReturnType<typeof createThreadStream>["setPermissions"]; setRespondiendoPermiso: ReturnType<typeof createThreadStream>["setRespondiendoPermiso"];
+  setSettlingTurns: ReturnType<typeof createThreadStream>["setSettlingTurns"]; setTerminales: ReturnType<typeof createThreadStream>["setTerminales"];
+  settleTurn: ReturnType<typeof createAttachmentsMount>["settleTurn"]; superficies: Accessor<Superficie[] | null>; taskQueues: ReturnType<typeof createThreadStream>["taskQueues"];
+  terminales: ReturnType<typeof createThreadStream>["terminales"]; threads: ReturnType<typeof createThreadsStore>; workspaceActivo: Accessor<string | null>; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2812–2959, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createResyncCommands(deps: ResyncCommandsDeps) {
@@ -34,7 +46,7 @@ export function createResyncCommands(deps: ResyncCommandsDeps) {
     const workspace = p.workspace ?? workspaceActivo();
     try {
       const current = p.revision === undefined
-        ? (await pendientesDe(p.session, workspace))?.permissions.find((x: Perm) => (x.request_id === p.requestId || x.id === p.requestId))
+        ? (await pendientesDe(p.session, workspace))?.permissions.find((x) => (x.request_id === p.requestId || x.id === p.requestId))
         : { revision: p.revision, id: p.durableId };
       // Un motor anterior a los pendientes durables los lista sin `id` ni
       // `revision` y contesta por `request_id`; exigir la revisión dejaba el

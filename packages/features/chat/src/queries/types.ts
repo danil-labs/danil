@@ -1,63 +1,33 @@
-// Tipos que llegan de otras features o del shell (R3)
-export type CarriedBase = any;
-export type CarryCheck = any;
-export type CarryMod = any;
-export type CarryModule = any;
-export type CerrarBorrador = any;
-export type ComposerConfiguration = any;
-export type ConfirmContext = any;
-export type ContextSource = any;
-export type ConversationScope = any;
-export type CreateUsage = any;
-export type DefaultPermissionModeChange = any;
-export type Dependencies = any;
-export type Draft = any;
-export type DraftConfiguration = any;
-export type DraftSelection = any;
-export type EnBorrador = any;
-export type EngineScope = any;
-export type FilterSessions = any;
-export type Forma = any;
-export type HandoffFact = any;
-export type HandoffPresentation = any;
-export type HandoffView = any;
-export type Hilo = any;
-export type HistoryEntry = any;
-export type IdsDeTurnos = any;
-export type InicioDeCarpeta = any;
-export type Invoke = any;
-export type Machine = any;
-export type MachineWait = any;
-export type MandarVentana = any;
-export type MarcaDe = any;
-export type Paneles = any;
-export type Pendientes = any;
-export type Perm = any;
-export type PestanaDelanteEn = any;
-export type PestanasDe = any;
-export type PickedAt = any;
-export type PollRequest = any;
-export type Preview = any;
-export type ProfilesWatcher = any;
-export type ProjectPlace = any;
-export type ProviderVal = any;
-export type PushedBatch = any;
-export type Question = any;
-export type QueueError = any;
-export type QueueItem = any;
-export type QueueMessage = any;
-export type ReadyScope = any;
-export type Route = any;
-export type Saved = any;
-export type SearchFilter = any;
-export type ServiceError = any;
-export type ServicePage = any;
-export type ServicePageData = any;
-export type SessionRow = any;
-export type Sidebar = any;
-export type Startup = any;
-export type StartupContext = any;
-export type TapadoPorElProyecto = any;
-export type TranscriptMetadata = any;
-export type Transition = any;
-export type VueltaDelBorrador = any;
+// Tipos de otras features que el chat recibe del shell por `deps` (R3: un `import type` por módulo, y R3 lo cuenta).
+// Se tipan por referencia a lo que ya existe; nada se reescribe aquí.
+import type { createComposerStore } from "../../../composer/src";
+import type { ConversationScope, createConversationHandoff } from "../../../conversation-handoff/src";
+import type { Draft, createDraftsStore } from "../../../drafts/src";
+import type * as carry from "../../../machines/src/queries/carry";
+import type { machines, runOn } from "../../../machines/src/queries/store";
+import type { MachinePicker } from "../../../machines/src/screens/MachinePicker";
+import type { PickedAt, createProjectsStore } from "../../../projects/src";
+import type { watchProfiles } from "../../../projects/src/queries/profiles";
+import type { InicioDeCarpeta } from "../../../projects/src/screens/AddWorkdir";
+import type { ProjectPicker } from "../../../projects/src/screens/Projects";
+import type { SessionRow } from "../../../projects/src/screens/Sessions";
+import type TabStrip from "../../../projects/src/screens/Tabs";
+import type { ServicePage, createBatchDelivery, createServiceStream } from "../../../service-stream/src";
+import type { listaBasta, reconciliar } from "../../../settings/src/model/early-startup";
+import type { Startup } from "../../../settings/src/queries/workspaces-store";
+import type { DefaultPermissionModeChange } from "../../../settings/src/screens/DefaultPermissions";
+import type { createEngineQueue, createTaskQueues } from "../../../task-queues/src";
+import type { createThreadsStore } from "../../../threads/src";
+import type { createWorkspaceStore } from "../../../workspace/src";
+import type { createContextSource } from "../../../workspaces/src";
+
+export type {
+  ConversationScope, DefaultPermissionModeChange, Draft, InicioDeCarpeta, MachinePicker, PickedAt, ProjectPicker, ServicePage, SessionRow, Startup, TabStrip,
+  createBatchDelivery, createComposerStore, createContextSource, createConversationHandoff, createDraftsStore, createEngineQueue, createProjectsStore,
+  createServiceStream, createTaskQueues, createThreadsStore, createWorkspaceStore, listaBasta, machines, reconciliar, runOn, watchProfiles,
+};
+export type CarryModule = typeof carry;
+export type CarriedBase = carry.CarriedBase;
+export type CarryCheck = carry.CarryCheck;
+export type Hilo = ReturnType<ReturnType<typeof createThreadsStore>["current"]>;
+export type MachineWait = ReturnType<ReturnType<typeof createThreadsStore>["machineWaits"]>[string];

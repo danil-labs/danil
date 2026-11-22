@@ -1,33 +1,46 @@
-import { type ObservedTurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
+
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type Trigger } from "../../../../../apps/desktop/src/lib/mentions.ts";
-import { type Project, type Source } from "../../../../../apps/desktop/src/lib/model.ts";
+import { type Project } from "../../../../../apps/desktop/src/lib/model.ts";
 import { trimDraft } from "../../../../../apps/desktop/src/lib/recipients";
-import { type Recipient } from "../../../../../apps/desktop/src/lib/recipients.ts";
 import { preguntaAlMargen } from "../../../../../apps/desktop/src/lib/side-question";
-import { type MentionTarget, type TaskMention, type TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
-import { type OlderState } from "../model/history.ts";
+import { type TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
-import { type Encolado } from "../components/MessageQueue.tsx";
 import { type Respuesta, type RespuestaEnviada } from "../components/Questions";
-import { type PreguntasAMedias } from "../components/Questions.tsx";
 import { mensajeDeFallo } from "../model/failures";
-import { type HandoverPending, type HandoverState } from "../model/handover.ts";
 import { type Msg } from "../model/messageTypes.ts";
 import { mergeGates } from "../model/permissionGates";
 import { comandoDeTerminal } from "../model/terminalIndent";
 import { type Turn } from "../model/transcript";
-import { type ChatEvent, type Session, type TranscriptOrigin } from "../model/transcript.ts";
-import { type PermissionRequest } from "../screens/Chat.tsx";
-import { type TerminalLanzada } from "./sleepSession.ts";
+import { type Session } from "../model/transcript.ts";
 import { createSignal, type Accessor, type Setter } from "solid-js";
-import type { CarriedBase, CarryCheck, CarryModule, ContextSource, Draft, DraftConfiguration, Hilo, HistoryEntry, IdsDeTurnos, Machine, MachineWait, Pendientes, ProjectPlace, Question, SessionRow, StartupContext, TranscriptMetadata, Transition } from "./types.js";
+import type { CarryCheck, CarryModule, Draft, SessionRow, createDraftsStore, createThreadsStore, createWorkspaceStore, machines, runOn } from "./types.js";
+import type { createAttachments } from "./attachments.ts";
+import type { createHandover } from "./handover.ts";
+import type { createSendNow } from "./send-now.ts";
+import type { createSend } from "./send.ts";
+import type { createShellCommand } from "./shell-command.ts";
+import type { createThreadStream } from "./thread-stream.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type SendGatesDeps = { importCarry: () => Promise<CarryModule>; abrirConComando: (command: string) => Promise<boolean>; agent: Accessor<string>; archivos: () => string[]; attachmentsFor: (paths: string[], options: { headers: Record<string, string>; } | undefined, proyecto: string) => Promise<string[]>; borrador: () => Draft; busy: () => boolean; claveAbierta: () => string; cola: Accessor<Encolado[]>; configDeLaSesion: (id: string) => { provider: string; model: string | null; effort: string | null; }; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: { peek: (key: string) => Draft; current: () => Draft; sourceIds: Accessor<string[]>; excludedSourceIds: Accessor<string[]>; attached: Accessor<string[]>; pendingMaterial: Accessor<Source[]>; context: Accessor<Source[]>; input: () => string; files: () => string[]; changeText: (value: string, inputType?: string, change?: TextEdit) => void; history: (redo: boolean) => boolean; addFiles: (paths: string[]) => Promise<void>; addSource: (id: string) => void; removeSource: (id: string) => void; recipient: (name: string, label: string, trigger: Trigger) => void; reference: (target: MentionTarget, label: string, trigger: Trigger) => void; replaceFiles: (files: string[]) => { [x: string]: Draft; }; replaceAttached: (ids: string[]) => string[]; acceptSources: (ids: string[]) => string[]; configure: (configuration: DraftConfiguration, key?: string) => { [x: string]: Draft; }; handover: (provider: HandoverPending | null | undefined, key?: string) => { [x: string]: Draft; }; invalidateProvider: (key: string, provider: string) => { [x: string]: Draft | { input: string; task_mentions?: TaskMention[]; recipients?: Recipient[]; mentionHistory?: HistoryEntry[]; mentionFuture?: HistoryEntry[]; sourceIds: string[]; excludedSourceIds: string[]; archivos: string[]; configuration?: DraftConfiguration; }; }; restoreSession: (key: string, excluded: string[]) => { [x: string]: Draft; }; retryText: (text: string, mentions?: TaskMention[]) => { [x: string]: Draft; }; takeFiles: (key: string, files: string[]) => { [x: string]: Draft; }; restoreFailed: (key: string, message: HistoryEntry, files: string[]) => { [x: string]: Draft; }; sentSources: (key: string, ids: string[]) => { [x: string]: Draft; }; continueFrom: (prompt: string, path: string, sources: string[], excluded: string[]) => { [x: string]: Draft; }; promote: (from: string, to: string) => { [x: string]: Draft; }; drop: (key: string) => Record<string, Draft>; reset: () => void; dispose: () => void; }; effortDelTurno: () => string | null; ejecutarComando: (session: string, lanzado: TerminalLanzada, command: string, queueId: string | null) => Promise<unknown>; encolar: (text: string, attachments: string[], task_mentions?: TaskMention[], recipients?: Recipient[]) => `${string}-${string}-${string}-${string}-${string}`; encolarYSoltar: (text: string, attachments: string[], task_mentions?: TaskMention[], recipients?: Recipient[]) => void; engineCanDispatch: (session: string | null | undefined) => boolean; enviar: (m: Omit<Encolado, "id">, respuestas?: { manda: RespuestaEnviada[]; pinta: Respuesta[]; }, destination?: { project: string; session: string; }, llevar?: (claveBorrador: string) => Promise<CarriedBase | null>, deLaCola?: string) => Promise<boolean>; escritorio: Accessor<string | null>; filaDe: (id: string) => SessionRow | undefined; gateSeq: number; input: () => string; leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; machineName: (id: string, local?: boolean) => string; machines: Accessor<Machine[]>; model: Accessor<string>; modo: Accessor<string>; msgs: Accessor<Msg[]>; nuevaSesion: (enProyecto?: string) => void; opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; pendientesDe: (session: string, workspace?: string | null) => Promise<Pendientes>; preguntarAlMargen: (question: string) => Promise<void>; project: Accessor<string>; projectList: Accessor<Project[]>; queueBusy: () => boolean; runOn: (workspace: string | null, project?: ProjectPlace) => string | null; sessionId: Accessor<string | null>; setArchivos: (files: string[]) => void; setAviso: Setter<{ texto: string; boton?: string; ir?: () => void; } | null>; setError: Setter<string | null>; setInput: (value: string, inputType?: string, change?: TextEdit) => void; setPermissions: Setter<PermissionRequest[]>; setRunOn: (workspace: string | null, id: string | null) => void; sideCommand: Accessor<string | null>; soltarPreguntas: (session: string, turno?: string) => ReadonlyMap<string, PreguntasAMedias>; threads: { read: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; acceptSession: (id: string, session: Session, clear: boolean, generation: number, latest?: boolean | undefined) => boolean; activities: (id: string, visible: readonly Msg[]) => ObservedTurnActivity<Msg>[]; beginActivity: (id: string, startedAt: number | null, startConfirmed?: boolean) => void; finishActivity: (id: string, workspace?: string | null) => void; rows: Accessor<Record<string, Hilo>>; current: Accessor<Hilo>; messages: Accessor<Msg[]>; loading: Accessor<string | null>; origins: Accessor<Readonly<Record<string, TranscriptOrigin | null>>>; offline: Accessor<Readonly<Record<string, string>>>; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>; handovers: Accessor<Readonly<Record<string, HandoverState>>>; olderAvailable: Accessor<Readonly<Record<string, boolean>>>; recentAvailable: Accessor<Readonly<Record<string, boolean>>>; olderStatus: Accessor<Readonly<Record<string, OlderState>>>; recentTail: Accessor<Readonly<Record<string, Msg[]>>>; appendLive: (session: string, messages: Msg[], workspace?: string | null) => void; appendPersisted: (session: string, messages: Msg[]) => void; appendOptimistic: (session: string, messages: Msg[]) => void; acknowledgeOptimistic: (session: string, messages: Msg[]) => void; commitUniqueTurn: (session: string, message: Msg) => void; replaceTurn: (session: string, message: Msg) => void; reviseOptimistic: (session: string, target: Msg, patch: Pick<Msg, "respuestas" | "author">) => void; rejectOptimistic: (session: string, messages: Msg[]) => void; question: (session: string, fields: Pick<Msg, "turno" | "preguntas" | "questionRequestId" | "agent">, workspace?: string | null) => void; replay: (session: string, workspace?: string | null, replayId?: string) => void; finishSteps: (session: string) => void; event: (payload: ChatEvent, metadata: TranscriptMetadata) => void; older: (project: string, id: string) => Promise<(() => void) | null>; latest: (id: string) => Promise<void>; replaceHistory: (session: string, leida: Msg[], vaciarVivo: boolean, antepuesta?: boolean, guardados?: IdsDeTurnos, cola?: IdsDeTurnos, readRevision?: number) => void; saveWorkspace: (previous: string | null) => void; activateWorkspace: (workspace: string | null) => void; resetService: () => void; adoptDraft: (id: string) => void; dropSaved: (workspace: string, id: string) => void; flush: () => void; markMachineWait: (id: string, wait: MachineWait | null) => void; markAwake: (id: string) => void; startLoading: (id: string) => void; finishLoading: (id: string) => void; reading: (id: string, active: boolean) => void; drop: (session: string) => void; dispose: () => void; }; vivas: Accessor<string[]>; workspaceActivo: Accessor<string | null>; workspaceContext: { active: Accessor<string | null>; mode: Accessor<string | null>; root: Accessor<string | null>; confirmed: Accessor<boolean>; generation: () => number; beginTransition: (startup: StartupContext) => Transition; activate: (token: Transition) => boolean; beginMaterial: () => Readonly<{ generation: number; material: number; }>; current: (token: Readonly<{ generation: number; material: number; }>) => boolean; currentMaterial: (token: Readonly<{ generation: number; material: number; }>) => boolean; confirmContext: (token: Readonly<{ generation: number; material: number; }>, candidate: string | null, listed: ContextSource[]) => "obsolete" | "unavailable" | "accepted"; modeChanged: (workspace: string | null, value: string | null, requestedGeneration?: number) => void; dispose: () => void; } };
+export type SendGatesDeps = { importCarry: () => Promise<CarryModule>; abrirConComando: ReturnType<typeof createShellCommand>["abrirConComando"]; agent: Accessor<string>; archivos: () => string[];
+  attachmentsFor: ReturnType<typeof createAttachments>["attachmentsFor"]; borrador: () => Draft; busy: ReturnType<typeof createThreadStream>["busy"]; claveAbierta: () => string;
+  cola: ReturnType<typeof createThreadStream>["cola"]; configDeLaSesion: ReturnType<typeof createHandover>["configDeLaSesion"];
+  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: ReturnType<typeof createDraftsStore>;
+  effortDelTurno: ReturnType<typeof createHandover>["effortDelTurno"]; ejecutarComando: ReturnType<typeof createShellCommand>["ejecutarComando"]; encolar: ReturnType<typeof createSendNow>["encolar"];
+  encolarYSoltar: ReturnType<typeof createSendNow>["encolarYSoltar"]; engineCanDispatch: ReturnType<typeof createThreadStream>["engineCanDispatch"]; enviar: ReturnType<typeof createSend>["enviar"];
+  escritorio: Accessor<string | null>; filaDe: (id: string) => SessionRow | undefined; gateSeq: number; input: () => string;
+  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; machineName: (id: string, local?: boolean) => string; machines: typeof machines;
+  model: Accessor<string>; modo: Accessor<string>; msgs: Accessor<Msg[]>; nuevaSesion: (enProyecto?: string) => void;
+  opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; pendientesDe: ReturnType<typeof createSend>["pendientesDe"];
+  preguntarAlMargen: ReturnType<typeof createThreadStream>["preguntarAlMargen"]; project: Accessor<string>; projectList: Accessor<Project[]>;
+  queueBusy: ReturnType<typeof createThreadStream>["queueBusy"]; runOn: typeof runOn; sessionId: Accessor<string | null>; setArchivos: (files: string[]) => void;
+  setAviso: Setter<{ texto: string; boton?: string; ir?: () => void; } | null>; setError: Setter<string | null>; setInput: (value: string, inputType?: string, change?: TextEdit) => void;
+  setPermissions: ReturnType<typeof createThreadStream>["setPermissions"]; setRunOn: (workspace: string | null, id: string | null) => void; sideCommand: Accessor<string | null>;
+  soltarPreguntas: ReturnType<typeof createThreadStream>["soltarPreguntas"]; threads: ReturnType<typeof createThreadsStore>; vivas: ReturnType<typeof createThreadStream>["vivas"];
+  workspaceActivo: Accessor<string | null>; workspaceContext: ReturnType<typeof createWorkspaceStore>; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 5209–5507, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createSendGates(deps: SendGatesDeps) {
@@ -44,7 +57,7 @@ export function createSendGates(deps: SendGatesDeps) {
   ): Promise<string | undefined> {
     if (!session) return undefined;
     const pendientes = await pendientesDe(session);
-    return pendientes?.questions.find((q: Question) => q.turn === turno)?.request_id;
+    return pendientes?.questions.find((q) => q.turn === turno)?.request_id;
   }
 
   /**
@@ -120,7 +133,7 @@ export function createSendGates(deps: SendGatesDeps) {
       const sid = questionSession;
       if (!sid) throw new Error(t("shell.answer.no_session"));
       try {
-        const pending = (await pendientesDe(sid, questionWorkspace))?.questions.find((q: Question) => (q.request_id === viva || q.id === viva) && q.turn === turno);
+        const pending = (await pendientesDe(sid, questionWorkspace))?.questions.find((q) => (q.request_id === viva || q.id === viva) && q.turn === turno);
         if (!pending) throw new Error(t("shell.answer.question_missing"));
         const guardado = await invoke<Turn>("answer_question", {
           session: sid,

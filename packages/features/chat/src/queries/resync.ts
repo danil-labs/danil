@@ -1,23 +1,35 @@
-import { type ObservedTurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
+
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import { type ContentTab, type FileTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import { esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
-import { type OlderState } from "../model/history.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { claveDe } from "../../../../ui/src/Failure";
-import { type ComandoEnVivo } from "../components/ShellCard.tsx";
-import { type HandoverState } from "../model/handover.ts";
-import { type Msg } from "../model/messageTypes.ts";
-import { type ChatEvent, type Session, type TranscriptOrigin } from "../model/transcript.ts";
-import { type PermissionRequest } from "../screens/Chat.tsx";
+import { type Session } from "../model/transcript.ts";
 import { type LiveTurn } from "./sleepSession.ts";
 import { createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
-import type { ContextSource, ConversationScope, Dependencies, FilterSessions, HandoffFact, HandoffPresentation, HandoffView, Hilo, IdsDeTurnos, Machine, MachineWait, PollRequest, PushedBatch, ServiceError, ServicePage, ServicePageData, StartupContext, TranscriptMetadata, Transition } from "./types.js";
+import type { ServicePage, createServiceStream, createThreadsStore, createWorkspaceStore, machines } from "./types.js";
+import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { createAttachmentsMount } from "./attachments-mount.ts";
+import type { createAttachments } from "./attachments.ts";
+import type { createResyncCommands } from "./resync-commands.ts";
+import type { createSendGates } from "./send-gates.ts";
+import type { createThreadStream } from "./thread-stream.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type ResyncDeps = { applyPushed: (batches: PushedBatch[]) => void; asleep: (error: unknown) => boolean; conversationScope: (id: string, projectId?: string) => ConversationScope; createServiceStream: (deps: Dependencies) => { paged: () => boolean; filterChanged: () => void; start: () => void; dispose: () => void; }; esDeLaAbierta: (session: string) => boolean; handoff: { requestStop: (scope: ConversationScope) => Promise<void>; replaceWithQueued: (scope: ConversationScope, id: string) => Promise<void>; observe: (fact: HandoffFact) => void; view: (scope: ConversationScope) => HandoffView; presentation: (scope: ConversationScope) => HandoffPresentation; blocked: (scope: ConversationScope) => boolean; reset: () => void; dispose: () => void; }; leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number; liveThreads: Set<string>; loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machines: Accessor<Machine[]>; marcarViva: (id: string, desde?: number, startConfirmed?: boolean) => void; pendingStarts: Map<string, symbol>; pestanas: { pinned: Accessor<ReadonlySet<string>>; isPinned: (id: string) => boolean; pin: (id: string) => void; restorable: () => string[]; replacePreviews(groups: readonly (readonly string[])[], visible: readonly (string | null)[]): void; open: Accessor<Tab[]>; active: Accessor<string | null>; activeTab: () => Tab | null; load(ws: string | null, desk?: string | null): string | null; ensure(p: { id: string; project: string; titulo: string; }): void; commitDraft(draft: string, p: { id: string; project: string; titulo: string; }): void; openObservability(title: string): void; openScreen(machine: string, title: string): void; openContent(p: ContentTab): void; activate: (id: string | null) => void; close: (id: string) => Tab | null; closeMany: (ids: readonly string[], opts?: { remember?: boolean; }) => Tab | null; canReopen: () => boolean; reopen(alive: (p: Tab) => boolean): Tab | null; attachPreviewFiles(project: string, session: string, tree: string): [string, string][]; renameFiles(session: string, tree: string, from: string, end: string): [string, string][]; navigate(id: string, url: string): void; moveToProject(session: string, project: string): void; markChanged(id: string): void; dirty: Accessor<ReadonlySet<string>>; setDirty(id: string, dirty: boolean): void; registerSaver(id: string, save: (() => Promise<boolean>) | null): void; dirtyTabsToClose(ids: string | readonly string[]): FileTab[]; saveFiles(ids: string[]): Promise<boolean>; sync(find: (id: string) => { project: string; titulo: string; } | null): string[]; }; ponerTerminal: (session: string, comando: ComandoEnVivo) => void; project: Accessor<string>; recargarMaterial: () => Promise<void>; releerTrasHueco: () => void; reponerGates: (session: string, workspace?: string | null) => Promise<void>; serviceListenersReady: Promise<unknown>; sesionesConPestana: Accessor<string[]>; sessionId: Accessor<string | null>; setConnectionError: Setter<string | null>; setDesdeDeTurno: Setter<Record<string, number>>; setEnFondo: Setter<string[]>; setError: Setter<string | null>; setPermissions: Setter<PermissionRequest[]>; settleTurn: (session: string, ok?: boolean | null, unsaved?: boolean) => Promise<void>; settlingTurns: Accessor<string[]>; soltarVistasHuerfanas: () => void; tareaDelRiel: (id: string) => SenderTask | null; terminales: Accessor<Record<string, ComandoEnVivo>>; threads: { read: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; acceptSession: (id: string, session: Session, clear: boolean, generation: number, latest?: boolean | undefined) => boolean; activities: (id: string, visible: readonly Msg[]) => ObservedTurnActivity<Msg>[]; beginActivity: (id: string, startedAt: number | null, startConfirmed?: boolean) => void; finishActivity: (id: string, workspace?: string | null) => void; rows: Accessor<Record<string, Hilo>>; current: Accessor<Hilo>; messages: Accessor<Msg[]>; loading: Accessor<string | null>; origins: Accessor<Readonly<Record<string, TranscriptOrigin | null>>>; offline: Accessor<Readonly<Record<string, string>>>; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>; handovers: Accessor<Readonly<Record<string, HandoverState>>>; olderAvailable: Accessor<Readonly<Record<string, boolean>>>; recentAvailable: Accessor<Readonly<Record<string, boolean>>>; olderStatus: Accessor<Readonly<Record<string, OlderState>>>; recentTail: Accessor<Readonly<Record<string, Msg[]>>>; appendLive: (session: string, messages: Msg[], workspace?: string | null) => void; appendPersisted: (session: string, messages: Msg[]) => void; appendOptimistic: (session: string, messages: Msg[]) => void; acknowledgeOptimistic: (session: string, messages: Msg[]) => void; commitUniqueTurn: (session: string, message: Msg) => void; replaceTurn: (session: string, message: Msg) => void; reviseOptimistic: (session: string, target: Msg, patch: Pick<Msg, "respuestas" | "author">) => void; rejectOptimistic: (session: string, messages: Msg[]) => void; question: (session: string, fields: Pick<Msg, "turno" | "preguntas" | "questionRequestId" | "agent">, workspace?: string | null) => void; replay: (session: string, workspace?: string | null, replayId?: string) => void; finishSteps: (session: string) => void; event: (payload: ChatEvent, metadata: TranscriptMetadata) => void; older: (project: string, id: string) => Promise<(() => void) | null>; latest: (id: string) => Promise<void>; replaceHistory: (session: string, leida: Msg[], vaciarVivo: boolean, antepuesta?: boolean, guardados?: IdsDeTurnos, cola?: IdsDeTurnos, readRevision?: number) => void; saveWorkspace: (previous: string | null) => void; activateWorkspace: (workspace: string | null) => void; resetService: () => void; adoptDraft: (id: string) => void; dropSaved: (workspace: string, id: string) => void; flush: () => void; markMachineWait: (id: string, wait: MachineWait | null) => void; markAwake: (id: string) => void; startLoading: (id: string) => void; finishLoading: (id: string) => void; reading: (id: string, active: boolean) => void; drop: (session: string) => void; dispose: () => void; }; vivas: Accessor<string[]>; workspaceActivo: Accessor<string | null>; workspaceContext: { active: Accessor<string | null>; mode: Accessor<string | null>; root: Accessor<string | null>; confirmed: Accessor<boolean>; generation: () => number; beginTransition: (startup: StartupContext) => Transition; activate: (token: Transition) => boolean; beginMaterial: () => Readonly<{ generation: number; material: number; }>; current: (token: Readonly<{ generation: number; material: number; }>) => boolean; currentMaterial: (token: Readonly<{ generation: number; material: number; }>) => boolean; confirmContext: (token: Readonly<{ generation: number; material: number; }>, candidate: string | null, listed: ContextSource[]) => "obsolete" | "unavailable" | "accepted"; modeChanged: (workspace: string | null, value: string | null, requestedGeneration?: number) => void; dispose: () => void; } };
+export type ResyncDeps = { applyPushed: ReturnType<typeof createAttachmentsMount>["applyPushed"]; asleep: (error: unknown) => boolean;
+  conversationScope: ReturnType<typeof createThreadStream>["conversationScope"]; createServiceStream: typeof createServiceStream;
+  esDeLaAbierta: ReturnType<typeof createThreadStream>["esDeLaAbierta"]; handoff: ReturnType<typeof createThreadStream>["handoff"];
+  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number; liveThreads: ReturnType<typeof createThreadStream>["liveThreads"];
+  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machines: typeof machines; marcarViva: ReturnType<typeof createThreadStream>["marcarViva"];
+  pendingStarts: ReturnType<typeof createThreadStream>["pendingStarts"]; pestanas: ReturnType<typeof createTabs>; ponerTerminal: ReturnType<typeof createResyncCommands>["ponerTerminal"];
+  project: Accessor<string>; recargarMaterial: ReturnType<typeof createAttachments>["recargarMaterial"]; releerTrasHueco: () => void; reponerGates: ReturnType<typeof createSendGates>["reponerGates"];
+  serviceListenersReady: Promise<unknown>; sesionesConPestana: Accessor<string[]>; sessionId: Accessor<string | null>; setConnectionError: Setter<string | null>;
+  setDesdeDeTurno: ReturnType<typeof createThreadStream>["setDesdeDeTurno"]; setEnFondo: ReturnType<typeof createThreadStream>["setEnFondo"]; setError: Setter<string | null>;
+  setPermissions: ReturnType<typeof createThreadStream>["setPermissions"]; settleTurn: ReturnType<typeof createAttachmentsMount>["settleTurn"];
+  settlingTurns: ReturnType<typeof createThreadStream>["settlingTurns"]; soltarVistasHuerfanas: () => void; tareaDelRiel: (id: string) => SenderTask | null;
+  terminales: ReturnType<typeof createThreadStream>["terminales"]; threads: ReturnType<typeof createThreadsStore>; vivas: ReturnType<typeof createThreadStream>["vivas"];
+  workspaceActivo: Accessor<string | null>; workspaceContext: ReturnType<typeof createWorkspaceStore>; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2197–2350, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createResync(deps: ResyncDeps) {
@@ -44,11 +56,11 @@ export function createResync(deps: ResyncDeps) {
 
   const serviceStream = createServiceStream({
     ready: () => deps.serviceListenersReady,
-    read: (request: PollRequest) => invoke<ServicePage>("service_poll", request),
-    filter: (sessions: FilterSessions) => invoke("service_filter", { sessions }),
+    read: (request) => invoke<ServicePage>("service_poll", request),
+    filter: (sessions) => invoke("service_filter", { sessions }),
     visibleSessions: tareasQueSeVen,
     applyBatches: applyPushed,
-    applyPage: (page: ServicePageData, recovered: boolean) => {
+    applyPage: (page, recovered: boolean) => {
       if (page.reset || page.gap || page.resync || page.streams || recovered) window.dispatchEvent(new CustomEvent("harness:service-resync"));
       // Un stream de comando cortado (árbol, git) se relee, pero no es salida en vivo perdida.
       if (page.reset || page.gap || page.resync || page.streams) releerTrasHueco();
@@ -66,7 +78,7 @@ export function createResync(deps: ResyncDeps) {
       // esta guarda el aviso de hueco sale sin que nada se haya perdido.
       if (page.gap && !page.reset && affectedTurns) setError(t("chat.error.service_gap"));
     },
-    classifyFailure: (error: ServiceError) => {
+    classifyFailure: (error) => {
       const code = claveDe(error);
       if (code === "shell.service.machine_off" || code === "shell.service.machine_starting" || asleep(error)) return "sleep";
       if (code === "shell.service.engine_missing") return "missing";

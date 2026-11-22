@@ -31,6 +31,7 @@ import McpSignInNotice, { noteMcpSignIn } from "../../../features/chat/src/scree
 import PreviousAgentChat from "../../../features/chat/src/screens/PreviousAgentChat";
 import { ThreadSearch } from "../../../features/chat/src/screens/ThreadSearch";
 import TranscriptSource from "../../../features/chat/src/screens/TranscriptSource";
+import { modoInicial, modoRecordado, recordarModo } from "../../../features/chat/src/model/modes";
 import {
   type ChatEvent,
   type ChatExportado,

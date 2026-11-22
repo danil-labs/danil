@@ -1,10 +1,13 @@
 import { type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
-import { type ContentTab, type FileTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import { type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import { createEffect, createSignal, on, type Accessor, type Setter } from "solid-js";
+import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type DraftSendDeps = { activarPestana: (p: Tab) => Promise<void>; cerrarPestanasYa: (ids: string[]) => void; cierreSinGuardar: Accessor<{ ids: string[]; archivos: string[]; sucios: string[]; } | null>; claveAbierta: () => string; pestanas: { pinned: Accessor<ReadonlySet<string>>; isPinned: (id: string) => boolean; pin: (id: string) => void; restorable: () => string[]; replacePreviews(groups: readonly (readonly string[])[], visible: readonly (string | null)[]): void; open: Accessor<Tab[]>; active: Accessor<string | null>; activeTab: () => Tab | null; load(ws: string | null, desk?: string | null): string | null; ensure(p: { id: string; project: string; titulo: string; }): void; commitDraft(draft: string, p: { id: string; project: string; titulo: string; }): void; openObservability(title: string): void; openScreen(machine: string, title: string): void; openContent(p: ContentTab): void; activate: (id: string | null) => void; close: (id: string) => Tab | null; closeMany: (ids: readonly string[], opts?: { remember?: boolean; }) => Tab | null; canReopen: () => boolean; reopen(alive: (p: Tab) => boolean): Tab | null; attachPreviewFiles(project: string, session: string, tree: string): [string, string][]; renameFiles(session: string, tree: string, from: string, end: string): [string, string][]; navigate(id: string, url: string): void; moveToProject(session: string, project: string): void; markChanged(id: string): void; dirty: Accessor<ReadonlySet<string>>; setDirty(id: string, dirty: boolean): void; registerSaver(id: string, save: (() => Promise<boolean>) | null): void; dirtyTabsToClose(ids: string | readonly string[]): FileTab[]; saveFiles(ids: string[]): Promise<boolean>; sync(find: (id: string) => { project: string; titulo: string; } | null): string[]; }; sessionId: Accessor<string | null>; setCierreSinGuardar: Setter<{ ids: string[]; archivos: string[]; sucios: string[]; } | null> };
+export type DraftSendDeps = { activarPestana: (p: Tab) => Promise<void>; cerrarPestanasYa: (ids: string[]) => void;
+  cierreSinGuardar: Accessor<{ ids: string[]; archivos: string[]; sucios: string[]; } | null>; claveAbierta: () => string; pestanas: ReturnType<typeof createTabs>; sessionId: Accessor<string | null>;
+  setCierreSinGuardar: Setter<{ ids: string[]; archivos: string[]; sucios: string[]; } | null>; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 3739–3760, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createDraftSend(deps: DraftSendDeps) {

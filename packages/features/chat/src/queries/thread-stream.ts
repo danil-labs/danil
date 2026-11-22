@@ -1,4 +1,4 @@
-import { type ObservedTurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
+
 import { lastRoster, rememberRoster } from "../../../../../apps/desktop/src/lib/handlerRoster";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type MentionSources } from "../../../../../apps/desktop/src/lib/mentions";
@@ -7,11 +7,9 @@ import { type Project } from "../../../../../apps/desktop/src/lib/model.ts";
 import { recipientCandidatesOf, type RecipientCandidate } from "../../../../../apps/desktop/src/lib/recipients";
 import { type SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
 import { alHilo } from "../../../../../apps/desktop/src/lib/side-question";
-import { type ContentTab, type FileTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import { type PlaceCandidate, type TaskCandidate } from "../../../../../apps/desktop/src/lib/taskMentions";
-import { type TaskMention, type TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
+import { type TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
 import { type Ventana } from "../../../../../apps/desktop/src/lib/usage";
-import { type OlderState } from "../model/history.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { asFailure, prosaDe } from "../../../../ui/src/Failure";
@@ -19,17 +17,29 @@ import { type Encolado } from "../components/MessageQueue";
 import { type AlmacenDePreguntas, type PreguntasAMedias } from "../components/Questions";
 import { type ComandoEnVivo } from "../components/ShellCard";
 import { type AlMargen } from "../components/SideQuestion";
-import { type HandoverState } from "../model/handover.ts";
-import { type Msg } from "../model/messageTypes.ts";
-import { type ChatEvent, type Session, type TranscriptOrigin } from "../model/transcript.ts";
+import { type Session } from "../model/transcript.ts";
 import { type PermissionRequest } from "../screens/Chat";
 import { type ComandoQueNace, type TerminalLanzada } from "./sleepSession.ts";
 import { batch, createEffect, createMemo, createResource, createSignal, on, onCleanup, type Accessor } from "solid-js";
-import type { ContextSource, ConversationScope, Dependencies, EngineScope, HandoffFact, HandoffPresentation, HandoffView, Hilo, IdsDeTurnos, Invoke, Machine, MachineWait, ProfilesWatcher, QueueError, QueueItem, QueueMessage, Route, Saved, SessionRow, StartupContext, TranscriptMetadata, Transition } from "./types.js";
+import type { ConversationScope, MachineWait, SessionRow, createConversationHandoff, createEngineQueue, createTaskQueues, createThreadsStore, createWorkspaceStore, machines, watchProfiles } from "./types.js";
+import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { createResync } from "./resync.ts";
+import type { createShellCommand } from "./shell-command.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type ThreadStreamDeps = { apagadas: Accessor<Readonly<Record<string, string>>>; claveAbierta: () => string; createConversationHandoff: (deps: Dependencies) => { requestStop: (scope: ConversationScope) => Promise<void>; replaceWithQueued: (scope: ConversationScope, id: string) => Promise<void>; observe: (fact: HandoffFact) => void; view: (scope: ConversationScope) => HandoffView; presentation: (scope: ConversationScope) => HandoffPresentation; blocked: (scope: ConversationScope) => boolean; reset: () => void; dispose: () => void; }; createEngineQueue: (env: { invoke: Invoke; machines: () => readonly Machine[]; machineOf: (session: string) => Route; nativeWindow: () => boolean; notStoppableYet: (session: string) => void; }) => { engineCanDispatch: (session: string | null | undefined) => boolean; turnStarted: (scope: EngineScope) => void; stopTurn: (scope: EngineScope) => Promise<false | undefined>; turnClosed: (session: string) => void; resumeQueue: (scope: EngineScope) => Promise<unknown>; }; createTaskQueues: (deps: Dependencies) => { items: Accessor<Encolado[]>; owner: Accessor<string | null>; editing: Accessor<boolean>; saved: (session: string) => Readonly<Saved> | undefined; openSession: (session: string, project: string, isCurrent?: () => boolean, fromEngine?: boolean) => Promise<void>; detach: () => void; remove: (id: string, session?: string | null) => void; persist: (session: string, project: string, queued: Encolado[]) => Promise<unknown>; adopt: (session: string) => string; editMode: (value: boolean) => boolean; enqueue: (message: Encolado, front?: boolean) => Encolado[]; edit: (id: string, text: string, mentions?: TaskMention[]) => Encolado[]; prioritize: (id: string) => Encolado[]; workspaceChanged: () => void; dispose: () => void; }; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; enviarFiltro: () => void; filaDe: (id: string) => SessionRow | undefined; input: () => string; leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number; loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machineName: (id: string, local?: boolean) => string; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>; machineWakes: (id: string) => boolean; machines: Accessor<Machine[]>; mandarElegido: (session: string) => undefined; opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; pestanas: { pinned: Accessor<ReadonlySet<string>>; isPinned: (id: string) => boolean; pin: (id: string) => void; restorable: () => string[]; replacePreviews(groups: readonly (readonly string[])[], visible: readonly (string | null)[]): void; open: Accessor<Tab[]>; active: Accessor<string | null>; activeTab: () => Tab | null; load(ws: string | null, desk?: string | null): string | null; ensure(p: { id: string; project: string; titulo: string; }): void; commitDraft(draft: string, p: { id: string; project: string; titulo: string; }): void; openObservability(title: string): void; openScreen(machine: string, title: string): void; openContent(p: ContentTab): void; activate: (id: string | null) => void; close: (id: string) => Tab | null; closeMany: (ids: readonly string[], opts?: { remember?: boolean; }) => Tab | null; canReopen: () => boolean; reopen(alive: (p: Tab) => boolean): Tab | null; attachPreviewFiles(project: string, session: string, tree: string): [string, string][]; renameFiles(session: string, tree: string, from: string, end: string): [string, string][]; navigate(id: string, url: string): void; moveToProject(session: string, project: string): void; markChanged(id: string): void; dirty: Accessor<ReadonlySet<string>>; setDirty(id: string, dirty: boolean): void; registerSaver(id: string, save: (() => Promise<boolean>) | null): void; dirtyTabsToClose(ids: string | readonly string[]): FileTab[]; saveFiles(ids: string[]): Promise<boolean>; sync(find: (id: string) => { project: string; titulo: string; } | null): string[]; }; project: Accessor<string>; projectList: Accessor<Project[]>; reconcileActiveTurns: () => Promise<void>; sesiones: Accessor<Record<string, SessionRow[]>>; sessionId: Accessor<string | null>; setInput: (value: string, inputType?: string, change?: TextEdit) => void; tareaDelRiel: (id: string) => SenderTask | null; threads: { read: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; acceptSession: (id: string, session: Session, clear: boolean, generation: number, latest?: boolean | undefined) => boolean; activities: (id: string, visible: readonly Msg[]) => ObservedTurnActivity<Msg>[]; beginActivity: (id: string, startedAt: number | null, startConfirmed?: boolean) => void; finishActivity: (id: string, workspace?: string | null) => void; rows: Accessor<Record<string, Hilo>>; current: Accessor<Hilo>; messages: Accessor<Msg[]>; loading: Accessor<string | null>; origins: Accessor<Readonly<Record<string, TranscriptOrigin | null>>>; offline: Accessor<Readonly<Record<string, string>>>; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>; handovers: Accessor<Readonly<Record<string, HandoverState>>>; olderAvailable: Accessor<Readonly<Record<string, boolean>>>; recentAvailable: Accessor<Readonly<Record<string, boolean>>>; olderStatus: Accessor<Readonly<Record<string, OlderState>>>; recentTail: Accessor<Readonly<Record<string, Msg[]>>>; appendLive: (session: string, messages: Msg[], workspace?: string | null) => void; appendPersisted: (session: string, messages: Msg[]) => void; appendOptimistic: (session: string, messages: Msg[]) => void; acknowledgeOptimistic: (session: string, messages: Msg[]) => void; commitUniqueTurn: (session: string, message: Msg) => void; replaceTurn: (session: string, message: Msg) => void; reviseOptimistic: (session: string, target: Msg, patch: Pick<Msg, "respuestas" | "author">) => void; rejectOptimistic: (session: string, messages: Msg[]) => void; question: (session: string, fields: Pick<Msg, "turno" | "preguntas" | "questionRequestId" | "agent">, workspace?: string | null) => void; replay: (session: string, workspace?: string | null, replayId?: string) => void; finishSteps: (session: string) => void; event: (payload: ChatEvent, metadata: TranscriptMetadata) => void; older: (project: string, id: string) => Promise<(() => void) | null>; latest: (id: string) => Promise<void>; replaceHistory: (session: string, leida: Msg[], vaciarVivo: boolean, antepuesta?: boolean, guardados?: IdsDeTurnos, cola?: IdsDeTurnos, readRevision?: number) => void; saveWorkspace: (previous: string | null) => void; activateWorkspace: (workspace: string | null) => void; resetService: () => void; adoptDraft: (id: string) => void; dropSaved: (workspace: string, id: string) => void; flush: () => void; markMachineWait: (id: string, wait: MachineWait | null) => void; markAwake: (id: string) => void; startLoading: (id: string) => void; finishLoading: (id: string) => void; reading: (id: string, active: boolean) => void; drop: (session: string) => void; dispose: () => void; }; watchHandlerStatuses: (project: string) => () => HandlerStatusRow[]; watchProfiles: ProfilesWatcher; workspaceActivo: Accessor<string | null>; workspaceContext: { active: Accessor<string | null>; mode: Accessor<string | null>; root: Accessor<string | null>; confirmed: Accessor<boolean>; generation: () => number; beginTransition: (startup: StartupContext) => Transition; activate: (token: Transition) => boolean; beginMaterial: () => Readonly<{ generation: number; material: number; }>; current: (token: Readonly<{ generation: number; material: number; }>) => boolean; currentMaterial: (token: Readonly<{ generation: number; material: number; }>) => boolean; confirmContext: (token: Readonly<{ generation: number; material: number; }>, candidate: string | null, listed: ContextSource[]) => "obsolete" | "unavailable" | "accepted"; modeChanged: (workspace: string | null, value: string | null, requestedGeneration?: number) => void; dispose: () => void; } };
+export type ThreadStreamDeps = { apagadas: Accessor<Readonly<Record<string, string>>>; claveAbierta: () => string; createConversationHandoff: typeof createConversationHandoff;
+  createEngineQueue: typeof createEngineQueue; createTaskQueues: typeof createTaskQueues; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
+  enviarFiltro: ReturnType<typeof createResync>["enviarFiltro"]; filaDe: (id: string) => SessionRow | undefined; input: () => string;
+  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number;
+  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machineName: (id: string, local?: boolean) => string;
+  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>;
+  machineWakes: (id: string) => boolean; machines: typeof machines; mandarElegido: ReturnType<typeof createShellCommand>["mandarElegido"];
+  opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; pestanas: ReturnType<typeof createTabs>;
+  project: Accessor<string>; projectList: Accessor<Project[]>; reconcileActiveTurns: ReturnType<typeof createResync>["reconcileActiveTurns"]; sesiones: Accessor<Record<string, SessionRow[]>>;
+  sessionId: Accessor<string | null>; setInput: (value: string, inputType?: string, change?: TextEdit) => void; tareaDelRiel: (id: string) => SenderTask | null;
+  threads: ReturnType<typeof createThreadsStore>; watchHandlerStatuses: (project: string) => () => HandlerStatusRow[]; watchProfiles: typeof watchProfiles; workspaceActivo: Accessor<string | null>;
+  workspaceContext: ReturnType<typeof createWorkspaceStore>; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 1131–1449, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createThreadStream(deps: ThreadStreamDeps) {
@@ -193,10 +203,10 @@ export function createThreadStream(deps: ThreadStreamDeps) {
   const { engineCanDispatch, resumeQueue, stopTurn, turnClosed, turnStarted } = createEngineQueue({ invoke, machines, machineOf, nativeWindow: () => capabilities().nativeWindow, notStoppableYet: (id) => threads.appendLive(id, [{ role: "system", text: t("shell.turn.not_stoppable_yet"), meta: "aviso" }]) });
   const taskQueues = createTaskQueues({
     scope: () => ({ workspace: workspaceActivo(), generation: workspaceContext.generation(), session: sessionId(), project: project() }),
-    readQueue: (scope: EngineScope) => invoke<Encolado[]>("load_queue", { project: scope.project, session: scope.session }, opcionesDeLaTarea(scope.session, scope.workspace)),
+    readQueue: (scope) => invoke<Encolado[]>("load_queue", { project: scope.project, session: scope.session }, opcionesDeLaTarea(scope.session, scope.workspace)),
     // Siempre: un motor que no lo conoce ignora el argumento, y el que sí no toma esta ventana por una vieja.
-    writeQueue: (scope: EngineScope, queued: QueueMessage) => invoke("save_queue", { project: scope.project, session: scope.session, queued, engineDispatch: true }, opcionesDeLaTarea(scope.session, scope.workspace)),
-    onSaveFailure: (error: QueueError, scope: EngineScope) => threads.appendLive(scope.session, [{ role: "system", text: t("shell.queue.save_failed", { error: prosaDe(error) }), meta: "aviso" }]),
+    writeQueue: (scope, queued) => invoke("save_queue", { project: scope.project, session: scope.session, queued, engineDispatch: true }, opcionesDeLaTarea(scope.session, scope.workspace)),
+    onSaveFailure: (error, scope) => threads.appendLive(scope.session, [{ role: "system", text: t("shell.queue.save_failed", { error: prosaDe(error) }), meta: "aviso" }]),
   });
   onCleanup(taskQueues.dispose);
   const conversationScope = (id: string, projectId = id === sessionId() ? project() : taskQueues.saved(id)?.project ?? pestanas.open().find(tab => tab.id === id)?.project ?? tareaDelRiel(id)?.folder ?? project()): ConversationScope => ({
@@ -205,7 +215,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
   });
   const handoff = createConversationHandoff({
     current: () => ({ workspace: workspaceActivo(), generation: workspaceContext.generation() }),
-    runtime: { active: (scope: EngineScope) => vivas().includes(scope.session), stop: async (scope: EngineScope) => {
+    runtime: { active: (scope) => vivas().includes(scope.session), stop: async (scope) => {
       const id = scope.session, shell = Boolean(terminales()[id] || lanzados.has(id));
       const current = () => scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation();
       if (shell) detenidos.add(id);
@@ -225,9 +235,9 @@ export function createThreadStream(deps: ThreadStreamDeps) {
         throw error;
       }
     } },
-    queue: { message: (scope: EngineScope, id: string) => (scope.session === sessionId() ? taskQueues.items() : taskQueues.saved(scope.session)?.items ?? []).find((item: QueueItem) => item.id === id),
-      select: (scope: EngineScope, id: string) => { if (scope.session !== sessionId() || !taskQueues.items().some(item => item.id === id)) return false; taskQueues.prioritize(id); return true; },
-      release: (scope: EngineScope) => mandarElegido(scope.session), failed: () => {} },
+    queue: { message: (scope, id: string) => (scope.session === sessionId() ? taskQueues.items() : taskQueues.saved(scope.session)?.items ?? []).find((item) => item.id === id),
+      select: (scope, id: string) => { if (scope.session !== sessionId() || !taskQueues.items().some(item => item.id === id)) return false; taskQueues.prioritize(id); return true; },
+      release: (scope) => mandarElegido(scope.session), failed: () => {} },
   });
   onCleanup(handoff.dispose);
   const handoffAt = (id: string | null, projectId?: string) => id ? handoff.view(conversationScope(id, projectId)) : null;
