@@ -12,8 +12,7 @@ import { runsWorkspace } from "../model/runs-workspace"; export { runsWorkspace 
 
 import type { Machine } from "../../../../ui/src/lib/machine"; export type { Machine };
 
-/** Lo que el picker sabe del proyecto de la tarea nueva: las máquinas con su carpeta y su remoto. */
-export type ProjectPlace = { name: string; machines?: string[]; remote_url?: string | null } | null | undefined;
+import type { ProjectPlace } from "../../../../ui/src/lib/machine"; export type { ProjectPlace };
 
 /**
  * Por qué una máquina no puede correr la tarea nueva, o `null` si puede. Un

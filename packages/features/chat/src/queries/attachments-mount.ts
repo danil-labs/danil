@@ -8,7 +8,7 @@ import { claveDe, prosaDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
 import { TRANSPORTE } from "./sleepSession.ts";
 import { batch, createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
-import type { Hilo, SessionRow, Startup, createBatchDelivery, createComposerStore, createContextSource, createProjectsStore, createThreadsStore, createWorkspaceStore, listaBasta, reconciliar } from "./types.js";
+import type { ComposerPort, ContextSourcePort, CreateBatchDelivery, Hilo, ListaBastaPort, ProjectsPort, ReconciliarPort, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import type { createAttachments } from "./attachments.ts";
 import type { createResyncCommands } from "./resync-commands.ts";
@@ -20,20 +20,20 @@ import type { createThreadStream } from "./thread-stream.ts";
 
 /** Lo que el bloque usaba del cuerpo de App. */
 export type AttachmentsMountDeps = { advanceTurn: ReturnType<typeof createThreadStream>["advanceTurn"]; agent: Accessor<string>; aplicar: ReturnType<typeof createAttachments>["aplicar"];
-  asleep: (error: unknown) => boolean; bloqueo: Accessor<Frase | null>; closeActiveTab: () => void; composer: ReturnType<typeof createComposerStore>;
-  conversationScope: ReturnType<typeof createThreadStream>["conversationScope"]; createBatchDelivery: typeof createBatchDelivery; enCache: Accessor<boolean>;
+  asleep: (error: unknown) => boolean; bloqueo: Accessor<Frase | null>; closeActiveTab: () => void; composer: ComposerPort;
+  conversationScope: ReturnType<typeof createThreadStream>["conversationScope"]; createBatchDelivery: CreateBatchDelivery; enCache: Accessor<boolean>;
   finishedTurns: ReturnType<typeof createThreadStream>["finishedTurns"]; grupos: Accessor<string[]>; handoff: ReturnType<typeof createThreadStream>["handoff"]; hilos: Accessor<Record<string, Hilo>>;
-  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; listaBasta: typeof listaBasta;
+  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; listaBasta: ListaBastaPort;
   loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; mandarElegido: ReturnType<typeof createShellCommand>["mandarElegido"];
-  marcarQuieta: ReturnType<typeof createThreadStream>["marcarQuieta"]; pestanas: ReturnType<typeof createTabs>; project: Accessor<string>; projectCatalog: ReturnType<typeof createProjectsStore>;
-  recargarMaterial: ReturnType<typeof createAttachments>["recargarMaterial"]; reconciliar: typeof reconciliar; refreshSessions: (proyectos: string[]) => Promise<void>;
-  releerProyectos: ReturnType<typeof createContextSource>["releerProyectos"]; releerUna: ReturnType<typeof createResync>["releerUna"]; sessionId: Accessor<string | null>;
+  marcarQuieta: ReturnType<typeof createThreadStream>["marcarQuieta"]; pestanas: ReturnType<typeof createTabs>; project: Accessor<string>; projectCatalog: ProjectsPort;
+  recargarMaterial: ReturnType<typeof createAttachments>["recargarMaterial"]; reconciliar: ReconciliarPort; refreshSessions: (proyectos: string[]) => Promise<void>;
+  releerProyectos: ContextSourcePort["releerProyectos"]; releerUna: ReturnType<typeof createResync>["releerUna"]; sessionId: Accessor<string | null>;
   setBloqueo: Setter<Frase | null>; setEnCache: Setter<boolean>; setEnFondo: ReturnType<typeof createThreadStream>["setEnFondo"];
   setPermissions: ReturnType<typeof createThreadStream>["setPermissions"]; setSesiones: Setter<Record<string, SessionRow[]>>; setSettings: ReturnType<typeof createThreadSide>["setSettings"];
   setSettlingTurns: ReturnType<typeof createThreadStream>["setSettlingTurns"]; setStartupReadError: Setter<string | null>; soltarHilo: (session: string) => void;
   soltarTerminal: ReturnType<typeof createResyncCommands>["soltarTerminal"]; tareaDelRiel: (id: string) => SenderTask | null; taskQueues: ReturnType<typeof createThreadStream>["taskQueues"];
   threads: ReturnType<typeof createThreadsStore>; turnRevisions: ReturnType<typeof createThreadStream>["turnRevisions"]; vivas: ReturnType<typeof createThreadStream>["vivas"];
-  workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2006–2194, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createAttachmentsMount(deps: AttachmentsMountDeps) {

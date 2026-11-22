@@ -9,7 +9,7 @@ import { type Msg } from "../model/messageTypes.ts";
 import { ENTREGA_SIN_CONFIRMAR, interrumpible, inyectable } from "../../../../ui/src/lib/queue.ts";
 import { type Turn } from "../model/transcript";
 import { type Accessor, type Setter } from "solid-js";
-import type { Hilo, SessionRow, createDraftsStore, createThreadsStore } from "./types.js";
+import type { DraftsPort, Hilo, SessionRow, createThreadsStore } from "./types.ts";
 import type { createAttachments } from "./attachments.ts";
 import type { createHandover } from "./handover.ts";
 import type { createSendGates } from "./send-gates.ts";
@@ -20,7 +20,7 @@ import type { createThreadStream } from "./thread-stream.ts";
 /** Lo que el bloque usaba del cuerpo de App. */
 export type SendNowDeps = { agent: Accessor<string>; attachmentsFor: ReturnType<typeof createAttachments>["attachmentsFor"]; cola: ReturnType<typeof createThreadStream>["cola"];
   conversationScope: ReturnType<typeof createThreadStream>["conversationScope"]; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
-  drafts: ReturnType<typeof createDraftsStore>; effortDelTurno: ReturnType<typeof createHandover>["effortDelTurno"]; enFondo: ReturnType<typeof createThreadStream>["enFondo"];
+  drafts: DraftsPort; effortDelTurno: ReturnType<typeof createHandover>["effortDelTurno"]; enFondo: ReturnType<typeof createThreadStream>["enFondo"];
   engineCanDispatch: ReturnType<typeof createThreadStream>["engineCanDispatch"]; enviar: ReturnType<typeof createSend>["enviar"]; escritorio: Accessor<string | null>;
   filaDe: (id: string) => SessionRow | undefined; handoff: ReturnType<typeof createThreadStream>["handoff"]; handoffAt: ReturnType<typeof createThreadStream>["handoffAt"];
   hilos: Accessor<Record<string, Hilo>>; injecting: ReturnType<typeof createThreadStream>["injecting"]; mandar: ReturnType<typeof createSendGates>["mandar"]; model: Accessor<string>;

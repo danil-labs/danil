@@ -1,8 +1,7 @@
 /** Cuántos proyectos abre el selector antes de «Más proyectos…». */
 export const RECENT_LIMIT = 8;
 
-/** Última vez que se eligió cada proyecto en este selector: id → epoch en ms. */
-export type PickedAt = Record<string, number>;
+import type { PickedAt } from "../../../../ui/src/lib/picked-at.ts"; export type { PickedAt };
 
 type Ranked = { id: string; name: string; created_at?: number | null };
 

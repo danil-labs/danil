@@ -7,7 +7,7 @@ import { claveDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
 import { type LiveTurn } from "./sleepSession.ts";
 import { createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
-import type { ServicePage, createServiceStream, createThreadsStore, createWorkspaceStore, machines } from "./types.js";
+import type { CreateServiceStream, MachinesPort, ServicePage, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
 import type { createAttachments } from "./attachments.ts";
@@ -18,10 +18,10 @@ import type { createThreadStream } from "./thread-stream.ts";
 
 /** Lo que el bloque usaba del cuerpo de App. */
 export type ResyncDeps = { applyPushed: ReturnType<typeof createAttachmentsMount>["applyPushed"]; asleep: (error: unknown) => boolean;
-  conversationScope: ReturnType<typeof createThreadStream>["conversationScope"]; createServiceStream: typeof createServiceStream;
+  conversationScope: ReturnType<typeof createThreadStream>["conversationScope"]; createServiceStream: CreateServiceStream;
   esDeLaAbierta: ReturnType<typeof createThreadStream>["esDeLaAbierta"]; handoff: ReturnType<typeof createThreadStream>["handoff"];
   leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number; liveThreads: ReturnType<typeof createThreadStream>["liveThreads"];
-  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machines: typeof machines; marcarViva: ReturnType<typeof createThreadStream>["marcarViva"];
+  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machines: MachinesPort; marcarViva: ReturnType<typeof createThreadStream>["marcarViva"];
   pendingStarts: ReturnType<typeof createThreadStream>["pendingStarts"]; pestanas: ReturnType<typeof createTabs>; ponerTerminal: ReturnType<typeof createResyncCommands>["ponerTerminal"];
   project: Accessor<string>; recargarMaterial: ReturnType<typeof createAttachments>["recargarMaterial"]; releerTrasHueco: () => void; reponerGates: ReturnType<typeof createSendGates>["reponerGates"];
   serviceListenersReady: Promise<unknown>; sesionesConPestana: Accessor<string[]>; sessionId: Accessor<string | null>; setConnectionError: Setter<string | null>;
@@ -29,7 +29,7 @@ export type ResyncDeps = { applyPushed: ReturnType<typeof createAttachmentsMount
   setPermissions: ReturnType<typeof createThreadStream>["setPermissions"]; settleTurn: ReturnType<typeof createAttachmentsMount>["settleTurn"];
   settlingTurns: ReturnType<typeof createThreadStream>["settlingTurns"]; soltarVistasHuerfanas: () => void; tareaDelRiel: (id: string) => SenderTask | null;
   terminales: ReturnType<typeof createThreadStream>["terminales"]; threads: ReturnType<typeof createThreadsStore>; vivas: ReturnType<typeof createThreadStream>["vivas"];
-  workspaceActivo: Accessor<string | null>; workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2197–2350, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createResync(deps: ResyncDeps) {

@@ -16,7 +16,7 @@ import type { SessionRow } from "../../../features/projects/src/screens/Sessions
 import { matchesTaskQuery } from "../../../features/projects/src/model/taskSearch";
 import { Pressable } from "../../../ui/src/Pressable";
 
-export type SearchFilter = "all" | "tasks" | "archived" | "folders" | "actions";
+import type { SearchFilter } from "../../../ui/src/lib/search-filter.ts"; export type { SearchFilter };
 type Group = Exclude<SearchFilter, "all">;
 
 
