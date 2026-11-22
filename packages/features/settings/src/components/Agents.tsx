@@ -10,6 +10,7 @@ import { EmptyState } from "../../../../ui/src/EmptyState";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
 import NewAgent, { type ModelChoices } from "../../../projects/src/screens/NewAgent";
+import { createFreeRouterConsent } from "./free-router-consent";
 import { displayName, notifyProfiles } from "../../../projects/src/queries/profiles";
 import { SettingsPanel, SettingsRow, SettingsSection } from "./layout";
 
@@ -76,7 +77,7 @@ export default function Agents(props: {
         </SettingsRow>}</For>
       </div>
     </SettingsSection>
-    <NewAgent abierto={creating()} onAbrir={setCreating} project="" workspaceOnly modelos={props.modelos} onCreado={() => { void refresh(); }} />
+    <NewAgent abierto={creating()} onAbrir={setCreating} project="" workspaceOnly modelos={props.modelos} createFreeRouterConsent={createFreeRouterConsent} onCreado={() => { void refresh(); }} />
     <Dialog open={deleting() !== null} onOpenChange={open => { if (!open && !busy()) setDeleting(null); }}>
       <Show when={deleting()}>{row => <DialogContent role="alertdialog" aria-describedby="delete-workspace-agent">
         <DialogTitle>{t("projects.agents.profile_delete_title", { name: displayName(row().agent.name, row().profile) })}</DialogTitle>

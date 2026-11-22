@@ -97,7 +97,7 @@ const MachinesLicense = lazy(() =>
     ),
   })),
 );
-
+import { createFreeRouterConsent, folderIcon, renderAvatar, renderPdf } from "./chatSlots";
 import { canonicalAgentId, isFreeRouterModel, lastActivity, launcherOf, OPENCODE, taskDescendants, withRemoteLaunchers } from "@terminus/tasks";
 import type { CarriedBase, CarryCheck } from "../../../features/machines/src/queries/carry";
 import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, rememberedRunOn, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../../../features/machines/src/queries/store";
@@ -123,7 +123,7 @@ const CARRY_STOPPED = Symbol("carry-stopped");
 const VistaDeProyecto = lazy(() => import("../../../features/projects/src/screens/ProjectView"));
 
 import { mensajeDeFallo } from "../../../features/chat/src/model/failures";
-import { workLabel } from "../../../features/projects/src/model/branchLabel";
+import { workLabel } from "../../../ui/src/lib/workLabel.ts";
 import { DEFAULT_PROFILE, displayName, notifyProfiles, watchProfiles } from "../../../features/projects/src/queries/profiles";
 import RecentAgentChats from "../../../features/projects/src/screens/RecentAgentChats";
 import { type SessionRow, threadTitle } from "../../../features/projects/src/screens/Sessions";
@@ -5964,13 +5964,13 @@ export default function App() {
       <div data-task-bar="" class={cn("flex min-w-0 shrink-0 flex-col overflow-hidden", LOCATION_BAR)}>{contenido}</div>;
     const ubicacion = () => <Show when={pp.sesion} fallback={<Show when={!paginaDeAgente()}>{barraDeLaTarea(<Suspense fallback={null}><TaskLocation
       /* La tarea nueva: la máquina y la carpeta donde va a correr. La rama sale al empezarla. */
-      machine={(draftMachine() ?? (capabilities().nativeWindow ? null : rememberedRunOn(workspaceActivo()))) ?? undefined}
+      machine={(draftMachine() ?? (capabilities().nativeWindow ? null : rememberedRunOn(workspaceActivo()))) ?? undefined} machineName={machineName} machineWakes={machineWakes} folderIcon={folderIcon}
       on={((m) => m?.on !== false && (capabilities().nativeWindow || (!!m && m.hosts !== false)))(machines().find(m => m.id === (draftMachine() ?? rememberedRunOn(workspaceActivo()))))}
       onScreen={abrirPantalla}
       project={proyectoDeLaCelda()}
       path={carpetaDeTrabajo(proyectoDeLaCelda() ?? {}) || undefined} /></Suspense>)}</Show>}>{(id) => {
       return barraDeLaTarea(<Suspense fallback={null}><TaskLocation
-        machine={filaDe(id())?.machine}
+        machine={filaDe(id())?.machine} machineName={machineName} machineWakes={machineWakes} folderIcon={folderIcon}
         on={!apagadas()[id()] && filaDe(id())?.machine_on !== false && (capabilities().nativeWindow || machines().find(m => m.id === filaDe(id())?.machine)?.hosts !== false)}
         onScreen={abrirPantalla}
         onFiles={() => {
@@ -6261,11 +6261,11 @@ export default function App() {
         onRecipient={drafts.recipient}
         onReference={drafts.reference}
         onInput={setInput}
-        onSend={mandar}
+        onSend={mandar} renderAvatar={renderAvatar} renderPdf={renderPdf} createFreeRouterConsent={createFreeRouterConsent} machineOf={machineOf}
         onRespuestaRapida={mandarTexto}
         visualScope={JSON.stringify([visualWorkspace, pp.proyecto ?? "", pp.sesion])}
-        readVisual={(file) => readChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "" }, file)}
-        openVisual={capabilities().nativeWindow ? (file) => openChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "" }, file) : undefined}
+        readVisual={(file) => readChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "", machine: machineOf(pp.sesion) }, file)}
+        openVisual={capabilities().nativeWindow ? (file) => openChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "", machine: machineOf(pp.sesion) }, file) : undefined}
         onMiniatura={miniaturaDeAdjunto}
         onPreview={previewDeAdjunto}
         onPegarImagen={pegarImagen}
@@ -6309,7 +6309,7 @@ export default function App() {
     >
       {(e) => (
         <LazyPart><AgentProfile
-          project={proyectoDeLaCelda()?.id ?? ""}
+          project={proyectoDeLaCelda()?.id ?? ""} createFreeRouterConsent={createFreeRouterConsent}
           agent={e()}
           profile={cellProfile()}
           handlerPolicy={handlerPolicy()}
@@ -6753,7 +6753,7 @@ export default function App() {
               materialPedido={materialPedido() === p().id}
               onMaterialVisto={() => setMaterialPedido(null)}
               workspace={workspaceActivo()}
-              modelos={modelosParaAgentes()}
+              modelos={modelosParaAgentes()} createFreeRouterConsent={createFreeRouterConsent}
               sources={sources()}
               agents={agents()}
               sessions={sesionesConEstado()[p().id] ?? []}
@@ -7301,7 +7301,7 @@ export default function App() {
             <div class="min-h-0 flex-1">
             <Sidebar
               projects={proyectosDelRiel()}
-              modelos={modelosParaAgentes()}
+              modelos={modelosParaAgentes()} createFreeRouterConsent={createFreeRouterConsent}
               sessions={sesionesDelRiel()}
               viewKey={sidebarViewKey(workspaceActivo(), escritorio())}
               filterRef={(filter, released) => setSidebarFilter((actual) => filter ?? (actual === released ? null : actual))}

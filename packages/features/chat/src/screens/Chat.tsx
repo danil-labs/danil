@@ -1,5 +1,5 @@
 import { isRetiredAgent } from "@terminus/tasks";
-import type { Preview } from "../../../artifacts/src/components/Preview";
+import type { Preview } from "../../../../ui/src/lib/preview.ts";
 import { HistoryDetails } from "../components/HistoryDetails";
 import type { InvokeOptions } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -41,7 +41,7 @@ import { createBlockKeys, estimateBlock } from "../model/threadRows";
 import type { ObservedTurnActivity as TurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation";
 import type { VirtualThreadApi } from "../components/VirtualThread";
 import { CHUNK, chunkAt, chunkIds, chunkOf, chunkStart, headChunk, tailChunk, type Lectura } from "../model/threadWindow";
-import { workLabel } from "../../../projects/src/model/branchLabel";
+import { workLabel } from "../../../../ui/src/lib/workLabel.ts";
 import { sangrarTerminal } from "../model/terminalIndent";
 import { ponerLanzamiento } from "../model/launchGroups";
 import { freeMcpNoticeAt } from "../model/free-mcp-notice.ts";
@@ -72,7 +72,8 @@ import type {
   ModoDePermiso,
   Source,
 } from "../../../../../apps/desktop/src/lib/model";
-import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
+import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
+import type { MachineOf } from "../queries/history-details";
 import {
   type CatalogosDeModelos,
   modelBrand,
@@ -163,7 +164,7 @@ import type { Msg, PermissionOrigin } from "../model/messageTypes";
 import { observedActivityAction } from "../model/activityPresentation";
 import { ComposerAction } from "../components/composer/ComposerAction";
 import { PendingHandoff, handoffStatus } from "../components/thread/PendingHandoff";
-import type { HandoffPresentation } from "../../../conversation-handoff/src";
+import type { HandoffPresentation } from "../../../../ui/src/lib/handoff.ts";
 import { RegistroDeTrabajo } from "../components/activity/TurnActivity";
 
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
@@ -553,6 +554,10 @@ export type ChatProps = {
   onAdjuntos: (rutas: string[]) => void;
   onAgregarAdjuntos: (rutas: string[]) => Promise<void>;
   cola: ColaDeMensajesProps;
+  renderAvatar: (props: { name: string; status: HandlerStatus; body?: string | null; avatar?: string | null; size?: number; class?: string }) => JSX.Element;
+  renderPdf: (props: { base64: string; name: string }) => JSX.Element;
+  createFreeRouterConsent: CreateFreeRouterConsent;
+  machineOf: MachineOf;
 };
 
 /**
@@ -2053,6 +2058,7 @@ export default function Chat(props: ChatProps) {
               <Suggestions
                 items={suggestions()}
                 index={picked()}
+                renderAvatar={props.renderAvatar}
                 truncated={trigger()?.kind === "@" && (props.mentionSources?.truncado || searchTasks(props.taskCandidates ?? [], trigger()?.query ?? "", props.mentionProject ?? "", props.mentionSession).length > 40)}
                 empty={
                   trigger()?.kind === "@"
@@ -2253,7 +2259,7 @@ export default function Chat(props: ChatProps) {
             <For each={props.adjuntos}>
               {(p) => (
                 <div class="group relative shrink-0">
-                  <Adjunto rel={p} miniatura={props.onMiniatura} preview={props.onPreview} />
+                  <Adjunto rel={p} miniatura={props.onMiniatura} preview={props.onPreview} renderPdf={props.renderPdf} />
                   {/* Dentro de la esquina: fuera de ella, el scroll horizontal la recorta. */}
                   <button
                     type="button"
@@ -2636,6 +2642,7 @@ export default function Chat(props: ChatProps) {
                   y «Modelos gratuitos» son dos entradas del mismo proveedor. */}
               <SelectorDeModelo
                 pildora
+                createFreeRouterConsent={props.createFreeRouterConsent}
                 invokeOptions={props.modelOptions}
                 marca={modelBrand(actual()?.provider ?? props.agent, props.model)}
                 models={opciones()}
@@ -2723,6 +2730,7 @@ export default function Chat(props: ChatProps) {
                 <Match when={trabajoDe(b())}>
                   {(trabajo) => (
                     <TrabajoDeAgente
+                      route={props.machineOf}
                       searchBlock={indice()}
                       responseOnly={b().responseOnly}
                       visualBudget={visualBudget}
@@ -2784,7 +2792,7 @@ export default function Chat(props: ChatProps) {
                         setTrabajos({ ...trabajos(), [claveFila(bp())]: abierto });
                       }}
                     />
-                    <div data-thread-search-text={indice()}><RespuestasDeAvance avance={pasosDe(b())?.avance ?? SIN_AVANCE} visualBudget={visualBudget} visualScope={props.visualScope} readVisual={props.readVisual} openVisual={props.openVisual} /></div>
+                    <div data-thread-search-text={indice()}><RespuestasDeAvance route={props.machineOf} avance={pasosDe(b())?.avance ?? SIN_AVANCE} visualBudget={visualBudget} visualScope={props.visualScope} readVisual={props.readVisual} openVisual={props.openVisual} /></div>
                     <Index each={(pasosDe(b())?.avance ?? SIN_AVANCE).map(chunk => chunk.msg).filter(message => message.preguntas?.length)}>{(message) => <RegistroPreguntas items={message().preguntas!} respuestas={message().turno ? respondido().get(message().turno!) ?? null : null} abierta={!preguntasPlegadas()[claveDeTrabajo(message())]} onAlternar={() => { const key = claveDeTrabajo(message()); setPreguntasPlegadas({ ...preguntasPlegadas(), [key]: !preguntasPlegadas()[key] }); }} />}</Index>
                     </div>
                   )}
@@ -2908,7 +2916,7 @@ export default function Chat(props: ChatProps) {
                     <Show when={m().encargado}>
                       {(name) => (
                         <div class="shrink-0 self-end pb-9">
-                          <AstroAvatar name={name()} status="awake" body={props.bodyOf?.(name())} avatar={props.avatarOf?.(name())} size={44} />
+                          {props.renderAvatar({ name: name(), status: "awake", body: props.bodyOf?.(name()), avatar: props.avatarOf?.(name()), size: 44 })}
                         </div>
                       )}
                     </Show>
@@ -2932,7 +2940,7 @@ export default function Chat(props: ChatProps) {
                         entrante() ? presentation().incomingMessage : presentation().userMessage,
                       )}
                     >
-                      <Show when={m().historyRefs?.length}><HistoryDetails refs={m().historyRefs!} turnId={m().turno} /></Show>
+                      <Show when={m().historyRefs?.length}><HistoryDetails refs={m().historyRefs!} turnId={m().turno} route={props.machineOf} /></Show>
                       <Show when={entrante()}>
                         <div class="mb-1 flex justify-start gap-1 text-[0.72rem] text-neutral-500" data-sender={m().encargado ? "agent" : "task"}>
                           <Show when={m().encargado}>
@@ -2989,7 +2997,7 @@ export default function Chat(props: ChatProps) {
                             <For each={m().recipients!}>
                               {(r) => (
                                 <span class="flex items-center gap-1 font-semibold text-primary">
-                                  <AstroAvatar name={r.name} status="awake" body={props.bodyOf?.(r.name)} avatar={props.avatarOf?.(r.name)} size={18} />
+                                  {props.renderAvatar({ name: r.name, status: "awake", body: props.bodyOf?.(r.name), avatar: props.avatarOf?.(r.name), size: 18 })}
                                   {r.name}
                                 </span>
                               )}
@@ -3005,6 +3013,7 @@ export default function Chat(props: ChatProps) {
                             rels={m().attachments!}
                             miniatura={props.onMiniatura}
                             preview={props.onPreview}
+                            renderPdf={props.renderPdf}
                           />
                         </Show>
                         {/* Lo que se mencionó se sigue viendo como referencia
@@ -3165,13 +3174,13 @@ export default function Chat(props: ChatProps) {
               title={t("projects.agents.profile_open")}
               onClick={() => props.onOpenProfile?.()}
             >
-              <AstroAvatar
-                name={name()}
-                status={props.chatEstado ?? "awake"}
-                body={props.chatBody}
-                avatar={props.chatAvatar}
-                size={44}
-              />
+              {props.renderAvatar({
+                name: name(),
+                status: props.chatEstado ?? "awake",
+                body: props.chatBody,
+                avatar: props.chatAvatar,
+                size: 44,
+              })}
               {/* Solo el nombre: el estado ya lo dice la cara, y escribirlo
                   además deja dos rótulos del mismo estado en la misma barra. */}
               <div class="min-w-0 truncate text-[0.95rem] leading-tight font-semibold">
@@ -3198,6 +3207,7 @@ export default function Chat(props: ChatProps) {
             onJump={saltarAlMensaje}
             bodyOf={props.bodyOf}
             avatarOf={props.avatarOf}
+            renderAvatar={props.renderAvatar}
           />
         </Show>
         <div
@@ -3270,7 +3280,7 @@ export default function Chat(props: ChatProps) {
             )}
           </Show>
 
-          <PendingHandoff handoff={props.handoff ?? null} showStatus={props.handoff?.phase === "waiting-close" || !props.activities?.some(activity => activity.active)} bubble={presentation().UserBubble} userClass={presentation().userMessage} miniatura={props.onMiniatura} preview={props.onPreview} />
+          <PendingHandoff handoff={props.handoff ?? null} showStatus={props.handoff?.phase === "waiting-close" || !props.activities?.some(activity => activity.active)} bubble={presentation().UserBubble} userClass={presentation().userMessage} miniatura={props.onMiniatura} preview={props.onPreview} renderPdf={props.renderPdf} />
 
           <div
             class="col-span-full"
@@ -3335,7 +3345,7 @@ export default function Chat(props: ChatProps) {
           <Show when={centrada() ? props.chatEncargado : null}>
             {(name) => <div class="pointer-events-auto mx-auto flex max-w-[860px] flex-col items-center gap-3 px-6 text-center">
               <button type="button" class="rounded-sm focus-visible:outline-2 focus-visible:outline-primary" aria-label={t("projects.agents.profile_open")} title={t("projects.agents.profile_open")} onClick={() => props.onOpenProfile?.()}>
-                <AstroAvatar name={name()} status={props.chatEstado ?? "awake"} body={props.chatBody} avatar={props.chatAvatar} size={56} />
+                {props.renderAvatar({ name: name(), status: props.chatEstado ?? "awake", body: props.chatBody, avatar: props.chatAvatar, size: 56 })}
               </button>
               <h1 class="m-0 font-display text-xl font-bold text-neutral-950">{props.chatName?.trim() || name()}</h1>
               <Show when={props.chatDescription}><p class="m-0 max-w-[36rem] text-sm text-neutral-700">{props.chatDescription}</p></Show>
@@ -3376,7 +3386,7 @@ export default function Chat(props: ChatProps) {
                 <div class="flex min-w-0 flex-col gap-2.5 pt-10 @5xl:sticky @5xl:top-0 @5xl:min-h-[100cqh] @5xl:justify-center @5xl:py-10">
                   <header class="mb-3 flex min-w-0 items-start gap-4">
                     <button type="button" class="shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" aria-label={t("projects.agents.profile_open")} title={t("projects.agents.profile_open")} onClick={() => props.onOpenProfile?.()}>
-                      <AstroAvatar name={name()} status={props.chatEstado ?? "awake"} body={props.chatBody} avatar={props.chatAvatar} size={52} />
+                      {props.renderAvatar({ name: name(), status: props.chatEstado ?? "awake", body: props.chatBody, avatar: props.chatAvatar, size: 52 })}
                     </button>
                     <div class="flex min-w-0 flex-1 flex-col gap-1">
                       <div class="flex min-w-0 items-center gap-2">
@@ -3420,15 +3430,16 @@ function activitySteps(activity: TurnActivity<Msg> | undefined): Paso[] {
 }
 
 /** Native stream messages have no semantic phase: their responses never enter the activity fold. */
-function RespuestasDeAvance(props: { avance: Avance[]; visualBudget: VisualBudget; visualScope?: string; readVisual?: (file: string) => Promise<string>; openVisual?: (file: string) => Promise<void> }) {
+function RespuestasDeAvance(props: { route: MachineOf; avance: Avance[]; visualBudget: VisualBudget; visualScope?: string; readVisual?: (file: string) => Promise<string>; openVisual?: (file: string) => Promise<void> }) {
   return <Index each={props.avance.filter(chunk => chunk.outside)}>{(chunk) => <>
     <Show when={textoVisible(chunk().msg.text)}>{(text) => <TextoConSiguientes texto={text()} vivo={false} rapida={null} readVisual={props.readVisual} openVisual={props.openVisual} owner={props.visualScope ?? ""} visualBudget={props.visualBudget} />}</Show>
-    <Show when={chunk().msg.historyRefs?.length}><HistoryDetails refs={chunk().msg.historyRefs!} turnId={chunk().msg.turno} renderText={(text) => <TextoConSiguientes texto={text} vivo={false} rapida={null} readVisual={props.readVisual} openVisual={props.openVisual} owner={props.visualScope ?? ""} visualBudget={props.visualBudget} />} /></Show>
+    <Show when={chunk().msg.historyRefs?.length}><HistoryDetails refs={chunk().msg.historyRefs!} turnId={chunk().msg.turno} route={props.route} renderText={(text) => <TextoConSiguientes texto={text} vivo={false} rapida={null} readVisual={props.readVisual} openVisual={props.openVisual} owner={props.visualScope ?? ""} visualBudget={props.visualBudget} />} /></Show>
     <Show when={chunk().msg.images?.length ? chunk().msg.images : null}>{(images) => <ImagenesEntregadas items={images()} />}</Show>
   </>}</Index>;
 }
 
 function TrabajoDeAgente(props: {
+  route: MachineOf;
   visualBudget: VisualBudget;
   visualScope?: string;
   readVisual?: (file: string) => Promise<string>;
@@ -3525,7 +3536,7 @@ function TrabajoDeAgente(props: {
           respuesta con un renglón encima; ahí competía con el texto y nombraba
           al encargado del hilo, que ya lo dice la cabecera. */}
       <div data-thread-search-text={props.searchBlock}>
-      <RespuestasDeAvance avance={props.avance} visualBudget={props.visualBudget} visualScope={props.visualScope} readVisual={props.readVisual} openVisual={props.openVisual} />
+      <RespuestasDeAvance route={props.route} avance={props.avance} visualBudget={props.visualBudget} visualScope={props.visualScope} readVisual={props.readVisual} openVisual={props.openVisual} />
       <Show when={texto()}>
         {(md) => (
           <AltoMonotono vivo={props.vivo}>
@@ -3535,7 +3546,7 @@ function TrabajoDeAgente(props: {
       </Show>
 
       </div>
-      <Show when={props.msg.historyRefs?.length}><HistoryDetails refs={props.msg.historyRefs!} turnId={props.msg.turno} renderText={(text) => <TextoConSiguientes texto={text} vivo={props.vivo} rapida={props.rapida} readVisual={props.readVisual} openVisual={props.openVisual} owner={props.visualScope ?? ""} visualBudget={props.visualBudget} />} /></Show>
+      <Show when={props.msg.historyRefs?.length}><HistoryDetails refs={props.msg.historyRefs!} turnId={props.msg.turno} route={props.route} renderText={(text) => <TextoConSiguientes texto={text} vivo={props.vivo} rapida={props.rapida} readVisual={props.readVisual} openVisual={props.openVisual} owner={props.visualScope ?? ""} visualBudget={props.visualBudget} />} /></Show>
       <Show when={props.msg.images?.length ? props.msg.images : null}>
         {(images) => <ImagenesEntregadas items={images()} />}
       </Show>

@@ -1,11 +1,11 @@
-import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
+import { createEffect, createSignal, For, on, onCleanup, Show, type JSX } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Popover, PopoverContent } from "../../../../ui/src/Popover";
 import { RETARDO_TOOLTIP } from "../../../../ui/src/Tooltip";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { modelBrand } from "../../../../../apps/desktop/src/lib/models";
 import { MarcaAgente } from "../../../../ui/src/icons";
-import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
+import type { HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
 
 /** Un input del hilo, con la identidad de quien lo envió si fue un agente. */
 export type InputMessage = {
@@ -29,6 +29,7 @@ export default function YourMessages(props: {
   onJump: (block: number) => void;
   bodyOf?: (name: string) => string | null;
   avatarOf?: (name: string) => string | null;
+  renderAvatar: (props: { name: string; status: HandlerStatus; body?: string | null; avatar?: string | null; size?: number }) => JSX.Element;
 }) {
   const [open, setOpen] = createSignal(false);
   const [preview, setPreview] = createSignal(props.active);
@@ -180,7 +181,7 @@ export default function YourMessages(props: {
                 <span class="flex size-6 shrink-0 items-center justify-center rounded-full bg-neutral-200">
                   <Show when={sender().kind === "agent" ? sender() as { kind: "agent"; name: string } : null}
                     fallback={<MarcaAgente id={modelBrand((sender() as { kind: "task"; agent: string }).agent, (sender() as { kind: "task"; model?: string | null }).model)} size={14} />}>
-                    {(agent) => <AstroAvatar name={agent().name} status="awake" body={props.bodyOf?.(agent().name)} avatar={props.avatarOf?.(agent().name)} size={24} />}
+                    {(agent) => props.renderAvatar({ name: agent().name, status: "awake", body: props.bodyOf?.(agent().name), avatar: props.avatarOf?.(agent().name), size: 24 })}
                   </Show>
                 </span>
               )}

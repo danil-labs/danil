@@ -1,9 +1,8 @@
 import Lock from "lucide-solid/icons/lock";
 import Sparkles from "lucide-solid/icons/sparkles";
-import { For, Show, createEffect, on } from "solid-js";
+import { For, Show, createEffect, on, type JSX } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
-import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
 
@@ -48,6 +47,7 @@ export default function Suggestions(props: {
   empty: string;
   /** La lista de origen no cabía entera. */
   truncated?: boolean;
+  renderAvatar: (props: { name: string; status: HandlerStatus; avatar?: string | null; size?: number; body?: string | null }) => JSX.Element;
   onPick: (s: Suggestion) => void;
 }) {
   let list: HTMLUListElement | undefined;
@@ -117,7 +117,7 @@ export default function Suggestions(props: {
                   <Show when={s.avatar}>
                     {(a) => (
                       <span class="shrink-0 self-center">
-                        <AstroAvatar name={a().name} status={a().status} avatar={a().image} size={18} />
+                        {props.renderAvatar({ name: a().name, status: a().status, avatar: a().image, size: 18 })}
                       </span>
                     )}
                   </Show>

@@ -25,7 +25,7 @@ import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
-import { createFreeRouterConsent } from "../../../settings/src/components/free-router-consent";
+import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import { DANIL_CREDITS } from "../model/danil-credits";
 
 const DanilServices = lazy(() => import("./DanilServices"));
@@ -42,6 +42,7 @@ const gruposDeModelos = (models: OpcionDeModelo[], query: string) =>
   agruparModelos(models.filter((opcion) => !esServicio(opcion)), query);
 
 type SelectorDeModeloProps = {
+  createFreeRouterConsent: CreateFreeRouterConsent;
   invokeOptions?: { headers: Record<string, string> };
   models: OpcionDeModelo[];
   superficie: string;
@@ -85,7 +86,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   const [favoritos, setFavoritos] = createPref<string[]>("chat.model.favorites", []);
   const [cupoGo, setCupoGo] = createSignal<Query | null>(null);
   const filas = new Map<string, HTMLElement>();
-  const consent = createFreeRouterConsent({ agente: () => FREE_ROUTER_OPENCODE });
+  const consent = props.createFreeRouterConsent({ agente: () => FREE_ROUTER_OPENCODE });
   const estadoRouter = () => routerOfferState(
     consent.cargado() ? (consent.texto() ? { enabled: consent.texto()!.policy.enabled, accepted: consent.aceptado() } : null) : undefined,
     consent.routeAvailable(),
