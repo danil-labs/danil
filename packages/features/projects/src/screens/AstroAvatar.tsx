@@ -3,7 +3,7 @@ import { Dynamic } from "solid-js/web";
 import { ASTRO_BODIES, ASTRO_SHAPES, astroBody, type AstroBody, type AstroNode } from "@terminus/design";
 import type { HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import { generacionDeAvatar, urlDeAvatar } from "../queries/avatar-src";
+import { generacionDeAvatar, urlDeAvatar } from "../queries";
 
 const CHARACTER_BODIES = ["character-ventas", "character-direccion", "character-diseno", "character-finanzas", "character-rh"] as const;
 export const CUERPOS = [...ASTRO_BODIES, ...CHARACTER_BODIES];

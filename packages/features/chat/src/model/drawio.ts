@@ -5,6 +5,7 @@
  * dentro del XML o del visor cierra la etiqueta que lo contiene y deja la vista
  * en blanco sin un error.
  */
+import { CSP_VISOR as VIEW_CSP } from "../../../../ui/src/lib/sandbox.ts";
 
 /** El XML que trajo la llamada, o `null` si no vino uno. */
 export function drawioXml(args: Record<string, unknown> | null | undefined): string | null {
@@ -54,21 +55,6 @@ export function drawioAssets(xml: string, catalog: DrawioAsset[]): DrawioAsset[]
     return asset.names.some((prefix) => names.some((name) => name === prefix || name.startsWith(`${prefix}.`)));
   });
 }
-
-const VIEW_CSP = [
-  "default-src 'none'",
-  "script-src 'unsafe-inline'",
-  "style-src 'unsafe-inline'",
-  "img-src data:",
-  "font-src data:",
-  "media-src data:",
-  "connect-src 'none'",
-  "form-action 'none'",
-  "frame-src 'none'",
-  "base-uri 'none'",
-  "object-src 'none'",
-  "worker-src 'none'",
-].join("; ");
 
 /**
  * El documento aislado que monta el visor oficial sobre el XML.

@@ -2,6 +2,7 @@ import { For } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import Accounts from "./Accounts";
 import type { MaquinasDeAjustes } from "../model/machines-port";
+import type { PiezasDeAjustes } from "../model/features-port";
 import DanilCreditsRow from "./DanilCreditsRow";
 import { SettingsSection } from "../../../../ui/src/SettingsLayout";
 
@@ -10,10 +11,10 @@ import { SettingsSection } from "../../../../ui/src/SettingsLayout";
  * un `Accounts soloGratuitos` sin título por motor (su fila trae el
  * consentimiento y la instalación). El Router no es un grupo ni sale en «Agregar cuenta».
  */
-export default function DanilBlock(props: { routers: string[]; maquinas: MaquinasDeAjustes }) {
+export default function DanilBlock(props: { routers: string[]; maquinas: MaquinasDeAjustes; piezas: PiezasDeAjustes }) {
   return (
     <SettingsSection title="Danil" aria-label="Danil">
-      <DanilCreditsRow />
+      <DanilCreditsRow piezas={props.piezas} />
       <For each={props.routers}>{(id) => <Accounts agente={id} soloGratuitos nombre={t("surfaces.label.free")} maquinas={props.maquinas} />}</For>
     </SettingsSection>
   );

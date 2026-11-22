@@ -4,24 +4,8 @@
       "sha256": "6cd391eb6595d06fabf8f620f7a299ce9d221f10a79afcf6bee4b7701474b682",
       "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
     },
-    "packages/attention/src/broadcasts.ts": {
-      "sha256": "610949eadf4a6f9d84a843d1bcf3e599e4dae76b4aa125aa087456367be07ed8",
-      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
-    },
-    "packages/attention/src/messaging.ts": {
-      "sha256": "2ecb5220657f7bdecbeed355f7ddec082035a594089b529ceda872f45d118d91",
-      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
-    },
-    "packages/attention/src/broadcast-panel.ts": {
-      "sha256": "cd3674c83e64d49c247ab177986c5ae2e968f7dff58103f76e84605b35a1393e",
-      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
-    },
     "packages/attention/src/channels.ts": {
       "sha256": "2bc49dc77a061196462cecd57aed15f4bb32fbc8a0de2349b4e0c01548956679",
-      "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
-    },
-    "packages/attention/src/service.ts": {
-      "sha256": "e95ac5930bc1fff5db3333195603ee8f060040a932c99eb82f44ec0f1e76cea1",
       "pending": "Mobile-only legacy module; desktop/web imports remain forbidden"
     }
   }

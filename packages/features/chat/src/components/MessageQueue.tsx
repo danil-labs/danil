@@ -14,7 +14,7 @@ import type { Agent } from "../../../../../apps/desktop/src/lib/model";
 import { Button } from "../../../../ui/src/Button";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { deOtraTarea, esDeLaTerminal, interrumpible, type Encolado, type RazonDeRetencion } from "../../../../ui/src/lib/queue.ts";
-import { Pressable } from "../../../../ui/src/Pressable";
+import { OpenSenderTask } from "./OpenSenderTask";
 export type { Encolado };
 
 
@@ -164,18 +164,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                             ? t("chat.queue.from_task", { title: it.from_task.title })
                             : t("chat.queue.from_agent", { name: it.agent ?? "" })}
                           <Show when={props.onOpenTask ? it.from_task : null}>
-                            {(sender) => (
-                              <>
-                                {" — "}
-                                <Pressable
-                                  class="cursor-pointer underline underline-offset-2"
-                                  aria-label={t("chat.recipients.open_task", { title: sender().title })}
-                                  onClick={() => props.onOpenTask?.(sender().folder, sender().task, sender().machine)}
-                                >
-                                  {t("chat.task_completed.open")}
-                                </Pressable>
-                              </>
-                            )}
+                            {(sender) => <OpenSenderTask sender={sender} onOpenTask={props.onOpenTask} />}
                           </Show>
                         </span>
                       </Show>

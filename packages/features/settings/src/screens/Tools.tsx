@@ -28,7 +28,7 @@ import {
   mcpSignIn,
   mcpSignInFailure,
   mcpSignInState,
-} from "../../../chat/src/screens/McpSignInNotice";
+} from "./McpSignInNotice";
 
 /**
  * Conectar una herramienta al agente: Figma, Jira, Confluence.

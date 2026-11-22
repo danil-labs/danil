@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../apps/desktop/src/lib/i18n";
 
 /**
  * Las marcas de `surfaces::Superficie`, tal como las escribe Rust.
