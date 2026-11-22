@@ -887,7 +887,7 @@ export class Fleet {
         if (verdict) member.outdated = false;
         this.config.onChange?.(info.id, info.context);
       }) ?? (() => {}),
-      link.onBlocked?.(() => this.config.onChange?.(info.id)) ?? (() => {}),
+      link.onBlocked?.(() => this.config.onChange?.(info.id, info.context)) ?? (() => {}),
       link.onDeferred?.((frame) => {
         if (!frame.actions.length && !frame.done.length && !member.fresh) return;
         member.fresh = new Set();
