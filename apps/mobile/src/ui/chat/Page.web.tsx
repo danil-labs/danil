@@ -1,4 +1,4 @@
-import { SANDBOX_ARTEFACTO } from "@terminus/chat/sandbox";
+import { SANDBOX_ARTEFACTO } from "@terminus/chat";
 
 /** La política de la página (`frame-src 'self'`) no deja abrir un PDF en `data:`; se ofrece abrirlo en la computadora. */
 export const PDF_INLINE = false;

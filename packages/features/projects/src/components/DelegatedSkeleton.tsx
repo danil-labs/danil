@@ -30,7 +30,7 @@ export function DelegatedSkeleton(props: { rows?: number }) {
               <div class="task-card-end">
                 <span class="task-card-end-mark">
                   <span class="task-card-mark">
-                    <Spinner size={14} class="text-primary motion-safe:animate-spin-lento motion-reduce:animate-none" />
+                    <Spinner size={14} speed="slow" class="text-primary" />
                   </span>
                 </span>
               </div>

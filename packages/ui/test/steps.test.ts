@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isQuestionFile, joinSteps, stepCounts } from "../src/steps.ts";
+import { isQuestionFile, joinSteps, stepCounts } from "../src/lib/chat/steps.ts";
 
 const kindOf = (step: { kind: string }) => step.kind;
 

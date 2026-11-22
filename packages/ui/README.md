@@ -8,6 +8,9 @@ Construida con SolidJS, Tailwind CSS y Kobalte; sin lógica de dominio ni llamad
 Exporta desde `src/` componentes y utilidades visuales:
 - Componentes base: `Button`, `Input`, `Select`, `Dialog`, `Popover`, `DropdownMenu`, `ContextMenu`, `Badge`, `Spinner`, `Toast`, `Table`, `Tabs`, `Toggle`, `Textarea`.
 - Visualización de datos y texto: `Markdown`, `Mermaid`, `FilePreview`, `EmptyState`, `ProgressBar`, `AnsiText`, `EnlargeableImage`.
+- Variantes de campo y de carga (2.1, p2-1f), cada una con las clases exactas del crudo que reemplaza:
+  - `Input variant="range"` (`accent-primary`; el ancho, `w-40` o `w-full`, va en `class`), `variant="picker"` (la búsqueda dentro de un selector, con la lupa a la izquierda), `variant="filePicker"` (el `type="file"` oculto que abre un botón) y `variant="plain"` (sin clases propias: casillas nativas y campos únicos que traen su className, como `Pressable`).
+  - `Spinner speed="slow"` (giro lento del riel, quieto con movimiento reducido), `RefreshSpinner` (el `RefreshCw` que gira con `spinning`) y `DashedRing` (el anillo punteado de la tarea que el motor todavía registra).
 - Iconos y tokens: catálogo de iconos (`icons.tsx`), marcas (`marcas.tsx`), y estilos globales.
 
 ## Qué consume

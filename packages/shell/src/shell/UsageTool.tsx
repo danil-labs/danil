@@ -1,4 +1,3 @@
-import RefreshCw from "lucide-solid/icons/refresh-cw";
 import AlertTriangle from "lucide-solid/icons/triangle-alert";
 import { For, Show } from "solid-js";
 import { immediateWindow } from "@terminus/computers";
@@ -12,6 +11,7 @@ import { Button } from "../../../ui/src/Button";
 import { MarcaAgente } from "../../../ui/src/icons";
 import { ProgressBar } from "../../../ui/src/ProgressBar";
 import { type Usage, usageKey } from "./usage";
+import { RefreshSpinner } from "../../../ui/src/Spinner";
 
 const AccountCard = sharedLazy(() => import("../../../features/settings/src/screens/AccountCard"));
 const DanilCredits = sharedLazy(() => import("../../../features/chat/src/screens/DanilCredits"));
@@ -132,7 +132,7 @@ export function UsagePanel(props: { usage: Usage; agent: string; onManage: () =>
       </div>
       <div class="flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2">
         <Button variant="ghost" size="compact" class="gap-1.5" title={t("usage.refresh")} disabled={props.usage.updating()} onClick={props.usage.refreshAll}>
-          <RefreshCw size={12} class={cn(props.usage.updating() && "animate-spin")} />
+          <RefreshSpinner size={12} spinning={props.usage.updating()} />
           {t("usage.refresh_all")}
         </Button>
         <Button variant="ghost" size="compact" class="font-semibold hover:text-neutral-950" onClick={props.onManage}>

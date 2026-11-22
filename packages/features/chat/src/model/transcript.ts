@@ -5,7 +5,7 @@
  * dominio y se prueba desde Node.
  */
 
-import { mcpCallFromName } from "@terminus/chat/tools";
+import { mcpCallFromName } from "../../../../ui/src/lib/chat/tools.ts";
 
 export * from "./transcript-chat-event.ts";
 export * from "./transcript-live.ts";
@@ -14,6 +14,6 @@ export * from "./transcript-render.ts";
 
 /**
  * Partir `mcp__servidor__tool` es cosa de todos los clientes, no de esta
- * pantalla: vive en `@terminus/chat/tools`, junto con la marca del servicio.
+ * pantalla: vive en `packages/ui/src/lib/chat/tools.ts`, junto con la marca del servicio.
  */
 export { mcpCallFromName };

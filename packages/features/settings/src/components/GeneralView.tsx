@@ -1,7 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import Files from "lucide-solid/icons/files";
 import FolderOpen from "lucide-solid/icons/folder-open";
-import RefreshCw from "lucide-solid/icons/refresh-cw";
 import Search from "lucide-solid/icons/search";
 import { createSignal, For, onMount, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -10,7 +9,6 @@ import { setRoot } from "../queries/engine-misc";
 import { getProfile, getProjectDirectory, listSources, removeSource, setProfile, setProjectDirectory, sourceDetail, sourceFreshness } from "../queries/engine-workspaces";
 import { abbreviateHomePath, remoteHost, remotePathLabel } from "../../../../../apps/desktop/src/lib/remote-path";
 import type { Source } from "../../../../../apps/desktop/src/lib/model";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote, prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
@@ -23,6 +21,7 @@ import { Lengua } from "./Language";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import MaterialPicker from "./MaterialPicker";
 import { type Freshness, type SourceDetail, SourceRow } from "./GeneralSources";
+import { RefreshSpinner } from "../../../../ui/src/Spinner";
 
 export default function General(props: { maquinas: MaquinasDeAjustes }) {
   const { machineName, machines } = props.maquinas;
@@ -267,7 +266,7 @@ export default function General(props: { maquinas: MaquinasDeAjustes }) {
                   : t("settings.general.extra.check_title")
               }
             >
-              <RefreshCw size={13} class={cn(checking() && "animate-spin")} />
+              <RefreshSpinner size={13} spinning={checking()} />
               {checking()
                 ? t("settings.general.extra.checking")
                 : t("settings.general.extra.check")}

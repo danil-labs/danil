@@ -5,7 +5,7 @@
  * quedan con su glifo o el spinner. No lleva rótulo escrito, a diferencia de un
  * MCP (`origenDeFila`): el programa ya nombra el servicio.
  */
-import { commandSource, type CommandSource } from "@terminus/chat/tools";
+import { commandSource, type CommandSource } from "../../../../packages/ui/src/lib/chat/tools.ts";
 import type { Fila } from "./steps.ts";
 
 export const comandoDeFila = (fila: Fila): CommandSource | null => {

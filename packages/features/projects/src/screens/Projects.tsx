@@ -20,6 +20,7 @@ import WorkdirIcon, { workdirKindLabel } from "../../../../ui/src/WorkdirIcon";
 import PickerRow from "../components/PickerRow";
 import { byRecent, type PickedAt, pickerSections, taskCountOf } from "../model/recent";
 import { Pressable } from "../../../../ui/src/Pressable";
+import { Input } from "../../../../ui/src/Input";
 
 /**
  * Con qué proyecto se trabaja, debajo de la caja y no en la cabecera: es una
@@ -115,9 +116,9 @@ export function ProjectPicker(props: {
               class="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2"
               aria-hidden="true"
             />
-            <input
+            <Input
               ref={enfocar}
-              class="w-full bg-transparent py-1 pr-2 pl-6 text-caption outline-none"
+              variant="picker"
               placeholder={t("projects.picker.search")}
               value={busca()}
               onInput={(e) => setBusca(e.currentTarget.value)}

@@ -1,5 +1,5 @@
 import { fromMarkdown } from "mdast-util-from-markdown";
-import { MAX_CHAT_VISUALS, parseVisualDirective } from "@terminus/chat/visual";
+import { MAX_CHAT_VISUALS, parseVisualDirective } from "../../../../ui/src/lib/chat/visual.ts";
 
 export { MAX_CHAT_VISUALS };
 

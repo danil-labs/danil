@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { commandSource, mcpCallFromName, readableToolName, toolSource } from "../src/tools.ts";
+import { commandSource, mcpCallFromName, readableToolName, toolSource } from "../src/lib/chat/tools.ts";
 
 test("el nombre de un MCP se parte en servidor y herramienta, con las dos formas", () => {
   assert.deepEqual(mcpCallFromName("mcp__github__create_issue"), { server: "github", tool: "create_issue" });

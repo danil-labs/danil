@@ -16,7 +16,7 @@
  * Si las comillas no cierran, no se adivina: se devuelve el texto tal cual. Pasa
  * cuando el agente censura credenciales y se lleva la barra de una comilla.
  */
-import { commandName } from "../../ui/src/toolMarkNames.ts";
+import { commandName } from "../../toolMarkNames.ts";
 
 /** Los intérpretes cuyo `-c`/`-lc` lleva el guion de verdad. */
 const SHELLS = new Set(["sh", "bash", "zsh", "dash", "ash", "ksh", "fish", "pwsh", "powershell", "cmd"]);

@@ -1,5 +1,5 @@
 import { TEXT } from "@terminus/design";
-import { envolver } from "@terminus/chat/sandbox";
+import { envolver } from "@terminus/chat";
 import type { FilePreview } from "@terminus/protocol";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";

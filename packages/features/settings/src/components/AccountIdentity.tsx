@@ -14,6 +14,7 @@ import {
 import { profileFromStatus } from "../queries/account-engine";
 import { failureCode, type DanilConnectStatus } from "../queries/danil-account";
 import { said } from "./danil-session";
+import { Input } from "../../../../ui/src/Input";
 
 /** La cara de la persona: su foto o sus iniciales. */
 export function AccountAvatar(props: { profile: AccountProfile | null; class?: string }) {
@@ -108,11 +109,11 @@ export function AccountIdentityBlock(props: { identity: AccountIdentityState }) 
           </Show>
         </div>
         <Show when={!id.readonly}><div class="flex shrink-0 items-center gap-2">
-          <input
+          <Input
             ref={picker}
             type="file"
             accept={PHOTO_TYPES.join(",")}
-            class="hidden"
+            variant="filePicker"
             data-account-photo-input=""
             onChange={(e) => {
               const file = e.currentTarget.files?.[0];

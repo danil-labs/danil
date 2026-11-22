@@ -7,7 +7,7 @@ import {
   VISUAL_PART_BYTES,
   type VisualPart,
   type VisualWhole,
-} from "../../../../packages/chat/src/visual.ts";
+} from "../../../../packages/ui/src/lib/chat/visual.ts";
 
 const b64 = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64");
 
