@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Que `packages/design` diga lo mismo que el escritorio.
+ * Que los tokens de `packages/ui` (`src/index.ts`) digan lo mismo que el escritorio.
  *
  *   node --experimental-strip-types scripts/guards/shared-design.mjs
  *
@@ -13,14 +13,13 @@
  * - cada palabra de `WORDS` (lista de tareas, dock, máquinas) contra la misma
  *   clave en los catálogos de su lengua.
  */
-import { generateAuthPage } from "../../../../packages/design/scripts/auth-page.mjs";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const { ASTRO_BODIES, astroColors, CHANNEL_COLORS, CSS_SOURCE, CSS_THEME_BLOCKS, RADIUS, STATUS_ICONS, STATUS_LABELS, TEXT, THEMES, WORDS } = await import(
-  pathToFileURL(join(ROOT, "..", "..", "packages/design/src/index.ts")).href
+  pathToFileURL(join(ROOT, "..", "..", "packages/ui/src/index.ts")).href
 );
 
 const failures = [];
@@ -93,7 +92,6 @@ for (const [mode, selectors] of Object.entries(CSS_THEME_BLOCKS)) {
 }
 
 const hoja = readFileSync(join(ROOT, "src/styles/global.css"), "utf8");
-if (readFileSync(join(ROOT, "../../packages/design/auth-page.css"), "utf8") !== generateAuthPage(hoja)) failures.push("auth-page.css differs from global.css; run node packages/design/scripts/auth-page.mjs");
 const medida = (variable) => hoja.match(new RegExp(`${variable}:\\s*([\\d.]+)(rem|px);`));
 const enPx = (variable) => {
   const m = medida(variable);
@@ -147,7 +145,7 @@ for (const [state, name] of Object.entries(STATUS_ICONS)) {
 }
 
 if (failures.length) {
-  console.error(`packages/design se apartó del escritorio:\n  ${failures.join("\n  ")}`);
+  console.error(`los tokens de packages/ui se apartaron del escritorio:\n  ${failures.join("\n  ")}`);
   process.exit(1);
 }
-console.log("packages/design coincide con global.css, los catálogos (estados y palabras) y TaskStatus.tsx.");
+console.log("los tokens de packages/ui coinciden con global.css, los catálogos (estados y palabras) y TaskStatus.tsx.");

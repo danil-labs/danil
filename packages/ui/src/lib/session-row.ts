@@ -1,4 +1,4 @@
-import type { TaskActivity } from "@terminus/design";
+import type { TaskActivity } from "../taskState";
 
 
 /**

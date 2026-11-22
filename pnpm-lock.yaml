@@ -88,9 +88,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../packages/computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../packages/design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../packages/fleet
@@ -221,8 +218,6 @@ importers:
 
   packages/computers: {}
 
-  packages/design: {}
-
   packages/engine-client:
     dependencies:
       '@tauri-apps/api':
@@ -310,9 +305,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -506,9 +498,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -702,9 +691,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -898,9 +884,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -1094,9 +1077,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -1290,9 +1270,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -1486,9 +1463,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -1682,9 +1656,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -1878,9 +1849,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -2074,9 +2042,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -2270,9 +2235,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -2466,9 +2428,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -2662,9 +2621,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -2858,9 +2814,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -3054,9 +3007,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -3250,9 +3200,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -3446,9 +3393,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -3642,9 +3586,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -3838,9 +3779,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
@@ -4107,9 +4045,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../fleet
@@ -4248,9 +4183,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../design
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1

@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
-import { TEXT_STEPS } from "@terminus/design";
+import { TEXT_STEPS } from "../../../../packages/ui/src/index";
 import { extendTailwindMerge } from "tailwind-merge";
 
 // Sin esto `text-caption` se lee como color y borra el `text-*` de color de al lado.

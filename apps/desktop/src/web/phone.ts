@@ -4,7 +4,7 @@
  * volver de identity, cuya vuelta exacta es la raíz. Cada una enlaza a la otra y lo que la persona
  * elige se recuerda (`chosenWebLayout`). Sin APIs del DOM: el navegador se inyecta.
  */
-import { MOBILE_WEB_DIR, chosenWebLayout } from "@terminus/design";
+import { MOBILE_WEB_DIR, chosenWebLayout } from "../../../../packages/ui/src/index";
 
 type Place = { pathname: string; search: string };
 

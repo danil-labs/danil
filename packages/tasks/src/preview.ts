@@ -9,7 +9,7 @@
  * aquí. Lo que solo el escritorio sabe (rama, PR, etapa) lo añade él.
  */
 import { modelPresentation } from "./model-presentation.ts";
-import { word } from "../../design/src/index.ts";
+import { word } from "../../ui/src/index.ts";
 import { type CardOptions, type CardTask, taskCard } from "./card.ts";
 import { isPinned } from "./view.ts";
 

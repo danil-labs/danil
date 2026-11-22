@@ -9,7 +9,7 @@ import { displayName } from "../queries/profiles";
 import EstadoDeTarea from "./TaskStatus";
 import { authorKey, authorKeys } from "../model/taskAuthors";
 import { descendientes, type Rama as RamaDeTareas } from "../model/taskTree";
-import { rolledOutcome } from "@terminus/design";
+import { rolledOutcome } from "../../../../ui/src/index";
 import { taskIdentity } from "@terminus/tasks";
 import { Pressable } from "../../../../ui/src/Pressable";
 import type { SessionRow, SessionsProps } from "./sessions-model";

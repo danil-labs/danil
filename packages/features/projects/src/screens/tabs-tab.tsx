@@ -16,7 +16,7 @@ import { displayName } from "../queries/profiles";
 import SessionGit, { sessionGitDescription } from "../components/SessionGit";
 import { readableSessionTitle, threadTitle } from "./Sessions";
 import EstadoDeTarea, { taskLabel } from "./TaskStatus";
-import { taskPriority } from "@terminus/design";
+import { taskPriority } from "../../../../ui/src/index";
 import { type GitStatus } from "../queries/taskGit";
 import { Pressable } from "../../../../ui/src/Pressable";
 import type { TabStripProps } from "./tabs-model";

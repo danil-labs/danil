@@ -1,9 +1,9 @@
 /**
  * La lista plana de tareas y su único filtro: carpetas, agente, agrupar y ordenar. Es la vista del sidebar del escritorio (#151) y la de la lista del
  * teléfono; las palabras de cada opción viven en `SIDEBAR_LABELS` de
- * `@terminus/design` (el escritorio las lee de `shell.sidebar.view.*`).
+ * `packages/ui` (el escritorio las lee de `shell.sidebar.view.*`).
  */
-import { type TaskActivity, type TaskState, taskPriority } from "../../design/src/index.ts";
+import { type TaskActivity, type TaskState, taskPriority } from "../../ui/src/index.ts";
 import { type WorkState, WORK_STATES } from "./workState.ts";
 
 /** Qué enseña la lista de tareas. `folders` vacío son todas las carpetas. */

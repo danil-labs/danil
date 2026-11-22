@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chosenWebLayout } from "../src/webLayout.ts";
+import { chosenWebLayout } from "../src/lib/webLayout.ts";
 
 const browser = (saved: string | null, phone: boolean, blocked = false) => ({
   matchMedia: () => ({ matches: phone }),

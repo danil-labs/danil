@@ -1,24 +1,12 @@
-# @terminus/design
+# @terminus/design (solo reexporta)
 
-## Qué hace
-Tokens de diseño compartidos entre aplicaciones desktop y mobile.
-Define estados de tareas, marcas visuales de agentes, colores de carpetas, temas y escalas tipográficas y de radios.
+Los tokens, marcas, palabras y temas se fundieron en `packages/ui` (tarea 3.6a del plan
+front-move). Lo que queda aquí existe solo porque `apps/mobile` está fuera del pnpm
+workspace y enlaza `@terminus/design` con `file:../../packages/design`:
 
-## Qué expone
-Exporta desde `src/index.ts`:
-- Estados de tarea y tonos de señal: `SignalTone`, `TaskActivity`, `TaskState`, `SIGNAL_DOT_SIZE`, `TASK_STATES`, `markedState`, `rolledOutcome`, `taskSignalTone`, `taskPriority`, `topState`.
-- Etiquetas de estado: `StatusLabel`, `STATUS_LABELS`, `WORK_STATUS_LABELS`.
-- Iconografía y formas: `IconShape`, `LucideName`, `LUCIDE`, `STATUS_ICONS`.
-- Temas y escalas: `ThemeTokens`, `CSS_SOURCE`, `CSS_THEME_BLOCKS`, `THEMES`, `RadiusStep`, `TextStep`, `CHANNEL_COLORS`, `RADIUS`, `TEXT`, `TEXT_STEPS`.
+- `src/index.ts` reexporta `packages/ui/src/index.ts`.
+- `src/toolMarksData.ts` reexporta `packages/ui/src/toolMarksData.ts`.
 
-## Qué consume
-- Constantes TypeScript y definiciones CSS puras; sin dependencias de red ni librerías externas.
-
-## Qué contratos toca
-- Rutas `/v1` del borde: ninguna.
-- Comandos RPC1 del motor: ninguno.
-
-## Qué falta según la fase 2 del plan
-- Fase 2.1: los componentes visuales (`agentMarks.ts`, `astro.ts`, `statusIcon.ts`) y temas suben a `packages/ui`.
-- Se retira en la fase 3 conforme el cliente móvil adopte los tokens de `packages/ui`.
-- Fuente y detalle: [INVENTORY.md](./INVENTORY.md).
+El paquete no es miembro del pnpm workspace (`!packages/design` en `pnpm-workspace.yaml`).
+Se borra cuando el teléfono importe `packages/ui/src/index.ts` directamente.
+Inventario original: [INVENTORY.md](./INVENTORY.md).

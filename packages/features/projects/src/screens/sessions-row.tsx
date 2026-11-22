@@ -11,7 +11,7 @@ import { FinishTaskButton } from "../../../../ui/src/FinishTaskButton";
 import { Input } from "../../../../ui/src/Input";
 import { WithMentions } from "../../../../ui/src/WithMentions";
 import { canFinishTask, effectiveTaskGit } from "../queries/taskGit";
-import { type TaskActivity, taskPriority } from "@terminus/design";
+import { type TaskActivity, taskPriority } from "../../../../ui/src/index";
 import { readableSessionTitle, type SessionRow, type SessionsProps } from "./sessions-model";
 import type { SessionsState } from "./sessions-state";
 import type { createConTarjeta, createFilaDelRiel } from "./sessions-card";
