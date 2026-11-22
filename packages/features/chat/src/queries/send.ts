@@ -1,5 +1,3 @@
-type CarryMod = any;
-type ProviderVal = any;
 import { type ObservedTurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type Trigger } from "../../../../../apps/desktop/src/lib/mentions.ts";
@@ -25,25 +23,8 @@ import { type ChatEvent, type Session, type TranscriptOrigin } from "../model/tr
 import { type Msg } from "../screens/Chat";
 import { OPENCODE, canonicalAgentId, isFreeRouterModel } from "@terminus/tasks";
 import { batch, type Accessor, type Setter } from "solid-js";
+import type { CarriedBase, CarryMod, ContextSource, ConversationScope, Draft, DraftConfiguration, HandoffFact, HandoffPresentation, HandoffView, Hilo, HistoryEntry, IdsDeTurnos, Machine, MachineWait, ProviderVal, Saved, SessionRow, StartupContext, TranscriptMetadata, Transition } from "./types.js";
 
-type CarriedBase = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type ContextSource = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type ConversationScope = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type Draft = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type DraftConfiguration = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type HandoffFact = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type HandoffPresentation = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type HandoffView = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type Hilo = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type HistoryEntry = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type IdsDeTurnos = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type Machine = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type MachineWait = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type Saved = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type SessionRow = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type StartupContext = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type TranscriptMetadata = any; // pendiente: el tipo llega de otra feature por el shell (R3)
-type Transition = any; // pendiente: el tipo llega de otra feature por el shell (R3)
 
 /** Lo que corta un envío cuya copia se detuvo: el fallo y su arreglo quedan en el encabezado. */
 const CARRY_STOPPED = Symbol("carry-stopped");

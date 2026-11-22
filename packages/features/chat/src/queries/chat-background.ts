@@ -1,8 +1,8 @@
 import { fondoPropio } from "../../../../../apps/desktop/src/lib/chat-background-store";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { createResource } from "solid-js";
+import type { Preview } from "./types.js";
 
-type Preview = any; // pendiente: el tipo llega de otra feature por el shell (R3)
 
 /** Lo que el bloque usaba del cuerpo de App. */
 export type ChatBackgroundDeps = { machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined };
