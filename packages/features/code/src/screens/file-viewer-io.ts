@@ -14,7 +14,7 @@ import {
 import { machineOf } from "../../../../host/src/machine";
 import { asFailure } from "../../../../ui/src/Failure";
 import { capabilities } from "../../../../host/src/platform";
-import { type FilePreview as Preview, type TreePart } from "../../../../engine-client/src/index.ts";
+import type { FilePreview as Preview, TreePart } from "../../../../engine-client/src/index.ts";
 import type { LeerParte } from "../../../../host/src/tree-download";
 import { parsearDiff } from "../model/diff";
 import { IDOS, alMoverseElArbol, comoEntra, esBorrado, type DetalleDeIdos } from "../queries/refresh";

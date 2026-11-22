@@ -11,7 +11,7 @@ import {
   type ProviderModels,
   type SlashMenu,
 } from "@terminus/protocol";
-import { replaceSlash, slashAt } from "@terminus/chat/slash";
+import { replaceSlash, slashAt } from "@terminus/chat";
 import { canonicalAgentId, creditsBalanceState, DANIL_CREDITS_MODEL, danilServiceOf, FREE_ROUTER_MODEL, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, previewLabel, type CreditsBalanceState, type RouterOfferState, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";

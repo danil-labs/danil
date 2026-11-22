@@ -1,4 +1,4 @@
-import { delimiterFor } from "@terminus/chat/table";
+import { delimiterFor } from "@terminus/chat";
 import { mediaKindOf } from "@terminus/protocol";
 
 /**

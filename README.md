@@ -127,7 +127,7 @@ apps/desktop/             the window (this is what the installers ship)
 apps/mobile/              the iOS and Android app (Expo) and its dev bridge
 packages/design           shim for apps/mobile only; the tokens live in packages/ui
 packages/tasks            shim for apps/mobile: re-exports packages/ui/src/lib/tasks/index.ts
-packages/chat             how every client reads an agent message: links, visuals, next steps, tool steps
+packages/chat             shim for apps/mobile: re-exports packages/ui/src/lib/chat and engine-client history
 packages/attention        Inbox, channels and customization of the phone
 packages/computers        Danil Machines client: control-plane API, relay session, wake rules
 packages/fleet            several machines behind one panel: envelope, per-machine slices, merge

@@ -1,6 +1,6 @@
 import { Match, Show, Switch, type JSX } from "solid-js";
 import { toolMarkId, toolMonogram } from "./toolMarkNames";
-import type { ToolSource } from "@terminus/chat/tools";
+import type { ToolSource } from "./lib/chat/tools.ts";
 import { MarcaServicio } from "./marcas";
 
 /**

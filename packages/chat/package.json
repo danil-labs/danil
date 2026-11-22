@@ -3,20 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "How every Terminus client reads an agent message: links and local images, the visual directive, next steps and the sandbox for agent HTML.",
+  "description": "Shim for apps/mobile only: re-exports the message readers that now live in packages/ui and packages/engine-client.",
   "exports": {
-    ".": "./src/index.ts",
-    "./history": "./src/history.ts",
-    "./historyDetail": "./src/historyDetail.ts",
-    "./links": "./src/links.ts",
-    "./nextSteps": "./src/nextSteps.ts",
-    "./sandbox": "./src/sandbox.ts",
-    "./steps": "./src/steps.ts",
-    "./command": "./src/command.ts",
-    "./slash": "./src/slash.ts",
-    "./tools": "./src/tools.ts",
-    "./inlineVisual": "./src/inlineVisual.ts",
-    "./visual": "./src/visual.ts",
-    "./table": "./src/table.ts"
+    ".": "./src/index.ts"
   }
 }

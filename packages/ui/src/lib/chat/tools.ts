@@ -8,7 +8,7 @@
  * fila. El mapa de servidores a servicios vive en `packages/ui`
  * (`toolMarkId`), porque es el mismo en todos los clientes.
  */
-import { commandMarkId, TOOL_LABELS, toolLabel, toolMarkId, type ToolMarkId } from "../../ui/src/index.ts";
+import { commandMarkId, TOOL_LABELS, toolLabel, toolMarkId, type ToolMarkId } from "../../index.ts";
 import { commandMarkProgram } from "./command.ts";
 
 /** El servidor y su herramienta, ya separados. */

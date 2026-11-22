@@ -1,5 +1,5 @@
-import { commandSummary } from "@terminus/chat/command";
-import { readableToolName } from "@terminus/chat/tools";
+import { commandSummary } from "../../../../packages/ui/src/lib/chat/command.ts";
+import { readableToolName } from "../../../../packages/ui/src/lib/chat/tools.ts";
 import { t } from "./i18n.ts";
 import { nombreDe, origenDe, type Origen, type Paso } from "./steps-model.ts";
 import type { Fila } from "./steps-group.ts";

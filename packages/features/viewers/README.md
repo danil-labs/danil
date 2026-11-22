@@ -11,7 +11,7 @@ Exporta desde `src/index.ts`:
 
 ## Qué consume
 - `@danil/ui`, `pdfjs-dist`.
-- `@terminus/chat/table` y `@terminus/protocol` (en proceso de retiro), `apps/desktop`.
+- `packages/ui/src/lib/chat/table.ts`, `@terminus/protocol` (en proceso de retiro), `apps/desktop`.
 
 ## Qué contratos toca
 - Rutas `/v1` del borde: ninguna.
@@ -20,5 +20,5 @@ Exporta desde `src/index.ts`:
 ## Qué falta según la fase 2 del plan
 - Fase 2.1: `IconButton` sube a `packages/ui`.
 - Fase 2.2: aritmética de zoom (`zoom.ts`) sube a `packages/ui/lib/zoom.ts`.
-- Fase 3: retirar `model/csv.ts` dependiente de `@terminus/chat/table`.
+- Fase 3: retirar `model/csv.ts` dependiente de `packages/ui/src/lib/chat/table.ts`.
 - Fuente y detalle: [INVENTORY.md](./INVENTORY.md).
