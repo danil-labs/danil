@@ -61,6 +61,10 @@ function AltaConSesion(props: Props & { tomado: { id: string; nombre: string } |
         setWorkspace(props.tomado);
       } else {
         const w = await entrarAlWorkspaceFree(props.sealFirstFreeWorkspace);
+        if (!w) {
+          props.onListo();
+          return;
+        }
         setWorkspace(w);
         props.onWorkspace(w);
       }
