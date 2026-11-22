@@ -181,6 +181,19 @@ test("one organization that fails keeps the machines of the others; a dead cooki
   assert.equal(await source.inventory(), null);
 });
 
+test("the same machine in two organizations keeps its name; two machines with one name get the organization", async () => {
+  const { windowContext } = await import("../../src/web/window-context.ts");
+  const source = windowContext({ sessions: { handle: async () => null }, groups: () => [], fallback: () => null, active: () => null,
+    factory: () => ({}) as never, fleet: () => ({}) as never, revision: () => {} });
+  const p = { context: "p", org: "org_p", name: "Cuenta de Ana", plan: "free" };
+  const x = { context: "x", org: "org_x", name: "Equipo X", plan: "pro" };
+  const mac = { machine_id: "mch_mac", name: "Mac de Ana", organization_id: "org_p" } as never;
+  const same = [{ machine: mac, group: p }, { machine: { machine_id: "mch_mac", name: "Mac de Ana", organization_id: "org_x" } as never, group: x }];
+  assert.equal(source.machineName(mac, p, same), "Mac de Ana");
+  const other = [{ machine: mac, group: p }, { machine: { machine_id: "mch_otra", name: "Mac de Ana", organization_id: "org_x" } as never, group: x }];
+  assert.equal(source.machineName(mac, p, other), "Mac de Ana · Cuenta de Ana");
+});
+
 test('successful scoped redemption invalidates the existing organization balance event, unavailable does not', async (t) => {
   const previous = globalThis.window;
   const target = new EventTarget();

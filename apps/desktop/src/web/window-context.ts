@@ -42,10 +42,14 @@ export function windowContext(options: { factory: (context: string) => Client; s
      * `organization | personal`: la Mac o PC de una persona (conectada, con dueño) nunca es la hospedada.
      */
     hosted: (machine: Machine) => !["personal", "connected"].includes(machine.kind ?? "") && !machine.person_id,
-    /** La misma computadora inscrita en dos organizaciones se distingue por su organización. */
+    /**
+     * Dos computadoras distintas con el mismo nombre en dos organizaciones se distinguen por su
+     * organización. La misma (`machine_id`, una conexión para todas sus organizaciones) es una sola:
+     * sin sufijo (« · Cuenta de …»).
+     */
     machineName: (machine: Machine, group: GroupAccount, rows: readonly ContextRow[]) => {
       const name = machine.name || machine.machine_id;
-      return rows.some((row) => row.group.context !== group.context && (row.machine.name || row.machine.machine_id) === name) ? `${name} · ${group.name}` : name;
+      return rows.some((row) => row.group.context !== group.context && row.machine.machine_id !== machine.machine_id && (row.machine.name || row.machine.machine_id) === name) ? `${name} · ${group.name}` : name;
     },
     current: () => { options.revision(); const active = options.active(); return active ? info(active) : null; },
     /** Cada orden va al contexto del workspace abierto; la atención del riel, a todos. */
