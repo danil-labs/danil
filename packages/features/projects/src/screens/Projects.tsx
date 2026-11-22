@@ -19,6 +19,7 @@ import { Badge } from "../../../../ui/src/Badge";
 import WorkdirIcon, { workdirKindLabel } from "../../../../ui/src/WorkdirIcon";
 import PickerRow from "../components/PickerRow";
 import { byRecent, type PickedAt, pickerSections, taskCountOf } from "../model/recent";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
  * Con qué proyecto se trabaja, debajo de la caja y no en la cabecera: es una
@@ -125,9 +126,9 @@ export function ProjectPicker(props: {
 
           <div class="max-h-[260px] overflow-y-auto py-1">
             <Show when={!busca().trim()}>
-              <button class={ITEM_DE_MENU} onClick={() => elegir("")}>
+              <Pressable class={ITEM_DE_MENU} onClick={() => elegir("")}>
                 {t("projects.picker.none")}
-              </button>
+              </Pressable>
             </Show>
 
             <For each={filtradas()}>
@@ -141,9 +142,9 @@ export function ProjectPicker(props: {
             </For>
 
             <Show when={plegados() > 0}>
-              <button class={cn(ITEM_DE_MENU, "text-neutral-700")} data-more-projects="" onClick={() => setTodos(true)}>
+              <Pressable class={cn(ITEM_DE_MENU, "text-neutral-700")} data-more-projects="" onClick={() => setTodos(true)}>
                 {t("projects.picker.more", { n: plegados() })}
-              </button>
+              </Pressable>
             </Show>
 
             <Show when={sinNada()}>
@@ -154,7 +155,7 @@ export function ProjectPicker(props: {
           </div>
 
           <div class="border-t border-border py-1">
-            <button
+            <Pressable
               class={cn(ITEM_DE_MENU, "flex items-center gap-2 text-neutral-700")}
               onClick={() => {
                 setAbierto(false);
@@ -163,10 +164,10 @@ export function ProjectPicker(props: {
             >
               <Plus size={13} aria-hidden="true" />
               {t("projects.picker.add")}
-            </button>
+            </Pressable>
             <Show when={props.onAdministrar}>
               {(administrar) => (
-                <button
+                <Pressable
                   class={cn(ITEM_DE_MENU, "grid grid-cols-[14px_minmax(0,1fr)_auto] items-center gap-2 text-neutral-700")}
                   onClick={() => {
                     setAbierto(false);
@@ -178,7 +179,7 @@ export function ProjectPicker(props: {
                   <span class="text-caption text-neutral-500">
                     {t("projects.picker.manage_where")}
                   </span>
-                </button>
+                </Pressable>
               )}
             </Show>
           </div>

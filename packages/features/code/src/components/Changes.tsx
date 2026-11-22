@@ -17,6 +17,7 @@ import {
   type Linea,
   type Tramo,
 } from "../model/diff";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
  * Las piezas del diff que comparten el visor de archivos (`FileViewer.tsx`) y
@@ -389,7 +390,7 @@ function cortar(texto: string, tramos: Tramo[]): [string, boolean][] {
 function Salto(props: { cuantas: number; onDesplegar: () => void; eco?: boolean }) {
   return (
     <Show when={props.cuantas > 0}>
-      <button
+      <Pressable
         class="col-span-full flex w-full items-center gap-2 border-y border-border bg-surface-raised px-2 py-1 text-left text-caption text-neutral-500 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         onClick={props.onDesplegar}
         title={t("code.gap.title")}
@@ -398,7 +399,7 @@ function Salto(props: { cuantas: number; onDesplegar: () => void; eco?: boolean 
       >
         <UnfoldVertical size={12} class="shrink-0" />
         {t("code.gap.lines", { count: props.cuantas })}
-      </button>
+      </Pressable>
     </Show>
   );
 }

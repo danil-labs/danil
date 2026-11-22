@@ -32,6 +32,7 @@ import VisorDeArchivo, { type Visores } from "./FileViewer";
 import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
 import { alMoverseElArbol } from "../queries/refresh";
 import type { TreePart } from "@terminus/protocol";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 const nameOf = (path: string) => path.split("/").pop() ?? path;
 const folderOf = (path: string) => path.split("/").slice(0, -1).join("/");
@@ -144,27 +145,27 @@ export default function TaskFilesCard(props: {
           title={t("code.panel.more")} aria-label={t("code.panel.more")}><Ellipsis size={15} /></Button>} />
         <PopoverContent class="w-56 p-1">
           <Show when={here() && !props.preview}>
-            <button type="button" class={ITEM_DE_MENU} onClick={() => { setMenu(false); void openTaskFolder(); }}>{t("shell.folder.open")}</button>
-            <button type="button" class={ITEM_DE_MENU} onClick={() => { setMenu(false); void copyTaskPath(); }}>{t("shell.folder.copy")}</button>
+            <Pressable class={ITEM_DE_MENU} onClick={() => { setMenu(false); void openTaskFolder(); }}>{t("shell.folder.open")}</Pressable>
+            <Pressable class={ITEM_DE_MENU} onClick={() => { setMenu(false); void copyTaskPath(); }}>{t("shell.folder.copy")}</Pressable>
           </Show>
           <Show when={!props.preview}>
-            <button type="button" class={ITEM_DE_MENU} disabled={exporting()} onClick={() => void exportChat()}>
+            <Pressable class={ITEM_DE_MENU} disabled={exporting()} onClick={() => void exportChat()}>
               {exporting() ? t("code.panel.export_chat.busy") : t("code.panel.export_chat")}
-            </button>
+            </Pressable>
             <div class="my-1 h-px bg-border" />
           </Show>
           <Show when={activeTab() && here()}>
-            <button type="button" class={ITEM_DE_MENU} onClick={() => { setMenu(false); void openOutside(); }}>{t("code.file.open_external")}</button>
-            <button type="button" class={ITEM_DE_MENU} onClick={() => { setMenu(false); void showInFolder(); }}>{t("code.panel.show_in_folder")}</button>
+            <Pressable class={ITEM_DE_MENU} onClick={() => { setMenu(false); void openOutside(); }}>{t("code.file.open_external")}</Pressable>
+            <Pressable class={ITEM_DE_MENU} onClick={() => { setMenu(false); void showInFolder(); }}>{t("code.panel.show_in_folder")}</Pressable>
           </Show>
           <Show when={activeTab() && !here()}>
-            <button type="button" class={ITEM_DE_MENU} onClick={() => { setMenu(false); void download(); }}>{t("code.panel.download")}</button>
+            <Pressable class={ITEM_DE_MENU} onClick={() => { setMenu(false); void download(); }}>{t("code.panel.download")}</Pressable>
           </Show>
           <Show when={activeTab()}><div class="my-1 h-px bg-border" /></Show>
-          <button type="button" class={ITEM_DE_MENU} disabled={!hasTabs()}
+          <Pressable class={ITEM_DE_MENU} disabled={!hasTabs()}
             onClick={() => { props.files.close(key(), panel().tabs.map((tab) => tab.id)); setMenu(false); }}>
             {t("code.panel.close_all")}
-          </button>
+          </Pressable>
         </PopoverContent>
       </Popover>
       <Show when={hasTabs() && !props.expandedOnly}>
@@ -203,12 +204,12 @@ export default function TaskFilesCard(props: {
                     </Show>
                     <span class="min-w-0 truncate" classList={{ italic: !tab.pinned }}>{nameOf(tab.path)}</span>
                     <Show when={tab.changes}><span class="shrink-0 font-sans text-caption font-normal text-neutral-500">{t("code.panel.side.changes")}</span></Show>
-                    <button type="button" aria-label={t("code.panel.tab.close")}
+                    <Pressable aria-label={t("code.panel.tab.close")}
                       class={cn("grid size-5 shrink-0 place-items-center rounded-sm text-neutral-500 hover:bg-neutral-200",
                         !active() && !dirty() && "opacity-0 group-hover:opacity-100")}
                       onClick={(event) => { event.stopPropagation(); props.files.close(key(), [tab.id]); }}>
                       <Show when={dirty()} fallback={<X size={13} />}><SignalDot tone="neutral" /></Show>
-                    </button>
+                    </Pressable>
                   </div>
                 );
               }}</For>
@@ -248,11 +249,11 @@ export default function TaskFilesCard(props: {
           <div class={cn("relative flex shrink-0 items-end gap-0.5 bg-surface-muted pl-1.5", HEADER_HEIGHT)}>
             <span aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-px bg-border" />
             <For each={(props.preview ? ["files"] : ["files", "changes"]) as ("files" | "changes")[]}>{(side) => (
-              <button type="button" onClick={() => props.files.setSide(key(), side)}
+              <Pressable onClick={() => props.files.setSide(key(), side)}
                 class={cn("relative z-10 flex h-full items-center gap-1.5 px-2 text-xs",
                   panel().side === side ? "tab-join font-semibold text-neutral-950" : "font-medium text-neutral-500 hover:bg-neutral-950/5 hover:text-neutral-950")}>
                 {side === "files" ? t("code.panel.side.files") : t("code.panel.side.changes")}
-              </button>
+              </Pressable>
             )}</For>
             <Show when={porGuardar() !== 0 && !props.preview}>
               <div class="relative z-10 ml-auto flex shrink-0 items-center self-center pl-1">
@@ -311,7 +312,7 @@ function ChangesList(props: {
           const on = () => props.active?.changes && props.active.tree === file.tree && props.active.path === file.path;
           const mark = () => file.status.charAt(0).toUpperCase();
           return (
-            <button type="button" onClick={() => props.onOpen(file.tree, file.path)}
+            <Pressable onClick={() => props.onOpen(file.tree, file.path)}
               class={cn("flex w-full items-center gap-1.5 py-1 pr-3 pl-3 text-left text-label hover:bg-surface-muted", on() && "bg-surface-muted")}>
               <IconoDeArchivo ruta={file.path} class="shrink-0 text-neutral-500" />
               <span class="min-w-0 flex-1 truncate font-mono">
@@ -323,7 +324,7 @@ function ChangesList(props: {
                 <Show when={file.removed > 0}><span class="text-error-strong"> −{file.removed}</span></Show>
               </span>
               <span class={cn("w-2.5 shrink-0 text-right font-mono text-2xs font-semibold", MARK[mark()] ?? "text-neutral-500")}>{mark()}</span>
-            </button>
+            </Pressable>
           );
         }}</For>
       </Show>
