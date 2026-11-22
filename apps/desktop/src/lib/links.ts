@@ -1,1 +1,1 @@
-export * from "@terminus/chat/links";
+export * from "../../../../packages/ui/src/lib/chat/links.ts";

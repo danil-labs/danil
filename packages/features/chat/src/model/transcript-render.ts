@@ -1,6 +1,6 @@
 /** La transcripción guardada convertida en los mensajes del hilo. */
-import { isQuestionFile } from "@terminus/chat/steps";
-import { mcpCallFromName } from "@terminus/chat/tools";
+import { isQuestionFile } from "../../../../ui/src/lib/chat/steps.ts";
+import { mcpCallFromName } from "../../../../ui/src/lib/chat/tools.ts";
 import { pasoDe } from "../../../../../apps/desktop/src/lib/steps.ts";
 import type { Msg, Razonamiento } from "./messageTypes";
 import type { Tool, Turn, TurnReasoning } from "./transcript-types.ts";

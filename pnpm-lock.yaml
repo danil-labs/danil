@@ -79,9 +79,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../packages/chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../packages/computers
@@ -206,8 +203,6 @@ importers:
 
   packages/attention: {}
 
-  packages/chat: {}
-
   packages/computers: {}
 
   packages/engine-client:
@@ -288,9 +283,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -475,9 +467,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -662,9 +651,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -849,9 +835,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1036,9 +1019,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1223,9 +1203,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1410,9 +1387,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1597,9 +1571,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1784,9 +1755,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -1971,9 +1939,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -2158,9 +2123,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -2345,9 +2307,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -2532,9 +2491,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -2719,9 +2675,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -2906,9 +2859,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -3093,9 +3043,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -3280,9 +3227,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -3467,9 +3411,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -3654,9 +3595,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
@@ -3909,9 +3847,6 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../computers
@@ -4044,9 +3979,6 @@ importers:
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../computers

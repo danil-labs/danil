@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { replaceSlash, slashAt, slashTokens } from "../src/slash.ts";
+import { replaceSlash, slashAt, slashTokens } from "../src/lib/chat/slash.ts";
 
 const at = (text: string) => slashAt(text, text.length);
 

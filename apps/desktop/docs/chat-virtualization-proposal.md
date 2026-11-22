@@ -20,14 +20,14 @@ archivados no se reprodujeron en ventana.
 
 ## Qué cambia
 
-- `packages/chat/src/history.ts`: continuidad por turnos, no por `revision`. La
+- `packages/engine-client/src/history.ts`: continuidad por turnos, no por `revision`. La
   página anterior se pide con `before = start + 1` y el turno solapado prueba la
   unión. `HistoryPager` hace una petición por tarea, reintenta choques con una
   escritura y deja un fallo visible. Desktop, web, Expo y teléfono usan esta política.
 - Presupuesto de 2 MiB: leyendo lejos, la ventana se separa de la cola y una cola
   nueva solo actualiza el total. «Volver a los mensajes recientes» recarga la
   cola; no hay cursor `after`. Lo pendiente sale de la última cola leída, no de la ventana.
-- `packages/chat/src/historyDetail.ts`: tras cambiar el archivo, la referencia se
+- `packages/engine-client/src/historyDetail.ts`: tras cambiar el archivo, la referencia se
   vuelve a pedir comprobando el `id` del turno; sin `id` no se expande.
 - `VirtualThread.tsx`: TanStack (`@tanstack/solid-virtual` 3.13.51, core 3.19.9)
   decide rango y mide. `seguirElFondo` es el único escritor de `scrollTop`; las

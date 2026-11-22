@@ -1,5 +1,5 @@
 import type { Trigger } from "./mentions.ts";
-import { slashTokens } from "@terminus/chat/slash";
+import { slashTokens } from "../../../../packages/ui/src/lib/chat/slash.ts";
 
 /** Lo que la ventana vio de una tarea de otra máquina: el motor que no la tiene se la cuenta al agente con esto. */
 export type TaskAbout = { machine_name?: string; title?: string; branch?: string; folder_name?: string };

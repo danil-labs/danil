@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Linking, Platform, StyleSheet, View } from "react-native";
 import { WebView, type WebViewMessageEvent } from "react-native-webview";
 import type { ShouldStartLoadRequest } from "react-native-webview/lib/WebViewTypes";
-import { destinoAbrible } from "@terminus/chat/links";
+import { destinoAbrible } from "@terminus/chat";
 import { t } from "../../lib/i18n";
 import { useTheme } from "../theme";
 

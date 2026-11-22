@@ -1,4 +1,4 @@
-import type { VisualTheme } from "@terminus/chat/inlineVisual";
+import type { VisualTheme } from "@terminus/chat";
 import type { Theme } from "../theme";
 
 /** Los tokens que reciben las visualizaciones, desde el tema del teléfono (el mismo del escritorio). */

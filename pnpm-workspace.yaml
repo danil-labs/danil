@@ -7,6 +7,7 @@ packages:
   - "!packages/design"
   - "!packages/protocol"
   - "!packages/carry"
+  - "!packages/chat"
   - packages/features/*
 
 # pnpm 10.15+ / 12: approval for packages that run install scripts.

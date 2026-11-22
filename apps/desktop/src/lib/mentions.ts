@@ -13,7 +13,7 @@
  * la interfaz dijo haber escrito. Esta copia es lo que hace falta para escribir
  * y pintar sin ir al backend por cada tecla. Las dos son cortas a propósito.
  */
-import { replaceSlash, slashAt } from "@terminus/chat/slash";
+import { replaceSlash, slashAt } from "../../../../packages/ui/src/lib/chat/slash.ts";
 
 /** Algo que la tarea alcanza y por tanto se puede mencionar. */
 export type MentionSource = {
@@ -118,7 +118,7 @@ export type Trigger = {
 
 /**
  * Qué menú corresponde a lo que hay escrito y dónde está el cursor. La barra
- * sigue `@terminus/chat/slash`: al principio o tras un espacio, nunca dentro
+ * sigue `packages/ui/src/lib/chat/slash.ts`: al principio o tras un espacio, nunca dentro
  * de una mención, una ruta o una URL.
  */
 export function activeTrigger(text: string, caret: number): Trigger | null {
