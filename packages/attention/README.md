@@ -1,7 +1,10 @@
 # @terminus/attention
 
 ## Qué hace
-Cliente del BFF alfa (`/terminus/alpha-api` y `/alpha-api`) para mensajería, campañas y soporte de Appv2.
+Cliente del BFF alfa para mensajería, campañas y soporte de Appv2.
+Rutas legadas:
+- `/terminus/alpha-api`
+- `/alpha-api`
 Se mantiene congelado únicamente mientras `apps/mobile` lo utilice (corrección de CTO, 2026-11-21).
 El front web y Desk no lo usan; está prohibido por la regla R8.
 
@@ -12,12 +15,16 @@ No tiene `index.ts`; su punto de entrada configurado en `package.json` es `src/i
 
 ## Qué consume
 - No consume `@danil/*` ni los clientes nuevos de plataforma o motor.
-- Realiza peticiones directas de red contra el BFF alfa legado `/terminus/alpha-api` y `/alpha-api`.
+- Realiza peticiones directas de red contra el BFF alfa legado:
+  - prefijo `/terminus/alpha-api`
+  - prefijo `/alpha-api`
 
 ## Qué contratos toca
 - Rutas `/v1` del borde: ninguna.
 - Comandos RPC1 del motor: ninguno.
-- Toca endpoints legados de Appv2 (`/terminus/alpha-api/auth/profile`, `/api/messaging/reply`, `/api/channels`, `/api/marketing/campaigns`).
+- Toca endpoints legados de Appv2:
+  - `/terminus/alpha-api/auth/profile`
+  - `/api/messaging/reply`
 
 ## Qué falta según la fase 2 del plan
 - En la fase 2 no se mueve código a `packages/ui` ni a features por tratarse de arquitectura vieja prohibida (R8).
