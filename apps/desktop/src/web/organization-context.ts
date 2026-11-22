@@ -7,8 +7,8 @@
  */
 import { isOrganizationSelectionRequired } from "@terminus/computers";
 import { createSignal } from "solid-js";
-import { organizationSession } from "./organization-session.ts";
-import type { platformTransport } from "./platform-session.ts";
+import { organizationSession } from "../../../../packages/session/src/organization-session.ts";
+import type { platformTransport } from "../../../../packages/session/src/platform-session.ts";
 
 const MARK = "danil.web.org-auth.";
 const AGAIN_MS = 120_000;

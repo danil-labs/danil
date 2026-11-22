@@ -1,5 +1,5 @@
-import type { AccountProfileSource } from "../features/settings/account-profile.ts";
-import type { platformTransport } from "./platform-session";
+import type { AccountProfileSource } from "../../../../packages/features/settings/src/model/account-profile.ts";
+import type { platformTransport } from "../../../../packages/session/src/platform-session";
 
 /** Identity owns the person; photo editing is unavailable until identity publishes it. */
 export function webAccountProfile(transport: Pick<ReturnType<typeof platformTransport>, "call">): AccountProfileSource {

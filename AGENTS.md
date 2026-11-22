@@ -33,8 +33,8 @@ which is not here.
 | `packages/design` | Task states, marks, status and list words, folder colors, theme colors, and the type and radius scale both apps use. | — |
 | `packages/tasks` | The task list both apps derive: flat list, filter and grouping, two-line card, agents dock. | — |
 | `packages/chat` | How every client reads an agent message: links, the visual directive, next steps, tool steps and the HTML sandbox. | — |
-| `packages/attention` | The Inbox, channels, customization and support access from any client, over the same-origin BFF. | — |
-| `packages/computers` | Danil Machines from any client: control-plane API, relay session (WebSocket injected) and wake rules. | — |
+| `packages/attention` | The Inbox, channels and customization of the phone, over the same-origin BFF. | — |
+| `packages/computers` | Danil Machines from any client: control-plane API, relay session (WebSocket injected) and wake rules. The `/v1/machines` client is not here: it lives in `packages/platform-client/src/machines.ts`. | — |
 | `packages/fleet` | Several machines behind one panel: the call envelope (the machine comes only from it), a slice with its status per machine, bounded waits and the merge. | — |
 | `packages/carry` | Carrying work between machines: what travels, the copy in parts and the base the new task starts on. | — |
 | `packages/protocol` | The closed list of commands the mobile app sends to a machine (relay or bridge) and their answers. | — |
@@ -43,48 +43,97 @@ Read the guide of the area before editing it.
 
 ## Front nuevo (rebuild)
 
-Estructura modular del front rebuild (SolidJS):
+Cómo está el front en `dev` hoy, después de que se fusionara `rebuild/move` (merge 09e6ca7b, plan
+[front-move](https://github.com/danil-labs/terminus-workspace/blob/main/docs/plans/2026-11-21-front-move/README.md)).
+Las reglas R1–R16 están en
+[03-structure.md](https://github.com/danil-labs/terminus-workspace/blob/main/docs/plans/2026-11-20-front-rebuild/03-structure.md).
+Las rutas `/v1` y los comandos RPC1, con archivo y línea, están en [docs/API.md](docs/API.md).
+Cada paquete tiene su `README.md`, y los que inventarió la fase 1 tienen además un `INVENTORY.md`
+con cada archivo y cada export clasificado.
 
-| Paquete / App | Qué hace | Qué consume | Contrato |
+**Entradas.** Hay un solo front, `packages/shell` + `packages/features/*`, y se compila desde
+`apps/desktop`:
+- La ventana Tauri carga `packages/shell/src/app/main.tsx` (`apps/desktop/index.html:81`).
+- La web carga `apps/desktop/src/web/bootstrap.ts` (`apps/desktop/web.html:467`) y se construye con
+  `pnpm -C apps/desktop web:build`.
+
+`apps/workspace`, `apps/auth` y `apps/desk` **no existen**, aunque `pnpm-workspace.yaml` y el script
+`front:build` todavía los nombran.
+
+**«Consume»** sale de contar imports por paquete (sin tests). `apps/desktop (N)` cuenta los imports
+hacia `apps/desktop/src/lib` y `src/web`: el front todavía depende de ellos. Las features que importan
+a otra feature rompen R3 (fase 2.4 en curso).
+
+### Paquetes base
+
+| Paquete | Qué hace | Qué consume | Contrato |
 |---|---|---|---|
-| `apps/desk` | Danil Desk con el front nuevo: shell + sesiones del motor (`createDeskSession(createTauriHost())`). Envoltorio Tauri propio pendiente. | `@danil/shell`, `@danil/host`, `@danil/session` | Comandos RPC1 del motor |
-| `apps/workspace` | Aplicación web de Danil (front rebuild); estático Vite servido por Worker en Cloudflare (`danil-front-preview`). | `@danil/shell`, `@danil/session`, `@danil/ui`, SolidJS | Despliegue en Cloudflare Workers (`preview-front.danil.ai`) |
-| `packages/platform-client` | Cliente tipado del borde `/v1` con reintentos automáticos (404/501/503, R10) y URL base única. | Borde HTTP `/v1` (`src/http.ts` es el único fetch al borde) | OpenAPI vendorizado (`contract/openapi.json`), genera `types`, `operations`, `contract` |
-| `packages/engine-client` | Cliente tipado de comandos RPC1 del motor y selección de transporte (`local` en Desk, `relay` vía WebSocket). | WebSocket al relay o IPC de Tauri inyectado vía `@danil/host` | Manifiesto RPC1 del motor vendorizado en `packages/engine-client/contract/` (base + extensiones, desde danil-engine `crates/engine-manifest`), genera `src/generated` |
-| `packages/session` | Gestión unificada de identidad y sesión: cookie HttpOnly (web) o sesiones de motor (Desk). | `@danil/platform-client`, comandos RPC1 de sesión en Desk | OpenAPI del borde y comandos RPC1 (`danil_sessions`, `danil_connect_start`, etc.) |
-| `packages/host` | Lo que solo la plataforma sabe hacer: IPC de Tauri hacia el motor local (Desk), abrir el navegador; `setHost`/`host` para las features. | `@tauri-apps/api` | Comandos RPC1 del motor; implementa `LocalHost` y `DeskAuthHost` |
-| `packages/ui` | Primitivas y componentes visuales puros y reutilizables (SolidJS + Tailwind CSS + Kobalte). Sin dominio ni red. | Nada de dominio ni de red (sin dependencias de `@danil/*`) | Componentes y tokens exportados en `src/index.ts` |
-| `packages/shell` | Router de estados mínimo, arranque lineal con sesión, riel vertical DS1 v2, layout y ErrorBoundaries. Único que compone features. | `@danil/session`, `@danil/ui`, componentes de `@danil/feature-*` | Rutas (`"machines"`, `"workspace/:id"`, `"account"`), props y slots |
-| `packages/features/machines` | Lista de máquinas, selector de ejecución en compositor, sondeo de VMs nuevas, encendido/apagado remoto y conexión. | `@danil/platform-client`, `@danil/engine-client`, `@danil/session`, `@danil/host`, `@danil/ui` | OpenAPI (`getMachines`, `startMachine`, `stopMachine`, `createMachineTicket`, `getOperation`) y RPC1 (`connectMachine`) |
-| `packages/features/workspaces` | Riel vertical DS1 v2 (`RailGroups`), selección atómica de workspaces, nombres de plan, gestión y creación de workspaces. | `@danil/platform-client`, `@danil/engine-client`, `@danil/session`, `@danil/ui` | OpenAPI (`getOrganizations`, `selectOrganization`, `getWorkspaces`, `createWorkspace`, `selectWorkspace`) y RPC1 (`set_active_workspace`) |
-| `packages/features/projects` | Catálogo de proyectos y tareas por máquina, carga acotada en lote, borrado con ciclo de vida y debounce, store reactivo unificado. | `@danil/engine-client`, `@danil/platform-client`, `@danil/ui` | RPC1 (`list_projects`, `list_live_sessions`, `delete_session`, `finish_task`) y OpenAPI (`Workspace`) |
-| `packages/features/chat` | Conversación con agentes, streaming reactivo con cursor, máquina de estados causal de turnos (razonamiento, deltas, herramientas) y aprobaciones de seguridad. | `@danil/engine-client`, `@danil/ui` | RPC1 (`load_session`, `send_message`, `stop_turn`, `respond_permission`, `answer_question`) y eventos push `"chat"` |
-| `packages/features/files` | Árbol de archivos con estado git, visor de archivos con tope de 5 MB y breadcrumbs, mapeo compacto de iconos. | `@danil/engine-client`, `@danil/ui` | RPC1 (`tree_files`, `tree_folder`, `tree_git_status`, `tree_show`, `tree_write`, `tree_patch`) |
-| `packages/features/ai-credentials` | Conexión, custodia y propagación de credenciales de IA selladas con WebCrypto (`TERMINUS-SECRET/1`), consulta única y cacheada por workspace, encendido explícito de máquinas apagadas. | `@danil/platform-client`, `@danil/engine-client`, `@danil/ui` | OpenAPI (`getWorkspaceAccounts`, `putWorkspaceAccount`, `deleteWorkspaceAccount`, `removeWorkspaceAccountMachine`, `restoreWorkspaceAccountMachine`) y RPC1 (`list_providers`, `connectMachine`) |
-| `packages/features/terminal` | Consola interactiva con ANSI, streaming y stdin sin pérdidas (F2.5). | `@danil/engine-client`, `@danil/ui`, `@danil/session`, `@danil/host` | Tipos generados por los clientes |
-| `packages/features/account` | Perfil, plan y enlaces a billing y harness por `host.openExternal` (F2.8). | `@danil/platform-client`, `@danil/ui`, `@danil/session`, `@danil/host` | OpenAPI del borde y tipos generados por los clientes |
+| `packages/platform-client` (`@danil/platform-client`) | Las rutas `/v1` por dominio: `identity.ts`, `workspaces.ts`, `machines.ts` (el único cliente de máquinas: lista, start, wake y ticket), `treasury.ts` (créditos y facturación) y `credentials.ts` (adaptador web). `client.ts` tiene `edgeUntil`, que reintenta 404/429/501/503 con idempotencia, y pone `X-Danil-Session` en la web. `shared-read.ts` hace que cada recurso se pida una vez por carga. | `engine-client` (`danil_edge_fetch` en Desk), `packages/computers` (tipos y `requestId`), `zod` | Borde `/v1`, con tipos escritos a mano. El cliente generado del OpenAPI es **propuesta** (4.2). |
+| `packages/engine-client` (`@danil/engine-client`) | `invoke(command, args)`: el `invoke` de Tauri o la ruta por máquina (`setMachineRoute`), con `untilConnected` y `retrying` (`retries.ts`), y `urlDeAvatar` (`previewFile.ts`). | `@tauri-apps/api`, `apps/desktop (6)`, `host (1)` | RPC1 sin tipar. El manifiesto está en `apps/desktop/src-tauri/crates/engine-protocol/commands.json` (553 comandos), pero no se genera nada de él: **propuesta** (4.2). |
+| `packages/session` (`@danil/session`) | Sesión e identidad: `platform-session.ts`, `person-session.ts`, `window-session.tsx`, `organization-session.ts`, `session-*.ts` y `sessionRefresh.ts`. | `apps/desktop (24)`, `platform-client (5)`, `@terminus/computers (3)`, `ui (2)`, `features/settings (2)`, `engine-client`, `shell`, `features/machines` | `/v1/identity/me`, `credits/balance`; RPC1 `danil_sign_in_complete` |
+| `packages/host` (`@danil/host`) | Lo que solo sabe hacer la plataforma: `platform.ts` (`setHost`, `host`, `LocalHost`, `DeskAuthHost`), portapapeles, descargas, ventana y `pick-image.ts`. | `apps/desktop (5)`, `features/settings (3)`, `@terminus/computers (2)`, `@terminus/protocol`, `ui`, `features/chat`, `features/machines` | Ningún `invoke` literal; escribe una ruta `/v1/workspaces/…` (`src/platform.ts`) |
+| `packages/ui` (`@danil/ui`) | Primitivas y componentes visuales (SolidJS, Tailwind, Kobalte, Lucide) y `src/styles/global.css`. | `apps/desktop (63)`, `@terminus/design (5)`, `engine-client (3)`, `@terminus/chat (3)`, `features/viewers (3)`, `host (2)` | Invoca 5 comandos (`preview_file`, `office_preview`, `file_size`, `open_external`, `open_file_external`). Es deuda de R4: el gate R4 solo mira `@danil/*`. |
+| `packages/shell` (`@danil/shell`) | Arranque (`src/app/main.tsx`), `App.tsx` (3.105 líneas; el gate 2.5 pide menos de 300), los slots (`featureSlots.tsx`, `chatSlots.tsx`, `settingsSlots.tsx`) y el riel y los diálogos de `src/shell/`. Es el único que compone features. | `apps/desktop (203)`, `ui (155)`, todas las features (las de más imports: projects 40, machines 30, settings 23, chat 15), `host (34)`, `engine-client (28)`, `platform-client (18)`, `session (5)`, `@terminus/*` | 63 comandos RPC1 (launcher, tray, ventana, adopción, almacenamiento…) y `/v1/identity/me` en `account-move.ts` |
 
-### Reglas de arquitectura (R1–R10)
+### Features (`packages/features/*`)
 
-Verificación con Node puro: `node scripts/verify-front.mjs` (o `pnpm front:verify`).
+| Feature | Qué hace | Qué consume | Contrato |
+|---|---|---|---|
+| `chat` | La pantalla de una tarea: la conversación con el agente y el compositor «¿Qué resolvemos?» (el nombre `chat` se queda, 4.3). | `apps/desktop (235)`, `ui (133)`, `engine-client (20)`, `host (19)`, `@terminus/{protocol,chat,tasks,design}`, `features/projects (8)` y otras 11 features | 59 comandos RPC1 (`send_message`, `respond_permission`, `answer_question`…) |
+| `projects` | Proyectos, espacios, tareas por máquina, agentes, memoria, fuentes y ciclo de vida de una tarea. | `apps/desktop (135)`, `ui (111)`, `engine-client (22)`, `@terminus/tasks`, `host`, `features/{chat,machines,settings,code}` | 69 comandos (`list_projects`, `list_live_sessions`, `task_lifecycle_*`…); `/v1/workspaces/{id}/memory` |
+| `code` | El árbol de archivos con su estado git, el visor y el editor, Typst, Office y el control de código (`kn_*`). | `apps/desktop (43)`, `ui (43)`, `host (21)`, `engine-client (6)`, `@terminus/protocol` | 44 comandos (`tree_*`, `kn_*`, `typst_live_*`…) |
+| `machines` | Las máquinas: la lista compartida (`queries/machines-query.ts`), el reparto por máquina (`router.ts`, `context-*.ts`), el relay, la flota, carry, WSL e invitados. | `ui (35)`, `apps/desktop (34)`, `host (14)`, `@terminus/fleet (13)`, `@terminus/computers (12)`, `platform-client (6)`, `engine-client (5)`, `@terminus/carry` | `/v1/machines` (por `platform-client`, más rutas escritas en `queries/`); 42 comandos (`guest_*`, `wsl_*`, `work_*`…) |
+| `settings` | Configuración: cuenta, cuentas de IA, integraciones, MCP, skills, idioma, harness y free-router. | `ui (255)`, `apps/desktop (176)`, `host (25)`, `engine-client (25)`, `@terminus/computers (9)`, `shell (6)`, `platform-client (6)` | 155 comandos (`radiant_*`, `account_credential*`, `github_account_*`…); `/v1/credentials/*` y `/v1/workspaces` |
+| `onboarding` | El alta: `Setup`, `ConnectAI` y `ConnectAccount`. | `apps/desktop (38)`, `ui (33)`, `features/settings (9)`, `host (6)`, `shell (3)`, `engine-client (3)` | 60 comandos (instalación, login de proveedores, Google Drive, Zotero…) |
+| `workspaces` | `createContextSource` (`queries/context-source.ts`), el contexto de la tarea que antes estaba en `App.tsx` (2.5c). El riel sigue en `packages/shell/src/shell`. | `apps/desktop (7)`, `packages/tasks (2)`, `engine-client`, `ui` | `list_mentions`, `list_workspaces`, `load_session`, `session_usage`, `set_workspace_source` |
+| `workspace` | `createWorkspaceStore`: el contexto de trabajo del motor. | nada | ninguno |
+| `artifacts` | Visor, versiones, descargas y publicaciones de artefactos. | `ui (15)`, `apps/desktop (6)`, `features/{viewers,machines}`, `engine-client`, `@terminus/chat` | 10 comandos (`artifact_*`, `read_version`, `restore_version`…) |
+| `viewers` | Visores de CSV, imagen, multimedia y PDF. | `ui (9)`, `apps/desktop (6)`, `host (2)`, `@terminus/protocol` | ninguno |
+| `sites` | Los sitios web dentro del workspace. | `apps/desktop (3)`, `ui (2)`, `engine-client` | `site_*` (8) |
+| `composer` | El estado de la caja del compositor: modos, modelos, superficies y slash. | `apps/desktop (4)`, `packages/tasks` | `list_models`, `list_permission_modes`, `list_providers`, `list_slash_menu`, `list_surfaces` |
+| `task-queues` | Las colas de turnos de una tarea. | `ui`, `apps/desktop` | `get_turn`, `queue_resume`, `stop_turn`, `stop_turn_if` |
+| `threads` | Los hilos y la proyección de actividad del turno. | `apps/desktop (7)`, `features/chat (6)`, `session` | `load_history`, `load_session` |
+| `observability` | El estado de agentsview y la conexión de observabilidad. | `apps/desktop (2)`, `ui (2)`, `features/sites`, `engine-client` | `agentsview_status`, `observability_connect`, `observability_disconnect` |
+| `screen` | La pantalla remota (noVNC). | `@terminus/computers (2)`, `apps/desktop`, `ui` | ninguno |
+| `drafts` · `service-stream` · `tabs` · `conversation-handoff` | Borradores por tarea · lotes de eventos de servicio · arrastre de pestañas y cierre sin guardar · traspaso de conversación. | `apps/desktop`; `tabs` y `conversation-handoff` también `ui` | ninguno |
 
-- **R1:** Ningún `fetch`, `WebSocket`, `EventSource`, `@tauri-apps/api` ni `invoke` fuera de `platform-client`, `engine-client`, `session` y `host`.
-- **R2:** Ningún tipo de respuesta escrito a mano fuera de `model.ts` (derivados de los clientes generados); cliente único del borde por app (`usePlatform()` en features).
-- **R3:** Una feature no importa a otra; solo `shell` (o un `apps/*`) las compone.
-- **R4:** `packages/ui` no importa nada de dominio ni de red (no importa `@danil/*`).
-- **R5:** La UI no distingue local de nube: sin `isLocal`, `is_local`, `kind === "personal"` ni comprobaciones locales fuera de `engine-client`.
-- **R6:** Tope de 400 líneas por archivo `.ts/.tsx` (incluyendo `generated/`).
-- **R7:** Si cambia el contrato RPC1 (`commands.json`) o OpenAPI (`openapi.json`), `CONTRACT_HASH` debe coincidir con su sha256 o se regeneran los clientes.
-- **R8:** Lista negra: nada de appv2, mensajería, `/v1/compute` ni `/v1/computers`.
-- **R9:** DRY: prohibidas 12+ líneas consecutivas idénticas normalizadas en dos archivos (salvo `generated/`).
-- **R10:** Prohibido manejar `404` o `501` en features: se manejan y reintentan automáticamente en `platform-client`.
+`files`, `ai-credentials`, `terminal` y `account` **no existen** como features (03-structure.md las
+propone). El código de archivos está en `code`, el de cuentas de IA y de cuenta en `settings`, y el de
+terminal en `chat` (`run_shell_command`, `write_shell_input`).
 
-### Red, clientes y despliegue
+**Paquetes viejos** (la tabla de arriba): `attention`, `carry`, `chat`, `computers`, `design`, `fleet`,
+`protocol` y `tasks`. Dicen `@terminus/*` y su `INVENTORY.md` dice qué se mueve y qué se borra
+(fases 2 y 3). `attention` no se borra mientras lo use `apps/mobile`.
 
-- **Aislamiento de red:** La red solo vive en `packages/platform-client`, `packages/engine-client`, `packages/session` y `packages/host`.
-- **Cliente único del borde:** Un solo cliente del borde por app instanciado en el shell (`createPlatformClient`); las features lo consumen únicamente con `usePlatform()`.
-- **Despliegue web (`apps/workspace`):** Worker `danil-front-preview`, que sirve `preview-front.danil.ai` y **`beta.danil.ai`** (F4.3). Se despliega con `pnpm -C apps/workspace run deploy`. `wrangler deploy` sincroniza los dominios con `apps/workspace/wrangler.jsonc`: si una rama no declara un dominio en `routes`, el despliegue lo quita (así cayó beta con 530 el 2026-11-21). Despliega solo desde una rama con los dos dominios declarados.
-- **Front viejo y migración:** `apps/desktop` y los paquetes viejos (`attention`, `computers`, `fleet`, `carry`, `chat`, `tasks`, `protocol`, `design`) son el front viejo y se borran en F4.4: el front nuevo no los importa.
+### Reglas y gates
+
+`node scripts/verify-front.mjs` (`pnpm front:verify`) corre R1–R12 y R14 (detalle en
+`scripts/verify-front/README.md`). Su alcance nombra `apps/{workspace,auth,desk}`, que no existen.
+En `dev` 4c22f04b falla con **894 violaciones en 703 archivos**. Pasan R4 y R7; R7 pasa porque no hay `generated/contract.ts`.
+No es todavía un gate de merge.
+
+Los gates del plan front-move son los que deciden si algo se integra:
+
+| Gate | Dónde | Qué exige |
+|---|---|---|
+| `move-gate` | `~/work/move/move-gate.sh <worktree> <dominio\|all>` (devbox, fuera del repo) | Compila (`tsc` + vite web). No quedan rutas `/v1/<dominio>` fuera del cliente. El diff no cambia JSX ni clases. El CSS es idéntico a la línea base. |
+| Paridad de 9 pantallas | Recetas en `scripts/verify-parity/screens/*.mjs`: `inicio`, `entrada`, `nueva-tarea`, `tarea`, `configuracion-{cuenta,maquinas,cuentas-ia,control-codigo,proyectos}`. Se corren con `~/work/f/gates/parity.sh <worktree>`. El corredor `run.f2.mjs` está en el checkout principal, no en git. | Captura la build web de la rama y la de su base con el borde simulado (`scripts/verify-parity/edge-fixtures.mjs`), en es-MX, tema oscuro y 1280×800. Tolera hasta un 2 % de píxeles distintos por pantalla. |
+| `requests.mjs` | `node scripts/verify-front/requests.mjs` (Playwright: `npm ci` en `scripts/verify-parity`) | En una carga web con sesión, `machines`, `sessions`, `catalog` y `me` se piden **una vez** cada uno (por contexto). Sale 1 si alguno pasa de 1. Al fusionar en dev dio `machines=2` (front-req-1). |
+| `f2-metrics` / `f2-gate` | `~/work/f/gates/f2-metrics.py <worktree> [--json]`; `~/work/f/gates/f2-gate.sh <worktree> <r12\|r3\|app\|r6\|raw> [unidad]` | Mide `raw` (botones, inputs y spinners crudos fuera de `ui`), `r12`, `r3` (imports entre features), `app` (líneas de `App.tsx`), `r6` (más de 400 líneas), `qjsx` (`.tsx` en `queries/`), `dup` (ventanas de 10 líneas repetidas) y `anyb` (`any` y `_bridge`). El gate pide que compile, que el CSS sea idéntico, que la métrica de la tarea baje y que ningún otro total suba; en `app` y `r6`, además, que ≥85 % de lo añadido sea código movido tal cual. |
+
+Medición de `f2-metrics` sobre `dev` 4c22f04b: R3 entre features 56, R6 55, `App.tsx` 3.105 líneas,
+crudos 65, R12 0, qjsx 0, dup 56, anyb 2.
+
+### Red y despliegue
+
+- La red solo vive en `platform-client`, `engine-client`, `session` y `host` (R1). Hoy hay rutas `/v1`
+  escritas en features, en `shell` y en `apps/desktop/src/web`: la lista está en
+  [docs/API.md](docs/API.md#rutas-v1-escritas-fuera-de-platform-client-deuda-de-r11).
+- No hay `createPlatformClient` ni `usePlatform()`: las features importan las funciones de dominio
+  de `platform-client` desde sus `queries/`. Un cliente único por app es **propuesta** (R2 y R11).
+- Beta (`beta.danil.ai`) es el Worker `danil-web-beta` (`apps/desktop/alpha-entry/wrangler.beta.toml`).
+  Se despliega con `~/work/move/deploy-beta.sh`, que se niega si falta el último `dev`, y anota el
+  rollback en el registro del plan.
 
 ## Product names
 
@@ -152,8 +201,8 @@ the pnpm workspace: it installs with npm from its own folder.
 ## Shared code
 
 - Code both apps need goes in `packages/`, not in a copy inside one app.
-- The desktop stays the source of the look: `apps/desktop/src/styles/global.css`
-  and its catalogs. `packages/design` repeats what other clients need, and the
+- The source of the look is `packages/ui/src/styles/global.css` (it moved
+  there from `apps/desktop/src/styles/` in the front move) and its catalogs. `packages/design` repeats what other clients need, and the
   `shared-design` guard fails when the two drift.
 - Packages are TypeScript sources without a build step; imports inside them
   carry the `.ts` extension so Node can load them directly.
@@ -168,9 +217,10 @@ the pnpm workspace: it installs with npm from its own folder.
   validarlos o hacer merge no concede esa autorización. Desktop consume más
   tiempo y dinero que el despliegue web; si falta la confirmación, solicítala
   indicando la versión y si será pre-release o release.
-- Work goes to `dev` first, then to `main`. Commits are signed off (DCO,
-  `git commit -s`) and follow Conventional Commits; see
-  [CONTRIBUTING.md](CONTRIBUTING.md).
+- `dev` es la única rama de trabajo (orden de Alejandro, 2026-11-22 03:15): cada
+  rama sale de `origin/dev` y se integra por PR a `dev`. `rebuild/move` está
+  congelada; no se toca. Commits are signed off (DCO, `git commit -s`) and follow
+  Conventional Commits; see [CONTRIBUTING.md](CONTRIBUTING.md).
 - File names and identifiers are in English; internal docs and comments are
   mostly in Spanish.
 - Only `AGENTS.md` files guide agents here; there is no `CLAUDE.md`.

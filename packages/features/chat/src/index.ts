@@ -1,41 +1,29 @@
-/**
- * Punto de entrada público de la feature @danil/feature-chat.
- * Exporta pantallas y piezas que el shell monta.
- */
-
-// Pantallas
-export { ChatScreen } from "./screens/ChatScreen.tsx";
-export type { ChatScreenProps } from "./screens/ChatScreen.tsx";
-
-// Componentes
-export { MessageItem } from "./components/MessageItem.tsx";
-export type { MessageItemProps } from "./components/MessageItem.tsx";
-export { ReasoningBlock } from "./components/ReasoningBlock.tsx";
-export type { ReasoningBlockProps } from "./components/ReasoningBlock.tsx";
-export { ToolPermissionCard } from "./components/ToolPermissionCard.tsx";
-export type { ToolPermissionCardProps } from "./components/ToolPermissionCard.tsx";
-export { Composer } from "./components/Composer.tsx";
-export type { ComposerProps } from "./components/Composer.tsx";
-export { ErrorBanner } from "./components/ErrorBanner.tsx";
-export type { ErrorBannerProps } from "./components/ErrorBanner.tsx";
-
-// Store
-export { createChatStore } from "./store.ts";
-export type { ChatStoreState } from "./store.ts";
-
-// Tipos de modelo
-export type {
-  ChatTurnView,
-  ChatHistoryView,
-  ChatStreamEvent,
-  ChatRole,
-  TurnPiece,
-  ReasoningPiece,
-  DeltaPiece,
-  ToolPiece,
-  ShellPiece,
-  PermissionPiece,
-  QuestionPiece,
-  TurnStatus,
-  TurnState,
-} from "./model.ts";
+export { modoInicial, modoRecordado, recordarModo } from "./model/modes.ts";
+export type { HandoverPending } from "./model/handover.ts";
+export { guardable, type Encolado } from "../../../ui/src/lib/queue.ts";
+export type { Msg } from "./screens/Chat.tsx";
+export { lotesDeDeltas, type Programar } from "./model/deltaFrames.ts";
+export { hasOlder, hasRecentGap, HistoryPager, type OlderState } from "./model/history.ts";
+export type { HandoverState } from "./model/handover.ts";
+export { anexarDeltas, anexarImagen, anexarRazonamiento, mcpCallFromName, mensajesDelHilo, tramoGuardado, transcripcion, type ChatEvent, type Session, type TranscriptOrigin, type Turn, type Delta } from "./model/transcript.ts";
+export { vivoTrasLeer } from "./model/threadOrder.ts";
+export type { PermissionRequest } from "./screens/Chat.tsx";
+export { mergeGates, type PendingPermission } from "./model/permissionGates.ts";
+export { createSleepSession, TRANSPORTE, type ComandoQueNace, type Corrida, type LiveTurn, type TerminalLanzada } from "./queries/sleepSession.ts";
+export { createChatBackground } from "./queries/chat-background.ts";
+export { createPanelDeChat } from "./screens/PanelDeChat.tsx";
+export { createSendNow } from "./queries/send-now.ts";
+export { createSendGates } from "./queries/send-gates.ts";
+export { createSend } from "./queries/send.ts";
+export { createHandover } from "./queries/handover.ts";
+export { createDraftSend } from "./queries/draft-send.ts";
+export { createShellCommand } from "./queries/shell-command.ts";
+export { createResyncCommands } from "./queries/resync-commands.ts";
+export { createResync } from "./queries/resync.ts";
+export { createAttachmentsMount } from "./queries/attachments-mount.ts";
+export { createAttachments } from "./queries/attachments.ts";
+export { createThreadSide } from "./queries/thread-side.ts";
+export { createThreadStream } from "./queries/thread-stream.ts";
+export { createChatEvents } from "./queries/chat-events.ts";
+export { createThreadsStore } from "./queries/threads-store.ts";
+export { createActivityProjection, activityElapsed, type TurnActivity } from "./model/activity.ts";

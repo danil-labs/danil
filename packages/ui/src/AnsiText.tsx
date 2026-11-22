@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
-import { segmentosAnsi } from "./lib/ansi";
-import { enlacesEnTexto } from "./lib/links";
+import { segmentosAnsi } from "../../../apps/desktop/src/lib/ansi";
+import { enlacesEnTexto } from "../../../apps/desktop/src/lib/links";
 
 function sinAnsi(text: string) {
   return segmentosAnsi(text).map((segmento) => segmento.text).join("");

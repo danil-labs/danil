@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { removeRailWorkspace } from "../../src/features/shell/remove-rail-workspace.ts";
+import { removeRailWorkspace } from "../../../../packages/shell/src/shell/remove-rail-workspace.ts";
 
 test("removal forgets view preferences and revokes only the selected workspace, keeping the context for a hidden sibling", async () => {
   const added = new Set(["visible", "hidden"]);

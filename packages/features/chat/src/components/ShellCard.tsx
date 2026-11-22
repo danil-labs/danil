@@ -1,6 +1,12 @@
+import CornerDownRight from "lucide-solid/icons/corner-down-right";
+import Square from "lucide-solid/icons/square";
+import SquareTerminal from "lucide-solid/icons/square-terminal";
 import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
-import { AnsiText } from "@danil/ui";
-import { CornerDownRight, Square, SquareTerminal } from "./icons.tsx";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { formatearDuracion } from "../../../../../apps/desktop/src/lib/steps";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { AnsiText } from "../../../../ui/src/AnsiText";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /** Un `!` mientras corre, armado con los eventos `shell_*` de su ejecución. */
 export type ComandoEnVivo = {
@@ -16,7 +22,7 @@ export type TarjetaDeTerminalProps = {
   command: string;
   cwd?: string | null;
   output: string;
-  truncated?: boolean;
+  truncated: boolean;
   exitCode?: number | null;
   durationMs?: number | null;
   /** Mientras corre: desde cuándo, y cómo se detiene. */
@@ -25,23 +31,16 @@ export type TarjetaDeTerminalProps = {
   pendiente?: string | null;
 };
 
-export function formatearDuracion(ms: number): string {
-  if (ms < 1000) return `${Math.round(ms)}ms`;
-  const seg = Math.round(ms / 1000);
-  if (seg < 60) return `${seg}s`;
-  const min = Math.floor(seg / 60);
-  const segResto = seg % 60;
-  return `${min}m ${segResto}s`;
-}
-
 const DATO = "shrink-0 text-caption text-neutral-500 tabular-nums";
+// Un `!` que termina antes no enseña el botón: aparecer y desaparecer en un instante se lee como un parpadeo.
 const ESPERA_DEL_BOTON_MS = 500;
+// Margen para contar como «al fondo»: el redondeo del scroll deja a veces un píxel.
 const HOLGURA_DEL_FONDO_PX = 8;
 
-export function ShellCard(props: TarjetaDeTerminalProps) {
+export default function TarjetaDeTerminal(props: TarjetaDeTerminalProps) {
   const [ahora, setAhora] = createSignal(Date.now());
+  // Una tarjeta nace viva o terminada; las del historial no llevan reloj.
   const [botonVisible, setBotonVisible] = createSignal(false);
-
   if (props.vivo) {
     const reloj = setInterval(() => setAhora(Date.now()), 1000);
     const boton = setTimeout(() => setBotonVisible(true), ESPERA_DEL_BOTON_MS);
@@ -50,14 +49,12 @@ export function ShellCard(props: TarjetaDeTerminalProps) {
       clearTimeout(boton);
     });
   }
-
   let salida: HTMLPreElement | undefined;
   let pegadoAlFondo = true;
   const alScroll = () => {
     if (!salida) return;
     pegadoAlFondo = salida.scrollHeight - salida.scrollTop - salida.clientHeight <= HOLGURA_DEL_FONDO_PX;
   };
-
   createEffect(
     on(
       () => props.output,
@@ -82,32 +79,34 @@ export function ShellCard(props: TarjetaDeTerminalProps) {
           {(vivo) => (
             <>
               <span class={DATO}>
-                corriendo {formatearDuracion(Math.max(0, ahora() - vivo().desde))}
+                {t("chat.shell.running", {
+                  duration: formatearDuracion(Math.max(0, ahora() - vivo().desde)),
+                })}
               </span>
               <Show when={botonVisible()}>
-                <button
-                  type="button"
+                <Pressable
                   class="flex size-6 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-neutral-50 outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
-                  aria-label={vivo().deteniendo ? "deteniendo..." : "Detener"}
-                  title={vivo().deteniendo ? "deteniendo..." : "Detener"}
+                  aria-label={vivo().deteniendo ? t("chat.turn.stopping") : t("chat.shell.stop")}
+                  title={vivo().deteniendo ? t("chat.turn.stopping") : t("chat.shell.stop")}
                   disabled={vivo().deteniendo}
                   onClick={() => vivo().onDetener()}
                 >
-                  <Square size={9} fill="currentColor" />
-                </button>
+                  <Square size={9} fill="currentColor" aria-hidden="true" />
+                </Pressable>
               </Show>
             </>
           )}
         </Show>
         <Show when={!props.vivo && props.exitCode != null}>
           <span
-            class={`flex h-5 shrink-0 items-center rounded-[5px] px-[7px] text-caption font-medium ${
+            class={cn(
+              "flex h-5 shrink-0 items-center rounded-[5px] px-[7px] text-caption font-medium",
               props.exitCode === 0
                 ? "bg-success/10 text-success-strong"
-                : "bg-error/10 text-error-strong"
-            }`}
+                : "bg-error/10 text-error-strong",
+            )}
           >
-            {props.exitCode === 0 ? "código 0" : `error ${props.exitCode}`}
+            {t("chat.shell.exit", { code: props.exitCode! })}
           </span>
         </Show>
         <Show when={!props.vivo && props.durationMs != null}>
@@ -115,26 +114,19 @@ export function ShellCard(props: TarjetaDeTerminalProps) {
         </Show>
       </header>
       <Show when={props.output || props.truncated}>
-        <pre
-          ref={salida}
-          onScroll={alScroll}
-          class="m-0 max-h-72 overflow-auto px-3 py-2.5 font-mono text-xs leading-[18px] break-words whitespace-pre-wrap text-neutral-700"
-        >
+        <pre ref={salida} onScroll={alScroll} class="m-0 max-h-72 overflow-auto px-3 py-2.5 font-mono text-xs leading-[18px] break-words whitespace-pre-wrap text-neutral-700">
           <Show when={props.truncated}>
-            <span class="text-neutral-500">[salida truncada]{"\n"}</span>
+            <span class="text-neutral-500">{t("chat.shell.truncated")}{"\n"}</span>
           </Show>
-          <AnsiText text={props.output} />
+          <AnsiText text={props.output} enlaces />
         </pre>
       </Show>
       <Show when={!props.vivo && props.pendiente}>
         <div class="flex min-h-7 min-w-0 items-center gap-1.5 border-t border-border px-3 py-0.5 text-caption text-neutral-500">
-          <CornerDownRight size={12} class="shrink-0" />
+          <CornerDownRight size={12} class="shrink-0" aria-hidden="true" />
           <span class="min-w-0 truncate">{props.pendiente}</span>
         </div>
       </Show>
     </article>
   );
 }
-
-export { ShellCard as TarjetaDeTerminal };
-export default ShellCard;

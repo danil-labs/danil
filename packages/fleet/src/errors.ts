@@ -51,6 +51,8 @@ export function fromRelay(error: unknown, machine: string): FleetError {
   const code = typeof e.code === "string" ? e.code : "io";
   // `RelaySession` vence con `io/timeout`: es el mismo plazo que el relay dice `machine_timeout`.
   if (code === "io" && e.detail === "timeout") return new FleetError("machine_timeout", machine);
+  // La sesión se detuvo con la VM apagada (409 del ticket): es una máquina apagada, que una acción enciende.
+  if (code === "machine_stopped") return new FleetError("machine_off", machine, null, true);
   if (code === "service_version") return new FleetError("version_mismatch", machine, e.detail);
   return new FleetError(code, machine, e.detail ?? null);
 }

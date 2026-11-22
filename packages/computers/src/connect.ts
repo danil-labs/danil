@@ -46,7 +46,7 @@ export type WatchOptions = {
   list: () => Promise<Answer<Computer[]>>;
   /** Las computadoras que ya había al abrir: las demás son nuevas. */
   known: Iterable<string>;
-  /** Si su motor no habla el contrato de este cliente (`machineCompatibility`). */
+  /** Si su motor no habla el contrato de este cliente. */
   outdated?: (computer: Computer) => boolean;
   onProgress: (progress: ConnectProgress) => void;
   signal?: AbortSignal;

@@ -1,10 +1,22 @@
 # @danil/host
 
-Lo que solo la plataforma de la app sabe hacer. Es el único lugar del front nuevo con `invoke` de Tauri (R1).
+## Qué hace
+Abstracción de capacidades nativas dependientes de la plataforma (Tauri en desktop, navegador en web).
+Gestiona apertura de URLs externas, portapapeles, selector de archivos e imágenes y controles de ventana.
 
-- `createTauriHost()` (Desk): `invoke`/`call` de comandos RPC1 por el IPC de Tauri hacia el motor local, con reintento mientras el proxy responde `engine_down`; `listen` de eventos del motor; `openExternal` con el comando `open_external`.
-- `createWebHost()` (web): sin motor local (todo va por relay); `openExternal` con `window.open`.
-- `setHost(h)` lo llama la app al arrancar; `host` es la fachada que usan las features (p. ej. abrir billing o harness).
-- `isLocal(machineId)`: en Desk, si la máquina es esta computadora (los `machine_id` de `danil_connected_status`, releídos con el evento `person-session`); en la web, nunca. engine-client lo usa para ir por IPC en vez de relay; la UI no distingue (R5 exime a host por eso).
-- Implementa `LocalHost` de `@danil/engine-client` (transporte local) y `DeskAuthHost` de `@danil/session` (sesiones del motor).
-- Consume: `@tauri-apps/api`. Contrato: los comandos RPC1 del motor (`danil-engine`).
+## Qué expone
+Exporta interfaces y funciones desde sus módulos en `src/`:
+- Capacidades de plataforma: `Capabilities`, `getPlatform`, `setHost`, `host`, `LocalHost`, `DeskAuthHost` en `platform.ts`.
+- Portapapeles y descargas: `readClipboardText`, `writeClipboardText` en `clipboard.ts`, y `downloadUrl` en `downloads.ts`.
+- Ventana y diálogo: `minimizeWindow`, `maximizeWindow`, `closeWindow` en `window.ts`, `pickImage` en `pick-image.ts`.
+
+## Qué consume
+- `@tauri-apps/api` (en entorno de escritorio).
+- `@terminus/computers` y `apps/desktop/src/lib/prefs.ts` (en proceso de desacoplamiento).
+
+## Qué contratos toca
+- Rutas `/v1` del borde: ninguna.
+- Comandos RPC1 del motor: ninguno directo; provee el canal de transporte nativo para `engine-client`.
+
+## Qué falta según la fase 2 del plan
+- Fase 2.4: retirar imports residuales hacia `features/settings` y `apps/desktop` para asegurar aislamiento completo según R1 y R15.

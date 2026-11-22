@@ -6,7 +6,6 @@
  * otro. Sin React Native: se prueba en Node.
  */
 import {
-  type MachineAdmission as Admission,
   type Computer,
   type MachineState,
   type Power,
@@ -19,6 +18,9 @@ import {
   orderComputers,
   wakes,
 } from "@terminus/computers";
+import {
+  type Admission,
+} from "../../../../packages/platform-client/src/machines-config.ts";
 import { Fleet, relayLink, type FleetEvent, type Slice, type StorageLike, classOf, isFleetError, isRead } from "@terminus/fleet";
 import { type AppCommand, type AppFeature, COMMAND_NOT_HERE, COMMAND_UNSUPPORTED, CommandSupport, type EngineError, type EngineEvent, type Support, isAppCommand, isScopeRefusal } from "@terminus/protocol";
 
@@ -205,7 +207,8 @@ export function accountFleet(config: AccountFleetConfig, factory?: SocketFactory
       } };
     },
     wake: config.wake,
-    storage: config.storage ?? null,
+    // El borde no persiste lecturas privadas entre sesiones de personas.
+    storage: config.admit ? null : (config.storage ?? null),
     onChange: (machine) => changed(machine),
     // La cola de aplazadas cambió (aquí o en otro dispositivo): la lista se relee.
     onDeferred: (machine) => changed(machine),

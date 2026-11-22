@@ -1,5 +1,5 @@
 import { Show, splitProps, type JSX } from "solid-js";
-import { cn } from "./lib/utils";
+import { cn } from "../../../apps/desktop/src/lib/utils";
 import { SectionLabel } from "./SectionLabel";
 
 /**

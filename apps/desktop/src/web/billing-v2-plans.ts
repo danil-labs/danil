@@ -1,4 +1,4 @@
-import type { billingV2, PlanChoice } from "./billing-v2-api.ts";
+import type { billingV2, PlanChoice } from "../../../../packages/platform-client/src/treasury.ts";
 
 type Catalog = Awaited<ReturnType<ReturnType<typeof billingV2>["catalog"]>>;
 

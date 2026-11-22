@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createAccountRequests, listOrgs } from "../../src/features/shell/account-requests.ts";
-import type { ContextGroup } from "../../src/features/shell/session-context-types.ts";
+import { createAccountRequests, listOrgs } from "../../../../packages/shell/src/shell/account-requests.ts";
+import type { ContextGroup } from "../../../../packages/shell/src/shell/session-context-types.ts";
 
 const acme: ContextGroup = { context_id: "c-acme", org: "org_acme", org_name: "Acme", plan: "pro", role: "admin", family: "f", email: "a@example.com" };
 

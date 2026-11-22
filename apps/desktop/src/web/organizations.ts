@@ -4,7 +4,7 @@
  * `Idempotency-Key` del intento. Los errores llegan como `PlatformSessionError` (`status`, `code`).
  */
 import type { OrganizationSource } from "@terminus/computers";
-import type { platformTransport } from "./platform-session.ts";
+import type { platformTransport } from "../../../../packages/session/src/platform-session.ts";
 
 type Transport = Pick<ReturnType<typeof platformTransport>, "call" | "mutation">;
 

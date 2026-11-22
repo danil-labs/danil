@@ -113,7 +113,7 @@ export type FleetConfig = {
   /** La máquina de la ventana (sus ids van sueltos), o `null` en la web. */
   self?: string | null;
   connect(info: MachineInfo): Link;
-  /** Si este cliente habla el contrato de un motor: `null` si no se sabe (`machineCompatibility`). */
+  /** Si este cliente habla el contrato de un motor: `null` si no se sabe. */
   compatible?(contract: string | null): boolean | null;
   /** Enciende una VM por el plano de control; `false` si no se pudo, `not_startable` si no es suya de encender. */
   wake?(machine: string, context?: string): Promise<boolean | "not_startable">;
@@ -677,13 +677,14 @@ export class Fleet {
   }
 
   /** `license_required` si alguna máquina está detenida por la licencia: la UI enseña el aviso de Terminus de pago. */
-  license(context?: string): Blocked | null {
-    return this.scoped(context).map((m) => this.blocked(m.id, context)).find(Boolean) ?? null;
+  license(context?: string): "license_required" | null {
+    return this.scoped(context).some((m) => this.blocked(m.id, context) === "license_required") ? "license_required" : null;
   }
 
   /** «Reintentar»: vuelve a abrir las sesiones detenidas. */
   retry() {
-    for (const m of this.members.values()) if (m.link.blocked?.()) m.link.retry?.();
+    // Una VM apagada no se reabre aquí: reabrirla pide un ticket sin `wake` y vuelve el 409. La enciende `wake`.
+    for (const m of this.members.values()) if (m.link.blocked?.() === "license_required") m.link.retry?.();
   }
 
   /** Los eventos de todas: cada máquina se suscribe ahora y las que lleguen después, al agregarse. */
@@ -762,17 +763,20 @@ export class Fleet {
     const args = this.argsFor(machine, envelope.args ?? {}, context);
     // Sin licencia no se pregunta nada: la sesión espera a «Reintentar».
     const stopped = member.link.blocked?.();
-    if (stopped) throw new FleetError(stopped, machine);
     const kind = classOf(command);
+    // VM apagada (409 `machine_stopped` del ticket): el canal no la enciende. Un mensaje o un gesto
+    // de la persona la enciende antes por el plano de control (#883); lo demás sigue detenido.
+    const halted = stopped === "machine_stopped" && kind !== "read" && !PASSIVE.has(command) && !this.defers(command, args, context);
+    if (stopped && !halted) throw new FleetError(stopped, machine);
     if (kind !== "read" && this.isOutdated(member)) throw new FleetError("version_mismatch", machine);
     const off = this.isOff(member);
     // Lo que la ventana pide sola (`PASSIVE`) no enciende la VM: solo un mensaje o un gesto de la persona.
     if (off && PASSIVE.has(command)) throw new FleetError("machine_off", machine);
     // Archivar, borrar, renombrar, fijar o mover de space: el relay la guarda sin encenderla.
-    if (off && kind !== "read" && !this.defers(command, args, context)) {
+    if (halted || (off && kind !== "read" && !this.defers(command, args, context))) {
       if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);
-      // El relay enciende la VM solo con un intent; otra acción la enciende antes el plano de control.
-      if (kind === "action") await this.wakeMember(member);
+      // El relay enciende la VM solo con un intent; otra acción, o el canal detenido, la enciende antes el plano de control.
+      if (kind === "action" || halted) await this.wakeMember(member);
     }
     const workspace = callWorkspace(envelope.workspace, args);
     const timeout = envelope.command === "list_storage" ? this.deadlines.action : this.deadlines[kind];
@@ -807,14 +811,28 @@ export class Fleet {
     return !(command === "move_task_to_space" && typeof args.space === "string" && this.shared(context).has(args.space));
   }
 
+  /** Los encendidos en vuelo, uno por máquina: dos intents a la vez esperan el mismo, no piden otro (`409 operation_in_progress`, #883). */
+  private starting = new Map<string, Promise<void>>();
+
   /** Enciende la VM y espera a que diga `online`, con el tope de un intent. */
-  private async wakeMember(member: Member) {
+  private wakeMember(member: Member): Promise<void> {
+    const key = memberKey(member.info.id, member.info.context);
+    const running = this.starting.get(key);
+    if (running) return running;
+    const start = this.startMember(member).finally(() => this.starting.delete(key));
+    this.starting.set(key, start);
+    return start;
+  }
+
+  private async startMember(member: Member) {
     const { id } = member.info;
     if (alwaysOn(member.info)) throw new FleetError("machine_off", id, null, false);
     if (!this.config.wake) throw new FleetError("machine_off", id, null, true);
     const started = member.link.state() === "starting" || (await this.config.wake(id, member.info.context).catch(() => false));
     if (started === "not_startable") throw new FleetError("machine_off", id, "not_remotely_startable", false);
     if (!started) throw new FleetError("machine_off", id, "start_failed", true);
+    // La sesión se detuvo al ver la VM apagada (409): ya encendida, vuelve a pedir su ticket.
+    if (member.link.blocked?.() === "machine_stopped") member.link.retry?.();
     await new Promise<void>((resolve, reject) => {
       const done = (ok: boolean) => {
         clearTimeout(timer);

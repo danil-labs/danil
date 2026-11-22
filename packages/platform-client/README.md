@@ -1,26 +1,34 @@
 # @danil/platform-client
 
-Cliente del borde /v1 con reintento ante 404/501/503 (R10) y la URL base única.
+## Qué hace
+Cliente HTTP tipado y único para el borde `/v1` de Danil.
+Implementa reintentos automáticos para 404, 501 y 503 (regla R10), gestión de sesión, lectura compartida (`shared-read.ts`) y el cliente oficial de máquinas (`machines.ts`).
 
-- Consume: fetch del borde (`src/http.ts` es el único fetch hacia el borde).
-- Contrato: `contract/openapi.json`, copia versionada del OpenAPI del borde (danil-contracts).
-- Generado: `pnpm -C packages/platform-client generate` emite `src/generated/{types,operations,contract}.ts`
-  (`CONTRACT_HASH` = sha256 del openapi.json). No editar lo generado.
-- Entrada pública: `src/index.ts` → `createPlatformClient({getToken?, getWorkspaceId?, csrf?, onUnauthorized?, onUnavailable?, signal?})`.
-- Errores (se lanzan tipados): `unauthorized` (401, llama a `onUnauthorized`), `forbidden`,
-  `unavailable` y `error{status,code,message}`. 404/501/503 y fallos de red reintentan solos
-  (1s, 2s, 4s… tope 30s, con jitter, sin límite hasta abortar `signal`); la UI recibe
-  `{kind:"unavailable", retrying:true}` por `onUnavailable`, nunca como error final.
-- Web usa cookie (`credentials: "include"`); Desk pasa `getToken` y va con Bearer.
-- Reglas: R1 (red solo aquí y en session, host, engine-client), R3 y R4 de `03-structure.md`.
+## Qué expone
+Exporta desde `src/client.ts` y módulos de dominio:
+- Cliente principal y hooks: `createPlatformClient`, `usePlatform`, `cancelEdgeWrites`, `nextDelay`, `EdgeMethod`, `EdgeRefusal`, `EdgeReply`, `GroupReply`.
+- Constantes y eventos: `ORGANIZATION_CHANGED`, `Admission`.
+- Clientes de dominio: `machines.ts` (`getMachines`, `startMachine`, `wakeMachine`, `createMachineTicket`), `identity.ts`, `workspaces.ts`, `treasury.ts`, `credentials.ts`.
 
-## Un solo cliente por app
+## Qué consume
+- Fetch HTTP nativo hacia el borde `/v1`.
+- `@danil/engine-client` (para ejecutar peticiones vía comando RPC1 `danil_edge_fetch` en Desk).
 
-- La app (el shell) crea **un** cliente: `createPlatformClient(session.transport())`, y lo provee con `<PlatformProvider client>`. Las features lo leen en su `queries.ts` con `usePlatform()` (gate R2).
-- Transportes (`src/http.ts`), con un solo bucle de reintento (`withRetry`):
-  - `createHttpTransport` (web): cookie `__Host-danil_session` (`credentials: "include"`), `X-CSRF-Token` en mutaciones y rotación ante `csrf_failed`.
-  - `createEngineTransport` (Desk): `person_session_fetch` del motor con el contexto de la sesión activa; sin tokens en la ventana.
-- R10: 404/501/503 y fallos de red se reintentan con backoff (`backoffDelay`, 1 s → 30 s con jitter) **solo** en lecturas y en mutaciones con `Idempotency-Key` (`idempotencyKey()`), hasta 10 intentos; después `{kind:"unavailable", retrying:false}` y la vista ofrece reintentar. Cada operación acepta `opts.signal` para cancelar al desmontar.
-- `API_BASE`, `BILLING_URL` y `HARNESS_URL` (`src/config.ts`) son las únicas URLs del front.
-- `planLabel(org)` (`src/plan.ts`): la única regla del nombre de plan (Personal, Team, Enterprise); nunca cae al nombre de la organización.
-- `createQuery(key, fetcher)` e `invalidate(prefix)` (`src/query.ts`): lecturas con clave compartidas entre vistas (una petición, un valor; `invalidate` tras una mutación). Las features las usan en su `queries.ts` (RV1 #17, B-023).
+## Qué contratos toca
+- Rutas del borde `/v1`:
+  - `/v1/capabilities`
+  - `/v1/credits/balance`
+  - Dominio identidad: `/v1/identity/contexts`, `/v1/identity/login`, `/v1/identity/me`, `/v1/identity/organizations`, `/v1/identity/organizations/select`, `/v1/identity/sessions`, `/v1/identity/sessions/catalog`
+  - Dominio workspaces: `/v1/workspaces`, `/v1/workspaces/adopt`, `/v1/workspaces/adopt/challenge`, `/v1/workspaces/promo/redeem`, `/v1/workspaces/select`
+  - Dominio máquinas: `/v1/machines`, `/v1/machines/start`, `/v1/machines/ticket`, `/v1/machines/wake`
+- Comandos RPC1 del motor: `danil_edge_fetch`.
+
+## Contrato vendorizado (R2 y R7)
+- `contract/openapi.json`: copia literal de `platform/openapi.json` de `danil-labs/danil-contracts`; el commit está en `contract/PIN`.
+- `node packages/platform-client/scripts/generate.mjs` regenera `src/generated/types.ts` (esquemas de las operaciones de cada dominio de `DOMAINS`) y `src/generated/contract.ts` (`CONTRACT_HASH`, `OPERATIONS`). Con `--check` falla si están desactualizados.
+- Para subir el contrato: copia el archivo del nuevo commit, actualiza `PIN` y regenera. R7 (`verify-front`) falla si `CONTRACT_HASH` no es el sha256 del archivo.
+- Dominios generados: **machines** (`machines.ts` reexporta `Machine`, `MachineList`, `MachineTicket` y `Operation`). La configuración, el transporte y el sobre `MachinesAnswer` no son respuestas y viven en `machines-config.ts`.
+
+## Qué falta según la fase 2 del plan
+- Fase 2.3: consumirse únicamente desde los archivos `queries.ts` de las features (R12).
+- Fase 4.2: generar del OpenAPI los dominios que quedan (identidad, workspaces, treasury, credenciales); machines ya está.

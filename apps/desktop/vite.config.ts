@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { defineConfig, mergeConfig, normalizePath, type Plugin, type UserConfig } from "vite";
 import solid from "vite-plugin-solid";
 import tailwindcss from "@tailwindcss/vite";
-import { webConnectSources, webRelayOrigins, webSessionDeployment } from "./src/web/session-config";
+import { webConnectSources, webRelayOrigins, webSessionDeployment } from "../../packages/session/src/session-config";
 
 const fonts = resolve(fileURLToPath(
   new URL("./node_modules/@excalidraw/excalidraw/dist/prod/fonts/", import.meta.url),
@@ -78,7 +78,7 @@ function webBuild(serve: boolean): UserConfig {
     generateBundle(_, bundle) {
       const html = bundle["web.html"];
       if (html?.type === "asset" && typeof html.source === "string") {
-        const entry = normalizePath(fileURLToPath(new URL("./src/app/main.tsx", import.meta.url)));
+        const entry = normalizePath(fileURLToPath(new URL("../../packages/shell/src/app/main.tsx", import.meta.url)));
         const app = Object.values(bundle).find(chunk => chunk.type === "chunk" && Object.hasOwn(chunk.modules, entry));
         if (!app) this.error("No se encontró la entrada de la ventana para precargarla");
         // La ruta de escritorio activa la descarga; el teléfono redirige sin pedir esta entrada.

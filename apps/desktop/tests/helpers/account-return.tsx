@@ -2,12 +2,12 @@ import { elegirLengua } from "../../src/lib/i18n";
 import "../../src/locales/catalogs";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { setCapabilities } from "../../src/lib/platform";
-import AddWorkspaceMenu from "../../src/features/shell/AddWorkspaceMenu";
-import { NewAccountTile } from "../../src/features/shell/NewAccountTile";
-import { accountReturn, setNewAccountTiles } from "../../src/features/shell/account-return-state";
-import { createSessionContexts } from "../../src/features/shell/session-contexts";
-import { ToastStack } from "../../src/ui/Toast";
+import { setCapabilities } from "../../../../packages/host/src/platform";
+import AddWorkspaceMenu from "../../../../packages/shell/src/shell/AddWorkspaceMenu";
+import { NewAccountTile } from "../../../../packages/shell/src/shell/NewAccountTile";
+import { accountReturn, setNewAccountTiles } from "../../../../packages/shell/src/shell/account-return-state";
+import { createSessionContexts } from "../../../../packages/shell/src/shell/session-contexts";
+import { ToastStack } from "../../../../packages/ui/src/Toast";
 
 export function mountReturn(root: HTMLElement, language = "es") {
   elegirLengua(language);

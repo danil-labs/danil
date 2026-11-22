@@ -1,96 +1,24 @@
-// GENERADO por scripts/generate.mjs. No editar.
+// GENERADO por packages/platform-client/scripts/generate.mjs desde contract/openapi.json. No editar a mano.
+// repo: danil-labs/danil-contracts; commit: 76173608d54571782453c165d1cfcacf612a6ea1; path: platform/openapi.json
+
+// Dominios: machines, identity, workspaces.
+
+export type ErrorBody = {
+  code?: string;
+  message?: string;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
+};
 
 export type ErrorResponse = {
   error: {
     code: string;
     message: string;
+    /** Campos aditivos: el contrato crece sin recompilar (R10). */
+    [key: string]: unknown;
   };
-  [key: string]: any;
-};
-
-/** application/problem+json que emite el borde; type es urn:danil:problem:<code>. */
-export type Problem = {
-  type?: string;
-  title?: string;
-  status?: number;
-  detail?: string;
-  code?: string;
-  [key: string]: any;
-};
-
-export type Loose = {
-  [key: string]: any;
-};
-
-export type OrganizationRef = {
-  id: string;
-  name?: string;
-  role?: string;
-  /** Abierto; hoy se observa personal. */
-  type?: string;
-  /** free, team, enterprise… */
-  plan?: string | null;
-  [key: string]: any;
-};
-
-export type Me = {
-  id: string;
-  name?: string;
-  state?: string;
-  /** Workspace activo si lo hay; forma no verificada. */
-  workspace?: Workspace | null;
-  organizations?: Array<OrganizationRef>;
-  active_organization_id?: string | null;
-  [key: string]: any;
-};
-
-export type OrganizationList = {
-  items?: Array<OrganizationRef>;
-  /** Alias posible; la forma exacta no está documentada. */
-  organizations?: Array<OrganizationRef>;
-  active_organization_id?: string | null;
-  [key: string]: any;
-};
-
-export type SelectOrganizationRequest = {
-  organization_id: string;
-  [key: string]: any;
-};
-
-export type SelectOrganizationResponse = {
-  active_organization_id?: string | null;
-  [key: string]: any;
-};
-
-export type Workspace = {
-  id: string;
-  org?: string;
-  name?: string;
-  role?: string;
-  [key: string]: any;
-};
-
-export type WorkspaceList = {
-  items?: Array<Workspace>;
-  workspaces?: Array<Workspace>;
-  [key: string]: any;
-};
-
-export type CreateWorkspaceRequest = {
-  name: string;
-  org?: string;
-  [key: string]: any;
-};
-
-export type SelectWorkspaceRequest = {
-  /** Id del workspace, p. ej. "12". */
-  workspace: string;
-  [key: string]: any;
-};
-
-export type SelectWorkspaceResponse = {
-  workspace: Workspace;
-  [key: string]: any;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };
 
 export type Machine = {
@@ -103,13 +31,37 @@ export type Machine = {
   kind?: "personal" | "organization";
   /** Abierto; p. ej. danil. */
   provider?: string;
-  [key: string]: any;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };
 
 export type MachineList = {
   items: Array<Machine>;
   next_cursor?: string | null;
-  [key: string]: any;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
+};
+
+export type MachineTicket = {
+  ticket?: string;
+  /** Instante de caducidad; formato no verificado. */
+  expires_at?: string | number;
+  /** URL wss si la devuelve el servidor. */
+  url?: string;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
+};
+
+export type Me = {
+  id: string;
+  name?: string;
+  state?: string;
+  /** Workspace activo si lo hay; forma no verificada. */
+  workspace?: Workspace | null;
+  organizations?: Array<OrganizationRef>;
+  active_organization_id?: string | null;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };
 
 export type Operation = {
@@ -120,122 +72,79 @@ export type Operation = {
   generation?: number;
   machine_id?: string;
   error?: ErrorBody;
-  [key: string]: any;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };
 
-export type ErrorBody = {
+export type OrganizationList = {
+  items?: Array<OrganizationRef>;
+  /** Alias posible; la forma exacta no está documentada. */
+  organizations?: Array<OrganizationRef>;
+  active_organization_id?: string | null;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
+};
+
+export type OrganizationRef = {
+  id: string;
+  name?: string;
+  role?: string;
+  /** Abierto; hoy se observa personal. */
+  type?: string;
+  /** free, team, enterprise… */
+  plan?: string | null;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
+};
+
+/** application/problem+json que emite el borde; type es urn:danil:problem:<code>. */
+export type Problem = {
+  type?: string;
+  title?: string;
+  status?: number;
+  detail?: string;
   code?: string;
-  message?: string;
-  [key: string]: any;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };
 
-export type MachineTicket = {
-  ticket?: string;
-  /** Instante de caducidad; formato no verificado. */
-  expires_at?: string | number;
-  /** URL wss si la devuelve el servidor. */
-  url?: string;
-  [key: string]: any;
+export type SelectOrganizationRequest = {
+  organization_id: string;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };
 
-export type CredentialProviderList = {
-  items?: Array<{
-    provider?: string;
-    enabled?: boolean;
-    connection?: {
-      [key: string]: any;
-    } | string | null;
-  }>;
-  [key: string]: any;
+export type SelectOrganizationResponse = {
+  active_organization_id?: string | null;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };
 
-export type CredentialMachine = {
-  machine_id: string;
-  state: "active" | "pending" | "removed";
-  version?: number;
-  last_seen_at?: string | null;
-  [key: string]: any;
+export type SelectWorkspaceRequest = {
+  /** Id del workspace, p. ej. "12". */
+  workspace: string;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };
 
-export type AccountCredential = {
-  credential_id: string;
-  kind: "api_key" | "mcp_secret" | "zotero" | "subscription" | "mcp_oauth" | "env_secret";
-  provider: string;
-  slot: string;
-  label?: string | null;
-  hint?: string | null;
-  status: string;
-  version: number;
-  config?: {
-    [key: string]: any;
-  } | null;
-  created_at?: string;
-  updated_at?: string;
-  machines: Array<CredentialMachine>;
-  [key: string]: any;
+export type SelectWorkspaceResponse = {
+  workspace: Workspace;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };
 
-export type CredentialRecipient = {
-  machine_id: string;
-  /** X25519, base64 */
-  public_key: string;
-  [key: string]: any;
+export type Workspace = {
+  id: string;
+  org?: string;
+  name?: string;
+  role?: string;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };
 
-export type WorkspaceAccounts = {
-  credentials: Array<AccountCredential>;
-  recipients: Array<CredentialRecipient>;
-  [key: string]: any;
-};
-
-export type SealedCopy = {
-  machine_id: string;
-  /** Sobre TERMINUS-SECRET/1 en base64 */
-  sealed: string;
-};
-
-export type PutWorkspaceAccount = {
-  kind: "api_key" | "mcp_secret" | "zotero" | "subscription" | "mcp_oauth" | "env_secret";
-  provider: string;
-  slot: string;
-  label?: string;
-  hint?: string;
-  config?: {
-    [key: string]: any;
-  };
-  copies: Array<SealedCopy>;
-};
-
-export type AccountCredentialEnvelope = {
-  credential: AccountCredential;
-  [key: string]: any;
-};
-
-export type Ok = {
-  ok?: boolean;
-  [key: string]: any;
-};
-
-export type GithubConnection = {
-  connected: boolean;
-  status?: string | null;
-  login?: string | null;
-  avatar?: string | null;
-  version?: number | null;
-  install_url?: string | null;
-  [key: string]: any;
-};
-
-export type GithubAuthorizeRequest = {
-  return_to?: string;
-};
-
-export type GithubAuthorizeResponse = {
-  url: string;
-  expires_at?: string | number | null;
-  [key: string]: any;
-};
-
-export type CsrfToken = {
-  csrf_token: string;
+export type WorkspaceList = {
+  items?: Array<Workspace>;
+  workspaces?: Array<Workspace>;
+  /** Campos aditivos: el contrato crece sin recompilar (R10). */
+  [key: string]: unknown;
 };

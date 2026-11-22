@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { splitProps, type JSX } from "solid-js";
-import { cn } from "./lib/utils";
+import { cn } from "../../../apps/desktop/src/lib/utils";
 
 /**
  * El desplegable, **nativo a propósito**: lo pinta el sistema.

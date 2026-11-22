@@ -1,0 +1,33 @@
+import LogOut from "lucide-solid/icons/log-out";
+import { createSignal, For, Show } from "solid-js";
+import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { ITEM_DE_MENU } from "../../../ui/src/Popover";
+import { emptySessionEmails } from "./empty-session-emails";
+import { confirmEmailClose, emailContextCount } from "./session-close-confirm";
+import { sessionRailState } from "./session-groups";
+import { Pressable } from "../../../ui/src/Pressable";
+
+/** Un correo sin ningún cuadro en el riel pierde su menú de cuenta: su «Cerrar sesión» queda en el pie. */
+export function EmptySessionSignOut(props: { open: string | null; onDone: () => void }) {
+  const [busy, setBusy] = createSignal(false);
+  const [failed, setFailed] = createSignal(false);
+  const rows = () => emptySessionEmails(sessionRailState()?.groups() ?? null, props.open);
+  const close = async (row: { email: string | null; family: string }) => {
+    const rail = sessionRailState();
+    if (!rail || busy()) return;
+    if (!confirmEmailClose(emailContextCount(rail.sessions.families(), row.email, row.family), (count) => t("shell.workspaces.close_email_confirm", { count, email: row.email ?? "" }), window.confirm.bind(window))) return;
+    setBusy(true); setFailed(false);
+    try { await rail.sessions.closeEmail(row.email, row.family); props.onDone(); }
+    catch { setFailed(true); }
+    finally { setBusy(false); }
+  };
+  return <Show when={rows().length}>
+    <div class="my-1 h-px bg-border" />
+    <For each={rows()}>{(row) => <Pressable class={cn(ITEM_DE_MENU, "flex items-center gap-2")} data-empty-session-sign-out={row.family} disabled={busy()} onClick={() => void close(row)}>
+      <LogOut size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
+      <span class="min-w-0 flex-1 truncate">{t("shell.workspaces.close_email", { email: row.email ?? "" })}</span>
+    </Pressable>}</For>
+    <Show when={failed()}><p role="alert" class="m-0 px-2 py-1 text-caption text-error-strong">{t("shell.workspaces.sessions_failed")}</p></Show>
+  </Show>;
+}

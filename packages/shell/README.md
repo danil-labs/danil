@@ -1,31 +1,24 @@
 # @danil/shell
 
-Shell de aplicación que orquesta la composición de features, riel de navegación y enrutamiento principal de Danil (Web y Desktop).
+## Qué hace
+Orquestador y marco estructural de la aplicación Danil.
+Gestiona el arranque lineal con sesión (`Launcher`, `SessionGate`), composición de layout mediante slots, enrutamiento básico y riel vertical de navegación.
 
-## Principios y reglas
+## Qué expone
+Exporta desde `src/shell/index.ts`:
+- Estado de retorno y sesión: `accountReturn`, `sealFirstFreeWorkspace`, `noteFirstLoginSignedIn`.
+- Componentes de arranque y diálogo: `Lanzador` (`Launcher`), `MoveWorkspaceDialog`, `SessionGate`, `WindowControls`, `WorkspaceMarks`.
 
-- **Regla R3 (Único punto de composición)**: `packages/shell/src/routes.tsx` es el único archivo del shell que importa paquetes `@danil/feature-*`. Ningún otro componente interno (Layout, Rail, router) accede directamente a las features.
-- **Carga diferida (Lazy Loading)**: Todas las pantallas de ruta y pestañas se cargan de forma diferida mediante `lazy(() => import(...))` con imports con nombre y contratos de props tipados estrictamente (sin `any`, sin `getFeatureScreen` dinámico y sin pantallas de reemplazo `PlaceholderScreen`).
-- **Conexión única de máquina**: `WorkspaceScreen` resuelve la máquina asociada al workspace y obtiene su `MachineConnection` vía `useMachines().connect`, pasando esta conexión tipada única a las cuatro pantallas que interactúan con el motor (`ProjectsScreen`, `ChatScreen`, `FilesScreen` y `TerminalScreen`).
-- **Estado de vista del Workspace**: La sesión de chat se enlaza reactivamente a la tarea seleccionada en la pestaña Proyectos (`selectedTaskId`), proveyendo `sessionId` y `project` reales al agente en lugar del id del workspace.
-- **Borde `/v1`**: Todas las pantallas consumen exclusivamente las APIs del borde `/v1` provistas por `@danil/platform-client` o el motor mediante sus queries y contratos.
-- **Estilos del sistema**: No se introducen estilos en línea con colores hexadecimales arbitrarios; se respetan las clases y variables del sistema (`@danil/ui` y `global.css`).
+## Qué consume
+- Compone los componentes y pantallas de las features (`@danil/features/*`).
+- `@danil/platform-client`, `@danil/engine-client`, `@danil/ui`, `@danil/session`, `@danil/host`.
+- Paquetes legados en proceso de retiro (`@terminus/*`).
 
-## Riel de navegación
+## Qué contratos toca
+- Rutas `/v1` del borde: rutas de identidad y workspaces vía `platform-client`.
+- Comandos RPC1 del motor: `sleep_session`, `set_active_workspace`, `list_live_turns`, `tray_update`, `window_to_background`, `quit_completely`, `adoption_candidates`, `adoption_proof`, etc.
 
-El riel (`Layout.tsx`) aloja la navegación global dentro de un `RailErrorBoundary`:
-- **Espacios de trabajo**: Monta `RailGroups` de `@danil/feature-workspaces` vía el slot `RailSlot` exportado por `routes.tsx`. Muestra la agrupación por plan («Personal», «Team», «Enterprise») y el botón «+» que abre el selector de agregar workspace.
-- **Navegación fija**: Mantiene los accesos fijos a Máquinas (`/machines`) y Cuenta (`/account`).
-
-## Rutas y composición de pantallas
-
-| Ruta | Feature montada | Origen de datos y conexión | Estado |
-|---|---|---|---|
-| `machines` (`/machines`) | `MachinesScreen` (`@danil/feature-machines`) | `GET /v1/machines` vía `useMachines()` | Activa |
-| `workspace/:id` (`/workspace/:id`) | Vista con pestañas (`Tabs` de `@danil/ui`) componiendo pantallas de espacio: | — | Activa |
-| ↳ Pestaña **Proyectos** | `ProjectsScreen` (`@danil/feature-projects`) | `useProjects()` pasando `workspaceId` y `conn: MachineConnection` único; emite selección de tarea | Activa |
-| ↳ Pestaña **Chat** | `ChatScreen` (`@danil/feature-chat`) | Historial y stream de turnos conectado al motor con `sessionId` de la tarea seleccionada en Proyectos | Activa |
-| ↳ Pestaña **Archivos** | `FilesScreen` (`@danil/feature-files`) | `useTree()` y lector de archivos pasando `conn: MachineConnection` del espacio | Activa |
-| ↳ Pestaña **Terminal** | `TerminalScreen` (`@danil/feature-terminal`) | Consola interactiva PTY por RPC1 (`useShell`) pasando `conn: MachineConnection` | Activa |
-| `ai-credentials` (`/ai-credentials`) | `AiCredentialsScreen` (`@danil/feature-ai-credentials`) | `useWorkspaceAccounts()` y `useProviders()` con el `workspaceId` activo | Activa |
-| `account` (`/account`) | `AccountScreen` (`@danil/feature-account`) | Perfil de usuario y enlaces externos a facturación y harness vía `useProfile()` | Activa |
+## Qué falta según la fase 2 del plan
+- Fase 2.4: mover componentes de riel a `features/workspaces` (`OrganizationStack`, `AddWorkspaceMenu`, etc.) y componentes de cuenta a `features/account`.
+- Fase 2.5: refactorizar `src/app/App.tsx` para que exclusivamente componga mediante slots y reduzca sus líneas de 7.775 a menos de 300.
+- Fuente y detalle: [INVENTORY.md](./INVENTORY.md).

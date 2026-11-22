@@ -1,7 +1,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { splitProps, type JSX, type ValidComponent, type ComponentProps } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { cn } from "./lib/utils";
+import { cn } from "../../../apps/desktop/src/lib/utils";
 
 /**
  * Un componente que decide qué elemento renderiza, con las props de ESE

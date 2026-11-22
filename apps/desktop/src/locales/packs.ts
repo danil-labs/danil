@@ -27,7 +27,7 @@
  * Estado del entorno dice por qué y ofrece quitarlo. No se borra solo: quien lo
  * instaló eligió esa carpeta y merece saber qué pasó con ella.
  */
-import { invoke } from "../lib/invoke.ts";
+import { invoke } from "../../../../packages/engine-client/src/client.ts";
 import { registrarPaquete, type Manifiesto, type Plural } from "../lib/i18n.ts";
 // Importarlo desde aquí es también lo que **ordena la carga**: los empotrados
 // entran al evaluarse ese módulo, así que ninguna lengua de disco puede llegar

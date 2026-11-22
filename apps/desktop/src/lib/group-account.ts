@@ -1,15 +1,16 @@
-import { availableDanilCredits } from "./credits-balance.ts";
+import { availableDanilCredits, CREDITS_BALANCE_PATH, type GroupReply } from "../../../../packages/platform-client/src/treasury.ts";
 import { groupPromoReply } from "./group-promo-reply.ts";
 import { normalizePromoCode } from "./promo-rejections.ts";
+import { WORKSPACES_PROMO_REDEEM_PATH } from "../../../../packages/platform-client/src/workspaces.ts";
 
 export type GroupAccount = { context: string; org: string; name: string; plan: string | null; role?: string | null };
-export type GroupReply = { status: number; body?: unknown; retry_after_ms?: number };
+export type { GroupReply };
 export type GroupSend = (context: string, method: "GET" | "POST", path: string, body?: unknown, key?: string) => Promise<GroupReply>;
 
 /** No se reutiliza un saldo del workspace activo para representar otra organización. */
 export async function readGroupBalance(send: GroupSend, group: GroupAccount): Promise<number | null> {
   try {
-    const reply = await send(group.context, "GET", "/v1/credits/balance");
+    const reply = await send(group.context, "GET", CREDITS_BALANCE_PATH);
     return reply.status === 200 ? availableCredits(reply.body, group.org) : null;
   } catch { return null; }
 }
@@ -20,7 +21,7 @@ export async function redeemGroupCode(send: GroupSend, group: GroupAccount, code
   const value = normalizePromoCode(code);
   if (!value) throw { status: 422, code: "invalid_code" };
   try {
-    const reply = await send(group.context, "POST", "/v1/workspaces/promo/redeem", { code: value }, key);
+    const reply = await send(group.context, "POST", WORKSPACES_PROMO_REDEEM_PATH, { code: value }, key);
     return groupPromoReply(reply);
   } catch (error) {
     const refusal = error as { detail?: string; status?: number } | null;

@@ -1,7 +1,7 @@
 import Trash2 from "lucide-solid/icons/trash-2";
 import Unlink from "lucide-solid/icons/unlink";
 import X from "lucide-solid/icons/x";
-import { cn } from "./lib/utils";
+import { cn } from "../../../apps/desktop/src/lib/utils";
 
 /** Cancelar lo que está en curso: un círculo con ×, que se pone rojo al pasar encima. */
 export function CancelButton(props: { label: string; onClick: () => void; disabled?: boolean; class?: string }) {

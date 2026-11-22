@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { type ContextInvoke, contextGroups, createSessionContexts, type SessionStatus } from "../../src/features/shell/session-contexts.ts";
-import { freeSessionRow, sessionStartTarget, sessionVisible } from "../../src/features/shell/session-rail-view.ts";
+import { type ContextInvoke, contextGroups, createSessionContexts, type SessionStatus } from "../../../../packages/shell/src/shell/session-contexts.ts";
+import { freeSessionRow, sessionStartTarget, sessionVisible } from "../../../../packages/shell/src/shell/session-rail-view.ts";
 
 const context = (id: string, org = id) => ({ context_id: id, org, org_name: org, plan: "paid" });
 const status: SessionStatus = { state: "connected", sessions: [{ family: "one", email: "one@example.com", contexts: [context("a"), context("b"), context("free")] }, { family: "two", email: "two@example.com", contexts: [context("c")] }] };
@@ -101,8 +101,8 @@ test("an edge response arriving after logout never reaches its old group", async
 });
 
 test("two preference synchronizers keep person/org records and their own IPC context", async () => {
-  const { createAddedSync } = await import("../../src/features/shell/workspace-added-sync.ts");
-  const { edgeAddedTransport, prefsAddedStore } = await import("../../src/features/shell/workspace-added-transport.ts");
+  const { createAddedSync } = await import("../../../../packages/shell/src/shell/workspace-added-sync.ts");
+  const { edgeAddedTransport, prefsAddedStore } = await import("../../../../packages/shell/src/shell/workspace-added-transport.ts");
   const calls: string[] = [];
   const invoke: ContextInvoke = async <T>(command: string, args?: Record<string, unknown>) => {
     if (command === "danil_session_status") return status as T;
@@ -157,8 +157,8 @@ test("A8: signing out an email closes all its local families, without treating f
 });
 
 test("A8: all seeds only a settled nonempty machine source; later and old replies keep the prior seed", async () => {
-  const { sessionSeedInputs } = await import("../../src/features/shell/session-seeding.ts");
-  const { seedOf } = await import("../../src/features/shell/workspace-added-sync.ts");
+  const { sessionSeedInputs } = await import("../../../../packages/shell/src/shell/session-seeding.ts");
+  const { seedOf } = await import("../../../../packages/shell/src/shell/workspace-added-sync.ts");
   const source = [{ id: "machine-one" }, { id: "machine-two" }];
   const previous = new Set(["machine-one"]);
   const hidden = new Set(["machine-two"]);
@@ -199,7 +199,7 @@ test("identity without mode=add falls back to the previous login only for 404/50
 });
 
 test("returning focus and visibility together shares one status read", async () => {
-  const { coalesceSessionReturn } = await import("../../src/features/shell/session-return.ts");
+  const { coalesceSessionReturn } = await import("../../../../packages/shell/src/shell/session-return.ts");
   const queued: (() => void)[] = [];
   let reads = 0;
   const returned = coalesceSessionReturn(async () => { reads++; }, (run) => queued.push(run));
@@ -214,7 +214,7 @@ test("returning focus and visibility together shares one status read", async () 
 });
 
 test("all retries when an empty machine listing gains rows, without rereading for added-only changes", async () => {
-  const { sessionSyncKey } = await import("../../src/features/shell/session-seeding.ts");
+  const { sessionSyncKey } = await import("../../../../packages/shell/src/shell/session-seeding.ts");
   const group = { context_id: "a", person: "person", workspaces: "all" as const, available: [] as { id: string }[], added: new Set<string>() };
   const empty = sessionSyncKey([group]);
   const populated = sessionSyncKey([{ ...group, available: [{ id: "new-workspace" }] }]);
@@ -223,9 +223,9 @@ test("all retries when an empty machine listing gains rows, without rereading fo
 });
 
 test("A8 later neither seeds prior rail evidence nor adds unchosen workspaces on the first choice", async () => {
-  const { createAddedSync } = await import("../../src/features/shell/workspace-added-sync.ts");
-  const { prefsAddedStore } = await import("../../src/features/shell/workspace-added-transport.ts");
-  const { sessionSeedInputs } = await import("../../src/features/shell/session-seeding.ts");
+  const { createAddedSync } = await import("../../../../packages/shell/src/shell/workspace-added-sync.ts");
+  const { prefsAddedStore } = await import("../../../../packages/shell/src/shell/workspace-added-transport.ts");
+  const { sessionSeedInputs } = await import("../../../../packages/shell/src/shell/session-seeding.ts");
   for (const initialVersion of [0, 1]) {
     const available = [{ id: "chosen" }, { id: "unchosen" }];
     let preferences: unknown = {};
@@ -255,7 +255,7 @@ test("A8 later neither seeds prior rail evidence nor adds unchosen workspaces on
 });
 
 test("organization selection stays in the legacy menu only without a session set", async () => {
-  const { organizationMenuReady } = await import("../../src/features/shell/organization-menu-state.ts");
+  const { organizationMenuReady } = await import("../../../../packages/shell/src/shell/organization-menu-state.ts");
   const state = { kind: "ready" as const, active: "org", busy: false, error: null, items: [{ id: "org", name: "Organization" }] };
   assert.equal(organizationMenuReady(state, true), null);
   assert.equal(organizationMenuReady(state, false), state);
@@ -311,7 +311,7 @@ test("a context removed by a status refresh loses its Danil tiles while the othe
 });
 
 test("empty reasons from native status, web headers or bodies are empty states, including future values", async () => {
-  const { createSessionEmptyState, emptyReasonKey, normalizeEmptyReason, replyEmptyReason } = await import("../../src/features/shell/session-empty.ts");
+  const { createSessionEmptyState, emptyReasonKey, normalizeEmptyReason, replyEmptyReason } = await import("../../../../packages/shell/src/shell/session-empty.ts");
   for (const [value, key] of [
     ["no_organization", "shell.workspaces.empty_no_org"],
     ["organization_access_denied", "shell.workspaces.empty_no_access"],

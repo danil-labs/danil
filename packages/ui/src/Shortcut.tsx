@@ -1,5 +1,5 @@
 import { splitProps } from "solid-js";
-import { ariaDeAtajo, textoDeAtajo, type AccionDeAtajo } from "./lib/shortcuts";
+import { ariaDeAtajo, textoDeAtajo, type AccionDeAtajo } from "../../../apps/desktop/src/lib/shortcuts";
 import { Button, type ButtonProps } from "./Button";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "./Tooltip";
 

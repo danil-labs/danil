@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import { t } from "../../lib/i18n";
-import { Button } from "../../ui/Button";
+import { Button } from "../../../../../packages/ui/src/Button";
 
 /** Codes the sign-in return can bring in `?error=`; any other shows the generic one. */
 const ERRORS = new Set(["callback_failed", "email_not_verified", "unknown_person", "no_login_yet", "login_banned", "identity_unavailable", "access_required"]);

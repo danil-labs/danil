@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { mergeByMachineId } from "../../src/features/machines/merge-by-machine.ts";
+import { mergeByMachineId } from "../../../../packages/features/machines/src/model/merge-by-machine.ts";
 
 // La forma real de `/v1/machines` (machine-provisioning): la Mac conectada, una fila por organización.
 const mac = (id: string, org: string) => ({ machine_id: id, name: "Mac de Alberto", state: "running", kind: "connected", person_id: "per_alberto", organization_id: org });
