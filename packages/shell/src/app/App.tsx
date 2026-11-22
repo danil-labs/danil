@@ -131,37 +131,7 @@ export default function App() {
   const [alta, setAlta] = createSignal(false);
   const { fondoDelAgente, setFondoDelAgente, workspaceContext, contextRoot, contextConfirmed, workspaceMode, workspaceActivo, confirmContext, attention, draftBases, setDraftBases, hablandoCon, setHablandoCon, projectCatalog, projectList, sources, setSources, draftMachine, draftOptions, composerProjects, materialError, setMaterialError, taskSourcesError, setTaskSourcesError, draftProjectError, setDraftProjectError, projectReadError, setProjectReadError, startupReadError, setStartupReadError, connectionError, setConnectionError, readRevision, setReadRevision, draftMachineOn, taskSources, setTaskSources, setError, errorVisible, bloqueo, setBloqueo, grupos, project, setProject, sesiones, setSesiones, actividadDeProyectos, elegidosAqui, recordarEleccion, tareasActivas, ocultosAqui, ocultarDelSelector, naciendo, setNaciendo, retoques, setRetoques, retirarNaciendo, sessionId, setSessionId, materialPedido, setMaterialPedido, proyectoAbierto, setProyectoAbierto, pestanas, archivosDeTarea, llaveDeBorrador, anchoDeArchivos, setAnchoDeArchivos, anchoDelArbol, setAnchoDelArbol, } = createWorkspaceSession({ asleep, createAttention, createWorkspaceStore, machineName, machines, runOn });
 
-  const {
-    activeSpace,
-    bordeDeLaBarra,
-    buscando,
-    enCache,
-    escritorio,
-    guardarCache,
-    idsDeContenido,
-    medirBordeDeLaBarra,
-    multipleSpaces,
-    pestanaActiva,
-    setBuscando,
-    setEnCache,
-    setEscritorio,
-    setSidebarFilter,
-    setSpaces,
-    shellCache,
-    sidebarFilter,
-    spaces,
-    workspaceActual,
-  } = createSpacesState({
-    bloqueo,
-    pestanas,
-    projectCatalog,
-    projectList,
-    proyectoAbierto,
-    sesiones,
-    setError,
-    setSesiones,
-    workspaceActivo,
-  });
+  const { activeSpace, bordeDeLaBarra, buscando, enCache, escritorio, guardarCache, idsDeContenido, medirBordeDeLaBarra, multipleSpaces, pestanaActiva, setBuscando, setEnCache, setEscritorio, setSidebarFilter, setSpaces, shellCache, sidebarFilter, spaces, workspaceActual } = createSpacesState({ bloqueo, pestanas, projectCatalog, projectList, proyectoAbierto, sesiones, setError, setSesiones, workspaceActivo });
 
   let cabeceraDeConversacion: HTMLDivElement | undefined;
   let controlesIzquierdos: HTMLDivElement | undefined;

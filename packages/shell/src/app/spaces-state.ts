@@ -1,12 +1,4 @@
-import {
-  batch,
-  createEffect,
-  createMemo,
-  createSignal,
-  onCleanup,
-  type Accessor,
-  type Setter,
-} from "solid-js";
+import { batch, createEffect, createMemo, createSignal, onCleanup, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { type Project } from "../../../../apps/desktop/src/lib/model.ts";
@@ -20,30 +12,10 @@ import { type SearchFilter } from "../shell/GlobalSearch";
 import type { Frase } from "../../../../apps/desktop/src/lib/prose";
 import type { SidebarFilterProps } from "../shell/SidebarFilter";
 
-export type SpacesStateDeps = {
-  bloqueo: Accessor<Frase | null>;
-  pestanas: ReturnType<typeof createTabs>;
-  projectCatalog: { fromCache: (projects: Project[]) => void };
-  projectList: Accessor<Project[]>;
-  proyectoAbierto: Accessor<string | null>;
-  sesiones: Accessor<Record<string, SessionRow[]>>;
-  setError: (msg: string) => void;
-  setSesiones: Setter<Record<string, SessionRow[]>>;
-  workspaceActivo: Accessor<string | null>;
-};
+export type SpacesStateDeps = { bloqueo: Accessor<Frase | null>; pestanas: ReturnType<typeof createTabs>; projectCatalog: { fromCache: (projects: Project[]) => void }; projectList: Accessor<Project[]>; proyectoAbierto: Accessor<string | null>; sesiones: Accessor<Record<string, SessionRow[]>>; setError: (msg: string) => void; setSesiones: Setter<Record<string, SessionRow[]>>; workspaceActivo: Accessor<string | null>; };
 
 export function createSpacesState(deps: SpacesStateDeps) {
-  const {
-    bloqueo,
-    pestanas,
-    projectCatalog,
-    projectList,
-    proyectoAbierto,
-    sesiones,
-    setError,
-    setSesiones,
-    workspaceActivo,
-  } = deps;
+  const { bloqueo, pestanas, projectCatalog, projectList, proyectoAbierto, sesiones, setError, setSesiones, workspaceActivo } = deps;
 
   const pestanaActiva = () => (proyectoAbierto() ? null : pestanas.active());
   // Los escritorios del workspace (`lib/spaces.ts`). Sin lista —un servicio
@@ -117,28 +89,5 @@ export function createSpacesState(deps: SpacesStateDeps) {
     pestanas.open().filter(isContentTab).map((p) => p.id),
   );
 
-  return {
-    activeSpace,
-    bordeDeLaBarra,
-    buscando,
-    enCache,
-    escritorio,
-    guardarCache,
-    idsDeContenido,
-    medirBordeDeLaBarra,
-    multipleSpaces,
-    pestanaActiva,
-    rawSpaces,
-    setBuscando,
-    setEnCache,
-    setEscritorio,
-    setSidebarFilter,
-    setSpaces,
-    shellCache,
-    sidebarFilter,
-    spaceOrder,
-    spaces,
-    workspaceActual,
-    workspacesDeLaFranja,
-  };
+  return { activeSpace, bordeDeLaBarra, buscando, enCache, escritorio, guardarCache, idsDeContenido, medirBordeDeLaBarra, multipleSpaces, pestanaActiva, rawSpaces, setBuscando, setEnCache, setEscritorio, setSidebarFilter, setSpaces, shellCache, sidebarFilter, spaceOrder, spaces, workspaceActual, workspacesDeLaFranja };
 }
