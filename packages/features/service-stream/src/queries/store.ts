@@ -1,6 +1,5 @@
-import type { JournalEvent } from "../../../../../apps/desktop/src/lib/serviceEvents";
-export type PushedBatch = { events?: JournalEvent[]; catchup?: string; resync?: string; replay?: boolean; replayId?: string; cursor?: number | null; runtime?: string };
-export type ServicePage = { cursor: number | null; gap: boolean; resync?: boolean; streams?: boolean; replay: boolean; runtime: string; reset: boolean; push?: boolean; batches?: PushedBatch[] };
+import type { PushedBatch, ServicePage } from "../../../../ui/src/lib/service-page.ts";
+export type { PushedBatch, ServicePage };
 export type PollRequest = { cursor: number | null; workspace: null; replay: boolean; runtime: string | null };
 export type ServiceFailure = "sleep" | "missing" | "managed" | "down" | "unavailable";
 export type ConnectionMessage = "shell.service.engine_missing" | "shell.service.managed" | "shell.service.engine_down" | "chat.error.service_unavailable";

@@ -11,6 +11,13 @@ const DelimitedTable = lazy(() => import("../../../features/viewers/src/screens/
 
 export { createFreeRouterConsent };
 
+/** Llevar la carpeta (machines) clona con el seguimiento de projects: el shell los une al cargarla. */
+export const importCarry = () =>
+  import("../../../features/machines/src/queries/carry").then((m) => {
+    m.setFollowClone((...args) => import("../../../features/projects/src/queries/remoteClone").then((c) => c.followClone(...args)));
+    return m;
+  });
+
 export function renderAvatar(props: {
   name: string;
   status: HandlerStatus;
