@@ -61,3 +61,27 @@ test("por clave: cada contexto su lectura; invalidate sin clave las olvida todas
   await r.read("a");
   assert.deepEqual(seen, ["a", "b", "a"]);
 });
+
+test("settleMs: una fresh justo después de la lectura recibe esa; pasado el plazo o tras invalidate relee", async () => {
+  let t = 0;
+  let release!: (n: number) => void;
+  let calls = 0;
+  const r = sharedRead(() => { calls++; return new Promise<number>((ok) => { release = ok; }); }, { now: () => t, freshMs: 3000, settleMs: 2000 });
+  const first = r.read({ fresh: true });
+  t = 100;
+  const echo = r.read({ fresh: true });
+  release(1);
+  assert.deepEqual(await Promise.all([first, echo]), [1, 1], "la fresh en curso se comparte");
+  t = 1999;
+  assert.equal(await r.read({ fresh: true }), 1, "la guardada hace menos de settleMs se reutiliza");
+  assert.equal(calls, 1);
+  t = 2100;
+  const later = r.read({ fresh: true });
+  release(2);
+  assert.equal(await later, 2, "pasado settleMs, fresh relee");
+  r.invalidate();
+  const after = r.read({ fresh: true });
+  release(3);
+  assert.equal(await after, 3, "tras invalidate (encender), fresh relee aunque sea reciente");
+  assert.equal(calls, 3);
+});
