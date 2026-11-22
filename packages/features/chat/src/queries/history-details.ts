@@ -1,5 +1,6 @@
 import type { HistoryChunk, HistoryRef } from "../../../../engine-client/src/index.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
+export { currentRef, readDetailText } from "../../../../engine-client/src/historyDetail.ts";
 import type { Session } from "../model/transcript";
 
 type MachineRoute = { headers: Record<string, string> } | undefined;

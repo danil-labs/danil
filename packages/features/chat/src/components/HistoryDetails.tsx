@@ -1,8 +1,7 @@
 import type { HistoryChunk, HistoryRef } from "../../../../engine-client/src/index.ts";
-import { currentRef, readDetailText } from "../../../../engine-client/src/historyDetail.ts";
 import { createResource, createSignal, For, Show, onCleanup, type JSX } from "solid-js";
 import { retainRowWhile } from "../model/threadRow";
-import { readTurns, readDetailChunk, type MachineOf } from "../queries";
+import { currentRef, readDetailText, readTurns, readDetailChunk, type MachineOf } from "../queries";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Markdown } from "../../../../ui/src/Markdown";
 import type { Session } from "../model/transcript";
