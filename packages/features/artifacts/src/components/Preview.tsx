@@ -2,7 +2,7 @@ import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup } 
 import { save } from "@tauri-apps/plugin-dialog";
 import { join, tempDir } from "@tauri-apps/api/path";
 import { useFileMachine } from "../../../../ui/src/fileMachine";
-import Documento from "../screens/Document";
+import Documento from "../../../../ui/src/Document";
 import Versiones from "./Versions";
 import {
   envolver,
@@ -33,7 +33,7 @@ import { Markdown } from "../../../../ui/src/Markdown";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { extensionDe } from "../../../../../apps/desktop/src/lib/steps";
 import { peso, nf } from "../../../../../apps/desktop/src/lib/format";
-import { delimiterFor } from "../../../viewers/src/model/csv";
+import { delimiterFor } from "../../../../ui/src/lib/csv";
 import { ArtifactDownloadError, readArtifactDownload } from "../model/download.ts";
 
 /** Bajan al abrirse: `pdfjs-dist` no entra en el arranque de la ventana. */

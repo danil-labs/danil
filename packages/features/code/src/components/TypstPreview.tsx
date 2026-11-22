@@ -13,12 +13,12 @@ import ZoomOut from "lucide-solid/icons/zoom-out";
 import { For, Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { treeTypstExport, openTreeExternal } from "../queries";
-import { machineOf } from "../../../machines/src/queries/store";
+import { machineOf } from "../../../../host/src/machine";
 import { seguirHueco, type Hueco } from "../../../../../apps/desktop/src/lib/sites";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
-import { IconButton } from "../../../viewers/src/components/IconButton";
-import { clampZoom, ZOOM_STEP } from "../../../viewers/src/model/zoom";
+import { IconButton } from "../../../../ui/src/IconButton";
+import { clampZoom, ZOOM_STEP } from "../../../../ui/src/lib/zoom";
 import {
   type DiagnosticoTypst,
   type ExportacionTypst,

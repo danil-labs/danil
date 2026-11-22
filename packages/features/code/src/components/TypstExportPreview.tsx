@@ -3,16 +3,14 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import CircleAlert from "lucide-solid/icons/circle-alert";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup } from "solid-js";
+import { For, Show, Suspense, createEffect, createSignal, on, onCleanup, type JSX } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { treeTypstExport, treeShow } from "../queries";
-import { machineOf } from "../../../machines/src/queries/store";
+import { machineOf } from "../../../../host/src/machine";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { type DiagnosticoTypst, lugarDe, pedirArreglo, principalElegido } from "../queries/typst";
-
-const PdfDocument = lazy(() => import("../../../viewers/src/screens/Pdf"));
 
 /** Cuánto espera, desde el último cambio guardado, a volver a compilar: cada vez escribe el PDF entero. */
 const PAUSA_DE_LA_EXPORTACION = 800;
@@ -31,6 +29,7 @@ export default function VistaTypstExportada(props: {
   /** Cambia con cada guardado y con cada relectura del archivo. */
   version: string;
   onIrA: (d: DiagnosticoTypst) => void;
+  renderPdf: (props: { base64: string; name: string }) => JSX.Element;
 }) {
   const [pdf, setPdf] = createSignal<string | null>(null);
   const [demasiado, setDemasiado] = createSignal(false);
@@ -165,7 +164,7 @@ export default function VistaTypstExportada(props: {
           >
             {(data) => (
               <Suspense fallback={<p class="m-0 p-3 text-xs text-neutral-500">{t("code.file.opening")}</p>}>
-                <PdfDocument base64={data()} name={props.ruta} />
+                {props.renderPdf({ base64: data(), name: props.ruta })}
               </Suspense>
             )}
           </Show>

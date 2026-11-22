@@ -29,7 +29,8 @@ import Chat, {
   type VistaDeLaConversacion,
   vistaNueva,
 } from "../../../features/chat/src/screens/Chat";
-import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies } from "../../../features/chat/src/screens/DelegatedTasks";
+import { DelegatedLaunch, DelegatedPanel, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies } from "../../../features/chat/src/screens/DelegatedTasks";
+import SearchPanel from "../../../features/chat/src/components/SearchPanel";
 import { agentSwitchBlocked, canHandOverTask, type HandoverPending, handoverInForce, handoverMatches, MACHINE_UNANNOUNCED, shellCli } from "../../../features/chat/src/model/handover";
 import McpSignInNotice, { noteMcpSignIn } from "../../../features/chat/src/screens/McpSignInNotice";
 import { MODO_AUTOMATICO, modoInicial, modoRecordado, recordarModo } from "../../../features/chat/src/model/modes";
@@ -76,7 +77,7 @@ const DeleteTaskDialog = lazy(() => import("../../../features/projects/src/scree
 const HandoverDialog = lazy(() => import("../../../features/chat/src/screens/HandoverDialog"));
 const TaskFilesCard = lazy(() => import("../../../features/code/src/screens/TaskFiles"));
 
-import { esDeCodigo } from "../../../features/code/src/model/workdirKind";
+import { esDeCodigo } from "../../../ui/src/lib/workdirKind";
 import Observability from "../../../features/observability/src/screens/Observability";
 import AnadirCarpeta, { type ClonEnCurso, type InicioDeCarpeta } from "../../../features/projects/src/screens/AddWorkdir";
 import AgentPageTasks from "../../../features/projects/src/screens/AgentPageTasks";
@@ -171,7 +172,8 @@ import type { SidebarFilterProps } from "../shell/SidebarFilter";
 import ColumnaLateral from "../shell/SideColumn";
 import SpaceMenu from "../shell/SpaceMenu";
 import { flattenTasks } from "../shell/sidebarTasks";
-import UsageTool from "../shell/UsageTool";
+import { visoresDeCodigo } from "../featureSlots";
+import UsageTool, { UsagePanel } from "../shell/UsageTool";
 import { createUsage } from "../shell/usage";
 import AvisoDeVersion from "../shell/VersionNotice";
 import WorkspaceColumn from "../shell/WorkspaceColumn";
@@ -6701,15 +6703,15 @@ export default function App() {
                 style={{ ...placement(), width: ancho() }}
                 onPointerDown={() => { const d = sitio(); if (d) mandarVentana(d); }}>
                 <TaskSideShell mode={panel().mode} side={<TaskSide mode={panel().mode}
-                  search={searchSurfaces().get(p.session)}
-                  usage={{
-                    usage: consumo,
-                    agent: sameSite(paneles.siteOf(p.id) ?? null, paneles.activeSite()) ? agent() : (filaDe(p.session)?.agent ?? agent()),
-                    onManage: () => { archivosDeTarea.setOpen(p.session, false); setSettings("proveedores-ia"); },
-                  }}
-                  delegated={() => delegatedPanels().get(`${workspaceActivo()}/${p.session}`)?.()} />}>
+                  searchSlot={searchSurfaces().get(p.session) ? <SearchPanel surface={searchSurfaces().get(p.session)!} /> : undefined}
+                  usageSlot={<UsagePanel usage={consumo} agent={sameSite(paneles.siteOf(p.id) ?? null, paneles.activeSite()) ? agent() : (filaDe(p.session)?.agent ?? agent())} onManage={() => { archivosDeTarea.setOpen(p.session, false); setSettings("proveedores-ia"); }} />}
+                  delegatedSlot={
+                    <Show when={delegatedPanels().get(`${workspaceActivo()}/${p.session}`)?.()} fallback={<p class="m-0 px-3 py-3 text-xs text-neutral-500">{t("chat.delegation.none")}</p>}>
+                      <DelegatedPanel model={() => delegatedPanels().get(`${workspaceActivo()}/${p.session}`)?.()} />
+                    </Show>
+                  } />}>
                   <Suspense fallback={null}>
-                    <TaskFilesCard project={proyectoDePestana(p.id)} session={p.session} files={archivosDeTarea}
+                    <TaskFilesCard visores={visoresDeCodigo} project={proyectoDePestana(p.id)} session={p.session} files={archivosDeTarea}
                       visible={visible()} readOnly={editorDeletionLocked(p.session)}
                       expandedOnly={paneles.isSplit() || compacta()}
                       onSaved={() => window.dispatchEvent(new CustomEvent("harness:copia"))}
@@ -6823,15 +6825,11 @@ export default function App() {
                   style={{ ...estiloDeLaCelda(sitio()), width: ancho() }}
                   onPointerDown={() => mandarVentana(sitio())}>
                   <TaskSideShell mode={panel().mode} side={<TaskSide mode={panel().mode}
-                    search={undefined}
-                    usage={{
-                      usage: consumo,
-                      agent: agent(),
-                      onManage: () => { archivosDeTarea.setOpen(llave(), false); setSettings("proveedores-ia"); },
-                    }}
-                    delegated={() => undefined} />}>
+                    searchSlot={undefined}
+                    usageSlot={<UsagePanel usage={consumo} agent={agent()} onManage={() => { archivosDeTarea.setOpen(llave(), false); setSettings("proveedores-ia"); }} />}
+                    delegatedSlot={<p class="m-0 px-3 py-3 text-xs text-neutral-500">{t("chat.delegation.none")}</p>} />}>
                     <Suspense fallback={null}>
-                      <TaskFilesCard project={proyecto()} session="" panelKey={llave()} preview={{ baseRef: draftBases()[claveAbierta()] }}
+                      <TaskFilesCard visores={visoresDeCodigo} project={proyecto()} session="" panelKey={llave()} preview={{ baseRef: draftBases()[claveAbierta()] }}
                         files={archivosDeTarea} visible={visible()}
                         expandedOnly={paneles.isSplit() || compacta()}
                         onSaved={() => {}} onExportChat={async () => {}}
@@ -6903,7 +6901,7 @@ export default function App() {
                       }
                     >
                       {(a) => (
-                        <Suspense fallback={null}><VisorDeArchivo
+                        <Suspense fallback={null}><VisorDeArchivo visores={visoresDeCodigo}
                           project={a().project}
                           session={a().session}
                           readOnly={editorDeletionLocked(a().session)}
@@ -6967,7 +6965,7 @@ export default function App() {
                           when={a().codigo}
                           fallback={<VisorDeArtefacto path={a().path} rel={a().rel} kind={a().kind} session={a().session} />}
                         >
-                          <Suspense fallback={null}><VisorDeArchivo
+                          <Suspense fallback={null}><VisorDeArchivo visores={visoresDeCodigo}
                             project={a().project}
                             session={a().session}
                             arbol=""

@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
 import { tipoDeCarpeta } from "../../../../../apps/desktop/src/lib/folderKinds";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import WorkdirIcon from "../../../code/src/components/WorkdirIcon";
+import WorkdirIcon from "../../../../ui/src/WorkdirIcon";
 
 /** El icono de una carpeta: dice si es repositorio, nube o documentos. */
 export function FolderSquare(props: { id: string; size?: number; class?: string }) {
