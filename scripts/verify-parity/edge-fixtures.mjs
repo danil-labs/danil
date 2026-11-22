@@ -380,6 +380,14 @@ export async function handleEdgeRoute(route) {
   });
 }
 
+/** Los mandos del motor simulado de cada página (ver `attachFixtures`). */
+const ENGINES = new WeakMap();
+export function engine(page) {
+  const controls = ENGINES.get(page);
+  if (!controls) throw new Error("engine: la página no tiene el borde simulado");
+  return controls;
+}
+
 export async function attachFixtures(page) {
   await page.route("https://edge.danil.ai/**", handleEdgeRoute);
 
@@ -387,6 +395,26 @@ export async function attachFixtures(page) {
   // Lo que la persona mandó en esta página (`send_message`, receta tarea-enviar): `load_session` lo relee como el
   // motor, que lo persiste. Sin envío la tarea es la misma de siempre.
   const sent = [];
+  // Los eventos `chat` del motor (el frame `events` del relay). Sin la acción que los dispara no sale ninguno, así que
+  // las recetas que no ejecutan un `!` ni arman la respuesta ven lo mismo que antes.
+  const after = [];
+  let shells = 0, shellRunning = false;
+  const chat = (kind, text, extra = {}) => ({ name: "chat", payload: { session: "t1", kind, text, meta: null, ok: null, request_id: null, ...extra } });
+  const emit = (socket, events) => socket.send(JSON.stringify({ type: "events", runtime: "rt1", cursor: ++cursor, replay: false, events }));
+  // El turno del agente (receta tarea-enviar-respuesta): `answerNextMessage()` arma el motor; el `send_message`
+  // siguiente arranca el turno y manda los deltas, y `finishTurn()` guarda la respuesta y manda el `done`, como el
+  // motor, que la persiste antes de cerrar. Mientras corre (o corre un `!`), `list_active_turns` nombra la tarea.
+  const REPLY = ["Hola, Ana. ", "Ya revisé la tarea."];
+  const turn = { armed: false, running: false, socket: null };
+  ENGINES.set(page, {
+    answerNextMessage() { turn.armed = true; },
+    finishTurn() {
+      if (!turn.running) throw new Error("finishTurn: no hay un turno en marcha");
+      turn.running = false;
+      sent.push({ role: "assistant", id: `a${sent.length + 2}`, at: 3 + sent.length, text: REPLY.join("") });
+      emit(turn.socket, [chat("done", "", { ok: true })]);
+    },
+  });
   await page.routeWebSocket("**/v1/machines/**", (ws) => {
     ws.send(JSON.stringify({ type: "state", state: "online" }));
     ws.send(JSON.stringify({ type: "engine", contract: "1", host_version: "1.0.0" }));
@@ -450,10 +478,27 @@ export async function attachFixtures(page) {
         } else if (msg.command === "send_message") {
           sent.push({ role: "user", id: `u${sent.length + 2}`, at: 3 + sent.length, text: msg.args?.prompt ?? "" });
           value = "t1";
+          if (turn.armed) {
+            turn.armed = false; turn.running = true; turn.socket = ws;
+            after.push([chat("started", ""), ...REPLY.map((text) => chat("delta", text))]);
+          }
+        } else if (msg.command === "list_active_turns") {
+          value = turn.running || shellRunning ? ["t1"] : [];
+        } else if (msg.command === "run_shell_command") {
+          // Un `!` que corre (receta tarea-terminal-salida): arranca y escribe su salida; sigue en marcha.
+          const id = `sh${++shells}`;
+          shellRunning = true;
+          value = { session: "t1", turn: id };
+          after.push([
+            chat("shell_started", msg.args?.command ?? "", { id, target: "/lab/p1" }),
+            chat("shell_output", "total 8\n-rw-r--r--  1 ana  staff  120 nov 21 10:00 README.md\n", { id }),
+          ]);
         } else if (msg.command === "task_history") {
           value = { history: { archived: false, events: [], recovery: null }, branch: null, path: "/lab", available: true, owned: false, restorable: false, recreatable: false, incomplete: false };
         }
         ws.send(JSON.stringify({ type: "result", id: msg.id, value }));
+        // Lo que la acción dispara llega después de su respuesta, como en el motor.
+        for (const events of after.splice(0)) emit(ws, events);
       }
     });
   });
