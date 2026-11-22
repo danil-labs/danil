@@ -15,7 +15,7 @@ export type FreeRouterScope = {
   workspace: string;
 };
 
-export type EdgeAnswer = { status: number; body?: unknown; retryAfterMs?: number };
+type EdgeAnswer = { status: number; body?: unknown; retryAfterMs?: number };
 /** Una llamada al borde con su método real; las escrituras llevan `key` (Idempotency-Key). */
 export type EdgeSend = (method: EdgeMethod, path: string, body?: unknown, key?: string) => Promise<EdgeAnswer>;
 /** Una orden RPC1 al motor del workspace; los errores llegan como códigos cerrados. */
@@ -39,7 +39,7 @@ const PROBLEMS = new Set([
   "temporarily_unavailable", "assignment_conflict",
 ]);
 const UNAVAILABLE = "free_router_unavailable";
-export const PLATFORM_FEATURE = "free_router_platform_v1";
+const PLATFORM_FEATURE = "free_router_platform_v1";
 
 /** El motor anuncia el Router de plataforma; sin el rasgo, lo que no es personal queda cerrado. */
 export function supportsPlatformFreeRouter(status: unknown): boolean {

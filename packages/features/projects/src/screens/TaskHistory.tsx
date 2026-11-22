@@ -1,12 +1,10 @@
-import { getTaskHistory, recreateTaskWork, type TaskWork } from "../queries";
+import { getTaskHistory, recreateTaskWork } from "../queries";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { Show, createMemo, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import BaseBranchPicker from "./BaseBranchPicker";
-
-export type { TaskWork };
 
 export function createTaskWork(
   scope: () => { project: string; id: string } | undefined,

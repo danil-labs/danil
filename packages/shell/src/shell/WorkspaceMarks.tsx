@@ -5,7 +5,7 @@ import type { AttentionState } from "./attention";
 import { generacionDeLogo, urlDeLogo } from "./logo-src";
 
 /** Las iniciales de las dos primeras palabras; una sola palabra da una letra. */
-export function monogram(name: string) {
+function monogram(name: string) {
   const words = name.trim().split(/[\s\-_.]+/).filter(Boolean);
   return words.slice(0, 2).map((word) => [...word][0] ?? "").join("").toUpperCase() || "?";
 }

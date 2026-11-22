@@ -30,7 +30,7 @@ export type Tool = {
  * Un trozo de lo que el agente produjo, en el orden en que lo produjo.
  * `tool` indexa `Turn.tools`. Ver `sessions::Piece`.
  */
-export type Piece = { text: string } | { tool: number };
+type Piece = { text: string } | { tool: number };
 
 /**
  * La clave con la que una respuesta apunta a su pregunta: el turno que la hizo

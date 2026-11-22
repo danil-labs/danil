@@ -18,14 +18,14 @@ import {
 } from "./liveTurns";
 
 /** «A, B, C y 2 más»; la que espera una respuesta lo dice: no termina sola. */
-export function namesOf(rows: ShownTurn[], max = 3): string {
+function namesOf(rows: ShownTurn[], max = 3): string {
   const names = rows.map((row) => (row.waiting ? `${row.title} (${t("shell.close.waiting")})` : row.title));
   const shown = names.slice(0, max).join(", ");
   return names.length > max ? t("shell.wait.more", { list: shown, count: names.length - max }) : shown;
 }
 
 /** Mientras se espera, mirar los turnos es local y barato. */
-export const WAIT_POLL = 2000;
+const WAIT_POLL = 2000;
 let poll: ReturnType<typeof setInterval> | undefined;
 let checking = false;
 
@@ -58,7 +58,7 @@ export function waitThen(then: AfterWait, rows: ShownTurn[] = []) {
   void check();
 }
 
-export function cancelWait() {
+function cancelWait() {
   if (poll !== undefined) clearInterval(poll);
   poll = undefined;
   setWaitingThen(null);

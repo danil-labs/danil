@@ -2,7 +2,7 @@ import type { Component } from "solid-js";
 import type { Consentimiento } from "../../../../ui/src/lib/freeRouterConsent.ts";
 
 /** Lo que el alta lee de la sesión de Danil de Configuración. */
-export type SesionDelAlta = {
+type SesionDelAlta = {
   view: () => { t: string };
   status: () => { state: string; user_code?: string | null; verification_uri_complete?: string | null } | null;
   busy: () => boolean;

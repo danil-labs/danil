@@ -6,7 +6,7 @@ export const cargarEditor = () => import("../components/CodeEditor");
 const COMUNES = ["a.ts", "a.tsx", "a.js", "a.json", "a.md", "a.rs", "a.py", "a.go", "a.java"];
 
 /** Baja el editor y las gramáticas frecuentes y los deja inicializados (`calentar`). */
-export async function calentarEditor() {
+async function calentarEditor() {
   const [modulo, ...gramaticas] = await Promise.all([cargarEditor(), ...COMUNES.map(gramaticaDe)]);
   modulo.calentar(gramaticas.filter((g): g is Extension => g !== null));
 }

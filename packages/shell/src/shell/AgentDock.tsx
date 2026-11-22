@@ -16,7 +16,7 @@ import { Pressable } from "../../../ui/src/Pressable";
 export type { DockAgent } from "./dockLayout";
 
 /** Mismas palabras que la fila del agente en `AgentRows`. */
-export function dockStatusText(agent: DockAgent): string {
+function dockStatusText(agent: DockAgent): string {
   if (!agent.status || agent.status === "asleep") return t("projects.sessions.agent_asleep");
   if (agent.status === "working") {
     return agent.liveTasks > 0

@@ -8,7 +8,7 @@ import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import PromoRedeem from "./PromoRedeem";
 import { Pressable } from "../../../ui/src/Pressable";
 
-export function groupBalanceLabel(amount: number | null | undefined) {
+function groupBalanceLabel(amount: number | null | undefined) {
   return amount === undefined ? t("shell.workspaces.danil_loading") : amount === null ? t("chat.credits.unavailable") : t("chat.credits.amount", { count: amount });
 }
 

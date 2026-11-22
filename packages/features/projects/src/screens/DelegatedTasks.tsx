@@ -14,9 +14,6 @@ import { type TaskTreeRow, taskDescendants } from "@terminus/tasks";
 import { taskPriority } from "../../../../ui/src/index";
 import { delegatedAttention } from "../model/delegatedRail";
 
-export { delegatedAttention } from "../model/delegatedRail";
-export { delegatedFamilies } from "@terminus/tasks";
-
 export type DelegatedListProps = Omit<ComponentProps<typeof Sessions>, "sessions" | "flat" | "card" | "hoverCardPlacement" | "includeArchived" | "groupByAuthor" | "groupByHandler">;
 
 export function delegatedDescendants(rows: SessionRow[], root: TaskTreeRow): SessionRow[] {
@@ -28,7 +25,7 @@ export function delegatedDescendants(rows: SessionRow[], root: TaskTreeRow): Ses
  *
  * Sin carpeta: viven en la de su madre. No se pasa `carpetaDe` (aunque la traiga la lista) y se pide `hideFolder`.
  */
-export function DelegatedTaskList(props: {
+function DelegatedTaskList(props: {
   rows: SessionRow[];
   list: (folder: string) => DelegatedListProps;
   readOnly?: boolean;

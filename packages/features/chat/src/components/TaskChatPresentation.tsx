@@ -9,7 +9,7 @@ export function TaskUserBubble(props: ParentProps) {
 }
 
 /** El input de un encargado u otra tarea: neutro, para que no compita con el de la persona. */
-export function TaskIncomingBubble(props: ParentProps) {
+function TaskIncomingBubble(props: ParentProps) {
   return (
     <div class="min-w-0 w-fit max-w-full rounded-lg bg-chat-incoming p-3 shadow-sm">
       {props.children}

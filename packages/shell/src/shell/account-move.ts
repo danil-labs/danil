@@ -21,7 +21,7 @@ const TRANSFER_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
 const ADMIN = new Set(["owner", "admin"]);
 
 /** La causa que el servidor dio, sin inventarla. */
-export function moveCause(reply: Reply): string {
+function moveCause(reply: Reply): string {
   const code = (reply.body as { code?: unknown } | null | undefined)?.code;
   return typeof code === "string" && code ? code : `http_${reply.status}`;
 }

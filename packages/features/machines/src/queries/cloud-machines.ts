@@ -29,8 +29,6 @@ type CloudRows = { state: "ready"; computers: Computer[]; renewInChannel: boolea
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
 type EdgeError = { detail?: unknown; status?: unknown; retry_after_ms?: number; body?: unknown };
 
-export type CloudMachines = ReturnType<typeof createCloudMachines>;
-
 /** El adaptador conserva el recibo nativo; solo las escrituras necesitan reintento por intención. */
 export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void, patience: Patience = {}): Fetch {
   // Máquinas solo pide GET y POST (más abajo se rechaza lo demás); el tipo es el del transporte común.

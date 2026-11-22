@@ -24,7 +24,7 @@ import { createCloudMachines } from "../queries/cloud-machines";
  * Dónde se leen y renombran las computadoras: lo que da la plataforma (la web)
  * o, en el escritorio, el token de cliente de esa cuenta.
  */
-export function accountComputersSource(_account: string | null = null, _workspace?: string): AccountComputersSource | null {
+function accountComputersSource(_account: string | null = null, _workspace?: string): AccountComputersSource | null {
   const given = capabilities().accountComputers;
   if (given) return given;
   if (!capabilities().danilAccount) return null;
@@ -70,7 +70,7 @@ function removeFailure(answer: Exclude<Answer<unknown>, { kind: "ok" | "missing"
   return t("danil.computers.remove_failed.other");
 }
 
-export type AccountComputersProps = {
+type AccountComputersProps = {
   source: AccountComputersSource;
   empty?: string;
   /** La computadora de esta ventana, si es una de la cuenta. */

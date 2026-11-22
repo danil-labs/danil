@@ -60,8 +60,8 @@ export type ProjectsPort = {
 };
 
 /** `features/workspace`: `createWorkspaceStore`. */
-export type MaterialToken = Readonly<{ generation: number; material: number }>;
-export type WorkspaceTransition = MaterialToken & Readonly<{ previous: string | null; workspace: string | null }>;
+type MaterialToken = Readonly<{ generation: number; material: number }>;
+type WorkspaceTransition = MaterialToken & Readonly<{ previous: string | null; workspace: string | null }>;
 export type WorkspaceContextPort = {
   activate: (token: WorkspaceTransition) => boolean;
   beginMaterial: () => MaterialToken;
@@ -84,7 +84,7 @@ export type ContextSourcePort = {
 };
 
 /** `features/conversation-handoff`: `createConversationHandoff`. El chat lo crea y lo devuelve al shell. */
-export type ConversationHandoffPort = {
+type ConversationHandoffPort = {
   requestStop: (scope: ConversationScope) => Promise<void>;
   replaceWithQueued: (scope: ConversationScope, id: string) => Promise<void>;
   observe: (fact: HandoffFact) => void;
@@ -97,7 +97,7 @@ export type ConversationHandoffPort = {
 export type CreateConversationHandoff = (deps: ConversationHandoffDeps) => ConversationHandoffPort;
 
 /** `features/task-queues`: `createTaskQueues` y `createEngineQueue`. El chat los crea y los devuelve al shell. */
-export type TaskQueuesPort = {
+type TaskQueuesPort = {
   items: Accessor<Encolado[]>;
   owner: Accessor<string | null>;
   editing: Accessor<boolean>;

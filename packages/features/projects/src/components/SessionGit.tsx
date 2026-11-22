@@ -143,7 +143,7 @@ export type RailPullSignal = "changes_requested" | "failure" | "pending" | "appr
  * su ícono ya lo dice. Con git desactualizado la señal es solo el reloj, y solo
  * en un PR que todavía puede cambiar.
  */
-export function railPullSignal(status?: GitStatus): RailPullSignal | null {
+function railPullSignal(status?: GitStatus): RailPullSignal | null {
   const pull = status?.pull;
   if (!status || !pull || !status.pull_known) return null;
   if (status.stale) return pull.state === "open" || pull.state === "draft" ? "stale" : null;

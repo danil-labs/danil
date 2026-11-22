@@ -15,9 +15,6 @@ import { Distro } from "./WslDistro";
 import { Installer } from "./WslInstaller";
 import { JobFailure, JobProgress, Technical } from "./WslJob";
 
-export { DistroBox } from "./WslDistroBox";
-export { StepList, Technical } from "./WslJob";
-
 /**
  * Configuración → Máquinas → Linux en esta PC. Lo que se ve lo guarda la
  * ventana (`wsl_state`, `guest-job`), no esta pantalla: salir de Configuración

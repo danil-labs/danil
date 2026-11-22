@@ -2,7 +2,7 @@ import type { HistoryChunk, HistoryRef } from "@terminus/protocol";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import type { Session } from "../model/transcript";
 
-export type MachineRoute = { headers: Record<string, string> } | undefined;
+type MachineRoute = { headers: Record<string, string> } | undefined;
 export type MachineOf = (id: string | null | undefined) => MachineRoute;
 
 export const readTurns = (ref: (HistoryRef), route: MachineOf) => (before: number) =>

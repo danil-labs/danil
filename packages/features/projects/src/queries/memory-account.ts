@@ -78,7 +78,7 @@ export function carpetaDe(files: MemoryFileRef[], project: string, scope: Memori
 }
 
 /** Lo que el motor llama `EntryView`, armado desde un archivo del repo. */
-export function entradaDesdeTexto(path: string, oid: string, raw: string, workspace: string, project: string): EntradaDeCuenta {
+function entradaDesdeTexto(path: string, oid: string, raw: string, workspace: string, project: string): EntradaDeCuenta {
   const p = parseMemoryEntry(raw);
   const o = p.origin;
   return {

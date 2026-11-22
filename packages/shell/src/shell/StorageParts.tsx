@@ -47,7 +47,7 @@ export function Barra(props2: { bytes: number; recuperable: number; escala: numb
   );
 }
 
-export function comparable(disk: MachineResources["storage"][number]) {
+function comparable(disk: MachineResources["storage"][number]) {
   return [disk.total_bytes, disk.free_bytes, disk.available_bytes].every((n) => Number.isFinite(n) && n >= 0)
     && (disk.total_bytes > 0) && disk.free_bytes <= disk.total_bytes && disk.available_bytes <= disk.free_bytes;
 }
