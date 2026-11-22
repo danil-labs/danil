@@ -52,7 +52,9 @@ import { createRouter, type Invoke } from "../queries/router";
 import { createSessionCloud } from "../queries/session-cloud";
 import { machineNamesChanged, refetchMachines, setCloudInventory } from "../queries/store";
 import type { WslChild } from "../model/wsl";
-import { RELIST, TOKEN_MARGIN, LOCAL, LOCAL_KEY, windowSystem, refresh, slicesChanged, pickedFor, type Internals, type Target, type ClientToken, type DanilStatus, type Installed } from "./account-helpers";
+import { RELIST, TOKEN_MARGIN, LOCAL, LOCAL_KEY, windowSystem, type ClientToken, type DanilStatus, type Installed } from "./account-helpers";
+import { refresh, slicesChanged, pickedFor } from "../queries/account-events";
+import { nativeInternals, type NativeInternals } from "../../../../host/src/native";
 
 let started = false;
 
@@ -83,12 +85,11 @@ const homeName = () => selfName() ?? (isMac() ? t("shell.machines.this_mac") : t
 /** `railSession` es la sesión del riel de la cuenta: la pasa el shell, que es quien la conoce. */
 export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
   railSession: (list: DanilSessionInfo[] | null, of: WorkspaceAccount | null) => { computer_id: string | null; account: string | null } | null,
-  target: Target = window,
 ) {
   if (started) return;
-  const found = target.__TAURI_INTERNALS__;
+  const found = nativeInternals();
   if (!found) return;
-  const internals: Internals = found;
+  const internals: NativeInternals = found;
   started = true;
   setCloudInventory("initial");
   const native: Invoke = internals.invoke.bind(internals);
