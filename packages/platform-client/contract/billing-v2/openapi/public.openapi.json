@@ -1,0 +1,3509 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Danil billing v2 — API pública por el borde",
+    "version": "2.13.0-draft",
+    "description": "Servicio billing (aud=billing), repo treasury. Todo el tráfico de clientes pasa por el borde; la organización de upgrade/operaciones existentes sale del JWT interno (`org`), nunca del cuerpo. Excepción: checkout intent=new_organization autentica a la persona en cualquier contexto y identity reserva la org nueva; no usa la org actual del JWT. Escrituras con Idempotency-Key (alcance: organización; huella = JCS de {method, plantilla de ruta, todos los parámetros de ruta, organization_id, body}; misma clave y otra huella → 409 idempotency_key_reused; vive ≥ 30 días). Errores application/problem+json con códigos cerrados. IDs opacos y listas con cursor. Importes como cadenas de micro-unidades (contract.mjs). Contrato PROPUESTO: no acredita implementación. Para new_organization la idempotencia pública se liga a (sub,intent,Idempotency-Key), sin org/contexto, con huella del cuerpo normalizado; cambiar de contexto no crea otra alta. El checkout_id propio se persiste antes de reservar y es la clave idempotente de identity. Consulta de checkout de alta nueva: creador por sub, en cualquier contexto y sin scope; las consultas de upgrade conservan org/billing.read. organization_id solo aparece en CheckoutStatus activo y terminal."
+  },
+  "x-danil-service": {
+    "aud": "billing",
+    "repo": "danil-labs/treasury",
+    "prefixes": [
+      "/v1/billing",
+      "/v1/credits"
+    ],
+    "ctx_none": [
+      "/v1/billing/catalog"
+    ],
+    "legacy_fallback": false,
+    "activation": "El mismo cambio que activa treasury en el borde retira el destino legado de estos prefijos; sin fallback; si treasury no responde, 503 billing_unavailable (vectors/routing-v1.json). Preparar este contrato no activa rutas.",
+    "ctx_none_by_intent": [
+      {
+        "method": "POST",
+        "path": "/v1/billing/checkout-sessions",
+        "intent": "new_organization"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/billing/checkout-sessions/{checkout_id}",
+        "intent": "new_organization",
+        "intent_source": "checkout_record"
+      }
+    ]
+  },
+  "servers": [
+    {
+      "url": "https://edge.danil.ai"
+    }
+  ],
+  "security": [
+    {
+      "edgeSession": []
+    }
+  ],
+  "paths": {
+    "/v1/billing/catalog": {
+      "get": {
+        "operationId": "getCatalog",
+        "summary": "Catálogo publicado vigente (solo sellable, salvo include_unsellable)",
+        "x-danil-scope": "session:ctx-none",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable"
+        ],
+        "parameters": [
+          {
+            "name": "include_unsellable",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Catálogo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/billing/organization": {
+      "get": {
+        "operationId": "getOrganizationBilling",
+        "summary": "Plan, estado, periodo, retención y asientos de la org del JWT",
+        "x-danil-scope": "billing.read",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable"
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado comercial",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationBilling"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/billing/checkout-sessions": {
+      "post": {
+        "operationId": "createCheckoutSession",
+        "summary": "Checkout de upgrade de la org o alta de organización por persona",
+        "x-danil-scope": "by-intent",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "idempotency_key_required",
+          "idempotency_key_reused",
+          "plan_not_sellable",
+          "catalog_version_stale",
+          "subscription_exists",
+          "checkout_open",
+          "subscription_suspended",
+          "organization_purging",
+          "payer_blocked",
+          "payment_provider_unavailable",
+          "organization_reservation_limit_reached",
+          "plan_price_pending",
+          "variant_not_sellable",
+          "checkout_disabled",
+          "promotion_code_invalid",
+          "addon_limit_exceeded",
+          "edition_not_allowed"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Checkout creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checkout"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Mismo checkout abierto (doble clic, misma clave)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checkout"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Operación durable; Stripe aún no confirma la sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Checkout"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request, incluidas URLs/campos no aceptados en el cuerpo",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "organization_reservation_limit_reached: máximo de reservas de alta abiertas por sub (3 por omisión, configurable); sin nueva org ni Stripe",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Intent obligatorio. upgrade exige org del JWT y billing.manage, prohíbe organization_name y no reserva identity. new_organization exige solo persona verificada (incluso ctx=none, org nula y scopes vacíos), requiere organization_name y reserva exitosa. Primero rechazar controles, después normalizar nombre NFC/trim y validar 1..80 caracteres; owner_person_id viene exclusivamente de sub. No acepta URLs ni campos extra: 400 invalid_request. Treasury no despacha Stripe antes de la reserva ligada a owner/checkout y vigente. Los retornos siguen saliendo de WEB_ORIGIN configurado y permitido con ?checkout=<bchk propio>&result=success|cancel; result nunca acredita el pago.",
+        "security": [
+          {
+            "edgePersonCheckout": []
+          },
+          {
+            "edgeOrganizationCheckout": []
+          }
+        ],
+        "x-danil-security-by-intent": {
+          "new_organization": {
+            "context": "any",
+            "scope": null,
+            "action": "checkout.create_new_organization",
+            "request_schema": "#/components/schemas/CheckoutNewOrganizationCreate",
+            "security": [
+              {
+                "edgePersonCheckout": []
+              }
+            ]
+          },
+          "upgrade": {
+            "context": "organization",
+            "scope": "billing.manage",
+            "action": "checkout.create",
+            "request_schema": "#/components/schemas/CheckoutUpgradeCreate",
+            "security": [
+              {
+                "edgeOrganizationCheckout": []
+              }
+            ]
+          }
+        },
+        "x-danil-security-selection": "Elegir OBLIGATORIAMENTE la regla por intent validado; la lista security de OAS describe perfiles, no autoriza usar el perfil de alta para upgrade. OAS 3.1 declara security por operación, no condicional por cuerpo. JWT req liga intent/nombre a los bytes originales."
+      }
+    },
+    "/v1/billing/checkout-sessions/{checkout_id}": {
+      "get": {
+        "operationId": "getCheckoutSession",
+        "summary": "Alta nueva: solo creador en cualquier contexto; upgrade: org y billing.read",
+        "x-danil-scope": "by-intent",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "not_found"
+        ],
+        "parameters": [
+          {
+            "name": "checkout_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "../schemas/common.v1.schema.json#/$defs/checkout_id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Checkout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutStatus"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found: inexistente o ajeno (por org o creador), indistinguible en cualquier contexto, antes de scope/intent",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "JWT de persona del borde verificado; el borde admite cualquier contexto y treasury aplica la regla sobre la fila. Un ID inexistente o ajeno devuelve siempre 404 not_found en cualquier contexto y con cualquier scope. Intent se toma del registro, nunca de query. Para new_organization primero se compara sub con el creador owner_person_id: otro creador da 404; el creador consulta en cualquier ctx sin scope. En los demás casos primero se exige contexto de org y coincidencia con checkout.organization_id (404 si no); solo en esa misma org se comprueba billing.read (403 si falta) y después intent (503 si desconocido). Registros sin intent usan upgrade. No se inspeccionan scope/tipo antes de pertenencia. Web consulta hasta terminal=true con backoff, plazo y reanudación; result es informativo. 429/503 de consulta no son finales y respetan Retry-After. organization_id está ausente salvo active y terminal=true, con organización activada; web lo usa para seleccionar la org mediante identity y sus permisos.",
+        "x-danil-intent-source": "checkout_record",
+        "x-danil-edge-admission": "person:any-context",
+        "x-danil-security-by-intent": {
+          "new_organization": {
+            "context": "any",
+            "scope": null,
+            "action": "checkout.read_new_organization",
+            "owner_match": "sub=checkout.owner_person_id",
+            "security": [
+              {
+                "edgePersonCheckout": []
+              }
+            ]
+          },
+          "upgrade": {
+            "context": "organization",
+            "scope": "billing.read",
+            "action": "checkout.read",
+            "security": [
+              {
+                "edgeOrganizationCheckoutRead": []
+              }
+            ],
+            "without_organization_context_status": 404
+          }
+        },
+        "security": [
+          {
+            "edgePersonCheckout": []
+          },
+          {
+            "edgeOrganizationCheckoutRead": []
+          }
+        ]
+      }
+    },
+    "/v1/billing/subscription/changes": {
+      "post": {
+        "operationId": "changeSubscription",
+        "summary": "Cambio de plan o asientos con prorrateo",
+        "x-danil-scope": "billing.manage",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "idempotency_key_required",
+          "idempotency_key_reused",
+          "plan_not_sellable",
+          "catalog_version_stale",
+          "subscription_state_conflict",
+          "not_implemented",
+          "payment_provider_unavailable",
+          "plan_price_pending",
+          "addon_limit_exceeded",
+          "edition_not_allowed"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubscriptionChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Operación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Operation"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/billing/subscription/cancel": {
+      "post": {
+        "operationId": "cancelSubscription",
+        "summary": "Cancelar al final del periodo (solo owner actual; auditado)",
+        "x-danil-scope": "billing.subscription.cancel",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "idempotency_key_required",
+          "idempotency_key_reused",
+          "subscription_state_conflict",
+          "not_found",
+          "payment_provider_unavailable"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationBilling"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/billing/subscription/resume": {
+      "post": {
+        "operationId": "resumeSubscription",
+        "summary": "Reanudar una cancelación pendiente (solo owner actual)",
+        "x-danil-scope": "billing.subscription.cancel",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "idempotency_key_required",
+          "idempotency_key_reused",
+          "subscription_state_conflict",
+          "not_found",
+          "organization_purging",
+          "payment_provider_unavailable"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationBilling"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/billing/portal-sessions": {
+      "post": {
+        "operationId": "createPortalSession",
+        "summary": "Customer Portal SOLO para el pagador: método de pago y facturas; sin subscription_cancel ni subscription_update",
+        "x-danil-scope": "billing.manage",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "idempotency_key_required",
+          "idempotency_key_reused",
+          "not_payer",
+          "not_found",
+          "payment_provider_unavailable"
+        ],
+        "x-danil-payer-only": true,
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Sesión del portal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSession"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/billing/invoices": {
+      "get": {
+        "operationId": "listInvoices",
+        "summary": "Facturas cuya suscripción es de la org del JWT (proyección local; cursor/ID ajeno → 404)",
+        "x-danil-scope": "billing.read",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "not_found"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,512}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoicePage"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credits/balance": {
+      "get": {
+        "operationId": "getCreditBalance",
+        "summary": "Saldos de la bolsa (gastables y no gastables) y admisión",
+        "x-danil-scope": "credits.read",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable"
+        ],
+        "responses": {
+          "200": {
+            "description": "Saldo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Balance"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credits/transactions": {
+      "get": {
+        "operationId": "listCreditTransactions",
+        "summary": "Historial del ledger con cursor (no se lee de Stripe)",
+        "x-danil-scope": "credits.read",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "not_found"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,512}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionPage"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credits/purchases": {
+      "post": {
+        "operationId": "createCreditPurchase",
+        "summary": "Compra de créditos (también Free). Checkout mode=payment. No salda deuda.",
+        "x-danil-scope": "credits.purchase",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "idempotency_key_required",
+          "idempotency_key_reused",
+          "pack_not_sellable",
+          "catalog_version_stale",
+          "subscription_suspended",
+          "payer_blocked",
+          "payment_provider_unavailable",
+          "checkout_disabled"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Compra creada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Purchase"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Misma compra (misma clave)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Purchase"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Operación durable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Purchase"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credits/purchases/{purchase_id}": {
+      "get": {
+        "operationId": "getCreditPurchase",
+        "summary": "Estado de una compra de la org del JWT",
+        "x-danil-scope": "credits.read",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "not_found"
+        ],
+        "parameters": [
+          {
+            "name": "purchase_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "../schemas/common.v1.schema.json#/$defs/purchase_id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Compra",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Purchase"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credits/usage-authorizations": {
+      "get": {
+        "operationId": "listUsageAuthorizations",
+        "summary": "Productores de consumo autorizados para la org del JWT",
+        "x-danil-scope": "billing.read",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable"
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageAuthorizationList"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credits/usage-authorizations/{producer}": {
+      "put": {
+        "operationId": "authorizeUsageProducer",
+        "summary": "Autoriza a un productor del registro a reportar consumo de ESTA org (no sube topes, factor ni catálogo)",
+        "x-danil-scope": "billing.manage",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "idempotency_key_required",
+          "idempotency_key_reused",
+          "not_found"
+        ],
+        "parameters": [
+          {
+            "name": "producer",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{1,62}$"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Autorización",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageAuthorization"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "revokeUsageProducer",
+        "summary": "Revoca la autorización; reportes nuevos → producer_not_authorized",
+        "x-danil-scope": "billing.manage",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable",
+          "idempotency_key_required",
+          "idempotency_key_reused",
+          "not_found"
+        ],
+        "parameters": [
+          {
+            "name": "producer",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{1,62}$"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Autorización revocada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageAuthorization"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credits/inference/v1/chat/completions": {
+      "post": {
+        "operationId": "createInferenceChatCompletion",
+        "summary": "Inferencia OpenAI con reserva/liquidación",
+        "x-danil-scope": "credits.use",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "idempotency_key_required",
+          "idempotency_key_reused",
+          "rate_limited",
+          "billing_unavailable",
+          "inference_not_admitted",
+          "inference_uncertain",
+          "inference_provider_unavailable",
+          "inference_fx_unavailable",
+          "inference_catalog_unavailable"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletion"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "data: JSON ChatCompletionChunk + LF LF; termina data: [DONE] + LF LF. include_usage=true permite choices=[] al final. Tras headers, error usa event:error con data=problem+json y NO DONE. Un corte no prueba ausencia de uso.",
+                "x-danil-chunk-schema": {
+                  "$ref": "#/components/schemas/ChatCompletionChunk"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatCompletionCreate"
+              }
+            }
+          }
+        },
+        "description": "JWT interno del borde aud=billing y org/persona verificadas. Misma identidad idempotente conserva nivel, catálogo, modelo, reservation_id y report_id, aun si cambia el catálogo. Repetición de una operación terminada entrega resultado/reproducción almacenados sin despachar otra vez; en curso o incierta da 409 inference_uncertain. No se reintenta por otra ruta ni con clave nueva. Antes del despacho se reserva; costo real liquida una vez por las rutas internas existentes. Proveedor caído sin despacho: 503; sin admisión: 402. Corte de cliente: cancelar upstream con plazo; uso real se liquida, ausencia probada se libera, desconocido retiene para conciliar. No se guardan prompts/respuestas en el ledger ni logs de dinero. Gastar exige credits.use; credits.read solo permite lectura. Además de scope, siempre se aplican admisión y presupuesto por persona. Antes de reservar/despachar se exige tarifa publicada y FX vigente en [max(effective_from, fx_observed_at), fx_valid_until). Sin datos, ventana o versión vigente: 503 inference_fx_unavailable, problem+json, sin despacho ni reserva. No se usa un FX vencido de respaldo. Billing fija la versión en la reserva y en cada reporte; una conciliación posterior conserva esa instantánea. Rev. 12: la reserva usa el precio de mercado USD por millón de tokens y max_output_tokens del modelo del nivel en esa tarifa; si falta alguno de los dos, 503 inference_catalog_unavailable, problem+json, sin reserva ni despacho."
+      }
+    },
+    "/v1/credits/inference/v1/models": {
+      "get": {
+        "operationId": "listInferenceModels",
+        "summary": "Niveles estables en formato OpenAI Models",
+        "x-danil-scope": "credits.use",
+        "x-danil-problems": [
+          "invalid_request",
+          "unauthenticated",
+          "insufficient_scope",
+          "rate_limited",
+          "billing_unavailable"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Resultado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceModels"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "problem+json con un código cerrado de x-danil-problems",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/problem"
+                }
+              }
+            }
+          }
+        },
+        "description": "Catálogo de modelos de inferencia para la org, con credits.use. Solo lectura: NO exige Idempotency-Key; compatible con clientes OpenAI que no la envían. No reserva ni debita. Ningún cliente elige factor o cargo."
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "edgeSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Sesión de persona ante el borde. El borde la verifica y reenvía a billing un JWT interno ES256 (typ=JWT, iss=edge-gateway, aud=billing, org, scopes, jti, req). billing lo verifica con el verificador común R1 y rechaza typ=danil-service+jwt."
+      },
+      "edgePersonCheckout": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Mismo JWT de persona del borde verificado, typ=JWT/sub=user_*/aud=billing, cualquier contexto incluso none y scopes vacíos. Para POST alta nueva; para GET de alta exige además sub=owner_person_id creador del registro. No acepta servicio/operador/productor."
+      },
+      "edgeOrganizationCheckout": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Mismo JWT de persona del borde verificado; para upgrade exige ctx de org y billing.manage. No admite ctx=none ni token de servicio."
+      },
+      "edgeOrganizationCheckoutRead": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Mismo JWT de persona verificado. Primero contexto y pertenencia de org: un checkout ajeno o sin contexto devuelve 404 aunque falte billing.read. Solo en la misma org se exige billing.read (403 si falta); luego se clasifica intent."
+      }
+    },
+    "parameters": {
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{16,128}$"
+        }
+      }
+    },
+    "schemas": {
+      "DisplayVariant": {
+        "type": "object",
+        "required": [
+          "variant",
+          "plan_key",
+          "edition",
+          "display_name"
+        ],
+        "properties": {
+          "variant": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,32}$"
+          },
+          "plan_key": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/plan_key"
+          },
+          "edition": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,31}$"
+          },
+          "display_name": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9 ]{0,39}$"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Rev. 13. Nombre comercial (variant, display_name) de un plan con una edición: declara explícitamente {variant, plan_key, edition}. Business = {variant: business, plan_key: team, edition: business}. La edición es un ítem de 0 MXN que solo dice qué paquetes instalar; el nombre comercial puede cambiar sin tocar a los consumidores, que leen plan_key y edition."
+      },
+      "CatalogPlan": {
+        "type": "object",
+        "required": [
+          "plan_key",
+          "sellable",
+          "price",
+          "interval",
+          "seats_included",
+          "extra_seat_price",
+          "included_credits",
+          "resource_spec",
+          "requires_card"
+        ],
+        "properties": {
+          "included": {
+            "type": "object",
+            "required": [
+              "ram_mib",
+              "vcpu",
+              "disk_gib_per_org",
+              "seats"
+            ],
+            "properties": {
+              "ram_mib": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1048576
+              },
+              "vcpu": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1024
+              },
+              "disk_gib_per_org": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1048576
+              },
+              "seats": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100000
+              }
+            },
+            "additionalProperties": false,
+            "description": "Rev. 13, opcional. Lo incluido en el nivel (plan_key es el nivel; no hay tier)."
+          },
+          "allowed_editions": {
+            "type": "array",
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,31}$"
+            },
+            "description": "Rev. 13, opcional. Ediciones que admite el nivel; otra da 409 edition_not_allowed."
+          },
+          "limits": {
+            "type": "object",
+            "required": [
+              "max_ram_mib",
+              "max_vcpu",
+              "max_disk_gib_per_org",
+              "max_extra_seats"
+            ],
+            "properties": {
+              "max_ram_mib": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1048576
+              },
+              "max_vcpu": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1024
+              },
+              "max_disk_gib_per_org": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1048576
+              },
+              "max_extra_seats": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1000
+              }
+            },
+            "additionalProperties": false,
+            "description": "Rev. 13, opcional. Topes del nivel con complementos (totales). Una sola función de treasury los valida en el checkout y en /subscription/changes antes de Stripe: 409 addon_limit_exceeded."
+          },
+          "display_variants": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/DisplayVariant"
+            },
+            "description": "Rev. 13, opcional. Variantes comerciales del plan, cada una con su edición (Business = team + business). Nunca es otro plan: el derecho y los eventos llevan plan_key y, para consumidores rev. 13, edition. Se elige en el checkout con variant; una edición por suscripción."
+          },
+          "plan_key": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/plan_key"
+          },
+          "sellable": {
+            "type": "boolean"
+          },
+          "price": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "interval": {
+            "type": "string",
+            "enum": [
+              "month",
+              "contract"
+            ]
+          },
+          "seats_included": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "extra_seat_price": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "included_credits": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resource_spec": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/resource_spec"
+          },
+          "requires_card": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CatalogAddon": {
+        "type": "object",
+        "required": [
+          "addon_key",
+          "sellable",
+          "price"
+        ],
+        "properties": {
+          "addon_key": {
+            "type": "string",
+            "enum": [
+              "extra_vm",
+              "ram_step",
+              "disk_step",
+              "os_macos",
+              "os_windows",
+              "extra_seat",
+              "ram",
+              "disk",
+              "vcpu"
+            ]
+          },
+          "unit": {
+            "type": "object",
+            "required": [
+              "measure",
+              "quantity"
+            ],
+            "properties": {
+              "measure": {
+                "type": "string",
+                "enum": [
+                  "ram_mib",
+                  "disk_gib",
+                  "vcpu",
+                  "seat"
+                ]
+              },
+              "quantity": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 1048576
+              }
+            },
+            "additionalProperties": false,
+            "description": "Rev. 13, opcional. Lo que suma una unidad del complemento: RAM en 1024 MiB, disco en N GiB, 1 vCPU o 1 asiento."
+          },
+          "price_id": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^price_[A-Za-z0-9_]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rev. 13, opcional. Price de Stripe de la unidad; null mientras no tenga precio."
+          },
+          "allowed_tiers": {
+            "type": "array",
+            "maxItems": 4,
+            "items": {
+              "$ref": "../schemas/common.v1.schema.json#/$defs/plan_key"
+            },
+            "description": "Rev. 13, opcional. Niveles que admiten el complemento. Un complemento sin precio o sin el soporte de machine-provisioning queda sellable=false (el disco, además, hasta que exista grow)."
+          },
+          "sellable": {
+            "type": "boolean"
+          },
+          "price": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "CreditPack": {
+        "type": "object",
+        "required": [
+          "pack_id",
+          "sellable",
+          "price",
+          "credits"
+        ],
+        "properties": {
+          "pack_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,64}$"
+          },
+          "sellable": {
+            "type": "boolean"
+          },
+          "price": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "credits": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          }
+        }
+      },
+      "Catalog": {
+        "type": "object",
+        "required": [
+          "realm",
+          "catalog_version",
+          "published_at",
+          "plans",
+          "addons",
+          "credit_packs",
+          "inference_tiers"
+        ],
+        "properties": {
+          "realm": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/realm"
+          },
+          "catalog_version": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/catalog_version"
+          },
+          "published_at": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+          },
+          "plans": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/CatalogPlan"
+            }
+          },
+          "addons": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/CatalogAddon"
+            }
+          },
+          "credit_packs": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/CreditPack"
+            }
+          },
+          "inference_tiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InferenceTier"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        }
+      },
+      "OrganizationBilling": {
+        "type": "object",
+        "required": [
+          "organization_id",
+          "state",
+          "plan_key",
+          "seats",
+          "max_members",
+          "payer",
+          "cancel_at_period_end"
+        ],
+        "properties": {
+          "organization_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/organization_id"
+          },
+          "state": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/subscription_state"
+          },
+          "suspension_reason": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/suspension_reason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "plan_key": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/plan_key"
+          },
+          "catalog_version": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/catalog_version"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "subscription_id": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/subscription_id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current_period_end": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cancel_at_period_end": {
+            "type": "boolean"
+          },
+          "suspended_at": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data_retention_until": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "seats": {
+            "type": "object",
+            "required": [
+              "included",
+              "extra"
+            ],
+            "properties": {
+              "included": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100000
+              },
+              "extra": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100000
+              }
+            }
+          },
+          "max_members": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100000
+          },
+          "payer": {
+            "type": "object",
+            "required": [
+              "is_you"
+            ],
+            "properties": {
+              "is_you": {
+                "type": "boolean"
+              }
+            }
+          },
+          "pending": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "since"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "activation",
+                      "change",
+                      "deletion"
+                    ]
+                  },
+                  "since": {
+                    "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "CheckoutCreate": {
+        "type": "object",
+        "required": [
+          "plan_key",
+          "catalog_version",
+          "intent"
+        ],
+        "properties": {
+          "promotion_code": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "Rev. 13.1, opcional. Treasury verifica el código y su cupón en Stripe contra la lista publicada antes de crear la sesión; si no está aprobado, 422 promotion_code_invalid."
+          },
+          "variant": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,32}$",
+            "description": "Rev. 13, opcional. Una variant de display_variants del plan en esa catalog_version (p. ej. business con team). Treasury la traduce a su edición, que debe estar en allowed_editions del plan (si no, 409 edition_not_allowed), y agrega el ítem de 0 MXN de la edición; una edición por suscripción. El plan vendido sigue siendo plan_key. Variante no ofrecida en esa versión: 409 variant_not_sellable."
+          },
+          "plan_key": {
+            "type": "string",
+            "enum": [
+              "pro",
+              "team"
+            ]
+          },
+          "catalog_version": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/catalog_version"
+          },
+          "extra_seats": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "intent": {
+            "type": "string",
+            "enum": [
+              "upgrade",
+              "new_organization"
+            ]
+          },
+          "organization_name": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/organization_name"
+          }
+        },
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CheckoutUpgradeCreate"
+          },
+          {
+            "$ref": "#/components/schemas/CheckoutNewOrganizationCreate"
+          }
+        ],
+        "description": "Intent obligatorio. upgrade exige org del JWT y billing.manage, prohíbe organization_name y no reserva identity. new_organization exige solo persona verificada (incluso ctx=none, org nula y scopes vacíos), requiere organization_name y reserva exitosa. Primero rechazar controles, después normalizar nombre NFC/trim y validar 1..80 caracteres; owner_person_id viene exclusivamente de sub. No acepta URLs ni campos extra: 400 invalid_request."
+      },
+      "Checkout": {
+        "type": "object",
+        "required": [
+          "checkout_id",
+          "kind",
+          "state",
+          "url",
+          "expires_at"
+        ],
+        "properties": {
+          "checkout_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/checkout_id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "credits"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "creating",
+              "open",
+              "completed",
+              "expired",
+              "canceled"
+            ]
+          },
+          "url": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^https://",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "SubscriptionChange": {
+        "type": "object",
+        "required": [
+          "catalog_version"
+        ],
+        "properties": {
+          "plan_key": {
+            "type": "string",
+            "enum": [
+              "pro",
+              "team"
+            ]
+          },
+          "catalog_version": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/catalog_version"
+          },
+          "extra_seats": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          }
+        }
+      },
+      "Operation": {
+        "type": "object",
+        "required": [
+          "operation_id",
+          "state",
+          "code"
+        ],
+        "properties": {
+          "operation_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "succeeded",
+              "failed"
+            ]
+          },
+          "code": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z_]{3,64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PortalSession": {
+        "type": "object",
+        "required": [
+          "url",
+          "expires_at"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "pattern": "^https://",
+            "maxLength": 2048
+          },
+          "expires_at": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+          }
+        }
+      },
+      "Invoice": {
+        "type": "object",
+        "required": [
+          "invoice_id",
+          "subscription_id",
+          "status",
+          "total",
+          "period_start",
+          "period_end",
+          "created_at",
+          "pay_url"
+        ],
+        "properties": {
+          "invoice_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/invoice_id"
+          },
+          "subscription_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/subscription_id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "open",
+              "paid",
+              "void",
+              "uncollectible"
+            ]
+          },
+          "total": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "period_start": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+          },
+          "period_end": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+          },
+          "created_at": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+          },
+          "pay_url": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^https://",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "$comment": "Solo para el pagador y solo si está open; null para los demás admins (no se expone la página del customer)."
+          }
+        }
+      },
+      "InvoicePage": {
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/Invoice"
+            }
+          },
+          "next_cursor": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,512}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Balance": {
+        "type": "object",
+        "required": [
+          "organization_id",
+          "available",
+          "included",
+          "purchased",
+          "dispute_hold",
+          "unsettled_usage",
+          "refund_obligation",
+          "included_expires_at",
+          "admission",
+          "as_of",
+          "gift",
+          "compensation",
+          "inference_hold",
+          "lots"
+        ],
+        "properties": {
+          "organization_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/organization_id"
+          },
+          "available": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "included": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "purchased": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "dispute_hold": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "unsettled_usage": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "refund_obligation": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "included_expires_at": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "admission": {
+            "type": "object",
+            "required": [
+              "admitted",
+              "reasons",
+              "version"
+            ],
+            "properties": {
+              "admitted": {
+                "type": "boolean"
+              },
+              "reasons": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "balance_exhausted",
+                    "suspended_nonpayment",
+                    "suspended_dispute_lost"
+                  ]
+                }
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          "as_of": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+          },
+          "gift": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "compensation": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "inference_hold": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          },
+          "lots": {
+            "type": "array",
+            "items": {
+              "$ref": "../schemas/common.v1.schema.json#/$defs/credit_lot"
+            }
+          }
+        },
+        "description": "Disponible = included + purchased + gift + compensation; inference_hold y dispute_hold no son gastables. lots expone source y vencimiento por lote."
+      },
+      "LedgerTransaction": {
+        "type": "object",
+        "required": [
+          "transaction_id",
+          "kind",
+          "occurred_at",
+          "recorded_at",
+          "changes",
+          "actor",
+          "usage",
+          "lot_changes"
+        ],
+        "properties": {
+          "transaction_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/transaction_id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "grant_included",
+              "purchase",
+              "usage",
+              "unsettled_recorded",
+              "expire",
+              "refund",
+              "dispute_hold",
+              "dispute_release",
+              "dispute_loss",
+              "settle",
+              "adjustment",
+              "gift",
+              "compensation",
+              "forfeit",
+              "reservation_created",
+              "reservation_settled",
+              "reservation_released"
+            ]
+          },
+          "occurred_at": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+          },
+          "recorded_at": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+          },
+          "changes": {
+            "type": "object",
+            "required": [],
+            "properties": {
+              "included": {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/signed_money"
+              },
+              "purchased": {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/signed_money"
+              },
+              "dispute_hold": {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/signed_money"
+              },
+              "unsettled_usage": {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/signed_money"
+              },
+              "refund_obligation": {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/signed_money"
+              },
+              "gift": {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/signed_money"
+              },
+              "compensation": {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/signed_money"
+              },
+              "inference_hold": {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/signed_money"
+              }
+            }
+          },
+          "actor": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/actor"
+          },
+          "usage": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "entry_point",
+                  "provider",
+                  "model",
+                  "rate_card_version",
+                  "tokens",
+                  "workspace_id"
+                ],
+                "properties": {
+                  "entry_point": {
+                    "$ref": "../schemas/common.v1.schema.json#/$defs/entry_point"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "model": {
+                    "type": "string",
+                    "maxLength": 128
+                  },
+                  "rate_card_version": {
+                    "$ref": "../schemas/common.v1.schema.json#/$defs/rate_card_version"
+                  },
+                  "tokens": {
+                    "type": "object",
+                    "required": [
+                      "input",
+                      "output",
+                      "cache_read",
+                      "cache_write"
+                    ],
+                    "properties": {
+                      "input": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000000
+                      },
+                      "output": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000000
+                      },
+                      "cache_read": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000000
+                      },
+                      "cache_write": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000000000
+                      }
+                    }
+                  },
+                  "workspace_id": {
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lot_changes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "lot_id",
+                "source",
+                "amount",
+                "payment_reference"
+              ],
+              "properties": {
+                "lot_id": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/lot_id"
+                },
+                "source": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/credit_source"
+                },
+                "amount": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/signed_money"
+                },
+                "payment_reference": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/common.v1.schema.json#/$defs/payment_reference"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "reason": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "forfeit registra el sobrante al surtir efecto la cancelación, conserva payment_reference y no implica reembolso. lot_changes atribuye cada movimiento a su source."
+      },
+      "TransactionPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/LedgerTransaction"
+            }
+          },
+          "next_cursor": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,512}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PurchaseCreate": {
+        "type": "object",
+        "required": [
+          "pack_id",
+          "catalog_version"
+        ],
+        "properties": {
+          "pack_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,64}$"
+          },
+          "catalog_version": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/catalog_version"
+          }
+        }
+      },
+      "Purchase": {
+        "type": "object",
+        "required": [
+          "purchase_id",
+          "checkout_id",
+          "state",
+          "url",
+          "expires_at",
+          "credits"
+        ],
+        "properties": {
+          "purchase_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/purchase_id"
+          },
+          "checkout_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/checkout_id"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "creating",
+              "open",
+              "paid",
+              "failed",
+              "expired"
+            ]
+          },
+          "url": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^https://",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "credits": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/money"
+          }
+        }
+      },
+      "UsageAuthorization": {
+        "type": "object",
+        "required": [
+          "producer",
+          "entry_points",
+          "state",
+          "changed_at",
+          "changed_by"
+        ],
+        "properties": {
+          "producer": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{1,62}$"
+          },
+          "entry_points": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "$ref": "../schemas/common.v1.schema.json#/$defs/entry_point"
+            }
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "revoked"
+            ]
+          },
+          "changed_at": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+          },
+          "changed_by": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/person_id"
+          }
+        }
+      },
+      "UsageAuthorizationList": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/UsageAuthorization"
+            }
+          }
+        }
+      },
+      "InferenceTier": {
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "provider_model",
+          "default",
+          "factor"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/inference_tier_id"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "provider_model": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "default": {
+            "type": "boolean"
+          },
+          "factor": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/rational"
+          }
+        },
+        "description": "Un único default. Los IDs danil/* son estables. Modelo/factor/versiones se fijan en la reserva y uso; cambiar el backend es catálogo, nunca un release de Desk."
+      },
+      "ChatMessage": {
+        "description": "Perfil compatible de texto y function tools: mensajes de entrada llevan content salvo assistant con tool_calls; tool exige tool_call_id. Campos/capacidades no soportados (incluida imagen/audio) dan 400 invalid_request, nunca se ignoran.",
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "role",
+              "content"
+            ],
+            "properties": {
+              "role": {
+                "type": "string",
+                "enum": [
+                  "system",
+                  "developer",
+                  "user"
+                ]
+              },
+              "content": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "text"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "text"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "minItems": 1
+                  }
+                ]
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "role",
+              "content"
+            ],
+            "properties": {
+              "role": {
+                "const": "assistant"
+              },
+              "content": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "text"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "text"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "minItems": 1
+                  }
+                ]
+              },
+              "tool_calls": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "type",
+                    "function"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "type": {
+                      "const": "function"
+                    },
+                    "function": {
+                      "type": "object",
+                      "required": [
+                        "name",
+                        "arguments"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "arguments": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "role",
+              "tool_calls"
+            ],
+            "properties": {
+              "role": {
+                "const": "assistant"
+              },
+              "tool_calls": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "type",
+                    "function"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "type": {
+                      "const": "function"
+                    },
+                    "function": {
+                      "type": "object",
+                      "required": [
+                        "name",
+                        "arguments"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 128
+                        },
+                        "arguments": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "minItems": 1
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": [
+              "role",
+              "content",
+              "tool_call_id"
+            ],
+            "properties": {
+              "role": {
+                "const": "tool"
+              },
+              "content": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "text"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "text"
+                        },
+                        "text": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "minItems": 1
+                  }
+                ]
+              },
+              "tool_call_id": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ChatCompletionCreate": {
+        "type": "object",
+        "required": [
+          "model",
+          "messages"
+        ],
+        "properties": {
+          "model": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/inference_tier_id"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            },
+            "minItems": 1
+          },
+          "stream": {
+            "type": "boolean"
+          },
+          "stream_options": {
+            "type": "object",
+            "required": [],
+            "properties": {
+              "include_usage": {
+                "type": "boolean"
+              }
+            }
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "max_completion_tokens": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "top_p": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "function"
+              ],
+              "properties": {
+                "type": {
+                  "const": "function"
+                },
+                "function": {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object"
+                    },
+                    "strict": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "tool_choice": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "auto",
+                  "required"
+                ]
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type",
+                  "function"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "function"
+                  },
+                  "function": {
+                    "type": "object",
+                    "required": [
+                      "name"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "parallel_tool_calls": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "description": "model es un nivel público, no un ID del proveedor. Equilibrado es la selección por omisión del catálogo/cliente; el campo model se envía explícito. max_tokens y max_completion_tokens no se envían juntos. El origen valida capacidades del modelo fijado; no hace fallback de ruta ni de proveedor ante incertidumbre."
+      },
+      "ChatCompletion": {
+        "type": "object",
+        "required": [
+          "id",
+          "object",
+          "created",
+          "model",
+          "choices",
+          "usage"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^chatcmpl_[A-Za-z0-9_-]{1,128}$"
+          },
+          "object": {
+            "const": "chat.completion"
+          },
+          "created": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "model": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/inference_tier_id"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "index",
+                "message",
+                "finish_reason"
+              ],
+              "properties": {
+                "index": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "message": {
+                  "type": "object",
+                  "required": [
+                    "role",
+                    "content"
+                  ],
+                  "properties": {
+                    "role": {
+                      "const": "assistant"
+                    },
+                    "content": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "tool_calls": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "type",
+                          "function"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 128
+                          },
+                          "type": {
+                            "const": "function"
+                          },
+                          "function": {
+                            "type": "object",
+                            "required": [
+                              "name",
+                              "arguments"
+                            ],
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 128
+                              },
+                              "arguments": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "finish_reason": {
+                  "type": "string",
+                  "enum": [
+                    "stop",
+                    "length",
+                    "tool_calls",
+                    "content_filter"
+                  ]
+                }
+              }
+            },
+            "minItems": 1
+          },
+          "usage": {
+            "type": "object",
+            "required": [
+              "prompt_tokens",
+              "completion_tokens",
+              "total_tokens"
+            ],
+            "properties": {
+              "prompt_tokens": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "completion_tokens": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "total_tokens": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            }
+          }
+        }
+      },
+      "ChatCompletionChunk": {
+        "type": "object",
+        "required": [
+          "id",
+          "object",
+          "created",
+          "model",
+          "choices"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^chatcmpl_[A-Za-z0-9_-]{1,128}$"
+          },
+          "object": {
+            "const": "chat.completion.chunk"
+          },
+          "created": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "model": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/inference_tier_id"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "index",
+                "delta",
+                "finish_reason"
+              ],
+              "properties": {
+                "index": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "delta": {
+                  "type": "object",
+                  "required": [],
+                  "properties": {
+                    "role": {
+                      "const": "assistant"
+                    },
+                    "content": {
+                      "oneOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "tool_calls": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "index"
+                        ],
+                        "properties": {
+                          "index": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "const": "function"
+                          },
+                          "function": {
+                            "type": "object",
+                            "required": [],
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "arguments": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "finish_reason": {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "stop",
+                        "length",
+                        "tool_calls",
+                        "content_filter"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "usage": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "prompt_tokens",
+                  "completion_tokens",
+                  "total_tokens"
+                ],
+                "properties": {
+                  "prompt_tokens": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "completion_tokens": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "total_tokens": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "InferenceModels": {
+        "type": "object",
+        "required": [
+          "object",
+          "data"
+        ],
+        "properties": {
+          "object": {
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "object",
+                "created",
+                "owned_by"
+              ],
+              "properties": {
+                "id": {
+                  "$ref": "../schemas/common.v1.schema.json#/$defs/inference_tier_id"
+                },
+                "object": {
+                  "const": "model"
+                },
+                "created": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "owned_by": {
+                  "const": "danil"
+                }
+              }
+            },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        }
+      },
+      "CheckoutStatus": {
+        "type": "object",
+        "required": [
+          "checkout_id",
+          "kind",
+          "state",
+          "url",
+          "expires_at",
+          "terminal"
+        ],
+        "properties": {
+          "checkout_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/checkout_id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "credits"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "active",
+              "canceled",
+              "expired",
+              "error"
+            ]
+          },
+          "url": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^https://",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terminal": {
+            "type": "boolean",
+            "description": "Polling termina cuando true. paid es final para créditos; en plan espera active. canceled/expired/error son finales; pending no. No se deriva de result en el navegador."
+          },
+          "organization_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/organization_id"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Estado durable autorizado por el intent guardado y el creador/org correspondiente. organization_id SOLO existe con state=active y terminal=true (organización activada); se omite en pending, paid, canceled, expired y error, incluso si terminal=true. Sirve para que la web seleccione la nueva org, sin conceder membresía por conocer el ID.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CheckoutStatusActive"
+          },
+          {
+            "$ref": "#/components/schemas/CheckoutStatusNotActive"
+          }
+        ]
+      },
+      "CheckoutUpgradeCreate": {
+        "type": "object",
+        "required": [
+          "plan_key",
+          "catalog_version",
+          "intent"
+        ],
+        "properties": {
+          "promotion_code": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "variant": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,32}$",
+            "description": "Rev. 13, opcional. Una variant de display_variants del plan en esa catalog_version (p. ej. business con team). Treasury la traduce a su edición, que debe estar en allowed_editions del plan (si no, 409 edition_not_allowed), y agrega el ítem de 0 MXN de la edición; una edición por suscripción. El plan vendido sigue siendo plan_key. Variante no ofrecida en esa versión: 409 variant_not_sellable."
+          },
+          "plan_key": {
+            "type": "string",
+            "enum": [
+              "pro",
+              "team"
+            ]
+          },
+          "catalog_version": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/catalog_version"
+          },
+          "extra_seats": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "intent": {
+            "const": "upgrade"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Intent obligatorio. upgrade exige org del JWT y billing.manage, prohíbe organization_name y no reserva identity. new_organization exige solo persona verificada (incluso ctx=none, org nula y scopes vacíos), requiere organization_name y reserva exitosa. Primero rechazar controles, después normalizar nombre NFC/trim y validar 1..80 caracteres; owner_person_id viene exclusivamente de sub. No acepta URLs ni campos extra: 400 invalid_request."
+      },
+      "CheckoutNewOrganizationCreate": {
+        "type": "object",
+        "required": [
+          "plan_key",
+          "catalog_version",
+          "intent",
+          "organization_name"
+        ],
+        "properties": {
+          "promotion_code": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "variant": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,32}$",
+            "description": "Rev. 13, opcional. Una variant de display_variants del plan en esa catalog_version (p. ej. business con team). Treasury la traduce a su edición, que debe estar en allowed_editions del plan (si no, 409 edition_not_allowed), y agrega el ítem de 0 MXN de la edición; una edición por suscripción. El plan vendido sigue siendo plan_key. Variante no ofrecida en esa versión: 409 variant_not_sellable."
+          },
+          "plan_key": {
+            "type": "string",
+            "enum": [
+              "pro",
+              "team"
+            ]
+          },
+          "catalog_version": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/catalog_version"
+          },
+          "extra_seats": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000
+          },
+          "intent": {
+            "const": "new_organization"
+          },
+          "organization_name": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/organization_name"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Intent obligatorio. upgrade exige org del JWT y billing.manage, prohíbe organization_name y no reserva identity. new_organization exige solo persona verificada (incluso ctx=none, org nula y scopes vacíos), requiere organization_name y reserva exitosa. Primero rechazar controles, después normalizar nombre NFC/trim y validar 1..80 caracteres; owner_person_id viene exclusivamente de sub. No acepta URLs ni campos extra: 400 invalid_request."
+      },
+      "CheckoutStatusActive": {
+        "type": "object",
+        "required": [
+          "checkout_id",
+          "kind",
+          "state",
+          "url",
+          "expires_at",
+          "terminal",
+          "organization_id"
+        ],
+        "properties": {
+          "checkout_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/checkout_id"
+          },
+          "kind": {
+            "const": "plan"
+          },
+          "state": {
+            "const": "active"
+          },
+          "url": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^https://",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terminal": {
+            "const": true
+          },
+          "organization_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/organization_id"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Estado durable autorizado por el intent guardado y el creador/org correspondiente. organization_id SOLO existe con state=active y terminal=true (organización activada); se omite en pending, paid, canceled, expired y error, incluso si terminal=true. Sirve para que la web seleccione la nueva org, sin conceder membresía por conocer el ID."
+      },
+      "CheckoutStatusNotActive": {
+        "type": "object",
+        "required": [
+          "checkout_id",
+          "kind",
+          "state",
+          "url",
+          "expires_at",
+          "terminal"
+        ],
+        "properties": {
+          "checkout_id": {
+            "$ref": "../schemas/common.v1.schema.json#/$defs/checkout_id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "credits"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "canceled",
+              "expired",
+              "error"
+            ]
+          },
+          "url": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^https://",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at": {
+            "oneOf": [
+              {
+                "$ref": "../schemas/common.v1.schema.json#/$defs/timestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "terminal": {
+            "type": "boolean",
+            "description": "Polling termina cuando true. paid es final para créditos; en plan espera active. canceled/expired/error son finales; pending no. No se deriva de result en el navegador."
+          }
+        },
+        "additionalProperties": false,
+        "description": "Estado durable autorizado por el intent guardado y el creador/org correspondiente. organization_id SOLO existe con state=active y terminal=true (organización activada); se omite en pending, paid, canceled, expired y error, incluso si terminal=true. Sirve para que la web seleccione la nueva org, sin conceder membresía por conocer el ID."
+      }
+    }
+  }
+}
