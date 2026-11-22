@@ -5,6 +5,7 @@ import Cloud from "lucide-solid/icons/cloud";
 import Laptop from "lucide-solid/icons/laptop";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { type Workspace } from "../queries/workspaces-store";
@@ -58,7 +59,7 @@ export function NavigationListRow(props: NavigationListRowProps) {
   ]);
 
   return (
-    <button
+    <Pressable
       type={propios.type ?? "button"}
       aria-current={propios.selected ? true : undefined}
       class={navigationListRowClass({
