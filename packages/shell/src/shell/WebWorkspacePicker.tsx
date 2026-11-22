@@ -2,6 +2,7 @@ import { createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import type { PickerOrg, PickerRow, WorkspacePicker } from "../../../../apps/desktop/src/web/workspace-picker";
+import { Pressable } from "../../../ui/src/Pressable";
 
 /**
  * Una sola lista (plan modelo Slack § 20): los workspaces de Danil que la persona ya puede abrir,
@@ -46,7 +47,7 @@ export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () =
     <Show when={data.loading}><p role="status">{t("shell.workspaces.danil_loading")}</p></Show>
     <Show when={data.error || (!data.loading && data()?.partial)}>
       <p role="alert">{t("shell.workspaces.catalog_error")}</p>
-      <button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={() => void refetch()}>{t("common.part.retry")}</button>
+      <Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => void refetch()}>{t("common.part.retry")}</Pressable>
     </Show>
     <Show when={!data.loading && !data.error && data()}>{result => <>
       <Show when={!result().organizations.length}><p role="status">{t("shell.workspaces.no_accessible")}</p></Show>
@@ -57,22 +58,22 @@ export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () =
               <p data-picker-state={org.catalog_state} class="m-0 px-2 py-1.5 text-caption text-neutral-500">{nameOf(org)}<span class="block truncate">{stateOf(org)}</span></p>
             }>
               <For each={rowsOf(org)}>{row =>
-                <button type="button" role="menuitem" data-picker-workspace="" data-picker-org={org.org} disabled={busy()} class={ITEM_DE_MENU} onClick={() => void choose(row)}>
+                <Pressable role="menuitem" data-picker-workspace="" data-picker-org={org.org} disabled={busy()} class={ITEM_DE_MENU} onClick={() => void choose(row)}>
                   <span class="flex min-w-0 flex-col text-left"><span class="truncate">{row.name}</span>
                     <span class="truncate text-caption text-neutral-500">{subtitleOf(org)}</span></span>
-                </button>
+                </Pressable>
               }</For>
             </Show>
           }>
-            <button type="button" role="menuitem" data-picker-organization={org.org} aria-label={t("shell.workspaces.admit") + " " + nameOf(org)} disabled={busy()} class={ITEM_DE_MENU} onClick={() => void admit(org)}>
+            <Pressable role="menuitem" data-picker-organization={org.org} aria-label={t("shell.workspaces.admit") + " " + nameOf(org)} disabled={busy()} class={ITEM_DE_MENU} onClick={() => void admit(org)}>
               <span class="flex min-w-0 flex-col text-left"><span class="truncate">{nameOf(org)}</span>
                 <span class="truncate text-caption text-neutral-500">{t("shell.workspaces.admission_required")}{stateOf(org) ? " · " + stateOf(org) : ""}</span></span>
-            </button>
+            </Pressable>
           </Show>
         }</For>
       </div>
     </>}</Show>
     <Show when={error()}>{key => <p role="alert">{t(key())}</p>}</Show>
-    <Show when={props.picker.canConnect}><button type="button" role="menuitem" data-picker-account="" disabled={busy()} class={ITEM_DE_MENU} onClick={() => void choose()}>{t("shell.workspaces.connect_account")}</button></Show>
+    <Show when={props.picker.canConnect}><Pressable role="menuitem" data-picker-account="" disabled={busy()} class={ITEM_DE_MENU} onClick={() => void choose()}>{t("shell.workspaces.connect_account")}</Pressable></Show>
   </div>;
 }

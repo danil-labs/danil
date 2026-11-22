@@ -19,6 +19,7 @@ import { SessionEmptyNotice } from "./SessionEmptyNotice";
 import type { sessionRail } from "./session-groups";
 import { openRequestedSessionMenu } from "./session-menu-open";
 import WorkspaceSearch, { SEARCH_FROM } from "./WorkspaceSearch";
+import { Pressable } from "../../../ui/src/Pressable";
 
 export { menuArrows };
 
@@ -95,8 +96,7 @@ export default function AddWorkspaceMenu(props: {
                   const name = () => w.name || t("shell.directory.unnamed");
                   return (
                     <div class="flex items-center gap-0.5" data-hidden-workspace={w.id}>
-                      <button
-                        type="button"
+                      <Pressable
                         role="menuitem"
                         class={cn(ITEM_DE_MENU, "flex min-w-0 flex-1 items-center gap-2")}
                         aria-label={state() ? t("shell.workspaces.tile_with_state", { name: name(), state: props.labelOf(state() as AttentionState) }) : name()}
@@ -108,9 +108,8 @@ export default function AddWorkspaceMenu(props: {
                       >
                         <span class="min-w-0 flex-1 truncate">{name()}</span>
                         <Show when={state()}>{(s) => <Dynamic component={props.badge} state={s()} />}</Show>
-                      </button>
-                      <button
-                        type="button"
+                      </Pressable>
+                      <Pressable
                         class="grid size-7 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
                         aria-label={t("shell.workspaces.show", { name: name() })}
                         title={t("shell.workspaces.show", { name: name() })}
@@ -118,7 +117,7 @@ export default function AddWorkspaceMenu(props: {
                         onClick={(e) => showKeepingFocus(e.currentTarget.closest<HTMLElement>("[data-hidden-workspace]") as HTMLElement, () => props.onShow(w.id))}
                       >
                         <Eye size={13} aria-hidden="true" />
-                      </button>
+                      </Pressable>
                     </div>
                   );
                 }}

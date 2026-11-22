@@ -6,6 +6,7 @@ import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { SEPARADOR_DE_MENU } from "../../../ui/src/ContextMenu";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import PromoRedeem from "./PromoRedeem";
+import { Pressable } from "../../../ui/src/Pressable";
 
 export function groupBalanceLabel(amount: number | null | undefined) {
   return amount === undefined ? t("shell.workspaces.danil_loading") : amount === null ? t("chat.credits.unavailable") : t("chat.credits.amount", { count: amount });
@@ -18,7 +19,7 @@ export function GroupAccountMenu(props: { group: GroupAccount; send: GroupSend; 
     {props.notice}
     <span aria-hidden="true" class={cn(SEPARADOR_DE_MENU, "block")} />
     <p class="m-0 flex items-center justify-between gap-3 px-2 py-1.5 text-xs tabular-nums text-neutral-500">{t("chat.credits.label")} <span class="font-medium text-neutral-950" role="status">{groupBalanceLabel(balance.loading ? undefined : balance() ?? null)}</span></p>
-    <Show when={!props.web && canRedeemPromo(props.group.role)}><button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={() => props.onPromo()}>{t("web.promo.redeem")}</button></Show>
+    <Show when={!props.web && canRedeemPromo(props.group.role)}><Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => props.onPromo()}>{t("web.promo.redeem")}</Pressable></Show>
     <span aria-hidden="true" class={cn(SEPARADOR_DE_MENU, "block")} />
   </Show>;
 }

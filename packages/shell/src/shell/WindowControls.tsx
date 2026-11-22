@@ -4,6 +4,7 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { capabilities } from "../../../host/src/platform";
 import { isWindows } from "../../../host/src/window";
+import { Pressable } from "../../../ui/src/Pressable";
 
 /**
  * Los controles nativos que Windows pierde al quitar sus decoraciones.
@@ -58,17 +59,17 @@ export default function ControlesDeVentana() {
           Así que alinear no es cosa de este componente: es de la fila que lo
           pone, que es la única que sabe qué más lleva. */}
       <div class="flex h-[30px] shrink-0 items-stretch">
-        <button class="grid w-11 place-items-center text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary" type="button" aria-label={t("shell.window.minimize")} title={t("shell.window.minimize")} onClick={minimizar}>
+        <Pressable class="grid w-11 place-items-center text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary" type="button" aria-label={t("shell.window.minimize")} title={t("shell.window.minimize")} onClick={minimizar}>
           <svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10"><path d="M1 5.5h8" fill="none" stroke="currentColor" /></svg>
-        </button>
-        <button class="grid w-11 place-items-center text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary" type="button" aria-label={maximizada() ? t("shell.window.restore") : t("shell.window.maximize")} title={maximizada() ? t("shell.window.restore") : t("shell.window.maximize")} onClick={alternarMaximo}>
+        </Pressable>
+        <Pressable class="grid w-11 place-items-center text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950 focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary" type="button" aria-label={maximizada() ? t("shell.window.restore") : t("shell.window.maximize")} title={maximizada() ? t("shell.window.restore") : t("shell.window.maximize")} onClick={alternarMaximo}>
           <Show when={maximizada()} fallback={<svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10"><rect x="1.5" y="1.5" width="7" height="7" fill="none" stroke="currentColor" /></svg>}>
             <svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10"><path d="M3 3V1.5h5.5V7H7M1.5 3h5.5v5.5H1.5z" fill="none" stroke="currentColor" /></svg>
           </Show>
-        </button>
-        <button class="grid w-11 place-items-center text-neutral-700 hover:bg-error-strong hover:text-white focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary" type="button" aria-label={t("shell.window.close_app")} title={t("shell.window.close")} onClick={pedirCierre}>
+        </Pressable>
+        <Pressable class="grid w-11 place-items-center text-neutral-700 hover:bg-error-strong hover:text-white focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-primary" type="button" aria-label={t("shell.window.close_app")} title={t("shell.window.close")} onClick={pedirCierre}>
           <svg aria-hidden="true" width="10" height="10" viewBox="0 0 10 10"><path d="m1.5 1.5 7 7m0-7-7 7" fill="none" stroke="currentColor" /></svg>
-        </button>
+        </Pressable>
       </div>
     </Show>
   );

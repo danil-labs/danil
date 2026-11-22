@@ -22,6 +22,7 @@ import { Input } from "../../../ui/src/Input";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
 import type { AttentionState } from "./attention";
 import { AttentionBadge } from "./WorkspaceColumn";
+import { Pressable } from "../../../ui/src/Pressable";
 
 /** El tope de `spaces::NAME_MAX_CHARS`. */
 const NOMBRE_MAX = 30;
@@ -122,8 +123,7 @@ export default function SpaceBar(props: {
                   <Show
                     when={renombrando() === i().id}
                     fallback={
-                      <button
-                        type="button"
+                      <Pressable
                         role="tab"
                         data-space={i().id}
                         aria-selected={elegida()}
@@ -154,7 +154,7 @@ export default function SpaceBar(props: {
                       >
                         <span class="max-w-40 truncate">{spaceName(i())}</span>
                         <Show when={senal()}>{(s) => <AttentionBadge state={s()} />}</Show>
-                      </button>
+                      </Pressable>
                     }
                   >
                     <Input

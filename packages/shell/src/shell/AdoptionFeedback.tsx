@@ -8,6 +8,7 @@ import type { AdoptionClaimed, AdoptionFailure } from "./account-adoption";
 import type { AdoptionReport } from "./session-account-workspaces";
 import MoveWorkspaceDialog from "./MoveWorkspaceDialog";
 import type { sessionRail } from "./session-groups";
+import { Pressable } from "../../../ui/src/Pressable";
 
 const CAUSES: Record<string, string> = {
   adoption_disabled: "shell.workspaces.adoption.cause.disabled",
@@ -53,8 +54,8 @@ export function AdoptionFeedback(props: { sessions: ReturnType<typeof sessionRai
                 <li class="flex items-center justify-between gap-2 text-xs">
                   <span class="truncate">{claimed.name}</span>
                   <span class="flex shrink-0 items-center gap-1">
-                    <button type="button" class="underline" onClick={() => props.onOpen(claimed.id, value().context)}>{t("shell.workspaces.adoption.view")}</button>
-                    <button type="button" class="underline" onClick={() => setMoving(claimed)}>{t("shell.workspaces.adoption.move")}</button>
+                    <Pressable class="underline" onClick={() => props.onOpen(claimed.id, value().context)}>{t("shell.workspaces.adoption.view")}</Pressable>
+                    <Pressable class="underline" onClick={() => setMoving(claimed)}>{t("shell.workspaces.adoption.move")}</Pressable>
                   </span>
                 </li>
               )}</For>

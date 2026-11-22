@@ -16,6 +16,7 @@ import { SidebarMenuButton } from "../../../ui/src/sidebar";
 import { FolderSquare } from "../../../features/projects/src/screens/FolderChip";
 import type { SessionRow } from "../../../features/projects/src/screens/Sessions";
 import EstadoDeTarea from "../../../features/projects/src/screens/TaskStatus";
+import { Pressable } from "../../../ui/src/Pressable";
 
 /** El rasgo que enciende la cabecera sobre la que se soltaría la tarea que va en la mano. */
 const RECIBE_LA_TAREA = ["ring-2", "ring-primary"];
@@ -73,7 +74,7 @@ export default function FolderGroupHeader(pp: {
       )}
       data-destino={p().id}
     >
-      <button
+      <Pressable
         class="relative grid size-5 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         aria-expanded={pp.abierto}
         aria-label={
@@ -85,7 +86,7 @@ export default function FolderGroupHeader(pp: {
       >
         <span class="transition-opacity group-hover:opacity-0"><FolderSquare id={p().id} /></span>
         <ChevronRight size={14} class={cn("absolute opacity-0 transition-[opacity,transform] group-hover:opacity-100", pp.abierto && "rotate-90")} />
-      </button>
+      </Pressable>
 
       {/* Renombrar pasa dentro de la cabecera, con la misma altura y letra:
           lo único que cambia es que el texto se puede escribir. */}
@@ -156,7 +157,7 @@ export default function FolderGroupHeader(pp: {
             la cabecera de `Sessions.tsx`. */}
         <PopoverTrigger
           as={(disparador: object) => (
-            <button
+            <Pressable
               {...disparador}
               class="mr-1 grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 opacity-0 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:opacity-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary group-hover:opacity-100 group-focus-within:opacity-100 data-[expanded]:opacity-100"
               aria-label={t("shell.sidebar.project_actions", { name: rotulo() })}
@@ -164,7 +165,7 @@ export default function FolderGroupHeader(pp: {
               title={t("shell.sidebar.actions")}
             >
               <MoreVertical size={15} />
-            </button>
+            </Pressable>
           )}
         />
         {/* Un solo `PopoverContent` con dos vistas: cambiarlo por otro lo
@@ -177,19 +178,19 @@ export default function FolderGroupHeader(pp: {
             when={confirmando()}
             fallback={
               <>
-                <button role="menuitem" class={ITEM_DE_MENU} onClick={() => {
+                <Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => {
                   setMenu(false);
                   pp.onNuevoAgente();
-                }}>{t("projects.agents.new_open")}</button>
+                }}>{t("projects.agents.new_open")}</Pressable>
                 <Show when={pp.onLlevar}>
                   {(llevar) => (
-                    <button role="menuitem" class={ITEM_DE_MENU} data-carry-folder onClick={() => {
+                    <Pressable role="menuitem" class={ITEM_DE_MENU} data-carry-folder onClick={() => {
                       setMenu(false);
                       llevar()();
-                    }}>{t("shell.machines.carry_to")}</button>
+                    }}>{t("shell.machines.carry_to")}</Pressable>
                   )}
                 </Show>
-                <button
+                <Pressable
                   role="menuitem"
                   class={ITEM_DE_MENU}
                   onClick={() => {
@@ -199,21 +200,21 @@ export default function FolderGroupHeader(pp: {
                   }}
                 >
                   {t("shell.sidebar.rename")}
-                </button>
+                </Pressable>
                 <Show
                   when={pp.onQuitarDelEspacio}
                   fallback={
-                    <button
+                    <Pressable
                       role="menuitem"
                       class={`${ITEM_DE_MENU} text-error-strong`}
                       onClick={() => setConfirmando(true)}
                     >
                       {t("shell.sidebar.delete_project")}
-                    </button>
+                    </Pressable>
                   }
                 >
                   {(quitar) => (
-                    <button
+                    <Pressable
                       role="menuitem"
                       class={ITEM_DE_MENU}
                       onClick={() => {
@@ -222,7 +223,7 @@ export default function FolderGroupHeader(pp: {
                       }}
                     >
                       {t("shell.sidebar.remove_from_space")}
-                    </button>
+                    </Pressable>
                   )}
                 </Show>
               </>
@@ -264,7 +265,7 @@ export default function FolderGroupHeader(pp: {
         </PopoverContent>
       </Popover>
 
-      <button
+      <Pressable
         class="mr-1 grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 opacity-0 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:opacity-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary group-hover:opacity-100 group-focus-within:opacity-100"
         aria-label={t("shell.sidebar.new_task_in", { name: rotulo() })}
         title={t("shell.sidebar.new_task_in", { name: rotulo() })}
@@ -274,7 +275,7 @@ export default function FolderGroupHeader(pp: {
         }}
       >
         <SquarePen size={14} aria-hidden="true" />
-      </button>
+      </Pressable>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import { asFailure, FailureNote } from "../../../ui/src/Failure";
 import { Input } from "../../../ui/src/Input";
 import type { SessionRow } from "../../../features/projects/src/screens/Sessions";
 import { matchesTaskQuery } from "../../../features/projects/src/model/taskSearch";
+import { Pressable } from "../../../ui/src/Pressable";
 
 export type SearchFilter = "all" | "tasks" | "archived" | "folders" | "actions";
 type Group = Exclude<SearchFilter, "all">;
@@ -172,8 +173,7 @@ function Panel(props: Parameters<typeof GlobalSearch>[0] & { initial: SearchFilt
       <div class="flex flex-wrap gap-1.5 px-3 pt-2 pb-1" role="group" aria-label={t("search.filters")}>
         <For each={chips()}>
           {(chip) => (
-            <button
-              type="button"
+            <Pressable
               data-search-chip={chip}
               aria-pressed={filter() === chip}
               class={cn(
@@ -185,7 +185,7 @@ function Panel(props: Parameters<typeof GlobalSearch>[0] & { initial: SearchFilt
               onClick={() => setFilter(chip)}
             >
               {t(`search.chip.${chip}`)}
-            </button>
+            </Pressable>
           )}
         </For>
       </div>

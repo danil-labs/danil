@@ -10,6 +10,7 @@ import { canRedeemPromo } from "../../../../apps/desktop/src/lib/promo-role";
 import { type Apariencia, apariencia, elegirApariencia } from "../../../../apps/desktop/src/lib/theme";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../../ui/src/Popover";
+import { Pressable } from "../../../ui/src/Pressable";
 
 const PromoRedeem = lazy(() => import("./PromoRedeem"));
 
@@ -46,8 +47,7 @@ export default function ProfileMenu(props: {
   const cuenta = () => capabilities().danilAccount || capabilities().accountProfile;
   const alternar = () => setOpen((o) => !o);
   const generico = () => (
-    <button
-      type="button"
+    <Pressable
       class="grid size-8 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
       aria-label={t("shell.profile.menu")}
       title={t("shell.profile.menu")}
@@ -55,7 +55,7 @@ export default function ProfileMenu(props: {
       onClick={alternar}
     >
       <UserRound size={17} aria-hidden="true" />
-    </button>
+    </Pressable>
   );
 
   return (
@@ -86,10 +86,10 @@ export default function ProfileMenu(props: {
       </PopoverAnchor>
       <PopoverContent class="w-72 p-1" aria-label={t("shell.profile.menu")}>
         <Show when={cuenta()}>
-          <button type="button" class={cn(ITEM_DE_MENU, "flex items-center gap-2")} onClick={() => { setOpen(false); props.onAccount(); }}>
+          <Pressable class={cn(ITEM_DE_MENU, "flex items-center gap-2")} onClick={() => { setOpen(false); props.onAccount(); }}>
             <span class="min-w-0 flex-1 truncate">{t("settings.nav.danil_account")}</span>
             <ChevronRight size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
-          </button>
+          </Pressable>
           <div class="my-1 h-px bg-border" />
         </Show>
         <Show when={capabilities().organizations}>
@@ -104,15 +104,14 @@ export default function ProfileMenu(props: {
         <div role="radiogroup" aria-label={t("shell.profile.theme")} class={cn(SEGMENTO, "mx-2 mb-2")}>
           <For each={TEMAS}>
             {(a) => (
-              <button
-                type="button"
+              <Pressable
                 role="radio"
                 aria-checked={tema() === a}
                 class={cn(OPCION, tema() === a && ELEGIDA)}
                 onClick={() => setTema(elegirApariencia(a))}
               >
                 {nombreDeTema(a)}
-              </button>
+              </Pressable>
             )}
           </For>
         </div>
@@ -121,11 +120,10 @@ export default function ProfileMenu(props: {
           <Bug size={12} aria-hidden="true" />
           {t("usage.bug_report")}
         </p>
-        <button type="button" class={ITEM_DE_MENU} onClick={() => { setOpen(false); props.onReportarBug(); }}>
+        <Pressable class={ITEM_DE_MENU} onClick={() => { setOpen(false); props.onReportarBug(); }}>
           {t("usage.bug_report.ask_agent")}
-        </button>
-        <button
-          type="button"
+        </Pressable>
+        <Pressable
           class={ITEM_DE_MENU}
           onClick={() => {
             setOpen(false);
@@ -133,15 +131,15 @@ export default function ProfileMenu(props: {
           }}
         >
           {t("usage.bug_report.open_web")}
-        </button>
+        </Pressable>
         <Show when={capabilities().webAccounts}>
           {(cuentas) => (
             <>
               <div class="my-1 h-px bg-border" />
-              <button type="button" class={cn(ITEM_DE_MENU, "flex items-center gap-2")} data-sign-out="" onClick={() => { setOpen(false); cuentas().signOut(); }}>
+              <Pressable class={cn(ITEM_DE_MENU, "flex items-center gap-2")} data-sign-out="" onClick={() => { setOpen(false); cuentas().signOut(); }}>
                 <LogOut size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
                 <span class="min-w-0 flex-1 truncate">{t("danil.account.sign_out")}</span>
-              </button>
+              </Pressable>
             </>
           )}
         </Show>

@@ -6,6 +6,7 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import type { SignalTone } from "../../../ui/src/SignalDot";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
+import { Pressable } from "../../../ui/src/Pressable";
 
 export type Mode = "on" | "agent" | "off";
 
@@ -80,7 +81,7 @@ export default function KeepAwake() {
       <Popover open={open()} onOpenChange={setOpen} placement="right-end" gutter={8}>
         <PopoverTrigger
           as={(p: object) => (
-            <button
+            <Pressable
               {...p}
               type="button"
               class={cn(
@@ -92,7 +93,7 @@ export default function KeepAwake() {
               title={label()}
             >
               <Coffee size={17} aria-hidden />
-            </button>
+            </Pressable>
           )}
         />
         <PopoverContent class="w-[280px] p-0">
@@ -105,8 +106,7 @@ export default function KeepAwake() {
           <div class="flex flex-col p-1" role="radiogroup" aria-label={t("shell.keep_awake.title")}>
             <For each={MODES}>
               {(mode) => (
-                <button
-                  type="button"
+                <Pressable
                   role="radio"
                   aria-checked={status()?.mode === mode}
                   class="grid w-full grid-cols-[12px_minmax(0,1fr)] items-start gap-x-2 rounded-sm px-2 py-1.5 text-left outline-none hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
@@ -121,7 +121,7 @@ export default function KeepAwake() {
                     <span class="block text-ui text-neutral-950">{nameOf(mode)}</span>
                     <span class="block text-caption text-neutral-500">{descriptionOf(mode)}</span>
                   </span>
-                </button>
+                </Pressable>
               )}
             </For>
           </div>
