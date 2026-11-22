@@ -1,0 +1,11 @@
+# Copia literal de chat_queue_v1 (productor: danil-engine). Único lugar con su origen y su hash.
+# Para actualizar: copia cada archivo con `git -C <danil-engine> show <commit>:<ruta> > <copia>`,
+# cambia commit y sha256 (`shasum -a 256 <copia>`). La prueba
+# apps/desktop/tests/unit/chat-queue-v1-fake-engine.test.mjs falla si una copia no coincide.
+repo danil-labs/danil-engine
+branch feat/chat-queue-v1-contrato
+commit fd608fa3ac2924b7b72514814826ef9e4a8cee90
+estado PROPUESTA (en revisión)
+file chat_queue_v1.json crates/engine-manifest/extensions/chat_queue_v1.json c9a041f64edee3273f9ac89927fe381e14c1053bb29f29929a48d1c2a3c20a17
+file chat_queue_v1.examples.json crates/engine-manifest/fixtures/chat_queue_v1.examples.json bb02dc32a39a47b5d052c3f8bb5e5db5ab41dfd24bd83940e4ef0c6a37f8f0ac
+file chat_queue_v1.mock.json crates/engine-manifest/fixtures/chat_queue_v1.mock.json 6fb8d7168c216fc93eb1589b328c3923cd8a3e3ac867ac076598b544504ee682

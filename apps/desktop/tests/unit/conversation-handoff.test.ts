@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { batch, createRoot, createSignal } from "solid-js";
-import { createConversationHandoff, type ConversationScope } from "../../src/features/conversation-handoff/index.ts";
-import { createTaskQueues } from "../../src/features/task-queues/index.ts";
+import { createConversationHandoff, type ConversationScope } from "../../../../packages/features/conversation-handoff/src/index.ts";
+import { createTaskQueues } from "../../../../packages/features/task-queues/src/index.ts";
+import { createFakeEngine } from "../helpers/fake-engine.mjs";
 
 const scope: ConversationScope = { workspace: "A", generation: 1, project: "p", session: "s", route: { headers: { "x-terminus-machine": "m1" } } };
 function fixture() {
@@ -169,4 +170,40 @@ for (const phase of ["submitting", "awaiting-start"] as const) test(`an authorit
   assert.equal(f.handoff.view(scope).pending, null); assert.equal(f.handoff.blocked(scope), false);
   assert.deepEqual(f.released, ["one"]); f.handoff.observe({ kind: "accepted", scope });
   assert.equal(f.handoff.presentation(scope), null); f.dispose();
+});
+
+// Con el motor falso de la cola: el traspaso real contra `stop_turn` y `send_message` del falso.
+function overFakeEngine() {
+  return createRoot(dispose => {
+    const engine = createFakeEngine(); engine.start("s", { id: "A", project: "p" });
+    const [live, setLive] = createSignal(true);
+    const queue = createTaskQueues({ scope: () => scope, readQueue: async () => [], writeQueue: async () => undefined, onSaveFailure: () => assert.fail("unexpected save failure") });
+    const handoff = createConversationHandoff({ current: () => scope,
+      runtime: { active: () => live(), stop: async captured => { await engine.handlers.stop_turn({ project: captured.project, session: captured.session }); } },
+      queue: { message: (_scope, id) => queue.items().find(item => item.id === id), select: (_scope, id) => { queue.prioritize(id); return true; },
+        // Como en dev (#357): no hay despachador de la cola; la ventana manda el elegido una vez, al soltar.
+        release: (_scope, id) => { const item = queue.items().find(row => row.id === id); if (!item) return; handoff.observe({ kind: "dispatching", scope, itemIds: [id] }); void engine.handlers.send_message({ provider: "codex", project: "p", session: "s", prompt: item.text }); },
+        failed: () => {} } });
+    const close = () => batch(() => { engine.close("s", { event: false }); setLive(false); handoff.observe({ kind: "terminal", scope }); });
+    return { engine, queue, handoff, close, dispose: () => { handoff.dispose(); queue.dispose(); dispose(); } };
+  });
+}
+test("over the fake engine, interrupt-and-send stops once and the engine accepts the queued message once", async () => {
+  const f = overFakeEngine(); await f.queue.openSession("s", "p");
+  f.queue.enqueue({ id: "q", text: "queued message", provider: "codex", model: null, effort: null, permission_mode: null, attachments: [] });
+  await f.handoff.replaceWithQueued(scope, "q"); f.close(); await Promise.resolve();
+  assert.deepEqual(f.engine.stopped, ["A"]); assert.deepEqual(f.engine.history("s").map((entry: { prompt: string }) => entry.prompt), ["queued message"]);
+  assert.equal(f.engine.calls("send_message").length, 1); f.dispose();
+});
+// Riesgo documentado, no un rojo: `runtime.stop` llama `stop_turn` sin
+// `turn_id` y un motor viejo detiene lo que haya (C0/Q1b; política a1/a2 sin
+// decidir). Se afirma lo de hoy: B se detiene y el traspaso enseña la detención.
+test("R-Rot risk over the fake engine: a stop requested after A rotated to B stops B, and the handoff shows it stopping until B closes", async () => {
+  const f = overFakeEngine(); f.engine.close("s", { event: false }); f.engine.start("s", { id: "B", project: "p" });
+  const stopping = f.handoff.requestStop(scope);
+  assert.equal(f.handoff.view(scope).stopping, true);
+  await stopping;
+  assert.deepEqual(f.engine.calls("stop_turn").map((entry: { args: unknown }) => entry.args), [{ project: "p", session: "s" }]);
+  assert.deepEqual(f.engine.stopped, ["B"]);
+  f.close(); assert.equal(f.handoff.view(scope).stopping, false); f.dispose();
 });

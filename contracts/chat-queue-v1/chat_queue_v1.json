@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "name": "chat_queue",
+  "description": "Cola de chat v1, corte E1a: el control condicional de turno C0 (decisión 2026-11-19-cola-chat-control-condicional-de-turno, PROPUESTA) y la clave de idempotencia de send_message (decisión 2026-11-20-extraccion-al-motor-fronteras § 4.2-4.4, PROPUESTA). Aditivo y fuera del hash de compatibilidad (status.contract): ninguna orden, parámetro ni respuesta de commands.json cambia de forma. RASGO. Un cliente usa esto solo si el motor anuncia chat_queue_v1 en status.service_features. Sin el rasgo, cualquier respuesta a get_turn o stop_turn_if (también service.error.command, unsupported o command_not_allowed) es estado desconocido: no hay control confirmado, no se ofrece Detener condicional y clientMessageId no da dedup (un motor sin el rasgo lo ignora). Un error de lectura (máquina dormida, relay caído) también es estado desconocido, nunca idle. TURN_ID. Identidad opaca de un turno: texto de 1 a 128 caracteres. El cliente solo la compara por igualdad; no la interpreta, no la ordena y no la deriva de otro dato. Es la identidad de turno que ya tiene el motor, no una segunda: donde el turno corre con TurnIdentity (el ejecutor nativo de Linux) es su execution_id; en las demás plataformas el motor la genera una vez al reservar el turno, con el mismo formato, y el ejecutor nativo recibe ese valor como execution_id. No se reutiliza. started_at (desde) no es identidad: se reescribe al dirigir un turno. GET_TURN {project, session} -> TurnState {state, turn_id?}. state: idle (la tarea no tiene turno en este motor), starting (turno reservado, sin control registrado todavía), running (control registrado y no cerrando), closing (cerrando: sigue ocupando la tarea y ya no se detiene), relieved (lo contesta el servicio anterior durante un relevo; aquí no hay control). turn_id viene en starting, running y closing, y nunca en idle ni relieved. Solo running es un control confirmado. Lectura pasiva: no toma ni suelta la reserva de la tarea (history::reserve) ni otro candado de archivo, no lanza ni detiene nada y no cuenta en status.busy (PASSIVE_READS). Una reserva de archivo sin turno (restaurar, renombrar, borrar, worktree) no se ve: get_turn da idle y send_message puede responder history.error.busy. Una tarea que este motor no conoce da idle. STOP_TURN_IF {project, session, turnId} -> StopIf {outcome}. Compara turnId con el turno de la tarea y, si coincide y está running, lo marca detenido bajo el mismo candado del registro de controles: entre la comparación y la marca no entra otro turno. outcome: stop_requested (coincide y estaba running: se pidió la detención; no es un cierre, que se confirma con done o cuando get_turn da idle u otro turn_id), turn_changed (la tarea tiene un turno con otro turn_id, en cualquier estado), not_running (la tarea no tiene turno en este motor), closing (coincide y ya está cerrando), not_controllable (coincide y está starting, o el turno está relieved y este motor no puede compararlo). Fuera de stop_requested no hay ningún efecto: ni cancel_children, ni reclaim_task_processes, ni close_local_resident, ni marca de detenido. Repetir stop_turn_if sobre un turno ya pedido devuelve stop_requested sin repetir efectos. Durable como stop_turn: un reintento con el mismo request_id recibe el mismo recibo, y un clic nuevo es un request_id nuevo. Errores cerrados de get_turn y stop_turn_if, como Failure con el código en detail: invalid_turn_id (turnId vacío o de más de 128 caracteres; sin efecto). QUEUE_READY no cambia de forma (sigue siendo -> Result < bool , String >). Con el rasgo cambia de semántica: ya no toma ni suelta la reserva de la tarea; da false si get_turn daría starting, running, closing o relieved, y true si daría idle. Queda por compatibilidad y obsoleto para despachar: la señal de liberación es get_turn idle y el despacho es send_message, que es la autoridad (history.error.busy). SEND_MESSAGE suma clientMessageId (Option < String >, en invoke_parameters): la clave de idempotencia del cliente, de 1 a 128 caracteres de [A-Za-z0-9_-]. Sin ella, send_message se comporta como hoy. Con ella, la dedup es durable (en disco: sobrevive a un reinicio del motor) y por tarea: por (workspace, project, session), o por (workspace, project) cuando el envío crea la tarea (sin session). La clave se conserva mientras exista la tarea. Un reenvío con una clave ya registrada no lanza otro turno ni crea otra tarea: devuelve el desenlace del primero, el mismo Ok(session), también si el primero sigue en curso (espera su desenlace) o si su suerte quedó incierta tras un reinicio. Si el primer envío falló antes de cualquier efecto (validación, history.error.busy), la clave no queda registrada y el siguiente envío con ella es un intento nuevo. El motor no compara el contenido: reusar una clave para otro mensaje devuelve el desenlace del primero. clientMessageId mal formado: el error de siempre de send_message, una cadena, chat.error.invalid_client_message_id, sin lanzar turno ni registrar nada. El recibo por request_id no cambia; la clave cubre los reenvíos con otro request_id (ventana reiniciada, relay). RELAY Y AUTORIDAD. get_turn y stop_turn_if son invoke, scope workspace, audience window y authority admin; el relay las acepta (relay_rule) y pasan el chequeo de dueño de la tarea por session (remote_parent), como stop_turn. get_turn es pasiva (PASSIVE_READS) y stop_turn_if no. Ninguna es deferrable. Estas reglas las hace cumplir el motor (relay_rule, el chequeo de dueño y PASSIVE_READS) y el relay legado; el relay nuevo (danil-labs/relay 4cc473f) no filtra por comando y no las aplica todavía. No se supone que el relay filtre. NO DEFINIDO EN V1: qué hace Detener con el resto de la cola; la política tras un reinicio y la recuperación de un envío incierto; las órdenes por elemento de E1b (queue_enqueue, queue_cancel, queue_edit, queue_resume, queue_get, queue_item, queue_interrupt_and_send) y el evento queue; la cola de la CLI (.cli-queue/). Ejemplos: fixtures/chat_queue_v1.examples.json. Mock con guion: fixtures/chat_queue_v1.mock.json.",
+  "features": [
+    "chat_queue_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "get_turn",
+      "output": "-> Result < TurnState , Failure >",
+      "parameters": [
+        {
+          "key": "project",
+          "name": "project",
+          "type": "String"
+        },
+        {
+          "key": "session",
+          "name": "session",
+          "type": "String"
+        }
+      ],
+      "path": "chat::get_turn",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "stop_turn_if",
+      "output": "-> Result < StopIf , Failure >",
+      "parameters": [
+        {
+          "key": "project",
+          "name": "project",
+          "type": "String"
+        },
+        {
+          "key": "session",
+          "name": "session",
+          "type": "String"
+        },
+        {
+          "key": "turnId",
+          "name": "turn_id",
+          "type": "String"
+        }
+      ],
+      "path": "chat::stop_turn_if",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": true,
+      "enforcement": "server"
+    }
+  ],
+  "invoke_parameters": {
+    "send_message": [
+      {
+        "key": "clientMessageId",
+        "name": "client_message_id",
+        "type": "Option < String >"
+      }
+    ]
+  }
+}

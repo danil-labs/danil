@@ -30,6 +30,9 @@ const SKIP_RUST = process.argv.includes("--no-cargo");
 const QUICK = process.argv.includes("--quick");
 const BASE = process.argv.find((argument) => argument.startsWith("--base="))?.slice(7) ?? "origin/dev";
 const rustBuild = { command: "cargo", env: process.env };
+// Un caso de ventana suelto (`tests/helpers/fake-engine-window.mjs`) no se hereda:
+// cada paso corre su archivo entero.
+delete process.env.FAKE_ENGINE_WINDOW_CASE;
 
 function undocumentedGuards() {
   const catalog = readFileSync(join(root, "docs/guards.md"), "utf8");
@@ -86,6 +89,7 @@ const steps = [
   ["Drafts own text references attachments and rollback", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/drafts-store.test.ts")], root],
   ["Conversation handoff waits for terminal and stop settlement", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/conversation-handoff.test.ts")], root],
   ["Task queues own retention persistence and session scope", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/task-queues-store.test.ts")], root],
+  ["The fake queue engine matches the pinned chat_queue_v1 copy, replays its mock scenarios and answers the lab coherence table", process.execPath, ["--test", join(root, "tests/unit/chat-queue-v1-fake-engine.test.mjs")], root],
   ["Native and web replay share one scoped delivery policy", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/service-delivery.test.ts")], root],
   ["The web journal is bounded and settles pending readers", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-event-queue.test.ts")], root],
   ["Threads own transcript history and streaming reconciliation", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/threads-store.test.ts")], root],
@@ -804,7 +808,7 @@ const steps = [
   ["Deleting tasks asks to accept only the members with listed losses, offers accept all and resets the review on a new inspection", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/delete-task-dialog.test.mjs")], root],
   ["Automatic background delivery enters the live turn once, including legacy engines", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-once.test.mjs")], root],
   ["Rejected automatic background delivery preserves the queue and explicit interruption", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-steer-refused.test.mjs")], root],
-  ["Queue arrow and keyboard interrupt before sending after both ack and terminal", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/queue-force-send.test.mjs")], root],
+  ["Queue arrow and keyboard interrupt before sending after both ack and terminal; first Enter queues, Stop spares other turns, legacy rotation risk documented (chat_queue_v1 rotation runs as todo)", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/queue-force-send.test.mjs")], root],
   ["Cancellation acknowledgement and failure are independent of presence reconciliation", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/stop-reconciliation.test.mjs")], root],
   ["Closed or paused activity cannot animate late tools and preserves inspection", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/completed-tool-activity.test.mjs")], root],
   ["Late start delivery retains one activity and resumes thinking labels", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/activity-start-order.test.mjs")], root],
