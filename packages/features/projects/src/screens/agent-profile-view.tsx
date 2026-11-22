@@ -172,12 +172,13 @@ export default function AgentProfile(props: AgentProfileProps) {
                 <span class="text-xs text-neutral-500">
                   {t("projects.agents.profile_visibility", { percent: visibility() })}
                 </span>
-                <input
+                <Input
                   type="range"
                   min="0"
                   max="100"
                   step="5"
-                  class="w-full accent-primary"
+                  variant="range"
+                  class="w-full"
                   value={visibility()}
                   onInput={(e) => void save({ veil: 1 - Number(e.currentTarget.value) / 100 })}
                 />

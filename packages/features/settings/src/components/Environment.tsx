@@ -14,7 +14,6 @@ import { checkEnvironment, installTool, restartApp } from "../queries/engine-env
 import { listDependencies } from "../queries/engine-misc";
 import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import RefreshCw from "lucide-solid/icons/refresh-cw";
 import SquareArrowOutUpRight from "lucide-solid/icons/square-arrow-out-up-right";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
@@ -47,6 +46,7 @@ import {
   TableRow,
 } from "../../../../ui/src/Table";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
+import { RefreshSpinner } from "../../../../ui/src/Spinner";
 
 type Columna = "label" | "version" | "location" | "bytes" | "source";
 
@@ -229,7 +229,7 @@ export default function Environment(props?: EnvironmentProps) {
             title={t("settings.environment.recheck")}
             onClick={() => void cargar(true)}
           >
-            <RefreshCw size={13} class={cn(cargando() && "animate-spin")} />
+            <RefreshSpinner size={13} spinning={cargando()} />
             {t("settings.environment.recheck")}
           </Button>
         }

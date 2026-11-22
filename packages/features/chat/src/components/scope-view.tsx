@@ -15,6 +15,7 @@ import { Panel } from "./scope-panel";
 import type { AlcanceProps } from "./scope-types";
 import { createAlcance } from "./scope-state";
 import { createPiezas } from "./scope-pieces";
+import { Input } from "../../../../ui/src/Input";
 
 /**
  * Las fuentes de la tarea, encima de la caja: lo que el agente lee, con su
@@ -341,7 +342,8 @@ export default function Alcance(props: AlcanceProps) {
                       traerEscrito();
                     }}
                   >
-                    <input
+                    <Input
+                      variant="plain"
                       ref={enfocar}
                       class="min-w-0 flex-1 rounded-sm border border-border bg-transparent px-2 py-1 font-mono text-caption outline-none focus:border-border-strong"
                       placeholder={t("chat.scope.address_or_path_placeholder")}
