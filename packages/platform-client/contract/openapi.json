@@ -1,0 +1,2012 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Danil /v1: borde para el MVP del front",
+    "version": "0.1.0-draft",
+    "description": "Contrato PROPUESTO del borde /v1 para el MVP del front (F0.3). Derivado de los docs/API.md de edge, identity, machine-provisioning y relay. Los objetos aceptan campos aditivos; los clientes deben tolerarlos. No acredita implementación.",
+    "license": {
+      "name": "Proprietary",
+      "identifier": "LicenseRef-Proprietary"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://edge.danil.ai",
+      "description": "beta"
+    },
+    {
+      "url": "https://api.danil.ai",
+      "description": "producción"
+    }
+  ],
+  "security": [
+    {
+      "webCookie": []
+    },
+    {
+      "edgeBearer": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "identity",
+      "description": "Persona y organizaciones"
+    },
+    {
+      "name": "workspaces",
+      "description": "Workspaces"
+    },
+    {
+      "name": "machines",
+      "description": "Máquinas, vía relay"
+    },
+    {
+      "name": "operations",
+      "description": "Operaciones asíncronas"
+    },
+    {
+      "name": "credentials",
+      "description": "Cuentas de IA"
+    }
+  ],
+  "paths": {
+    "/v1/identity/me": {
+      "get": {
+        "operationId": "getMe",
+        "summary": "Perfil de la persona y sus organizaciones",
+        "tags": [
+          "identity"
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/organizations": {
+      "get": {
+        "operationId": "getOrganizations",
+        "summary": "Organizaciones de la persona",
+        "tags": [
+          "identity"
+        ],
+        "responses": {
+          "200": {
+            "description": "Organizaciones",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/organizations/select": {
+      "post": {
+        "operationId": "selectOrganization",
+        "summary": "Fija la organización activa",
+        "tags": [
+          "identity"
+        ],
+        "description": "Efecto exacto sobre la cookie no documentado; el cliente debe releer getMe.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectOrganizationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organización activa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelectOrganizationResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Reautenticación requerida (organization_auth_required) u otro conflicto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces": {
+      "get": {
+        "operationId": "getWorkspaces",
+        "summary": "Lista los workspaces",
+        "tags": [
+          "workspaces"
+        ],
+        "responses": {
+          "200": {
+            "description": "Workspaces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createWorkspace",
+        "summary": "Crea un workspace",
+        "tags": [
+          "workspaces"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkspaceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Workspace creado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Petición inválida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/select": {
+      "post": {
+        "operationId": "selectWorkspace",
+        "summary": "Selecciona el workspace activo",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Requiere el scope workspaces.select e Idempotency-Key.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectWorkspaceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Workspace seleccionado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelectWorkspaceResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/machines": {
+      "get": {
+        "operationId": "getMachines",
+        "summary": "Lista las máquinas visibles para la persona",
+        "tags": [
+          "machines"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Valor de next_cursor de la página anterior."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Tamaño de página; el servidor puede acotarlo."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Página de máquinas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/machines/{id}": {
+      "get": {
+        "operationId": "getMachine",
+        "summary": "Detalle de una máquina",
+        "tags": [
+          "machines"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MachineId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Máquina",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Machine"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/machines/{id}/start": {
+      "post": {
+        "operationId": "startMachine",
+        "summary": "Enciende una máquina",
+        "tags": [
+          "machines"
+        ],
+        "description": "Asíncrono: sondear getOperation.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MachineId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operación aceptada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Operation"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Estado incompatible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/machines/{id}/stop": {
+      "post": {
+        "operationId": "stopMachine",
+        "summary": "Apaga una máquina",
+        "tags": [
+          "machines"
+        ],
+        "description": "Asíncrono: sondear getOperation.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MachineId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operación aceptada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Operation"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "Estado incompatible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/machines/{id}/tickets": {
+      "post": {
+        "operationId": "createMachineTicket",
+        "summary": "Ticket de un solo uso para abrir la sesión",
+        "tags": [
+          "machines"
+        ],
+        "description": "El ticket va en el subprotocolo de wss://connect.danil.ai/v1/machines/{id}/session. Un solo uso.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MachineId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineTicket"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "machine_stopped (apagada y sin wake), machine_unreachable, ticket_already_issued u operation_in_progress",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "description": "machine_starting: la VM enciende (con wake); reintentar con la misma Idempotency-Key tras Retry-After",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "wake": {
+                    "type": "boolean",
+                    "description": "true SOLO por una acción de la persona: enciende la VM apagada. Sin wake, a una VM apagada responde 409 machine_stopped y no la enciende (relay#18)."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operations/{id}": {
+      "get": {
+        "operationId": "getOperation",
+        "summary": "Estado de una operación",
+        "tags": [
+          "operations"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Operation"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/providers": {
+      "get": {
+        "operationId": "listCredentialProviders",
+        "summary": "Proveedores de IA habilitados y estado de la conexión de la persona",
+        "tags": [
+          "credentials"
+        ],
+        "description": "Forma completa en platform/credentials-v1/openapi/public.openapi.json; aquí solo el mínimo tolerante.",
+        "responses": {
+          "200": {
+            "description": "Proveedores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialProviderList"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/providers/{provider}/connections": {
+      "post": {
+        "operationId": "connectCredentialProvider",
+        "summary": "Inicia la conexión de la persona con un proveedor",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Provider"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Loose"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conexión iniciada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Loose"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/providers/{provider}/connections/me": {
+      "delete": {
+        "operationId": "disconnectCredentialProvider",
+        "summary": "Desconecta a la persona del proveedor",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Provider"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Desconectado"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/workspaces/{workspace_id}/accounts": {
+      "get": {
+        "operationId": "getWorkspaceAccounts",
+        "summary": "Cuentas de IA del workspace y máquinas destinatarias",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cuentas de IA del workspace y máquinas destinatarias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceAccounts"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "putWorkspaceAccount",
+        "summary": "Guarda o rota una cuenta de IA con sus copias selladas",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Guarda o rota una cuenta de IA con sus copias selladas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountCredentialEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          },
+          "400": {
+            "description": "invalid_recipient",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Loose"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "credential_slot_conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Loose"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutWorkspaceAccount"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}": {
+      "delete": {
+        "operationId": "deleteWorkspaceAccount",
+        "summary": "Borra la cuenta y sus copias",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Borra la cuenta y sus copias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}": {
+      "delete": {
+        "operationId": "removeWorkspaceAccountMachine",
+        "summary": "Quita una máquina de la cuenta",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountMachineId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quita una máquina de la cuenta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/workspaces/{workspace_id}/accounts/{credential_id}/machines/{machine_id}/restore": {
+      "post": {
+        "operationId": "restoreWorkspaceAccountMachine",
+        "summary": "Devuelve la máquina a pending",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          },
+          {
+            "$ref": "#/components/parameters/AccountMachineId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Devuelve la máquina a pending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/github": {
+      "get": {
+        "operationId": "getGithubConnection",
+        "summary": "Estado de GitHub de la persona",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Estado de GitHub de la persona",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubConnection"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "disconnectGithub",
+        "summary": "Revoca y borra la conexión de GitHub",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Revoca y borra la conexión de GitHub",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/credentials/github/authorize": {
+      "post": {
+        "operationId": "authorizeGithub",
+        "summary": "URL para autorizar GitHub en el navegador",
+        "tags": [
+          "credentials"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "URL para autorizar GitHub en el navegador",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GithubAuthorizeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GithubAuthorizeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/identity/csrf": {
+      "get": {
+        "operationId": "getCsrf",
+        "summary": "CSRF de la sesión web (cookie); se manda como X-CSRF-Token en cada mutación",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "webCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSRF",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CsrfToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/logout": {
+      "post": {
+        "operationId": "logout",
+        "summary": "Cierra la sesión web y borra la cookie",
+        "tags": [
+          "identity"
+        ],
+        "security": [
+          {
+            "webCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Sesión cerrada"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "webCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-danil_session",
+        "description": "Sesión web. Los POST de la web llevan además X-CSRF-Token (de GET /csrf)."
+      },
+      "edgeBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Portador de sesión (Desk)."
+      }
+    },
+    "parameters": {
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "MachineId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "machine_id, p. ej. mch_..."
+      },
+      "Provider": {
+        "name": "provider",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "WorkspaceId": {
+        "name": "workspace_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "CredentialId": {
+        "name": "credential_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "AccountMachineId": {
+        "name": "machine_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Sin sesión válida",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          },
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Sin permiso",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          },
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "No existe",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          },
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Error": {
+        "description": "Error. Decidir por error.code, no por el estado HTTP.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          },
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": true
+      },
+      "Problem": {
+        "type": "object",
+        "description": "application/problem+json que emite el borde; type es urn:danil:problem:<code>.",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "Loose": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "OrganizationRef": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "description": "Abierto; hoy se observa personal."
+          },
+          "plan": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "free, team, enterprise…"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": true
+      },
+      "Me": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "workspace": {
+            "description": "Workspace activo si lo hay; forma no verificada.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Workspace"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "organizations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrganizationRef"
+            }
+          },
+          "active_organization_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": true
+      },
+      "OrganizationList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrganizationRef"
+            }
+          },
+          "organizations": {
+            "type": "array",
+            "description": "Alias posible; la forma exacta no está documentada.",
+            "items": {
+              "$ref": "#/components/schemas/OrganizationRef"
+            }
+          },
+          "active_organization_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "SelectOrganizationRequest": {
+        "type": "object",
+        "properties": {
+          "organization_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "organization_id"
+        ],
+        "additionalProperties": true
+      },
+      "SelectOrganizationResponse": {
+        "type": "object",
+        "properties": {
+          "active_organization_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "Workspace": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "org": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": true
+      },
+      "WorkspaceList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Workspace"
+            }
+          },
+          "workspaces": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Workspace"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "CreateWorkspaceRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "org": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": true
+      },
+      "SelectWorkspaceRequest": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "type": "string",
+            "description": "Id del workspace, p. ej. \"12\"."
+          }
+        },
+        "required": [
+          "workspace"
+        ],
+        "additionalProperties": true
+      },
+      "SelectWorkspaceResponse": {
+        "type": "object",
+        "properties": {
+          "workspace": {
+            "$ref": "#/components/schemas/Workspace"
+          }
+        },
+        "required": [
+          "workspace"
+        ],
+        "additionalProperties": true
+      },
+      "Machine": {
+        "type": "object",
+        "properties": {
+          "machine_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "running",
+              "stopped",
+              "starting",
+              "stopping"
+            ]
+          },
+          "connection": {
+            "type": "string",
+            "enum": [
+              "connected",
+              "disconnected"
+            ]
+          },
+          "organization_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "person_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "organization"
+            ]
+          },
+          "provider": {
+            "type": "string",
+            "description": "Abierto; p. ej. danil."
+          }
+        },
+        "required": [
+          "machine_id"
+        ],
+        "additionalProperties": true
+      },
+      "MachineList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Machine"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "additionalProperties": true
+      },
+      "Operation": {
+        "type": "object",
+        "properties": {
+          "operation_id": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "description": "Abierto; el docs no enumeran los estados."
+          },
+          "generation": {
+            "type": "integer"
+          },
+          "machine_id": {
+            "type": "string"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "additionalProperties": true
+      },
+      "ErrorBody": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "MachineTicket": {
+        "type": "object",
+        "properties": {
+          "ticket": {
+            "type": "string"
+          },
+          "expires_at": {
+            "description": "Instante de caducidad; formato no verificado.",
+            "type": [
+              "string",
+              "integer"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "description": "URL wss si la devuelve el servidor."
+          }
+        },
+        "additionalProperties": true
+      },
+      "CredentialProviderList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string"
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "connection": {
+                  "type": [
+                    "object",
+                    "string",
+                    "null"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "CredentialMachine": {
+        "type": "object",
+        "required": [
+          "machine_id",
+          "state"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "machine_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "pending",
+              "removed"
+            ]
+          },
+          "version": {
+            "type": "integer"
+          },
+          "last_seen_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "AccountCredential": {
+        "type": "object",
+        "required": [
+          "credential_id",
+          "kind",
+          "provider",
+          "slot",
+          "status",
+          "version",
+          "machines"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "credential_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "api_key",
+              "mcp_secret",
+              "zotero",
+              "subscription",
+              "mcp_oauth",
+              "env_secret"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "slot": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "config": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "machines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialMachine"
+            }
+          }
+        }
+      },
+      "CredentialRecipient": {
+        "type": "object",
+        "required": [
+          "machine_id",
+          "public_key"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "machine_id": {
+            "type": "string"
+          },
+          "public_key": {
+            "type": "string",
+            "description": "X25519, base64"
+          }
+        }
+      },
+      "WorkspaceAccounts": {
+        "type": "object",
+        "required": [
+          "credentials",
+          "recipients"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "credentials": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountCredential"
+            }
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CredentialRecipient"
+            }
+          }
+        }
+      },
+      "SealedCopy": {
+        "type": "object",
+        "required": [
+          "machine_id",
+          "sealed"
+        ],
+        "properties": {
+          "machine_id": {
+            "type": "string"
+          },
+          "sealed": {
+            "type": "string",
+            "description": "Sobre TERMINUS-SECRET/1 en base64"
+          }
+        }
+      },
+      "PutWorkspaceAccount": {
+        "type": "object",
+        "required": [
+          "kind",
+          "provider",
+          "slot",
+          "copies"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "api_key",
+              "mcp_secret",
+              "zotero",
+              "subscription",
+              "mcp_oauth",
+              "env_secret"
+            ]
+          },
+          "provider": {
+            "type": "string"
+          },
+          "slot": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "copies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SealedCopy"
+            }
+          }
+        }
+      },
+      "AccountCredentialEnvelope": {
+        "type": "object",
+        "required": [
+          "credential"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "credential": {
+            "$ref": "#/components/schemas/AccountCredential"
+          }
+        }
+      },
+      "Ok": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "GithubConnection": {
+        "type": "object",
+        "required": [
+          "connected"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "login": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "avatar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "install_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GithubAuthorizeRequest": {
+        "type": "object",
+        "properties": {
+          "return_to": {
+            "type": "string"
+          }
+        }
+      },
+      "GithubAuthorizeResponse": {
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "additionalProperties": true,
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "integer",
+              "null"
+            ]
+          }
+        }
+      },
+      "CsrfToken": {
+        "type": "object",
+        "required": [
+          "csrf_token"
+        ],
+        "properties": {
+          "csrf_token": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

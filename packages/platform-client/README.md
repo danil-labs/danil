@@ -23,6 +23,12 @@ Exporta desde `src/client.ts` y módulos de dominio:
   - Dominio máquinas: `/v1/machines`, `/v1/machines/start`, `/v1/machines/ticket`, `/v1/machines/wake`
 - Comandos RPC1 del motor: `danil_edge_fetch`.
 
+## Contrato vendorizado (R2 y R7)
+- `contract/openapi.json`: copia literal de `platform/openapi.json` de `danil-labs/danil-contracts`; el commit está en `contract/PIN`.
+- `node packages/platform-client/scripts/generate.mjs` regenera `src/generated/types.ts` (esquemas de las operaciones de cada dominio de `DOMAINS`) y `src/generated/contract.ts` (`CONTRACT_HASH`, `OPERATIONS`). Con `--check` falla si están desactualizados.
+- Para subir el contrato: copia el archivo del nuevo commit, actualiza `PIN` y regenera. R7 (`verify-front`) falla si `CONTRACT_HASH` no es el sha256 del archivo.
+- Dominios generados: **machines** (`machines.ts` reexporta `Machine`, `MachineList`, `MachineTicket` y `Operation`). La configuración, el transporte y el sobre `MachinesAnswer` no son respuestas y viven en `machines-config.ts`.
+
 ## Qué falta según la fase 2 del plan
 - Fase 2.3: consumirse únicamente desde los archivos `queries.ts` de las features (R12).
-- Fase 4.2: generación automática de contratos y tipos desde el OpenAPI vendorizado de `danil-contracts` (R2, R7).
+- Fase 4.2: generar del OpenAPI los dominios que quedan (identidad, workspaces, treasury, credenciales); machines ya está.
