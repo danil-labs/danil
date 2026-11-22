@@ -8,7 +8,7 @@ import {    type TaskTab } from "../../../../apps/desktop/src/lib/tabs-types.ts"
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import SearchPanel from "../../../features/chat/src/components/SearchPanel";
-import {  DelegatedPanel, type DelegatedPanelModel } from "../../../features/chat/src/screens/DelegatedTasks";
+import {  DelegatedPanel, type DelegatedPanelModel } from "../../../features/projects/src/screens/DelegatedTasks";
 import { type SearchSurface } from "../../../features/chat/src/screens/ThreadSearch.tsx";
 import { taskFilesWidth } from "../../../features/code/src/screens/TaskFilesRow";
 import { TaskSide, TaskSideShell } from "../../../features/code/src/screens/TaskSide";

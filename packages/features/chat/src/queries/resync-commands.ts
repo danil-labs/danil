@@ -8,7 +8,7 @@ import { contestaALaTerminal } from "../../../../ui/src/lib/queue.ts";
 import { type Turn } from "../model/transcript";
 import { type Msg, type PermissionRequest } from "../screens/Chat";
 import { batch, createSignal, type Accessor } from "solid-js";
-import type { createThreadsStore } from "./types.js";
+import type { createThreadsStore } from "./types.ts";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
 import type { createSendGates } from "./send-gates.ts";
 import type { createSendNow } from "./send-now.ts";

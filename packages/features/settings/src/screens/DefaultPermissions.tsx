@@ -9,7 +9,7 @@ import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 /** Avisa a la ventana, que arranca con esto la caja en blanco de este workspace. */
 export const DEFAULT_PERMISSION_MODE_EVENT = "harness:default-permission-mode";
 
-export type DefaultPermissionModeChange = { workspace: string; mode: string | null };
+import type { DefaultPermissionModeChange } from "../../../../ui/src/lib/default-permission-mode.ts"; export type { DefaultPermissionModeChange };
 
 /**
  * El modo de permisos con que arranca lo nuevo del workspace activo

@@ -44,8 +44,7 @@ export type ClonEnCurso = {
 export type RemoteClone = { operation: string; machine: string; workspace: string; name: string };
 export const REMOTE_CLONES = "projects.remote_clones";
 
-/** Por dónde abre el diálogo cuando se pide desde el menú «Nueva carpeta» del riel. */
-export type InicioDeCarpeta = "carpeta" | "vacia" | "clonar";
+import type { InicioDeCarpeta } from "../../../../ui/src/lib/workdirKind.ts"; export type { InicioDeCarpeta };
 
 /** Cómo se lee la fase que git reporta. La comparten el diálogo y el riel. */
 export function faseDeClon(phase: string | null | undefined) {

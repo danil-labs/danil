@@ -18,7 +18,7 @@ import { type Session } from "../model/transcript.ts";
 import { type Msg } from "../screens/Chat";
 import { OPENCODE, canonicalAgentId, isFreeRouterModel } from "@terminus/tasks";
 import { batch, type Accessor, type Setter } from "solid-js";
-import type { CarriedBase, MachineWait, SessionRow, createDraftsStore, createThreadsStore, createWorkspaceStore, machines } from "./types.js";
+import type { CarriedBase, DraftsPort, MachineWait, MachinesPort, SessionRow, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import type { createPanelDeChat } from "../screens/PanelDeChat.tsx";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
@@ -37,12 +37,12 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
   apagadas: Accessor<Readonly<Record<string, string>>>; attachmentsFor: ReturnType<typeof createAttachments>["attachmentsFor"]; carryModule: ReturnType<typeof createSendGates>["carryModule"];
   catalogos: Accessor<CatalogosDeModelos>; claveAbierta: () => string; conversationScope: ReturnType<typeof createThreadStream>["conversationScope"];
   deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; draftBases: Accessor<Record<string, string>>;
-  draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: ReturnType<typeof createDraftsStore>;
+  draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: DraftsPort;
   espacioPara: (space: string | null | undefined, machine: string | null | undefined) => string | null; excludedSourceIds: Accessor<string[]>; filaDe: (id: string) => SessionRow | undefined;
   finishedTurns: ReturnType<typeof createThreadStream>["finishedTurns"]; firmas: Record<string, Author | null>; grupos: Accessor<string[]>;
   hablandoCon: Accessor<{ project: string; name: string; } | null>; handoff: ReturnType<typeof createThreadStream>["handoff"];
   leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number;
-  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>; machines: typeof machines;
+  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>; machines: MachinesPort;
   marcarQuieta: ReturnType<typeof createThreadStream>["marcarQuieta"]; marcarViva: ReturnType<typeof createThreadStream>["marcarViva"]; modelosEnVivo: Record<string, string | null>;
   olvidarPestana: ReturnType<typeof createPanelDeChat>["olvidarPestana"];
   opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; };
@@ -52,7 +52,7 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
   setArrancando: ReturnType<typeof createThreadStream>["setArrancando"]; setError: Setter<string | null>; setHablandoCon: Setter<{ project: string; name: string; } | null>;
   setSessionId: Setter<string | null>; settleTurn: ReturnType<typeof createAttachmentsMount>["settleTurn"]; sourceIds: Accessor<string[]>;
   taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; taskSources: Accessor<Source[] | null>; threads: ReturnType<typeof createThreadsStore>;
-  traspasos: Accessor<Readonly<Record<string, HandoverState>>>; workspaceActivo: Accessor<string | null>; workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  traspasos: Accessor<Readonly<Record<string, HandoverState>>>; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 4892–5203, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createSend(deps: SendDeps) {

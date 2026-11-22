@@ -145,3 +145,12 @@ export function seMandaSinSuperficie(texto: string): boolean {
  * `chat.steer.unconfirmed`; OpenCode 2.x cae aquí (rechaza el segundo prompt).
  */
 export const ENTREGA_SIN_CONFIRMAR = "executor_acceptance_unknown";
+
+export type QueueScope = { workspace: string | null; generation: number; session: string | null; project: string };
+export type Saved = { project: string; items: Encolado[] };
+export type TaskQueuesDeps = {
+  scope: () => QueueScope;
+  readQueue: (scope: QueueScope & { session: string }) => Promise<Encolado[]>;
+  writeQueue: (scope: QueueScope & { session: string }, items: Encolado[]) => Promise<unknown>;
+  onSaveFailure: (error: unknown, scope: QueueScope & { session: string }) => void;
+};

@@ -1,15 +1,9 @@
 import { batch, createSignal } from "solid-js";
 
-export type ConversationScope = { workspace: string | null; generation: number; project: string; session: string; route?: { headers: Record<string, string> } };
-export type HandoffView = { stopping: boolean; pending: { queueItemId: string; phase: "waiting-close" | "submitting" | "awaiting-start" } | null; error: unknown | null; released: boolean };
+import type { ConversationScope, HandoffView, HandoffFact } from "../../../../ui/src/lib/handoff.ts"; export type { ConversationScope, HandoffView, HandoffFact };
 import type { HandoffPresentation } from "../../../../ui/src/lib/handoff.ts";
 export type { HandoffPresentation };
-export type HandoffFact = { scope: ConversationScope } & ({ kind: "terminal" | "started" | "accepted" } | { kind: "dispatching"; itemIds: readonly string[] } | { kind: "rejected"; error: unknown } | { kind: "queue-removed"; queueItemId: string });
-type Dependencies = {
-  current: () => { workspace: string | null; generation: number };
-  runtime: { active: (scope: ConversationScope) => boolean; stop: (scope: ConversationScope) => Promise<unknown> };
-  queue: { message: (scope: ConversationScope, id: string) => { text: string; attachments?: readonly string[] } | undefined; select: (scope: ConversationScope, id: string) => boolean; release: (scope: ConversationScope, id: string) => void; failed: (scope: ConversationScope, id: string, error: unknown) => void };
-};
+import type { ConversationHandoffDeps as Dependencies } from "../../../../ui/src/lib/handoff.ts";
 const EMPTY: HandoffView = { stopping: false, pending: null, error: null, released: false };
 type Barrier = { kind: "in-flight"; promise: Promise<void> } | { kind: "acknowledged" | "declined" } | { kind: "failed"; error: unknown };
 type Cancelling = { kind: "cancelling"; scope: ConversationScope; barrier: Barrier; terminal: "unseen" | "observed"; queueItemId: string | null };

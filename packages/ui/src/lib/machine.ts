@@ -9,3 +9,6 @@ import type { MachineState, SystemId } from "@terminus/computers";
  * sabe la flota (`starting`: encendiéndose); `version`, su `host_version`, también apagada.
  */
 export type Machine = { id: string; local: boolean; active: boolean; on: boolean; connection?: MachineState; power?: "on" | "off" | "starting" | "outdated"; version?: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean; wakes?: boolean; os?: SystemId; features?: readonly string[] };
+
+/** Lo que el picker sabe del proyecto de la tarea nueva: las máquinas con su carpeta y su remoto. */
+export type ProjectPlace = { name: string; machines?: string[]; remote_url?: string | null } | null | undefined;
