@@ -8,6 +8,7 @@ import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 import { Button } from "../../../ui/src/Button";
 import { Spinner } from "../../../ui/src/Spinner";
 import { CabeceraDelAlta, rememberAccountWelcome } from "../../../features/onboarding/src";
+import ControlesDeVentana from "./WindowControls";
 import { said } from "../../../features/settings/src";
 import { type EngineAdoption, engineAdoptionDone, engineAdoptionFinished, engineAdoptionProgress, engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, readEngineAdoption } from "./engine-adoption";
 import { accountWorkspaces } from "./session-account-workspaces";
@@ -162,7 +163,7 @@ export function SessionGate(props: { children: JSX.Element }) {
       <Match when={view().t === "open"}>{props.children}</Match>
       <Match when={true}>
         <div class="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg" data-session-gate={view().t}>
-          <CabeceraDelAlta />
+          <CabeceraDelAlta ControlesDeVentana={ControlesDeVentana} />
           <div class="min-h-0 flex-1 overflow-y-auto">
             <section class="mx-auto flex w-full max-w-[520px] flex-col gap-6 px-8 py-12">
               <Switch>

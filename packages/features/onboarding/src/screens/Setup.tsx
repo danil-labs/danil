@@ -82,7 +82,7 @@ export default function Setup(props: SetupProps) {
   let preparadas: Promise<void> | null = null;
   function prepararConexiones() {
     preparadas ??= (async () => {
-      if (!workspace()) setWorkspace(await entrarAlWorkspaceFree());
+      if (!workspace()) setWorkspace(await entrarAlWorkspaceFree(props.sealFirstFreeWorkspace));
       if (!conexiones()) {
         const [{ crearConexiones }] = await Promise.all([import("../queries/connect-store"), import("../components/ConnectAI")]);
         runWithOwner(dueño, () => setConexiones(crearConexiones()));
@@ -307,11 +307,11 @@ export default function Setup(props: SetupProps) {
       }
     >
       <Match when={mostrar() === null}>
-        <Esqueleto preparando={!conFoto} />
+        <Esqueleto preparando={!conFoto} ControlesDeVentana={props.ControlesDeVentana} />
       </Match>
       <Match when={mostrar() && !seguir()}>
         <main class="flex h-full flex-col overflow-hidden bg-bg">
-          <CabeceraDelAlta fase={alta() ? (paso() === "personalizar" ? 1 : 0) : undefined} />
+          <CabeceraDelAlta fase={alta() ? (paso() === "personalizar" ? 1 : 0) : undefined} ControlesDeVentana={props.ControlesDeVentana} />
           <Show
             when={!pideCuenta()}
             fallback={

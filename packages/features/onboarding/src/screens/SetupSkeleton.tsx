@@ -3,6 +3,7 @@ import { connected } from "../../../../../apps/desktop/src/lib/engineConnection"
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { CabeceraDelAlta } from "../components/Phases";
 import { Escenario, TituloCambiante } from "../components/Stage";
+import type { ControlesDeVentanaDelShell } from "../model/shell-port";
 
 /** El hueco de una tarjeta mientras llega su trozo: mismo borde, sin contenido. */
 export function TarjetaVacia() {
@@ -13,7 +14,7 @@ export function TarjetaVacia() {
  * El primer frame, antes de saber si hace falta preparar. Con la foto del sidebar
  * de la vez anterior es neutro: a quien ya usa Terminus no le parpadea el alta.
  */
-export function Esqueleto(props: { preparando: boolean }) {
+export function Esqueleto(props: { preparando: boolean; ControlesDeVentana: ControlesDeVentanaDelShell }) {
   return (
     <Show
       when={props.preparando}
@@ -26,7 +27,7 @@ export function Esqueleto(props: { preparando: boolean }) {
       }
     >
       <main class="flex h-full flex-col overflow-hidden bg-bg" aria-busy="true" data-setup-skeleton="preparing">
-        <CabeceraDelAlta />
+        <CabeceraDelAlta ControlesDeVentana={props.ControlesDeVentana} />
         <Escenario
           izquierda={<TituloCambiante titulo={t("setup.title")} />}
           derecha={<TarjetaVacia />}

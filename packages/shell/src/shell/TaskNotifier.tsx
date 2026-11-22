@@ -11,10 +11,7 @@ import { Dynamic } from "solid-js/web";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { stateColor, stateIcon } from "../../../features/projects/src/screens/TaskStatus";
 import type { ChatEvent } from "@terminus/protocol";
-
-/** Qué tareas avisan: todas, solo las que necesitan a la persona, o ninguna. */
-export type NotifyChoice = "all" | "needs_you" | "off";
-export const NOTIFY_PREF = "notify.tasks";
+import { NOTIFY_PREF, type NotifyChoice } from "../../../features/settings/src/model/notify-pref";
 
 const NEEDS_YOU: AttentionState[] = ["approving", "asked", "failed"];
 

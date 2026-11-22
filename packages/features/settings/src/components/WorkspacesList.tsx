@@ -13,12 +13,13 @@ import { anunciarMudanza, anunciarRenombrado, createWorkspaces, type Workspace }
 import { capabilities } from "../../../../host/src/platform";
 import { NavigationListRow, NAV_LIST_ROW_TRIPLE_LAYOUT, GlifoDeWorkspace, CarpetaDeCopias } from "./WorkspacesRow";
 import { LogoDelWorkspace } from "./WorkspacesLogo";
+import type { SesionesDeAjustes } from "../model/sessions-port";
 import { Proyectos } from "./WorkspacesProjects";
 
 // Chunk aparte: la cuenta de Danil del workspace solo pesa al abrir esta pantalla.
 const WorkspaceAccount = lazy(() => import("./WorkspaceAccount"));
 
-export default function Workspaces(props: { maquinas: MaquinasDeAjustes }) {
+export default function Workspaces(props: { maquinas: MaquinasDeAjustes; sesiones: SesionesDeAjustes }) {
   const ws = createWorkspaces();
 
   const [editando, setEditando] = createSignal<string | null>(null);
@@ -212,13 +213,13 @@ export default function Workspaces(props: { maquinas: MaquinasDeAjustes }) {
                       </p>
                     </Show>
 
-                    <LogoDelWorkspace workspace={w} onCambio={() => void ws.cargar()} />
+                    <LogoDelWorkspace workspace={w} onCambio={() => void ws.cargar()} sesiones={props.sesiones} />
 
                     <CarpetaDeCopias workspace={w} onCambio={() => void ws.cargar()} />
 
                     <Show when={capabilities().danilAccount}>
                       <Suspense fallback={null}>
-                        <WorkspaceAccount workspace={w.id} name={w.name} maquinas={props.maquinas} />
+                        <WorkspaceAccount workspace={w.id} name={w.name} maquinas={props.maquinas} sesiones={props.sesiones} />
                       </Suspense>
                     </Show>
 

@@ -8,6 +8,7 @@ import { esIncluida, fallasIncluidas, funcion } from "../model/bundled";
 import type { EstadoDeEtapa, Instalacion } from "../components/Prepare";
 import type { EnvReport } from "../../../../ui/src/lib/bundled";
 import type { EstadoDelAlta } from "./setup-state";
+import type { ControlesDeVentanaDelShell, SellarWorkspaceFree } from "../model/shell-port";
 
 export type SetupProps = {
   children: JSX.Element;
@@ -24,6 +25,9 @@ export type SetupProps = {
   }) => Promise<res>;
   setupRequired: <res = unknown>() => Promise<res>;
   listWorkspaces: <res = unknown>() => Promise<res>;
+  /** Lo enchufa el shell (R3). */
+  sealFirstFreeWorkspace: SellarWorkspaceFree;
+  ControlesDeVentana: ControlesDeVentanaDelShell;
 };
 
 export type Etapa = { name: string; essential: boolean; state: EstadoDeEtapa; failure?: string };

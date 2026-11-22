@@ -91,7 +91,7 @@ export function createSuperficiesDeAjustes(props: Parameters<typeof Settings>[0]
       setEstadoSuperficies({ k: "loading" });
       cargarSuperficies();
     },
-  }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null, props.maquinas, props.piezas, props.avisoReparacion, props.integraciones);
+  }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null, props.maquinas, props.piezas, props.sesiones, props.avisoReparacion, props.integraciones);
   const ENTRADAS = entradasDe(pestanas);
   return { ENTRADAS };
 }

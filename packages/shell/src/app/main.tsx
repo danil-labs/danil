@@ -7,7 +7,8 @@ import { enchufarProyectos } from "./projectsPorts";
 import { Setup } from "../../../features/onboarding/src";
 import { checkEnvironment, installTool, prepareRuntime, restartApp, servicePoll, setupRequired } from "../../../features/settings/src/queries/engine-environment";
 import { listWorkspaces } from "../../../features/settings/src/queries/engine-workspaces";
-import { Lanzador, SessionGate } from "../shell";
+import { Lanzador, sealFirstFreeWorkspace, SessionGate } from "../shell";
+import ControlesDeVentana from "../shell/WindowControls";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { seguirElTema } from "../../../../apps/desktop/src/lib/theme";
 import { aplicarEscala, atajoDeEscala } from "../../../../apps/desktop/src/lib/zoom";
@@ -111,6 +112,8 @@ const montar = () => {
           servicePoll={servicePoll}
           setupRequired={setupRequired}
           listWorkspaces={listWorkspaces}
+          sealFirstFreeWorkspace={sealFirstFreeWorkspace}
+          ControlesDeVentana={ControlesDeVentana}
         >
           <SessionGate><App /></SessionGate>
         </Setup>

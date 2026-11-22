@@ -8,14 +8,15 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import type { MaquinasDeAjustes } from "../model/machines-port";
-import { MoveWorkspaceDialog, sessionRailState } from "../../../../shell/src/shell";
+import type { SesionesDeAjustes } from "../model/sessions-port";
 import { createDanilAccounts, type DanilAccounts } from "../queries/danil-accounts";
 import { said } from "./danil-session";
 import { connectedSessions, syncLine } from "../queries/danil-sessions";
 import { LICENSE_REQUIRED, requestAccessInBrowser, TerminusLicense } from "../screens/TerminusLicense";
 
 /** `placement`: `card` en Workspaces; `section` dentro de Cuenta de Danil. Un local nunca ofrece iniciar sesión. */
-export default function WorkspaceAccount(props: { workspace: string; name: string; placement?: "card" | "section"; onChanged?: (problem: string | null) => void; state?: DanilAccounts; maquinas: MaquinasDeAjustes }) {
+export default function WorkspaceAccount(props: { workspace: string; name: string; placement?: "card" | "section"; onChanged?: (problem: string | null) => void; state?: DanilAccounts; maquinas: MaquinasDeAjustes; sesiones: SesionesDeAjustes }) {
+  const { MoveWorkspaceDialog, sessionRailState } = props.sesiones;
   const { isDanilWorkspace } = props.maquinas;
   const accounts = props.state ?? createDanilAccounts({ workspace: () => props.workspace, machines: props.maquinas.machines });
 

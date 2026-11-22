@@ -15,6 +15,7 @@ import type { PiezasDeAjustes } from "../model/features-port";
 import { createApariencia } from "./AppearanceState";
 import { temas, darkStyles, lightStyles, motor, fondos, VISIBILITY_ID, TABS_VEIL_ID, PANELS_VEIL_ID } from "./AppearanceOptions";
 import { StylePicker } from "./AppearanceStylePicker";
+import type { SesionesDeAjustes } from "../model/sessions-port";
 
 /**
  * Tema, fondo de los chats y la cara propia de cada agente.
@@ -22,13 +23,13 @@ import { StylePicker } from "./AppearanceStylePicker";
  * El fondo de un agente sigue siendo el suyo: el de aquí solo pinta el chat
  * que no tiene uno. La imagen de la cara no entra al catálogo de cuerpos.
  */
-export default function Appearance(props: { proyecto: string; maquinas: MaquinasDeAjustes; piezas: PiezasDeAjustes }) {
+export default function Appearance(props: { proyecto: string; maquinas: MaquinasDeAjustes; piezas: PiezasDeAjustes; sesiones: SesionesDeAjustes }) {
   const { espacios, tema, setTema, estilo, setEstilo, estiloClaro, setEstiloClaro, hayPropia, elegirImagenPropia, setFondo, setPropia, fondo, pulsarFondo, vistaPropia, velo, visibilidad, setVelo, veloPestanas, setVeloPestanas, veloPaneles, setVeloPaneles, backgroundFailure, cargado, filas, AstroAvatar, displayName, ocupada, ponerAvatar, elegirImagen, fallo } = createApariencia(props);
   return (
     <SettingsPanel>
       <SettingsSection title={t("settings.appearance.title")}>
         <Show when={espacios.actual()}>
-          {(w) => <LogoDelWorkspace fila workspace={w()} onCambio={() => void espacios.cargar()} />}
+          {(w) => <LogoDelWorkspace fila workspace={w()} onCambio={() => void espacios.cargar()} sesiones={props.sesiones} />}
         </Show>
         <SettingsRow label={t("settings.appearance.theme.title")}>
           <div

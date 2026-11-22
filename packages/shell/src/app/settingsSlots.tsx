@@ -2,6 +2,9 @@ import { lazy, type ComponentProps } from "solid-js";
 import Settings from "../../../features/settings/src/screens/Settings";
 import type { MaquinasDeAjustes } from "../../../features/settings/src/model/machines-port";
 import type { PiezasDeAjustes } from "../../../features/settings/src/model/features-port";
+import type { SesionesDeAjustes } from "../../../features/settings/src/model/sessions-port";
+import { accountReturn, MoveWorkspaceDialog, noteWebAccountMode, sessionRailState, usesGroupAccounts } from "../shell";
+import { MarcaDeWorkspace } from "../shell/WorkspaceMarks";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import NewAgent from "../../../features/projects/src/screens/NewAgent";
 import { displayName, notifyProfiles } from "../../../features/projects/src/queries/profiles";
@@ -36,7 +39,17 @@ const piezasDeAjustes: PiezasDeAjustes = {
   createDanilCreditsBalance,
 };
 
+/** Lo del riel de sesiones y de cuentas que lee Configuración: es del shell y él lo enchufa (R3). */
+const sesionesDeAjustes: SesionesDeAjustes = {
+  sessionRailState,
+  accountReturn,
+  noteWebAccountMode,
+  usesGroupAccounts,
+  MoveWorkspaceDialog,
+  MarcaDeWorkspace,
+};
+
 /** Configuración con sus máquinas: viaja en el mismo chunk perezoso que la pantalla. */
-export default function SettingsWithMachines(props: Omit<ComponentProps<typeof Settings>, "maquinas" | "piezas">) {
-  return <Settings {...props} maquinas={maquinasDeAjustes} piezas={piezasDeAjustes} />;
+export default function SettingsWithMachines(props: Omit<ComponentProps<typeof Settings>, "maquinas" | "piezas" | "sesiones">) {
+  return <Settings {...props} maquinas={maquinasDeAjustes} piezas={piezasDeAjustes} sesiones={sesionesDeAjustes} />;
 }
