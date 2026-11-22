@@ -1,38 +1,37 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { createCeldasDeContenido } from "./conversation-content";
+import { createCeldasDeTareas } from "./conversation-tasks";
+import { createConversacion } from "./conversation";
 import { createColumnasDePrincipal } from "./principal-columns";
 import { createPrincipal } from "./principal";
-import { AgentProfile, CarryOriginLabel, CarryProgress,       MachinePicker,   Screen,  TaskFilesCard, TaskLocation, VisorDeArchivo, VistaDeProyecto } from "./lazy-screens";
+import { AgentProfile, CarryOriginLabel, CarryProgress,       MachinePicker,      TaskLocation } from "./lazy-screens";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
-import Columns2 from "lucide-solid/icons/columns-2";
 import {
   batch,
   createEffect,
   createMemo,
   createResource,
   createSignal,
-  For,
-  Index,
+  
+  
   type JSX,
   
-  Match,
+  
   on,
   onCleanup,
   onMount,
   Show,
   Suspense,
-  Switch,
+  
 } from "solid-js";
-import VisorDeArtefacto from "../../../features/artifacts/src/screens/ArtifactViewer";
 import type { Preview } from "../../../features/artifacts/src/components/Preview";
 import Chat, {
   type Msg,
 } from "../../../features/chat/src/screens/Chat";
-import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedDescendants, DelegatedPanel } from "../../../features/chat/src/screens/DelegatedTasks";
+import { DelegatedLaunch, type DelegatedListProps,  type DelegatedPanelModel,  delegatedDescendants } from "../../../features/chat/src/screens/DelegatedTasks";
 import { agentSwitchBlocked, MACHINE_UNANNOUNCED } from "../../../features/chat/src/model/handover";
-import SearchPanel from "../../../features/chat/src/components/SearchPanel";
 import { noteMcpSignIn } from "../../../features/settings/src/screens/McpSignInNotice";
 import PreviousAgentChat from "../../../features/chat/src/screens/PreviousAgentChat";
-import { ThreadSearch } from "../../../features/chat/src/screens/ThreadSearch";
 import TranscriptSource from "../../../features/chat/src/screens/TranscriptSource";
 import { modoInicial, modoRecordado, recordarModo } from "../../../features/chat/src/model/modes";
 import {
@@ -51,17 +50,14 @@ import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 
 
 import { avisarDeLosArboles } from "../../../features/code/src/queries/refresh";
-import TaskFilesRow, { taskFilesWidth } from "../../../features/code/src/screens/TaskFilesRow";
-import { TaskSide, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
+import TaskFilesRow, {  } from "../../../features/code/src/screens/TaskFilesRow";
 import { arbolesDe, contiene, ubicar } from "../../../features/code/src/queries/treeKind";
-import { moviendoHueco } from "../../../../apps/desktop/src/lib/sites";
 
 
 import { esDeCodigo } from "../../../ui/src/lib/workdirKind";
-import Observability from "../../../features/observability/src/screens/Observability";
 import AgentPageTasks from "../../../features/projects/src/screens/AgentPageTasks";
 
-import { createFreeRouterConsent, folderIcon, importCarry, renderAvatar, renderImage, renderPdf, renderTable } from "./chatSlots";
+import { createFreeRouterConsent, folderIcon, importCarry, renderAvatar,  renderPdf } from "./chatSlots";
 import { launcherOf, taskDescendants } from "@terminus/tasks";
 import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, rememberedRunOn, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../../../features/machines/src/queries/store";
 import { createdTasks } from "../../../features/projects/src/model/agentPageFilters";
@@ -94,14 +90,9 @@ import { unconfirmedOpen } from "../../../features/machines/src/model/unconfirme
 import { createBatchDelivery, createServiceStream } from "../../../features/service-stream/src";
 import { type SearchFilter } from "../shell/GlobalSearch";
 import PantallaDeBloqueo from "../shell/LockScreen";
-import Paneles from "../shell/Panels";
 import { createSidebar } from "../shell/Sidebar";
 import type { SidebarFilterProps } from "../shell/SidebarFilter";
-import { materialDeProyecto, visoresDeCodigo } from "../featureSlots";
-import UsageTool, { UsagePanel } from "../shell/UsageTool";
 import { createUsage } from "../shell/usage";
-import Sitio from "../../../features/sites/src/screens/Site";
-import { DragOverlay } from "../../../features/tabs/src";
 import { createEngineQueue, createTaskQueues } from "../../../features/task-queues/src";
 import { VELO_DE_FONDO } from "../../../../apps/desktop/src/lib/chat-background";
 import { fondoDeChat, imagenDelWorkspace, veloDeFondo } from "../../../../apps/desktop/src/lib/chat-background-store";
@@ -114,15 +105,15 @@ import { carpetaDeTrabajo, type HandlerList } from "../../../../apps/desktop/src
 import {
   createPanels,
   gridCell,
-  gridTracks,
-  MIN_PANEL_HEIGHT,
-  MIN_PANEL_WIDTH,
+  
+  
+  
   type Side as PanelSide,
   panelReadingOrder,
   type PanelSite as SitioDePanel,
   sameSite,
 } from "../../../../apps/desktop/src/lib/panels";
-import { capabilities, openMachineScreen } from "../../../host/src/platform";
+import { capabilities } from "../../../host/src/platform";
 import { createPointerDrag } from "../../../../apps/desktop/src/lib/pointer-drag";
 import { type SenderTask } from "../../../../apps/desktop/src/lib/recipients";
 import { conservar } from "../../../session/src/sessionRefresh";
@@ -138,14 +129,14 @@ import {
   
 } from "../../../../apps/desktop/src/lib/spaces";
 import {
-  type ArtifactTab,
-  type FileTab,
-  fileTabId,
+  
+  
+  
   isContentTab,
   isTaskTab,
-  OBSERVABILITY_TAB_ID,
-  type ScreenTab,
-  type SiteTab,
+  
+  
+  
   screenTabId,
   type Tab,
 } from "../../../../apps/desktop/src/lib/tabs";
@@ -159,11 +150,11 @@ import {
 } from "../../../../apps/desktop/src/lib/usage";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import {
-  BELOW_LOCATION,
+  
   createCompactViewport,
-  HEADER_HEIGHT,
+  
   LOCATION_BAR,
-  toggleMaximizeFromHeader,
+  
 } from "../../../host/src/window";
 import { Button } from "../../../ui/src/Button";
 import { prosaDe } from "../../../ui/src/Failure";
@@ -1997,660 +1988,11 @@ export default function App() {
     fondoDelAgente()?.url ?? (fondoDeChat() === "propia" ? (imagenDelWorkspace() ?? fondoPropioUrl()) : null) ?? null;
   const veloDeVentana = () => (fondoDelAgente() ? (fondoDelAgente()?.veil ?? VELO_DE_FONDO) : veloDeFondo());
 
-  const Conversacion = () => (
-    <section class="relative flex h-full min-h-0 flex-col overflow-hidden">
-      {/* Sin línea divisora y sin rótulo de sección: arriba va DE QUÉ es esta
-          conversación y el único control que abre algo. El selector de agente no
-          vive aquí: con qué agente corre un mensaje se decide al escribirlo. */}
+  const { CeldasDeContenido } = createCeldasDeContenido({ PanelDeChat, abrirSesion, adjuntarAlProyecto, agent, agents, anchoDeArchivos, anchoDelArbol, archivosDeTarea, carpetaDelProyecto, carpetaEditable, celdaDe, cerrarPestanasYa, claveAbierta, compacta, consumo, deleteTask, draftBases, editorDeletionLocked, estiloDeLaCelda, etaparSesion, fijarSesion, hablarConEncargado, idsDeContenido, llaveDeBorrador, llevaTiraInterior, mandarVentana, materialPedido, modelosParaAgentes, moverSesion, nuevaSesion, paneles, permissions, pestanas, project, projectList, proyectoDeLaVista, quitarDelProyecto, renombrarSesion, sesionesConEstado, sessionId, setMaterialPedido, setSettings, sitiosEnBlanco, sources, tapadoPorElProyecto, vivas, workspaceActivo });
 
-      {/* El mismo eje que la cabecera del historial —el del semáforo,
-          ver `lib/window.ts`— y con su hueco cuando la esquina superior
-          izquierda es suya: al colapsar el historial a ancho cero, esta
-          fila lleva el conmutador para traerlo de vuelta. Antes flotaba
-          con `position: absolute`, sin compartir eje con nada. */}
-      <Show when={paneles.isSplit()}>
-      <div
-        ref={cabeceraDeConversacion}
-        class={cn("tab-veil flex shrink-0 items-center gap-3 pr-4",
-          HEADER_HEIGHT,
-          "pl-4",
-        )}
-        data-tauri-drag-region=""
-        onDblClick={toggleMaximizeFromHeader}
-      >
-        <div ref={controlesIzquierdos} class="relative z-40 flex shrink-0 items-center gap-3">
-        </div>
-        {/* Las pestañas, donde estaba el título de la conversación: con
-            una se ve como el título de siempre; con varias, las tareas
-            a mano. El historial de la izquierda sigue siendo el
-            historial entero; esto son las abiertas. Con el split, las
-            de abajo llevan su tira en la cuadrícula, sin pagar una
-            fila propia. */}
+  const { CeldasDeTareas } = createCeldasDeTareas({ PanelDeChat, activarPestana, agent, alta, anchoDeArchivos, anchoDelArbol, archivoBorrado, archivoMovido, archivosDeTarea, arrastrando, arrastrarPestana, botonDeArchivos, botonDelArbol, carpetaDelProyecto, celdaDe, cerrarBorrador, cerrarPestana, cerrarPestanas, compacta, consumo, cursor, delegatedPanels, donde, dropSide, editorDeletionLocked, enBorrador, estiloDeLaCelda, exportarChat, filaDe, llaveDeBorrador, llevaTiraInterior, mandarVentana, marcaDe, montadas, muestra, nombreDeSeparar, paginaDeAgente, paneles, partirVentana, permissions, pestanaDelanteEn, pestanas, pestanasDe, preguntadas, project, proyectoDePestana, puedeSepararseDe, reabrirPestana, searchSurfaces, setSearchSurfaces, setSettings, settings, tapadoPorElProyecto, tareasEnVentanas, threadSearchTargets, tituloDePestana, ventanas, vivas, vueltaDelBorrador, workspaceActivo });
 
-        {/* Sin partir hay una sola ventana y una sola tira. Su envoltorio y
-            el «+» quedan fuera del `For`, que vuelve a montar la tira al
-            abrir una tarea: así el «+» no cuesta nodos en cada apertura. */}
-        {/* Partida, las tiras se alinean por las pistas reales de las
-            ventanas: `pistas(anchosEnPantalla())`, igual que `Paneles`. */}
-        <Show when={paneles.isSplit()}>
-          <div
-            class="pointer-events-none absolute inset-0 z-30 grid"
-            style={{ "grid-template-columns": gridTracks(anchosEnPantalla()) }}
-          >
-            <For each={ventanas().filter((sitio) => sitio.fila === 0)}>
-              {(sitio) => (
-                <div
-                  class="pointer-events-auto flex h-[30px] min-w-0 items-center px-2"
-                  style={{
-                    "grid-column": `${sitio.col * 2 + 1}`,
-                    "padding-left":
-                      sitio.col === 0
-                        ? `${Math.max(8, reservaIzquierdaDeTiras())}px`
-                        : undefined,
-                    "padding-right":
-                      sitio.col === anchosEnPantalla().length - 1
-                        ? `${Math.max(8, reservaDerechaDeTiras())}px`
-                        : undefined,
-                  }}
-                  data-tira=""
-                  data-ventana={`${sitio.col},${sitio.fila}`}
-                  onPointerDown={() => mandarVentana(sitio)}
-                >
-                  <TabStrip
-                    session={filaDe}
-                    tabs={pestanasDe(sitio)}
-                  pinnedIds={pestanas.pinned()}
-                  onPin={pestanas.pin}
-                    activeId={pestanaDelanteEn(sitio)}
-                    draftLabel={enBorrador(sitio) ? t("projects.tabs.draft") : undefined}
-                    onCloseDraft={vueltaDelBorrador(sitio) !== null ? () => cerrarBorrador(sitio) : undefined}
-                    liveIds={vivas()}
-                    approvingIds={permissions().map((p) => p.session)}
-                    waitingIds={preguntadas()}
-                    onPick={(id) => {
-                      const p = pestanas.open().find((x) => x.id === id);
-                      if (p) void activarPestana(p);
-                    }}
-                    onClose={cerrarPestana}
-                    dirtyIds={pestanas.dirty()}
-                    onCloseMany={cerrarPestanas}
-                    canReopen={pestanas.canReopen()}
-                    onReopen={reabrirPestana}
-                    onDrag={arrastrarPestana}
-                    dropIndex={marcaDe(sitio)}
-                  />
-                  {botonDeNuevaPestana()}
-                  <span class="flex-1" />
-                  <Show when={pestanas.open().find(p => p.id === paneles.activeTabAt(sitio))?.clase !== "tarea"}>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    class="size-6 shrink-0 text-neutral-500"
-                    disabled={!puedeSepararseDe(sitio)}
-                    onClick={() => partirVentana(sitio)}
-                    aria-label={nombreDeSeparar(sitio)}
-                    title={nombreDeSeparar(sitio)}
-                  >
-                    <Columns2 size={14} />
-                  </Button>
-                  </Show>
-                </div>
-              )}
-            </For>
-          </div>
-        </Show>
-        <div ref={controlesDerechos} class="relative z-40 ml-auto flex shrink-0 items-center gap-3">
-        </div>
-      </div>
-      </Show>
-
-
-      {/* La columna del árbol de trabajo no reemplaza al chat: lo angosta. La
-          vista de proyecto sí, y es la única cosa que lo hace: es lo que
-          ocupa el panel cuando lo que se está mirando no es una conversación. */}
-
-      {/* La conversación se esconde, no se desmonta, cuando hay un documento
-          delante: un archivo y un artefacto son pestañas del mismo sitio que
-          las tareas y ocupan este hueco; volver a la conversación devuelve
-          el hilo donde iba y lo escrito sin mandar. Desmontarla tiraría las
-          dos cosas. */}
-
-      {/* Esa misma propiedad sostiene la cuadrícula: separar una pestaña no
-          mueve estos nodos a otro padre, les asigna una celda con
-          `grid-column`/`grid-row` dentro de la misma cuadrícula
-          (`features/shell/Panels.tsx`). Cambia dónde se pinta cada uno y
-          cuál está escondido, no quién lo pintó. */}
-      <Paneles
-        anchos={anchosEnPantalla()}
-        altos={altosEnPantalla()}
-        filasPorColumna={filasEnPantalla()}
-        minimoAncho={MIN_PANEL_WIDTH}
-        minimoAlto={MIN_PANEL_HEIGHT}
-        etiquetaAncho={t("projects.split.divider")}
-        etiquetaAlto={t("projects.split.divider_rows")}
-        onRepartirAncho={paneles.resizeColumns}
-        onRepartirAlto={paneles.resizeRows}
-      >
-      <Index each={ventanas()}>{site => {
-        const task = () => pestanas.open().find(p => p.id === paneles.activeTabAt(site()) && p.clase === "tarea");
-        const target = () => threadSearchTargets().get(task()?.session ?? "");
-        // La ventana activa responde con lo elegido en el composer; las demás, con el agente de su tarea.
-        const agenteDeLaVentana = () => sameSite(site(), paneles.activeSite())
-          ? agent()
-          : (filaDe(task()?.session ?? "")?.agent ?? agent());
-        const idDePanel = () => task()?.session || (carpetaDelProyecto() ? llaveDeBorrador(project()) : "");
-        const herramientas = () => <ThreadSearch conversation={task()?.session ?? ""} active={sameSite(site(), paneles.activeSite()) && settings() === null && !alta()}
-              disabled={!task()?.session}
-              open={muestra(task()?.session ?? "", "search")}
-              messages={target()?.messages() ?? []} thread={() => target()?.thread()}
-              onJump={block => target()?.jump(block)}
-              onMove={delta => target()?.move(delta)}
-              onToggle={() => { const id = task()?.session; if (id) archivosDeTarea.present(id, "search"); }}
-              onShow={() => { const id = task()?.session; if (id && !muestra(id, "search")) archivosDeTarea.present(id, "search"); }}
-              onClose={() => { const id = task()?.session; if (id) archivosDeTarea.setOpen(id, false); }}
-              onSurface={(id, surface) => setSearchSurfaces(previous => {
-                if (surface) return new Map(previous).set(id, surface);
-                if (!previous.has(id)) return previous;
-                const next = new Map(previous);
-                next.delete(id);
-                return next;
-              })}
-              tools={<>
-                <Show when={delegatedPanels().get(`${workspaceActivo()}/${task()?.session ?? ""}`)} fallback={<DelegatedNone />}>
-                  {(read) => <DelegatedToolbar model={read()()} pressed={muestra(task()?.session ?? "", "delegated")} onClick={() => { const id = task()?.session; if (id) archivosDeTarea.present(id, "delegated"); }} />}
-                </Show>
-                <UsageTool usage={consumo} agent={agenteDeLaVentana()} pressed={muestra(idDePanel(), "usage")} onToggle={() => { const id = idDePanel(); if (id) archivosDeTarea.present(id, "usage"); }} />
-                <Show when={task()?.session} fallback={<Show when={!paginaDeAgente()}>{botonDelArbol()}</Show>}>
-                  {botonDeArchivos(() => task()?.session ?? "")}
-                </Show>
-              </>} />;
-        // Centrada con la fila de máquina, proyecto y rama de la tarea (`TaskLocation`).
-        // La tarea nueva (ventana sin pestaña) lleva la misma barra, con lo que aún no tiene apagado;
-        // la página de un agente también es una ventana sin pestaña, y no es una tarea.
-        return <Show when={(Boolean(task()) || (paneles.activeTabAt(site()) === null && !paginaDeAgente())) && !tapadoPorElProyecto(site())}>
-          <div class="z-20 min-w-0 max-w-full self-start justify-self-end pt-2 pr-3" style={estiloDeLaCelda(site())}
-            classList={{ "mt-[30px]": llevaTiraInterior(site()) }} onPointerDown={() => mandarVentana(site())}>
-            {herramientas()}
-          </div>
-        </Show>;
-      }}</Index>
-
-      {/* Aquí solo viven las tiras de las filas inferiores: la primera usa
-          la cabecera del chasis, que una fila inferior no comparte. Va
-          encima de su celda con `align-self: start` y no en un contenedor
-          propio: meter tira y contenido en un mismo padre por ventana los
-          sacaría del padre común que arrastrar un visor necesita
-          (`features/shell/Panels.tsx`). */}
-
-      {/* Partir vive un nivel por debajo de las pestañas, a la derecha de
-          su ventana, como en un terminal: pertenece al panel que va a
-          partir, no a una fila compartida donde un botón único no diría
-          cuál. Flota sobre la esquina (`self-start justify-self-end`) en
-          vez de ocupar una fila propia de 30 px que separaría las
-          pestañas del texto. */}
-
-      {/* El icono son dos columnas y no una flecha: es una forma, no un
-          movimiento. No es un conmutador —sin `aria-pressed`—: la vuelta
-          atrás es cerrar la última pestaña de la ventana. */}
-      <For each={ventanas().filter((sitio) => sitio.fila > 0 && pestanas.open().find(p => p.id === paneles.activeTabAt(sitio))?.clase !== "tarea")}>
-        {(sitio) => (
-          <div
-            class="z-20 flex self-start justify-self-end p-1"
-            style={estiloDeLaCelda(sitio)}
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              class="size-6 text-neutral-500"
-              disabled={!puedeSepararseDe(sitio)}
-              onClick={() => partirVentana(sitio)}
-              aria-label={nombreDeSeparar(sitio)}
-              title={nombreDeSeparar(sitio)}
-            >
-              <Columns2 size={14} />
-            </Button>
-          </div>
-        )}
-      </For>
-
-      <Show when={paneles.isSplit()}>
-        <For each={ventanas().filter((sitio) => sitio.fila > 0)}>
-          {(sitio) => (
-            <div
-              class="tab-veil z-30 flex h-[30px] min-w-0 items-center self-start px-2"
-              style={estiloDeLaCelda(sitio)}
-              // Cómo la encuentra el arrastre: `ventanaBajo` pregunta al
-              // documento por estos dos atributos, que es lo que hace que soltar
-              // valga tanto aquí como en el cuerpo del cuadrante.
-              data-tira=""
-              data-ventana={`${sitio.col},${sitio.fila}`}
-              // Pulsar en cualquier sitio de la tira pone su ventana al mando,
-              // aunque no se pulse una pestaña. Es lo que hace que la caja y la
-              // columna derecha sigan al clic y no solo al cambio de pestaña.
-              onPointerDown={() => mandarVentana(sitio)}
-            >
-              <TabStrip
-                session={filaDe}
-                tabs={pestanasDe(sitio)}
-                  pinnedIds={pestanas.pinned()}
-                  onPin={pestanas.pin}
-                activeId={pestanaDelanteEn(sitio)}
-                draftLabel={enBorrador(sitio) ? t("projects.tabs.draft") : undefined}
-                onCloseDraft={vueltaDelBorrador(sitio) !== null ? () => cerrarBorrador(sitio) : undefined}
-                liveIds={vivas()}
-                approvingIds={permissions().map((p) => p.session)}
-                waitingIds={preguntadas()}
-                onPick={(id) => {
-                  const p = pestanas.open().find((x) => x.id === id);
-                  if (p) void activarPestana(p);
-                }}
-                onClose={cerrarPestana}
-                dirtyIds={pestanas.dirty()}
-                onCloseMany={cerrarPestanas}
-                canReopen={pestanas.canReopen()}
-                onReopen={reabrirPestana}
-                onDrag={arrastrarPestana}
-                dropIndex={marcaDe(sitio)}
-              />
-            </div>
-          )}
-        </For>
-      </Show>
-
-      {/* La pestaña que se está llevando, pegada al cursor: sin ella el
-          gesto no dice que lleve nada. El arrastre nativo del navegador
-          pinta este fantasma solo; el nuestro es por puntero
-          (`arrastrarPestana`) y hay que pintarlo aquí, no en la tira, que
-          no sabe dónde acabó el cursor. */}
-      <DragOverlay
-        dragging={arrastrando() !== null}
-        cursor={cursor()}
-        title={tituloDePestana(arrastrando()!)}
-        split={paneles.isSplit()}
-        hasDestination={donde() !== null}
-        targetStyle={estiloDeLaCelda(donde()!.sitio)}
-        side={dropSide()}
-      />
-
-      {/* Una conversación por tarea abierta, no por ventana: la clave es la
-          tarea. Arrastrarla a otra ventana solo le cambia la celda —no se
-          desmonta, no se vuelve a pedir el hilo, no se pierde lo escrito sin
-          mandar. Con una por ventana, arrastrar costaría las tres cosas. */}
-
-      {/* Se lee y no se escribe salvo en la activa (`PanelDeChat` ·
-          `soloLectura`): la caja de escritura es una sola y vive donde está
-          el mando, evitando que dos cajas manden con el agente y el modelo
-          que eligió una (`lib/panels.ts`). */}
-      <For each={tareasEnVentanas()}>
-        {(p) => {
-          const sitio = () => paneles.siteOf(p.id);
-          /** Se ve si su ventana la tiene delante y esa ventana se pinta. */
-          const celda = () => celdaDe(p.id);
-          const placement = createMemo<ReturnType<typeof celda>>(previous => celda() ?? previous);
-          const manda = () => sameSite(sitio(), paneles.activeSite())
-            && celda() !== undefined && !tapadoPorElProyecto(sitio());
-          return (
-            <div
-              class="flex min-h-0 min-w-0 flex-col"
-              classList={{
-                hidden: celda() === undefined || tapadoPorElProyecto(sitio()),
-                "pt-8": llevaTiraInterior(sitio()),
-              }}
-              style={placement()}
-              data-ventana={
-                sitio() ? `${sitio()!.col},${sitio()!.fila}` : undefined
-              }
-              onPointerDown={() => {
-                const d = sitio();
-                if (d) mandarVentana(d);
-              }}
-            >
-              <Show when={montadas().has(p.id)}>
-                <PanelDeChat
-                  sesion={p.session}
-                  proyecto={proyectoDePestana(p.id)}
-                  soloLectura={!manda()}
-                />
-              </Show>
-            </div>
-          );
-        }}
-      </For>
-
-      {/* The files card of each open task: a sibling of its chat, kept mounted while the chat is not. */}
-      <For each={tareasEnVentanas()}>
-        {(p) => {
-          const sitio = () => paneles.siteOf(p.id);
-          const celda = () => celdaDe(p.id);
-          const placement = createMemo<ReturnType<typeof celda>>(previous => celda() ?? previous);
-          const panel = () => archivosDeTarea.panel(p.session);
-          const [usado, setUsado] = createSignal(false);
-          createEffect(() => { if (panel().open) setUsado(true); });
-          const cubre = () => panel().expanded || paneles.isSplit() || compacta();
-          const visible = () => panel().open && celda() !== undefined && !tapadoPorElProyecto(sitio());
-          const ancho = () => (cubre() ? undefined : taskFilesWidth(panel().tabs.length > 0, anchoDeArchivos(), anchoDelArbol()));
-          return (
-            <Show when={usado()}>
-              {/* The padding clears the location row (8 px of air plus the 30 px box)
-                  instead of covering it: only the card takes the pointer. */}
-              <div class={cn("pointer-events-none z-10 flex min-h-0 min-w-0 justify-self-end pr-2 pb-2 *:pointer-events-auto", BELOW_LOCATION)}
-                classList={{ hidden: !visible(), "w-full pl-2": cubre(), "mt-[30px]": llevaTiraInterior(sitio()), "transition-[width] duration-200 ease-out": !moviendoHueco() }}
-                style={{ ...placement(), width: ancho() }}
-                onPointerDown={() => { const d = sitio(); if (d) mandarVentana(d); }}>
-                <TaskSideShell mode={panel().mode} side={<TaskSide mode={panel().mode}
-                  searchSlot={searchSurfaces().get(p.session) ? <SearchPanel surface={searchSurfaces().get(p.session)!} /> : undefined}
-                  usageSlot={<UsagePanel usage={consumo} agent={sameSite(paneles.siteOf(p.id) ?? null, paneles.activeSite()) ? agent() : (filaDe(p.session)?.agent ?? agent())} onManage={() => { archivosDeTarea.setOpen(p.session, false); setSettings("proveedores-ia"); }} />}
-                  delegatedSlot={
-                    <Show when={delegatedPanels().get(`${workspaceActivo()}/${p.session}`)?.()} fallback={<p class="m-0 px-3 py-3 text-xs text-neutral-500">{t("chat.delegation.none")}</p>}>
-                      <DelegatedPanel model={() => delegatedPanels().get(`${workspaceActivo()}/${p.session}`)?.()} />
-                    </Show>
-                  } />}>
-                  <Suspense fallback={null}>
-                    <TaskFilesCard visores={visoresDeCodigo} project={proyectoDePestana(p.id)} session={p.session} files={archivosDeTarea}
-                      visible={visible()} readOnly={editorDeletionLocked(p.session)}
-                      expandedOnly={paneles.isSplit() || compacta()}
-                      onSaved={() => window.dispatchEvent(new CustomEvent("harness:copia"))}
-                      onExportChat={() => exportarChat(p.session, proyectoDePestana(p.id))}
-                      onMoved={archivoMovido} onRemoved={archivoBorrado} />
-                  </Suspense>
-                </TaskSideShell>
-              </div>
-            </Show>
-          );
-        }}
-      </For>
-
-      {/* Toda ventana enseña algo: su pestaña de delante, o la conversación
-          en blanco. La vista de proyecto ocupa la activa; una ventana sin
-          pestaña delante pinta el blanco en su propia celda. */}
-
-      {/* El blanco es de la celda, no de la ventana activa: `paneles.blanquear()`
-          deja la ventana con sus pestañas y sin ninguna delante, y la celda
-          hace la pregunta —no una señal global— para que enfocar otra
-          ventana no se lleve el blanco con ella. */}
-
-      {/* Dos ventanas en blanco del mismo proyecto comparten borrador y solo
-          escribe la que manda. Proyectos distintos conservan borradores
-          distintos. */}
-
-      {/* El `For` de arriba pinta una conversación por tarea abierta: sin
-          tareas no pinta ninguna. Sin este bloque, cerrar la última pestaña
-          deja la ventana en negro sin que `tsc` lo detecte. */}
-      <Show when={proyectoDeLaVista()}>
-        {(p) => (
-          <div
-            class="flex min-h-0 min-w-0 flex-col"
-            classList={{ "pt-8": llevaTiraInterior(paneles.activeSite()) }}
-            style={estiloDeLaCelda(paneles.activeSite())}
-            data-ventana={`${paneles.activeSite().col},${paneles.activeSite().fila}`}
-          >
-            <Suspense fallback={<div class="flex flex-1 items-center justify-center text-sm text-neutral-500" role="status">{t("projects.view.opening")}</div>}>
-            <VistaDeProyecto material={materialDeProyecto}
-              proyecto={p()}
-              materialPedido={materialPedido() === p().id}
-              onMaterialVisto={() => setMaterialPedido(null)}
-              workspace={workspaceActivo()}
-              modelos={modelosParaAgentes()} createFreeRouterConsent={createFreeRouterConsent}
-              sources={sources()}
-              agents={agents()}
-              sessions={sesionesConEstado()[p().id] ?? []}
-              current={sessionId()}
-              vivas={vivas()}
-              aprobando={permissions().map((x) => x.session)}
-              destinos={projectList()
-                .filter((x) => x.id !== p().id)
-                .map((x) => ({ id: x.id, name: x.name }))}
-              onNueva={() => nuevaSesion(p().id)}
-              onAbrir={(id) => void abrirSesion(p().id, id)}
-              onHablarCon={(name) => hablarConEncargado(p().id, name)}
-              onDelete={(id, members) => void deleteTask(p().id, id, members)}
-              onMove={(id, a) => void moverSesion(p().id, id, a)}
-              onEtapa={(id, etapa) => void etaparSesion(p().id, id, etapa)}
-              onPin={(id, pinned) => fijarSesion(p().id, id, pinned)}
-              onRenombrar={(id, title) =>
-                void renombrarSesion(p().id, id, title)
-              }
-              onAdjuntar={(source) => adjuntarAlProyecto(p().id, source)}
-              onQuitar={(source) => quitarDelProyecto(p().id, source)}
-              onCarpetaEditable={(dir) => carpetaEditable(p().id, dir)}
-            />
-            </Suspense>
-          </div>
-        )}
-      </Show>
-
-      {/* `Index` y no `For`: la lista son sitios, y `sitios()` construye
-          objetos nuevos en cada lectura. Con `For` —que compara por
-          referencia— activar una pestaña en OTRA ventana volvería a montar
-          este blanco, perdiendo foco y punto de inserción del cursor.
-          `Index` va por posición y reutiliza el nodo mientras la cuenta de
-          ventanas en blanco no cambie. */}
-      <Index each={sitiosEnBlanco()}>
-        {(sitio) => (
-          <div
-            class="flex min-h-0 min-w-0 flex-col"
-            classList={{ "pt-8": llevaTiraInterior(sitio()) }}
-            style={estiloDeLaCelda(sitio())}
-            data-ventana={`${sitio().col},${sitio().fila}`}
-            onPointerDown={() => mandarVentana(sitio())}
-          >
-            <PanelDeChat
-              sesion={null}
-              soloLectura={!sameSite(sitio(), paneles.activeSite())}
-            />
-          </div>
-        )}
-      </Index>
-
-      {/* Los archivos base de la carpeta, antes de que exista la tarea: el mismo panel, leído del proyecto. */}
-      <Index each={sitiosEnBlanco()}>
-        {(sitio) => {
-          const llave = () => (carpetaDelProyecto() ? llaveDeBorrador(project()) : "");
-          const panel = () => archivosDeTarea.panel(llave());
-          const [usado, setUsado] = createSignal(false);
-          createEffect(() => { if (llave() && panel().open) setUsado(true); });
-          const cubre = () => panel().expanded || paneles.isSplit() || compacta();
-          const visible = () => !!llave() && panel().open && !tapadoPorElProyecto(sitio());
-          const ancho = () => (cubre() ? undefined : taskFilesWidth(panel().tabs.length > 0, anchoDeArchivos(), anchoDelArbol()));
-          return (
-            <Show when={usado() && project()}>
-              {(proyecto) => (
-                <div class={cn("pointer-events-none z-10 flex min-h-0 min-w-0 justify-self-end pr-2 pb-2 *:pointer-events-auto", BELOW_LOCATION)}
-                  classList={{ hidden: !visible(), "w-full pl-2": cubre(), "mt-[30px]": llevaTiraInterior(sitio()), "transition-[width] duration-200 ease-out": !moviendoHueco() }}
-                  style={{ ...estiloDeLaCelda(sitio()), width: ancho() }}
-                  onPointerDown={() => mandarVentana(sitio())}>
-                  <TaskSideShell mode={panel().mode} side={<TaskSide mode={panel().mode}
-                    searchSlot={undefined}
-                    usageSlot={<UsagePanel usage={consumo} agent={agent()} onManage={() => { archivosDeTarea.setOpen(llave(), false); setSettings("proveedores-ia"); }} />}
-                    delegatedSlot={<p class="m-0 px-3 py-3 text-xs text-neutral-500">{t("chat.delegation.none")}</p>} />}>
-                    <Suspense fallback={null}>
-                      <TaskFilesCard visores={visoresDeCodigo} project={proyecto()} session="" panelKey={llave()} preview={{ baseRef: draftBases()[claveAbierta()] }}
-                        files={archivosDeTarea} visible={visible()}
-                        expandedOnly={paneles.isSplit() || compacta()}
-                        onSaved={() => {}} onExportChat={async () => {}}
-                        onMoved={() => {}} onRemoved={() => {}} />
-                    </Suspense>
-                  </TaskSideShell>
-                </div>
-              )}
-            </Show>
-          );
-        }}
-      </Index>
-
-      {/* Cada documento queda montado, escondido cuando no es el que se
-          está mirando: cambiar de pestaña y volver no vuelve a pedir el
-          archivo, no pierde qué vista se había elegido ni el borrador sin
-          guardar. */}
-
-      {/* Se montan todos, no solo los de la tarea abierta: la tira es una,
-          y activar el archivo de otra tarea abre esa tarea detrás
-          (`activarPestana`); su visor sigue vivo mientras su pestaña
-          exista. */}
-      <For each={idsDeContenido()}>
-        {(id) => {
-          const p = () => pestanas.open().find((x) => x.id === id) ?? null;
-          /**
-           * En qué panel se enseña este documento, `-1` si en ninguno. No es
-           * `id === pestanaActiva()`: con un solo panel son lo mismo, pero con
-           * la pantalla partida un documento del panel de al lado se ve sin
-           * ser la activa, y esa pregunta lo dejaría escondido.
-           */
-          const celda = () => celdaDe(id);
-          const visible = () => celda() !== undefined;
-          return (
-            <Show when={p()}>
-              {(abierta) => (
-                <div
-                  class="min-h-0 min-w-0 overflow-y-auto"
-                  classList={{
-                    hidden: !visible() || tapadoPorElProyecto(paneles.siteOf(id)),
-                    "pt-8": llevaTiraInterior(paneles.siteOf(id)),
-                  }}
-                  style={celda()}
-                  data-ventana={(() => {
-                    const d = paneles.siteOf(id);
-                    return d ? `${d.col},${d.fila}` : undefined;
-                  })()}
-                  onPointerDown={() => {
-                    const d = paneles.siteOf(id);
-                    if (d) mandarVentana(d);
-                  }}
-                >
-                  {/* `Switch` y no dos `Show` anidados: con tres clases,
-                      el `fallback` de un `Show` deja de significar «la otra»
-                      y pasa a significar «alguna de las otras dos». Aquí
-                      cada clase se nombra. */}
-                  <Switch>
-                    {/* El estrechamiento va en el `when`, no dentro del
-                        hijo: aquí el cuerpo corre una vez y lo que decide qué
-                        se pinta es la expresión reactiva (`SYSTEM.md` § Las
-                        reglas de Solid · 7). Con el `as` dentro del hijo, la
-                        rama del archivo se construía también para una pestaña
-                        de sitio, con `arbol` y `ruta` en `undefined`. */}
-                    <Match
-                      when={
-                        abierta().clase === "archivo"
-                          ? (abierta() as FileTab)
-                          : null
-                      }
-                    >
-                      {(a) => (
-                        <Suspense fallback={null}><VisorDeArchivo visores={visoresDeCodigo}
-                          project={a().project}
-                          session={a().session}
-                          readOnly={editorDeletionLocked(a().session)}
-                          base={a().base}
-                          arbol={a().arbol}
-                          ruta={a().ruta}
-                          cambiado={a().cambiado}
-                          visible={visible()}
-                          onSucio={(sucio) => pestanas.setDirty(id, sucio)}
-                          onGuardador={(guardar) => pestanas.registerSaver(id, guardar)}
-                          onBorrado={() => cerrarPestanasYa([id])}
-                          onAbrirOtro={(ruta) =>
-                            pestanas.openContent({
-                              clase: "archivo",
-                              id: fileTabId({ project: a().project, session: a().session, arbol: a().arbol, ruta }),
-                              project: a().project,
-                              session: a().session,
-                              arbol: a().arbol,
-                              ruta,
-                              cambiado: false,
-                            })
-                          }
-                          onGuardado={() => {
-                            // Guardar convierte el archivo en uno cambiado: su
-                            // pestaña gana la vista de cambios y el árbol
-                            // relee su estado, que es de donde la pestaña saca
-                            // su letra de git.
-                            pestanas.markChanged(id);
-                            window.dispatchEvent(
-                              new CustomEvent("harness:copia"),
-                            );
-                          }}
-                        /></Suspense>
-                      )}
-                    </Match>
-                    <Match
-                      when={
-                        abierta().clase === "sitio"
-                          ? (abierta() as SiteTab)
-                          : null
-                      }
-                    >
-                      {(s) => (
-                        <Sitio
-                          url={s().url}
-                          visible={visible()}
-                          navegador={s().navegador}
-                          onNavego={(url) => s().navegador && pestanas.navigate(id, url)}
-                        />
-                      )}
-                    </Match>
-                    <Match
-                      when={
-                        abierta().clase === "artefacto"
-                          ? (abierta() as ArtifactTab)
-                          : null
-                      }
-                    >
-                      {(a) => (
-                        <Show
-                          when={a().codigo}
-                          fallback={<VisorDeArtefacto path={a().path} rel={a().rel} kind={a().kind} session={a().session} renderPdf={renderPdf} renderImage={renderImage} renderTable={renderTable} />}
-                        >
-                          <Suspense fallback={null}><VisorDeArchivo visores={visoresDeCodigo}
-                            project={a().project}
-                            session={a().session}
-                            arbol=""
-                            ruta={a().path}
-                            suelto
-                            cambiado={false}
-                            visible={visible()}
-                            onSucio={() => {}}
-                            onGuardador={() => {}}
-                            onGuardado={() => {}}
-                          /></Suspense>
-                        </Show>
-                      )}
-                    </Match>
-                  </Switch>
-                </div>
-              )}
-            </Show>
-          );
-        }}
-      </For>
-
-      <Show when={pestanas.open().some((p) => p.id === OBSERVABILITY_TAB_ID)}>
-        <div
-          class="min-h-0 min-w-0"
-          classList={{ hidden: celdaDe(OBSERVABILITY_TAB_ID) === undefined || tapadoPorElProyecto(paneles.siteOf(OBSERVABILITY_TAB_ID)), "pt-8": llevaTiraInterior(paneles.siteOf(OBSERVABILITY_TAB_ID)) }}
-          style={celdaDe(OBSERVABILITY_TAB_ID)}
-        >
-          <Observability onManage={() => setSettings("plugins")} renderSite={(url) => <Sitio url={url} visible />} />
-        </div>
-      </Show>
-
-      <For each={pestanas.open().filter((p): p is ScreenTab => p.clase === "pantalla")}>
-        {(p) => {
-          return (
-            <div
-              class="min-h-0 min-w-0"
-              classList={{ hidden: celdaDe(p.id) === undefined || tapadoPorElProyecto(paneles.siteOf(p.id)), "pt-8": llevaTiraInterior(paneles.siteOf(p.id)) }}
-              style={celdaDe(p.id)}
-            >
-              <Suspense fallback={null}><Screen open={() => openMachineScreen(p.machine)} /></Suspense>
-            </div>
-          );
-        }}
-      </For>
-
-      </Paneles>
-
-    </section>
-  );
+  const { Conversacion } = createConversacion({ CeldasDeContenido, CeldasDeTareas, activarPestana, altosEnPantalla, anchosEnPantalla, arrastrarPestana, botonDeNuevaPestana, cerrarBorrador, cerrarPestana, cerrarPestanas, enBorrador, filaDe, filasEnPantalla, mandarVentana, marcaDe, nombreDeSeparar, paneles, partirVentana, permissions, pestanaDelanteEn, pestanas, pestanasDe, preguntadas, puedeSepararseDe, reabrirPestana, reservaDerechaDeTiras, reservaIzquierdaDeTiras, ventanas, vivas, vueltaDelBorrador, get cabeceraDeConversacion() { return cabeceraDeConversacion; }, set cabeceraDeConversacion(v) { cabeceraDeConversacion = v; }, get controlesDerechos() { return controlesDerechos; }, set controlesDerechos(v) { controlesDerechos = v; }, get controlesIzquierdos() { return controlesIzquierdos; }, set controlesIzquierdos(v) { controlesIzquierdos = v; } });
 
   const { proyectosDelRiel, sesionesDelRiel, opcionesDeMover } = createRailSessions({ activeSpace, escritorio, multipleSpaces, permissions, projectList, remoteChildScope, sesiones, sesionesConEstado, spaces, vivas, });
 
