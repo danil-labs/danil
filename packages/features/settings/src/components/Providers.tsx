@@ -1,4 +1,4 @@
-import { For, Match, Show, Suspense, Switch, createEffect, createSignal, lazy, on, onCleanup, onMount } from "solid-js";
+import { For, Match, Show, Suspense, Switch, createEffect, createSignal, lazy, on, onCleanup, onMount, type JSX } from "solid-js";
 import { checkEnvironment } from "../queries/engine-environment";
 import { attachRepo, cancelBrowserLogin, checkGitHost, connectGitHost, disconnectGitHost, finishBrowserLogin, gitHostAreas, gitHostAvailableAreas, gitHostProjects, installGh, selectGitHostArea, startBrowserLogin } from "../queries/engine-git";
 import { openExternal } from "../queries/engine-open";
@@ -25,8 +25,6 @@ import type { GithubAccountState } from "./GithubAccount";
 import { ExternalLink } from "../../../../ui/src/ExternalLink";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
 
-// La tarjeta de Drive es la del alta; su chunk solo lo carga quien abre Fuentes.
-const Integraciones = lazy(() => import("../../../onboarding/src/components/ToolCards").then((m) => ({ default: m.Integraciones })));
 // GitHub de la cuenta de Danil: con sesión, su tarjeta reemplaza la local.
 const GithubAccount = lazy(() => import("./GithubAccount"));
 const CredentialsInUse = lazy(() => import("./AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));
@@ -131,7 +129,12 @@ const rankOf = (id: string) => (ORDER.includes(id) ? ORDER.indexOf(id) : ORDER.l
  * `solo` limita el catálogo a uno o varios proveedores. Configuración los
  * compone por sección sin volver a hacer de cada uno un destino del riel.
  */
-export default function Providers(props: { solo?: string | string[] }) {
+export type ProvidersProps = {
+  solo?: string | string[];
+  integraciones?: (p: { solo: string[]; onCambio: () => void }) => JSX.Element;
+};
+
+export default function Providers(props: ProvidersProps) {
   const [generation, setGeneration] = createSignal(1);
   onMount(() => {
     const changed = () => setGeneration((n) => n + 1);
@@ -140,12 +143,12 @@ export default function Providers(props: { solo?: string | string[] }) {
   });
   return (
     <Show when={generation()} keyed>
-      {(_generation) => <WorkspaceProviders solo={props.solo} />}
+      {(_generation) => <WorkspaceProviders solo={props.solo} integraciones={props.integraciones} />}
     </Show>
   );
 }
 
-function WorkspaceProviders(props: { solo?: string | string[] }) {
+function WorkspaceProviders(props: ProvidersProps) {
   const startup = listWorkspaces<Startup>();
   // En la web sin workspace abierto, la cuenta se resuelve por el primero de la lista.
   const scope = startup.then((s) => s.active ?? (capabilities().nativeWindow ? null : s.workspaces[0]?.id) ?? "pending");
@@ -1192,23 +1195,27 @@ function WorkspaceProviders(props: { solo?: string | string[] }) {
               );
             }}
           </For>
-          <Show when={!props.solo}>
-            <SettingsSection title={t("onboarding.tools.drive")} description={t("onboarding.tools.about.drive")}>
-              <div class="mt-3">
-                <Suspense fallback={null}>
-                  <Integraciones solo={["drive"]} onCambio={() => {}} />
-                </Suspense>
-              </div>
-            </SettingsSection>
-            <SettingsSection title={t("onboarding.tools.references.group")} description={t("onboarding.tools.references.about")}>
-              <div class="mt-3">
-                <Suspense fallback={null}>
-                  <Integraciones solo={["zotero"]} onCambio={() => {}} />
-                  <LocalKeysBanner kinds={["zotero"]} />
-                  <CredentialsInUse kinds={["zotero"]} title={t("danil.credentials.zotero_title")} />
-                </Suspense>
-              </div>
-            </SettingsSection>
+          <Show when={!props.solo && props.integraciones}>
+            {(Integraciones) => (
+              <>
+                <SettingsSection title={t("onboarding.tools.drive")} description={t("onboarding.tools.about.drive")}>
+                  <div class="mt-3">
+                    <Suspense fallback={null}>
+                      {Integraciones()({ solo: ["drive"], onCambio: () => {} })}
+                    </Suspense>
+                  </div>
+                </SettingsSection>
+                <SettingsSection title={t("onboarding.tools.references.group")} description={t("onboarding.tools.references.about")}>
+                  <div class="mt-3">
+                    <Suspense fallback={null}>
+                      {Integraciones()({ solo: ["zotero"], onCambio: () => {} })}
+                      <LocalKeysBanner kinds={["zotero"]} />
+                      <CredentialsInUse kinds={["zotero"]} title={t("danil.credentials.zotero_title")} />
+                    </Suspense>
+                  </div>
+                </SettingsSection>
+              </>
+            )}
           </Show>
         </SettingsPanel>
       </Show>

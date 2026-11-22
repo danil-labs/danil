@@ -1,6 +1,6 @@
-import { type Component, type ComponentProps, type ParentProps, Show } from "solid-js";
+import { type Component, type ComponentProps, type JSX, type ParentProps, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import type { HandoffPresentation } from "../../../../conversation-handoff/src";
+import type { HandoffPresentation } from "../../../../../ui/src/lib/handoff.ts";
 import { t } from "../../../../../../apps/desktop/src/lib/i18n";
 import Adjuntos from "../Attachments";
 
@@ -20,13 +20,14 @@ export function PendingHandoff(props: {
   showStatus?: boolean;
   miniatura: ComponentProps<typeof Adjuntos>["miniatura"];
   preview?: ComponentProps<typeof Adjuntos>["preview"];
+  renderPdf: (props: { base64: string; name: string }) => JSX.Element;
 }) {
   const pending = () => props.handoff?.phase === "waiting-close" ? props.handoff.pendingMessage : null;
   const visible = () => props.handoff && (props.handoff.phase === "waiting-close" || props.showStatus !== false) ? props.handoff : null;
   return <Show when={visible()}>{handoff => <section class="col-start-1 min-w-0" data-chat-handoff={handoff().phase}>
     <Show when={pending()}>{message => <div class={props.userClass} data-pending-handoff-input="">
       <Dynamic component={props.bubble}>
-        <Show when={message().attachments}>{attachments => <Adjuntos rels={Array.from(attachments())} miniatura={props.miniatura} preview={props.preview} />}</Show>
+        <Show when={message().attachments}>{attachments => <Adjuntos rels={Array.from(attachments())} miniatura={props.miniatura} preview={props.preview} renderPdf={props.renderPdf} />}</Show>
         <p class="m-0 leading-[1.5] break-words whitespace-pre-wrap">{message().text}</p>
       </Dynamic>
     </div>}</Show>

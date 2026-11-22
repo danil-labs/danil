@@ -7,6 +7,7 @@ import ImagePlus from "lucide-solid/icons/image-plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createEffect, createMemo, createSignal, on, onCleanup, Show } from "solid-js";
 import SelectorDeModelo from "../../../chat/src/components/ModelPicker";
+import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { AgentProfile as Profile, HandlerDefinition, HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
 import { type CatalogosDeModelos, type OpcionDeModelo, opcionesDeModelos } from "../../../../../apps/desktop/src/lib/models";
@@ -47,6 +48,7 @@ export default function AgentProfile(props: {
    *  que la caja de escritura. */
   superficies: Superficie[];
   catalogos: CatalogosDeModelos;
+  createFreeRouterConsent: CreateFreeRouterConsent;
   /** Con qué CLI corrió su chat la última vez. `null` si nunca arrancó:
    *  ahí no hay hilo que perder al elegir un proveedor distinto. */
   currentAgent: string | null;
@@ -339,6 +341,7 @@ export default function AgentProfile(props: {
             <span class={LABEL}>{t("projects.agents.profile_model")}</span>
             <div class="flex items-center gap-2">
               <SelectorDeModelo
+                createFreeRouterConsent={props.createFreeRouterConsent}
                 models={opciones()}
                 superficie={superficieElegida()}
                 model={modelChoice() ?? ""}

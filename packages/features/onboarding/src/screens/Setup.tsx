@@ -16,8 +16,6 @@ import {
 } from "solid-js";
 import { connected } from "../../../../../apps/desktop/src/lib/engineConnection";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { checkEnvironment, installTool, prepareRuntime, restartApp, servicePoll, setupRequired } from "../queries/engine-environment";
-import { listWorkspaces } from "../queries/engine-workspaces";
 import { anotarFalta, SIN_ESPACIO, textoSinEspacio } from "../../../../../apps/desktop/src/lib/no-space";
 import { capabilities } from "../../../../host/src/platform";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
@@ -26,14 +24,31 @@ import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote, prosaDe } from "../../../../ui/src/Failure";
 import { Toast, ToastPortal } from "../../../../ui/src/Toast";
-import { esIncluida, fallasIncluidas, funcion } from "../../../onboarding/src/model/bundled";
-import type { Conexiones } from "../../../onboarding/src/queries/connect-store";
-import { accountWelcomeAnswered, offerAccountWelcome } from "../../../onboarding/src/model/account-welcome";
-import { entrarAlWorkspaceFree } from "../../../onboarding/src/queries/onboarding-store";
-import { CabeceraDelAlta } from "../../../onboarding/src/components/Phases";
-import type { EstadoDeEtapa, Instalacion } from "../../../onboarding/src/components/Prepare";
-import { Escenario, QUIETO, TituloCambiante } from "../../../onboarding/src/components/Stage";
-import type { EnvReport } from "../model/environment-store";
+import { esIncluida, fallasIncluidas, funcion } from "../model/bundled";
+import type { Conexiones } from "../queries/connect-store";
+import { accountWelcomeAnswered, offerAccountWelcome } from "../model/account-welcome";
+import { entrarAlWorkspaceFree } from "../queries/onboarding-store";
+import { CabeceraDelAlta } from "../components/Phases";
+import type { EstadoDeEtapa, Instalacion } from "../components/Prepare";
+import { Escenario, QUIETO, TituloCambiante } from "../components/Stage";
+import type { EnvReport } from "../../../../ui/src/lib/bundled";
+
+export type SetupProps = {
+  children: JSX.Element;
+  checkEnvironment: <res = unknown>(args?: { force?: boolean }) => Promise<res>;
+  installTool: <res = unknown>(args?: { tool: string }) => Promise<res>;
+  prepareRuntime: <res = unknown>(args?: { joinOnly?: boolean }) => Promise<res>;
+  restartApp: <res = unknown>() => Promise<res>;
+  servicePoll: <res = unknown>(args?: {
+    cursor: number | null;
+    workspace: null;
+    runtime: string | null;
+    replay: boolean;
+    setup: boolean;
+  }) => Promise<res>;
+  setupRequired: <res = unknown>() => Promise<res>;
+  listWorkspaces: <res = unknown>() => Promise<res>;
+};
 
 /**
  * La preparación del runtime, por etapas y a la vista, y en la primera vez el
@@ -61,13 +76,13 @@ const RITMO_CONSEJOS = 5000;
 const RITMO_FOTO = 5000;
 
 // Conectar la IA y personalizar solo se cargan en el primer arranque: la carga inicial está en su techo.
-const MapaDeConexiones = lazy(() => import("../../../onboarding/src/components/ConnectAI").then((m) => ({ default: m.MapaDeConexiones })));
-const PanelDeIA = lazy(() => import("../../../onboarding/src/components/ConnectAI").then((m) => ({ default: m.PanelDeIA })));
-const Comprobacion = lazy(() => import("../../../onboarding/src/components/ConnectAI").then((m) => ({ default: m.Comprobacion })));
-const Personalizar = lazy(() => import("../../../onboarding/src/screens/Personalize"));
-const PreparationProgress = lazy(() => import("../../../onboarding/src/components/Prepare").then((m) => ({ default: m.PreparationProgress })));
-const FuncionesAfectadas = lazy(() => import("../../../onboarding/src/components/Repair").then((m) => ({ default: m.FuncionesAfectadas })));
-const ConectarCuenta = lazy(() => import("../../../onboarding/src/screens/ConnectAccount"));
+const MapaDeConexiones = lazy(() => import("../components/ConnectAI").then((m) => ({ default: m.MapaDeConexiones })));
+const PanelDeIA = lazy(() => import("../components/ConnectAI").then((m) => ({ default: m.PanelDeIA })));
+const Comprobacion = lazy(() => import("../components/ConnectAI").then((m) => ({ default: m.Comprobacion })));
+const Personalizar = lazy(() => import("./Personalize"));
+const PreparationProgress = lazy(() => import("../components/Prepare").then((m) => ({ default: m.PreparationProgress })));
+const FuncionesAfectadas = lazy(() => import("../components/Repair").then((m) => ({ default: m.FuncionesAfectadas })));
+const ConectarCuenta = lazy(() => import("./ConnectAccount"));
 
 /** El hueco de una tarjeta mientras llega su trozo: mismo borde, sin contenido. */
 function TarjetaVacia() {
@@ -101,7 +116,7 @@ function Esqueleto(props: { preparando: boolean }) {
   );
 }
 
-export default function Setup(props: { children: JSX.Element }) {
+export default function Setup(props: SetupProps) {
   // En el navegador no hay instalador: cada máquina de la cuenta llega preparada y la app abre sin esperarla.
   if (!capabilities().localSetup) return props.children;
   const conFoto = hasShellCache();
@@ -214,7 +229,7 @@ export default function Setup(props: { children: JSX.Element }) {
   async function readSetupEvents() {
     if (streamClosed || seguir() || mostrar() === false) return;
     try {
-      const page = await servicePoll<{ cursor: number | null; runtime: string; reset?: boolean }>({
+      const page = await props.servicePoll<{ cursor: number | null; runtime: string; reset?: boolean }>({
         cursor: streamCursor, workspace: null, runtime: streamRuntime, replay: false, setup: true,
       });
       streamCursor = page.cursor;
@@ -250,7 +265,7 @@ export default function Setup(props: { children: JSX.Element }) {
   async function consultar(joinOnly = true) {
     let corrida: Preparacion | null = null;
     try {
-      corrida = await prepareRuntime<Preparacion | null>({ joinOnly });
+      corrida = await props.prepareRuntime<Preparacion | null>({ joinOnly });
     } catch (e) {
       // Sin parar de preguntar: un servicio que vuelve retoma la corrida y borra el aviso.
       setFalloDelServicio(prosaDe(e));
@@ -266,7 +281,7 @@ export default function Setup(props: { children: JSX.Element }) {
     try {
       // Instalar ya tiró el reporte (`env::olvidar`), y lo instalado estrena
       // archivo: la huella no acierta y se vuelve a sondear solo eso.
-      const r = await checkEnvironment<EnvReport>({ force: false });
+      const r = await props.checkEnvironment<EnvReport>({ force: false });
       setReporte(r);
       setBloqueado(r?.blocked === true);
     } catch {
@@ -283,7 +298,7 @@ export default function Setup(props: { children: JSX.Element }) {
   );
 
   function contarEspacios() {
-    listWorkspaces<{ workspaces: { id: string; name: string }[]; active: string | null }>()
+    props.listWorkspaces<{ workspaces: { id: string; name: string }[]; active: string | null }>()
       .then((s) => {
         setHayEspacio(s.workspaces.length > 0);
         const activo = s.workspaces.find((w) => w.id === s.active);
@@ -306,11 +321,11 @@ export default function Setup(props: { children: JSX.Element }) {
     const optimista = mostrar() === null && !connected() && conFoto;
     if (optimista) setMostrar(false);
     // A la vez: el reporte no depende de si hace falta la preparación.
-    const reporteEnCurso = checkEnvironment<EnvReport>({ force: false });
+    const reporteEnCurso = props.checkEnvironment<EnvReport>({ force: false });
     reporteEnCurso.catch(() => {});
     let primera = false;
     try {
-      primera = await setupRequired<boolean>();
+      primera = await props.setupRequired<boolean>();
     } catch (e) {
       setFallo(prosaDe(e));
       if (!optimista) setMostrar(true);
@@ -406,12 +421,12 @@ export default function Setup(props: { children: JSX.Element }) {
     setReparando(true);
     setFalloDeReparar(null);
     try {
-      await installTool({ tool: "bundled-work-tools" });
+      await props.installTool({ tool: "bundled-work-tools" });
     } catch (e) {
       setFalloDeReparar({ ...asFailure(e), what: t("setup.functions.repair_failed") });
     }
     try {
-      const r = await checkEnvironment<EnvReport>({ force: true });
+      const r = await props.checkEnvironment<EnvReport>({ force: true });
       setReporte(r);
       setBloqueado(r?.blocked === true);
       if (etapas().some((s) => s.state === "failed")) await preparar();
@@ -432,7 +447,7 @@ export default function Setup(props: { children: JSX.Element }) {
     preparadas ??= (async () => {
       if (!workspace()) setWorkspace(await entrarAlWorkspaceFree());
       if (!conexiones()) {
-        const [{ crearConexiones }] = await Promise.all([import("../../../onboarding/src/queries/connect-store"), import("../../../onboarding/src/components/ConnectAI")]);
+        const [{ crearConexiones }] = await Promise.all([import("../queries/connect-store"), import("../components/ConnectAI")]);
         runWithOwner(dueño, () => setConexiones(crearConexiones()));
       }
       await conexiones()?.cargar();
@@ -496,7 +511,7 @@ export default function Setup(props: { children: JSX.Element }) {
             reparando={reparando()}
             error={falloDeReparar()}
             onReparar={() => void reparar()}
-            onReiniciar={() => void restartApp()}
+            onReiniciar={() => void props.restartApp()}
           />
           </Suspense>
         </div>

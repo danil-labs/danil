@@ -13,6 +13,7 @@ import { rememberRoster } from "../../../../../apps/desktop/src/lib/handlerRoste
 import { createCopied } from "../../../../host/src/clipboard";
 import { machineAction } from "../../../../host/src/machine-action";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import {
   listSourceBranches,
   setSourceBranch,
@@ -232,6 +233,7 @@ export default function VistaDeProyecto(props: {
   /** Lo que se ofrece como modelo por defecto al crear un agente. */
   modelos: ModelChoices;
   material: (entrada: { onCancelar: () => void; onListo: (source: string) => Promise<void> | void }) => JSX.Element;
+  createFreeRouterConsent: CreateFreeRouterConsent;
 }) {
   // Abrir el proyecto es una acción de la persona: su VM se enciende si está apagada.
   machineAction();
@@ -460,6 +462,7 @@ export default function VistaDeProyecto(props: {
                   onAbrir={setCreando}
                   project={props.proyecto.id}
                   modelos={props.modelos}
+                  createFreeRouterConsent={props.createFreeRouterConsent}
                   onCreado={releerEncargados}
                 />
               </LazyPart>

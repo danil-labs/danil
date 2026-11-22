@@ -1,14 +1,11 @@
-import { createResource, createSignal, Show, For, Suspense, lazy } from "solid-js";
+import { createResource, createSignal, Show, For, Suspense, type JSX } from "solid-js";
 import { openExternal } from "../queries";
 import X from "lucide-solid/icons/x";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import FileText from "lucide-solid/icons/file-text";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { extensionDe, nombreDe } from "../../../../../apps/desktop/src/lib/steps";
-import type { Preview } from "../../../artifacts/src/components/Preview";
-
-/** Baja al abrirse: `pdfjs-dist` no entra en el arranque de la ventana. */
-const PdfDocument = lazy(() => import("../../../viewers/src/screens/Pdf"));
+import type { Preview } from "../../../../ui/src/lib/preview.ts";
 
 export default function Adjuntos(props: {
   /** Las rutas del archivo, tal como las guarda el turno. */
@@ -22,13 +19,14 @@ export default function Adjuntos(props: {
   miniatura: (rel: string) => Promise<string | null>;
   /** El archivo entero, para pintar un PDF o un texto sin salir de la ventana. */
   preview?: (rel: string) => Promise<Preview | null>;
+  renderPdf: (props: { base64: string; name: string }) => JSX.Element;
 }) {
   return (
     <div class="mb-2 flex gap-2 overflow-x-auto overflow-y-hidden pb-1" onWheel={rodarEnHorizontal}>
       <For each={props.rels}>
         {(rel) => (
           <div class="shrink-0">
-            <Adjunto rel={rel} miniatura={props.miniatura} preview={props.preview} />
+            <Adjunto rel={rel} miniatura={props.miniatura} preview={props.preview} renderPdf={props.renderPdf} />
           </div>
         )}
       </For>
@@ -47,6 +45,7 @@ export function Adjunto(props: {
   rel: string;
   miniatura: (rel: string) => Promise<string | null>;
   preview?: (rel: string) => Promise<Preview | null>;
+  renderPdf: (props: { base64: string; name: string }) => JSX.Element;
 }) {
   // Una ruta desaparecida no debe impedir que se lea la conversación.
   const [imagen] = createResource(
@@ -144,7 +143,7 @@ export function Adjunto(props: {
               {(data) => (
                 <div class="min-h-0 flex-1 rounded-md border border-border bg-surface-muted">
                   <Suspense fallback={null}>
-                    <PdfDocument base64={data()} name={props.rel} />
+                    {props.renderPdf({ base64: data(), name: props.rel })}
                   </Suspense>
                 </div>
               )}
