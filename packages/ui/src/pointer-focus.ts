@@ -16,7 +16,7 @@ if (typeof document !== "undefined") {
 const TABBABLE = 'input:not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
 const TYPES = /^(INPUT|TEXTAREA|SELECT)$/;
 
-export function pointerOpenFocus(e: Event) {
+function pointerOpenFocus(e: Event) {
   const panel = e.currentTarget as HTMLElement | null;
   if (!pointer || e.defaultPrevented || !panel) return;
   const first = panel.querySelector<HTMLElement>(TABBABLE);

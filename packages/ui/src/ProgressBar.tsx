@@ -9,7 +9,7 @@ import { cn } from "../../../apps/desktop/src/lib/utils";
  * nada.
  */
 
-export type ProgressSegment = {
+type ProgressSegment = {
   /** Cuánto cubre este tramo, en las mismas unidades que `max`. */
   value: number;
   /** Utility de relleno respaldada por token (`bg-warning`, `bg-error`…). */

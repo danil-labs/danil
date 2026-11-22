@@ -75,7 +75,7 @@ export type RazonDeRetencion = "pregunta" | "motor" | "manual" | "terminal";
  * lo que se escribió durante su primer turno, que aún no tiene id porque lo
  * reparte Rust al crear la sesión. `enviar` le pone dueño en cuanto vuelve.
  */
-export function esDeLaTareaAbierta(de: string | null, mirando: string | null): boolean {
+function esDeLaTareaAbierta(de: string | null, mirando: string | null): boolean {
   return de === mirando;
 }
 

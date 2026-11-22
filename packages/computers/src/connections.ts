@@ -26,16 +26,6 @@ export type Connection = {
   usage: { day: string; tasks_created: number };
 };
 
-export type AuditEntry = {
-  at: number;
-  connection: string;
-  tool: string;
-  computer_id: string | null;
-  request_id: string | null;
-  outcome: "ok" | "error";
-  code: string | null;
-};
-
 export type ConnectionPatch = {
   state?: "active" | "paused";
   permission_mode?: string | null;
@@ -104,16 +94,6 @@ export function updateConnection(
 
 export function revokeConnection(endpoint: string, token: string, id: string, f: Fetch = globalFetch): Promise<Answer<null>> {
   return request(apiUrl(endpoint, `/v1/connections/${encodeURIComponent(id)}`), token, "DELETE", () => null, f);
-}
-
-export function connectionAudit(endpoint: string, token: string, id: string, f: Fetch = globalFetch): Promise<Answer<AuditEntry[]>> {
-  return request(
-    apiUrl(endpoint, `/v1/connections/${encodeURIComponent(id)}/audit`),
-    token,
-    "GET",
-    (body) => (Array.isArray(body) ? (body as AuditEntry[]) : []),
-    f,
-  );
 }
 
 export type ConnectionCapabilities = {

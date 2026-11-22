@@ -5,14 +5,16 @@
  *
  * - Lista, estado, `start` (202 con operación y su sondeo) y ticket del canal de datos.
  * - Un 404 o un 501 de la colección es `unavailable`: el servidor aún no la tiene y quien
- *   llama reintenta solo (`retryUnavailable`). Un 404 de una máquina es `missing`.
+ *   llama reintenta solo. Un 404 de una máquina es `missing`.
  * - El canal de datos va por `wss://` con el subprotocolo `ticket.*`, nunca `bearer.*`.
  *
  * Sin APIs del DOM: `fetch`, el reloj y la espera se inyectan.
  */
-import { type Answer, type Computer, type Fetch, apiUrl, errorCodeOf, globalFetch } from "../../computers/src/api.ts";
+import { type Computer, apiUrl, errorCodeOf, globalFetch } from "../../computers/src/api.ts";
 import { requestId } from "../../computers/src/relay.ts";
 import type { MachineState } from "../../computers/src/machine.ts";
+import type { Machine, MachineList, MachineTicket, Operation } from "./generated/types.ts";
+import type { Admission, MachinesAnswer, MachinesConfig, MachinesResponse } from "./machines-config.ts";
 
 /** El catálogo de capacidades del borde: Desk compilado lo lee para no recompilarse cuando cambia el servidor. */
 export const CAPABILITIES_PATH = "/v1/capabilities";
@@ -20,52 +22,8 @@ export const CAPABILITIES_PATH = "/v1/capabilities";
 /** La URL de capacidades bajo un endpoint del borde que ya termina en `/v1`. */
 export const capabilitiesUrl = (endpoint: string) => `${endpoint}/capabilities`;
 
-/** Una fila de `GET /v1/machines`. Todo salvo `machine_id` y `state` es opcional: el contrato crece sin recompilar. */
-export type Machine = {
-  machine_id: string;
-  name?: string | null;
-  /** `MachineState` de `machine-provisioning`; un enum abierto. */
-  state: string;
-  /** `connected | disconnected`: si el motor de la máquina es alcanzable. */
-  connection?: string | null;
-  organization_id?: string | null;
-  person_id?: string | null;
-  /** `organization | personal`, enum abierto; ausente o desconocido = `organization`. Una `personal` es la Mac o PC propia de la persona. */
-  kind?: string | null;
-};
-
-export type MachineOperation = { operation_id: string; kind?: string; status: string; created_at?: string; error?: { code?: string } | null };
-
-/** Lo que entrega un ticket: la URL ya validada y el ticket de un solo uso. */
-export type Admission = { url: string; ticket: string; protocol?: string; expires_at?: string; session_expires_at?: string | null };
-
-/** `Answer` más «el servidor aún no tiene esta ruta» (404 o 501 de una colección). */
-export type MachinesAnswer<T> = (Answer<T> | { kind: "unavailable"; status: number }) & { retryAfter?: string };
-export type MachinesTransport = {
-  call(path: string, init?: RequestInit): Promise<Response>;
-  mutation(path: string, init?: RequestInit): Promise<Response>;
-};
-type MachinesResponse = Awaited<ReturnType<Fetch>> & { headers?: Pick<Headers, "get"> };
-type MachinesFetch = (url: string, init?: Parameters<Fetch>[1]) => Promise<MachinesResponse>;
-
-export type MachinesConfig = {
-  /** El borde con su versión: `https://edge.danil.ai/v1`. */
-  endpoint: string;
-  /**
-   * El portador de la sesión, solo donde el token vive en JS. Sin él no se manda `Authorization`:
-   * Desk autentica en Rust (`danil_edge_fetch`) y la web usa su cookie (`transport`).
-   */
-  getToken?: () => Promise<string>;
-  fetch?: MachinesFetch;
-  /** La web inyecta el transporte con cookie y CSRF; con él nunca se pide un Bearer. */
-  transport?: MachinesTransport;
-  /** Orígenes exactos del relay que pueden recibir el ticket (`RELAY_ORIGIN`); sin lista, los del borde de producción. */
-  relayOrigins?: readonly string[];
-  now?: () => number;
-  sleep?: (ms: number) => Promise<void>;
-  /** Cuánto se espera a que termine una operación de encendido. */
-  operationTimeoutMs?: number;
-};
+/** Las respuestas del dominio salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7). */
+export type { Machine, MachineList, MachineTicket, Operation } from "./generated/types.ts";
 
 /**
  * Los relays que sirven a `edge.danil.ai`, por origen exacto (machine-session.v1, Apertura §2): el puente de
@@ -73,7 +31,7 @@ export type MachinesConfig = {
  * un relay con otro nombre se añade aquí. Nunca un comodín: otro subdominio de Danil no recibe el ticket.
  */
 export const DEFAULT_RELAY_ORIGINS: readonly string[] = ["wss://machines-session.danil.ai", "wss://connect.danil.ai"];
-export const OPERATION_TIMEOUT_MS = 330_000;
+const OPERATION_TIMEOUT_MS = 330_000;
 const POLL_FIRST_MS = 500;
 const POLL_MAX_MS = 4_000;
 const TERMINAL = new Set(["succeeded", "failed", "cancelled"]);
@@ -94,15 +52,17 @@ const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(r
  */
 export function machineToComputer(m: Machine): Computer & { state: MachineState } {
   const connected = m.connection === "connected";
+  // El contrato cierra `state` en cuatro valores; `reserved` llega igual (hallazgo para danil-contracts) y uno desconocido degrada.
+  const raw: string | undefined = m.state as string | undefined;
   const state =
-    m.state === "running" ? (connected ? "online" : "offline")
-    : m.state === "reserved" ? "provisioning"
-    : m.state === "starting" ? "starting"
-    : m.state === "stopped" || m.state === "stopping" ? "stopped"
+    raw === "running" ? (connected ? "online" : "offline")
+    : raw === "reserved" ? "provisioning"
+    : raw === "starting" ? "starting"
+    : raw === "stopped" || raw === "stopping" ? "stopped"
     : "unknown";
   // `wakeable` es «VM administrada», no «apagada ahora»: se apaga sola sin que la lista lo sepa. Una personal no se enciende desde la nube.
   return {
-    computer_id: m.machine_id, name: m.name ?? null, state, wakeable: POWER_STATES.has(m.state) && m.kind !== "personal", provider: null,
+    computer_id: m.machine_id, name: m.name ?? null, state, wakeable: POWER_STATES.has(raw ?? "") && m.kind !== "personal", provider: null,
     ...(typeof m.kind === "string" ? { kind: m.kind } : {}),
     ...(typeof m.organization_id === "string" && m.organization_id ? { organization_id: m.organization_id } : {}),
   };
@@ -111,19 +71,22 @@ export function machineToComputer(m: Machine): Computer & { state: MachineState 
 function machineOf(raw: unknown): Machine | null {
   const r = raw as Record<string, unknown> | null;
   if (!r || typeof r.machine_id !== "string" || !r.machine_id || typeof r.state !== "string") return null;
-  return r as unknown as Machine;
+  return r as Machine;
 }
 
-function operationOf(raw: unknown): MachineOperation | null {
-  const r = (raw as { operation?: unknown } | null)?.operation as Record<string, unknown> | null | undefined;
+/** La operación del contrato y su estado ya normalizado (`status` no está en el contrato: hallazgo para danil-contracts). */
+type Polled = { operation: Operation; status: string };
+
+function operationOf(raw: unknown): Polled | null {
+  const r = (raw as { operation?: unknown } | null)?.operation as Operation | null | undefined;
   if (!r || typeof r.operation_id !== "string" || !r.operation_id) return null;
   // Un estado que no conocemos se trata como `pending`, nunca como terminado.
   const status = typeof r.status === "string" && (TERMINAL.has(r.status) || r.status === "running") ? r.status : "pending";
-  return { ...(r as unknown as MachineOperation), status };
+  return { operation: r, status };
 }
 
 /** El ticket exige wss, origen configurado exacto y la ruta de su máquina, sin credenciales ni query. */
-export function admissionUrl(raw: unknown, machineId: string, origins: readonly string[]): string | null {
+function admissionUrl(raw: unknown, machineId: string, origins: readonly string[]): string | null {
   if (typeof raw !== "string") return null;
   let url: URL;
   try {
@@ -216,7 +179,7 @@ export function machinesClient(config: MachinesConfig) {
       let cursor: string | null = null;
       do {
         const answer: MachinesAnswer<{ items: Machine[]; next: string | null }> = await call(true, "GET", `/machines${cursor ? `?cursor=${cursorParam(cursor)}` : ""}`, body => {
-          const page = body as { items?: unknown; next_cursor?: unknown } | null;
+          const page = body as MachineList | null;
           if (!Array.isArray(page?.items) || (page.next_cursor != null && typeof page.next_cursor !== "string")) throw new Error("invalid_machines");
           const rows = page.items.map(machineOf);
           if (rows.some(row => !row)) throw new Error("invalid_machine");
@@ -264,7 +227,7 @@ export function machinesClient(config: MachinesConfig) {
         if (next.kind === "ok") operation = next.value;
         else if (next.status !== null && next.status < 500 && next.status !== 429) return next;
       }
-      if (operation.status !== "succeeded") return { kind: "error", status: null, code: operation.error?.code ?? `operation_${operation.status}` };
+      if (operation.status !== "succeeded") return { kind: "error", status: null, code: operation.operation.error?.code ?? `operation_${operation.status}` };
       return call(false, "GET", idPath(id), readMachine);
     },
 
@@ -293,7 +256,7 @@ export function machinesClient(config: MachinesConfig) {
         "POST",
         `${idPath(id)}/tickets`,
         (body) => {
-          const b = body as { ticket?: unknown; url?: unknown; protocol?: unknown; expires_at?: unknown; session_expires_at?: unknown } | null;
+          const b = body as MachineTicket | null;
           if (typeof b?.ticket !== "string" || !b.ticket) throw new Error("invalid_admission");
           return { ticket: b.ticket, url: b.url, session_expires_at: typeof b.session_expires_at === "string" ? b.session_expires_at : null,
             ...(typeof b.protocol === "string" ? { protocol: b.protocol } : {}), ...(typeof b.expires_at === "string" ? { expires_at: b.expires_at } : {}) };
@@ -307,19 +270,6 @@ export function machinesClient(config: MachinesConfig) {
         ...(issued.value.protocol ? { protocol: issued.value.protocol } : {}), ...(issued.value.expires_at ? { expires_at: issued.value.expires_at } : {}) } };
     },
   };
-}
-
-/** Reintenta una lectura que contestó `unavailable` (el servidor aún no la tiene), con espera creciente, hasta que `stop()` o una respuesta distinta. */
-export async function retryUnavailable<T>(read: () => Promise<MachinesAnswer<T>>, opts: { sleep?: (ms: number) => Promise<void>; stop?: () => boolean; first?: number; max?: number; onUnavailable?: () => void } = {}): Promise<MachinesAnswer<T>> {
-  const sleep = opts.sleep ?? defaultSleep;
-  let wait = opts.first ?? 5_000;
-  for (;;) {
-    const answer = await read();
-    if (answer.kind !== "unavailable" || opts.stop?.()) return answer;
-    opts.onUnavailable?.();
-    await sleep(wait);
-    wait = Math.min(wait * 2, opts.max ?? 5 * 60_000);
-  }
 }
 
 /** Lo que la flota entiende de un encendido: encendida, no se pudo, o la nube no la enciende. */

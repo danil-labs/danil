@@ -19,14 +19,14 @@ function fakeLink(options: FakeOptions = {}) {
   const stateListeners = new Set<(s: MachineState) => void>();
   const eventListeners = new Set<(p: EventsPage) => void>();
   const engineListeners = new Set<(e: { contract: string | null; host_version: string | null }) => void>();
-  const blockedListeners = new Set<(b: "license_required" | null) => void>();
-  let stopped: "license_required" | null = null;
+  const blockedListeners = new Set<(b: "license_required" | "machine_stopped" | null) => void>();
+  let stopped: "license_required" | "machine_stopped" | null = null;
   let retries = 0;
   let closed = false;
   const subscribed: (number | null)[] = [];
   const deferredListeners = new Set<(f: DeferredFrame) => void>();
   let queue: DeferredFrame = { actions: [], done: [] };
-  const link: Link & { calls: typeof calls; setState(s: MachineState): void; push(p: EventsPage): void; hello(contract: string): void; block(b: "license_required" | null): void; retries(): number; closed(): boolean; subscribed: typeof subscribed; options: FakeOptions; queueFrame(f: DeferredFrame): void } = {
+  const link: Link & { calls: typeof calls; setState(s: MachineState): void; push(p: EventsPage): void; hello(contract: string): void; block(b: "license_required" | "machine_stopped" | null): void; retries(): number; closed(): boolean; subscribed: typeof subscribed; options: FakeOptions; queueFrame(f: DeferredFrame): void } = {
     calls,
     deferred: () => queue,
     onDeferred(l) {
@@ -529,6 +529,58 @@ test("without a Terminus license a machine keeps its slice with a named state, a
   assert.equal(link("cmp_vm").retries(), 1);
   assert.equal(fleet.license(), null);
   assert.equal((await fleet.read(envelope)).status, "ok");
+});
+
+/** Como el canal con ticket de `/v1/machines`: apagada, el borde contesta `409 machine_stopped` y la sesión se detiene sin encender nada (#883). */
+function stoppedChannel(answers: Record<string, Answer>) {
+  let starts = 0;
+  const online: string[] = [];
+  const { fleet, link } = setup({ cmp_vm: { state: "stopped", answers } }, [VM], {
+    wake: async (machine) => {
+      starts += 1;
+      // Como `POST /start` mientras otro sigue en curso: `409 operation_in_progress`.
+      if (starts > 1) return false;
+      await new Promise((done) => setTimeout(done, 20));
+      setTimeout(() => link(machine).setState("online"), 10);
+      return true;
+    },
+  });
+  link("cmp_vm").block("machine_stopped");
+  const seen = (command: string) => () => (online.push(`${command}:${link("cmp_vm").state()}`), `${command}-ok`);
+  return { fleet, link, seen, online, starts: () => starts };
+}
+
+for (const command of ["send_message", "add_account"]) {
+  test(`${command} to a machine whose ticket said machine_stopped starts it through the control plane first, then delivers it once`, async () => {
+    const m = stoppedChannel({});
+    m.link("cmp_vm").options.answers = { [command]: m.seen(command) };
+    await m.fleet.call({ machine: "cmp_vm", workspace: "w", command, args: { project: "p1", session: null } });
+    assert.equal(m.starts(), 1, "the channel cannot start it: the control plane does, before the call");
+    assert.equal(m.link("cmp_vm").retries(), 1, "once started, the session asks for a new ticket");
+    assert.deepEqual(m.online, [`${command}:online`], "delivered once, already online");
+    assert.equal(m.fleet.power("cmp_vm"), "on");
+  });
+}
+
+test("two intents to a stopped machine share one start and are each delivered once", async () => {
+  const m = stoppedChannel({});
+  m.link("cmp_vm").options.answers = { add_account: m.seen("add_account"), send_message: m.seen("send_message") };
+  await Promise.all([
+    m.fleet.call({ machine: "cmp_vm", workspace: "w", command: "add_account", args: {} }),
+    m.fleet.call({ machine: "cmp_vm", workspace: "w", command: "send_message", args: { project: "p1", session: null } }),
+  ]);
+  assert.equal(m.starts(), 1, "one start per machine while one is in flight");
+  assert.deepEqual(m.online.sort(), ["add_account:online", "send_message:online"]);
+});
+
+test("a read, or what the window asks alone, to a stopped machine starts nothing", async () => {
+  const m = stoppedChannel({ list_live_sessions: [] });
+  await assert.rejects(m.fleet.call({ machine: "cmp_vm", workspace: "w", command: "list_live_sessions", args: { project: "p1" } }), (e: FleetError) => e.code === "machine_stopped");
+  for (const command of PASSIVE) {
+    await assert.rejects(m.fleet.call({ machine: "cmp_vm", workspace: "w", command, args: {} }));
+  }
+  assert.equal(m.starts(), 0);
+  assert.equal(m.link("cmp_vm").calls.length, 0);
 });
 
 test("a space shared with the account keeps its id on every machine; one of a single machine keeps its prefix", async () => {

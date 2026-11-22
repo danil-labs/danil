@@ -1,3 +1,5 @@
+import type { EstadoLocal, MarcaLocal } from "../../../../ui/src/lib/localStatus";
+
 /** Lo que el backend dice de un archivo que cambió. `development::FileChange`. */
 export type Cambio = {
   path: string;
@@ -226,14 +228,7 @@ export function rutasDeCarpetas(nodos: Nodo[]): Set<string> {
 }
 
 export type EstadoGit = { path: string; index: string; worktree: string };
-export type MarcaLocal = "U" | "M" | "A" | "D" | "R" | "C" | "T" | "!";
-export type EstadoLocal = {
-  marca: MarcaLocal;
-  index?: MarcaLocal;
-  worktree?: MarcaLocal;
-  /** Medido contra la carpeta del proyecto, no contra un índice: una copia kn. */
-  kn?: true;
-};
+export type { EstadoLocal, MarcaLocal };
 
 /** Lo que Guardar llevaría a la carpeta del proyecto. `kn::Pendiente`. */
 export type CambioKn = { path: string; kind: string };

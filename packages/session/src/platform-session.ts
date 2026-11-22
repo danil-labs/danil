@@ -35,6 +35,4 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
   };
 }
 
-export { activeGroupCredits } from "../../../apps/desktop/src/web/active-group-credits.ts";
-
 export { contextMachines } from "../../../apps/desktop/src/web/context-machines.ts";

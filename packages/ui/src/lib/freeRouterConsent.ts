@@ -3,7 +3,7 @@ import type { FreeModelPolicy } from "../../../../apps/desktop/src/lib/free-mode
 import type { Frase } from "../../../../apps/desktop/src/lib/prose";
 
 /** Lo que el selector de modelos usa del consentimiento de Router IA gratis. */
-export type FreeRouterConsent = {
+type FreeRouterConsent = {
   cargado: () => boolean;
   texto: () => { policy: { enabled: boolean } } | null;
   aceptado: () => boolean;

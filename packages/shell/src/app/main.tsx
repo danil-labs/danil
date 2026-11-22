@@ -3,6 +3,7 @@
 import "../../../../apps/desktop/src/locales/catalogs";
 import { render } from "solid-js/web";
 import App from "./App";
+import { enchufarProyectos } from "./projectsPorts";
 import { Setup } from "../../../features/onboarding/src";
 import { checkEnvironment, installTool, prepareRuntime, restartApp, servicePoll, setupRequired } from "../../../features/settings/src/queries/engine-environment";
 import { listWorkspaces } from "../../../features/settings/src/queries/engine-workspaces";
@@ -20,6 +21,8 @@ import { mountAfterLanguagePacks } from "../../../../apps/desktop/src/locales/st
 import { capabilities, setCapabilities } from "../../../host/src/platform";
 import { askGuestChannels } from "../../../features/machines/src/queries/guestChannels";
 import "../../../../apps/desktop/src/lib/sharedClock";
+// Antes de montar nada: las pantallas de projects leen machines, code y chat por aquí.
+enchufarProyectos();
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
 void import("../../../../apps/desktop/src/locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
@@ -123,4 +126,4 @@ else void mountAfterLanguagePacks(lenguasDeDisco, montar);
 
 // Las otras computadoras de la cuenta de Danil, en un trozo aparte: sin sesión no instala nada.
 // La web trae su propio transporte (`web/main.tsx`).
-if (capabilities().nativeWindow) void import("../../../features/machines/src/screens/account").then((m) => m.startAccountMachines());
+if (capabilities().nativeWindow) void Promise.all([import("../../../features/machines/src/screens/account"), import("../../../features/settings/src/queries/danil-sessions")]).then(([m, s]) => m.startAccountMachines(s.railSession));

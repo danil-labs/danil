@@ -1,7 +1,7 @@
 import { Index, Show } from "solid-js";
 import { claseDelTramo, type TaskMention, tramosDelMensaje } from "../../../../../apps/desktop/src/lib/taskMentions";
 import { Markdown } from "../../../../ui/src/Markdown";
-import { WithMentions } from "./WithMentions";
+import { WithMentions } from "../../../../ui/src/WithMentions";
 
 type Marcas = {
   taskMentions?: TaskMention[];

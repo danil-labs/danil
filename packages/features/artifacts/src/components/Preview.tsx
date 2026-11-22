@@ -1,4 +1,4 @@
-import { For, Show, Suspense, createEffect, createSignal, lazy, on, onCleanup } from "solid-js";
+import { For, Show, Suspense, createEffect, createSignal, on, onCleanup, type JSX } from "solid-js";
 import { save } from "@tauri-apps/plugin-dialog";
 import { join, tempDir } from "@tauri-apps/api/path";
 import { useFileMachine } from "../../../../ui/src/fileMachine";
@@ -36,11 +36,6 @@ import { peso, nf } from "../../../../../apps/desktop/src/lib/format";
 import { delimiterFor } from "../../../../ui/src/lib/csv";
 import { ArtifactDownloadError, readArtifactDownload } from "../model/download.ts";
 
-/** Bajan al abrirse: `pdfjs-dist` no entra en el arranque de la ventana. */
-const PdfDocument = lazy(() => import("../../../viewers/src/screens/Pdf"));
-const ZoomableImage = lazy(() => import("../../../viewers/src/screens/ImageViewer"));
-const DelimitedTable = lazy(() => import("../../../viewers/src/screens/CsvTable"));
-
 export type { Preview };
 
 /**
@@ -70,6 +65,9 @@ export default function PreviewPane(props: {
       no es trabajo de la sesión, es su insumo. */
   esArtefacto: boolean;
   error: string | null;
+  renderPdf: (props: { base64: string; name: string }) => JSX.Element;
+  renderImage: (props: { src: string; alt: string }) => JSX.Element;
+  renderTable: (props: { text: string; delim: string }) => JSX.Element;
 }) {
   // Lo que falla al preparar una impresión o al abrir una versión no
   // puede quedarse en la consola: desde fuera se ve igual que un botón que no
@@ -644,14 +642,14 @@ export default function PreviewPane(props: {
               <Show when={p().kind === "image" && p().data_url}>
                 {(source) => (
                   <div class="min-h-0 flex-1 rounded-md border border-border bg-surface-muted">
-                    <ZoomableImage src={source()} alt={p().rel} />
+                    {props.renderImage({ src: source(), alt: p().rel })}
                   </div>
                 )}
               </Show>
               <Show when={p().kind === "pdf" && p().pdf}>
                 {(data) => (
                   <div class="min-h-0 flex-1 rounded-md border border-border bg-surface-muted">
-                    <PdfDocument base64={data()} name={p().rel} />
+                    {props.renderPdf({ base64: data(), name: p().rel })}
                   </div>
                 )}
               </Show>
@@ -679,7 +677,7 @@ export default function PreviewPane(props: {
               >
                 {(d) => (
                   <div class="min-h-0 flex-1 overflow-hidden rounded-md border border-border bg-surface-muted">
-                    <DelimitedTable text={mostrado() ?? p().text!} delim={d()} />
+                    {props.renderTable({ text: mostrado() ?? p().text!, delim: d() })}
                   </div>
                 )}
               </Show>

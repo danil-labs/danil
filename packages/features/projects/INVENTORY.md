@@ -54,8 +54,14 @@ Fase 1.3. Cada `.ts`/`.tsx` de la feature (sin `node_modules/` ni `test/`). Los 
 | src/screens/TaskHistory.tsx | TaskWork, createTaskWork, ResumeTask | propio | se queda | Lo monta shell App.tsx:133. engine-client `task_history` y `recreate_task_work`. Importa `machineOf` de machines (línea 1): el enrutado entra como argumento desde shell. |
 | src/screens/TaskStage.tsx | Etapa, ETAPAS, default | propio | se queda | Lo usan Sessions.tsx:41, ProjectView.tsx:48, shell App.tsx:134 y Sidebar.tsx:34. Etapa que pone la persona (`in_progress`, `review`, `done`). Sin invoke. |
 | src/screens/TaskStatus.tsx | taskLabel, stateColor, stateIcon, default | propio | se queda | Lo usan Sessions.tsx:42, Tabs.tsx:32, shell WorkspaceColumn.tsx:10, TaskNotifier.tsx:12 y FolderGroupHeader.tsx:18. Estado que pone la máquina. `@terminus/design` `taskPriority`, `markedState`, `TaskActivity` (paquete viejo, fase 1.9). Sin invoke. |
+| src/model/ports.ts | SelectorDeModeloProps, PuertosDeProyectos, enchufarPuertos, machines, machineName, machineSystem, bringHereLabel, canBringHere, MachineChip, localDe, colorDeMarca, describirEstado, SelectorDeModelo | propio | se queda | Lo que projects usa de machines, code y chat (2.4 p2-4h). Lo enchufa `shell/src/app/projectsPorts.ts` desde `main.tsx` antes de montar; lo leen Sessions, TaskHoverCard, Tabs, AgentProfile y NewAgent con los mismos nombres. Sin invoke. |
+| src/queries/handler-action.ts | handlerAction | propio | se queda | Vino de `settings/queries/engine-consent.ts` con HandlerPolicy (2.4 p2-4h). engine-client `handler_action`. |
+| src/queries/handlerOperations.ts | pendingHandlerOperation, handlerOperationRunning, handlerMutation, resumeHandlerOperation, staleReason | propio | se queda | Vino de settings (2.4 p2-4h). Lo usa HandlerPolicy.tsx:1. Estado local sobre HandlerRequests. Sin invoke. |
+| src/screens/HandlerPolicy.tsx | default, HandlerPolicyActions, HandlerTarget | propio | se queda | Vino de settings (2.4 p2-4h). Lo carga AgentProfile.tsx:25; shell App.tsx importa el tipo `HandlerTarget`. Política del encargado de un agente. |
 
 ## Imports cruzados
+
+2.4 p2-4h: los de chat, settings, code y machines que quedaban (Sessions, Tabs, TaskHoverCard, AgentProfile, NewAgent) ya no existen. `WithMentions` y `GovernedNotice` subieron a `packages/ui`; HandlerPolicy se mudó aquí; lo de machines, code y `ModelPicker` entra por `src/model/ports.ts`, que enchufa el shell.
 
 Cada import de esta feature hacia otra feature, y qué entra en su lugar (fase 2.4). `ui`, `engine-client`, `session`, `host` y `apps/desktop/src/lib` no son features.
 

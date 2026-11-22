@@ -40,8 +40,10 @@ import {
 } from "../../../features/chat/src/model/transcript";
 import { createComposerStore } from "../../../features/composer/src";
 import { createCloneFolder, createDeskStrip, createNewTask, createSpaceOps, createRailSessions, createSessionMutations, createWorkspaceSession } from "../../../features/projects/src";
-import type { HandlerTarget } from "../../../features/settings/src/screens/HandlerPolicy";
+
 import { createThreadsStore } from "../../../features/chat/src/index.ts";
+import type { HandlerTarget } from "../../../features/projects/src/screens/HandlerPolicy";
+
 import { createWorkspaceStore } from "../../../features/workspace/src";
 import { createContextSource } from "../../../features/workspaces/src";
 import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
@@ -78,7 +80,7 @@ const MachinesLicense = lazy(() =>
     ),
   })),
 );
-import { createFreeRouterConsent, folderIcon, renderAvatar, renderPdf } from "./chatSlots";
+import { createFreeRouterConsent, folderIcon, importCarry, renderAvatar, renderImage, renderPdf, renderTable } from "./chatSlots";
 import { launcherOf, taskDescendants } from "@terminus/tasks";
 import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, rememberedRunOn, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../../../features/machines/src/queries/store";
 import { createdTasks } from "../../../features/projects/src/model/agentPageFilters";
@@ -1365,7 +1367,7 @@ export default function App() {
 
   const { enviar, pendientesDe } = createSend({ adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, espacioPara, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, threads, traspasos, workspaceActivo, workspaceContext, get carryModule() { return carryModule; }, get lifecycleRevision() { return lifecycleRevision; }, set lifecycleRevision(v) { lifecycleRevision = v; }, get olvidarPestana() { return olvidarPestana; } });
 
-  const { abrirLlevarCarpeta, abrirTraer, cancelarPregunta, carryModule, despuesDeTraer, esRemota, hojaDeLlevar, mandar, maquinaDeLaVentana, permissionReads, reponerGates, responder, setHojaDeLlevar, traer } = createSendGates({ importCarry: () => import("../../../features/machines/src/queries/carry"), abrirConComando, agent, archivos, attachmentsFor, borrador, busy, claveAbierta, cola, configDeLaSesion, deLaTarea, drafts, effortDelTurno, ejecutarComando, engineCanDispatch, enviar, escritorio, filaDe, input, leerTarea, machineName, machines, model, modo, msgs, nuevaSesion, opcionesDeLaTarea, pendientesDe, preguntarAlMargen, project, projectList, queueBusy, runOn, sessionId, setArchivos, setAviso, setError, setInput, setPermissions, setRunOn, sideCommand, soltarPreguntas, threads, vivas, workspaceActivo, workspaceContext, get encolar() { return encolar; }, get encolarYSoltar() { return encolarYSoltar; }, get gateSeq() { return gateSeq; }, set gateSeq(v) { gateSeq = v; } });
+  const { abrirLlevarCarpeta, abrirTraer, cancelarPregunta, carryModule, despuesDeTraer, esRemota, hojaDeLlevar, mandar, maquinaDeLaVentana, permissionReads, reponerGates, responder, setHojaDeLlevar, traer } = createSendGates({ importCarry, abrirConComando, agent, archivos, attachmentsFor, borrador, busy, claveAbierta, cola, configDeLaSesion, deLaTarea, drafts, effortDelTurno, ejecutarComando, engineCanDispatch, enviar, escritorio, filaDe, input, leerTarea, machineName, machines, model, modo, msgs, nuevaSesion, opcionesDeLaTarea, pendientesDe, preguntarAlMargen, project, projectList, queueBusy, runOn, sessionId, setArchivos, setAviso, setError, setInput, setPermissions, setRunOn, sideCommand, soltarPreguntas, threads, vivas, workspaceActivo, workspaceContext, get encolar() { return encolar; }, get encolarYSoltar() { return encolarYSoltar; }, get gateSeq() { return gateSeq; }, set gateSeq(v) { gateSeq = v; } });
 
   const { detenerYEnviar, editarEncolado, encolar, encolarYSoltar, mandarAhora, mandarTexto, quitarEncolado, reanudarCola, reintentar } = createSendNow({ agent, attachmentsFor, cola, conversationScope, deLaTarea, drafts, effortDelTurno, enFondo, engineCanDispatch, enviar, escritorio, filaDe, handoff, handoffAt, hilos, injecting, mandar, model, modo, msgs, project, queueBusy, resumeQueue, sessionId, setDesdeDeTurno, setError, setInjecting, setSinSteer, sinSteer, taskQueues, threads, workspaceActivo });
 
@@ -2643,7 +2645,7 @@ export default function App() {
                       {(a) => (
                         <Show
                           when={a().codigo}
-                          fallback={<VisorDeArtefacto path={a().path} rel={a().rel} kind={a().kind} session={a().session} />}
+                          fallback={<VisorDeArtefacto path={a().path} rel={a().rel} kind={a().kind} session={a().session} renderPdf={renderPdf} renderImage={renderImage} renderTable={renderTable} />}
                         >
                           <Suspense fallback={null}><VisorDeArchivo visores={visoresDeCodigo}
                             project={a().project}
@@ -2674,7 +2676,7 @@ export default function App() {
           classList={{ hidden: celdaDe(OBSERVABILITY_TAB_ID) === undefined || tapadoPorElProyecto(paneles.siteOf(OBSERVABILITY_TAB_ID)), "pt-8": llevaTiraInterior(paneles.siteOf(OBSERVABILITY_TAB_ID)) }}
           style={celdaDe(OBSERVABILITY_TAB_ID)}
         >
-          <Observability onManage={() => setSettings("plugins")} />
+          <Observability onManage={() => setSettings("plugins")} renderSite={(url) => <Sitio url={url} visible />} />
         </div>
       </Show>
 

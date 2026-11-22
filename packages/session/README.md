@@ -6,7 +6,7 @@ Administra cookies de sesión HttpOnly en web, tokens de sesión del motor en De
 
 ## Qué expone
 Exporta desde sus módulos en `src/`:
-- Identidad y sesión: `PlatformProfile`, `bridgePersonSession`, `canListWorkspaces`, `clearWebCaches`, `completeSignIn` en `platform-session.ts` y `person-session.ts`.
+- Identidad y sesión: `PlatformProfile`, `bridgePersonSession`, `clearWebCaches`, `completeSignIn` en `platform-session.ts` y `person-session.ts`.
 - Sesión de ventana y organizaciones: `window-session.tsx`, `organization-session.ts`.
 - Configuración y almacenamiento: `session-config.ts`, `session-storage.ts`, `session-wait.ts`, `sessionRefresh.ts`.
 

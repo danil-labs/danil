@@ -74,7 +74,6 @@ Inventario exhaustivo de todo el código en el front que consume o adapta sistem
 |  | Endpoint legado /v1/connections | /v1/connections |  / ticket relay vía  |  |
 |  | Endpoint legado /v1/connections | /v1/connections |  / ticket relay vía  |  |
 |  | Endpoint legado /v1/connections | /v1/connections |  / ticket relay vía  |  |
-|  | Endpoint legado /v1/connections | /v1/connections |  / ticket relay vía  |  |
 |  | Endpoint legado /v1/me/workspaces | /v1/me/workspaces |  vía  |  |
 |  | Subruta legada /v1/workspaces/{id}/github | /v1/workspaces/.../github | «se borra» |  |
 |  | Subruta legada /v1/workspaces/{id}/github | /v1/workspaces/.../github | «se borra» |  |
@@ -94,13 +93,12 @@ Inventario exhaustivo de todo el código en el front que consume o adapta sistem
 |  | Subruta legada /v1/workspaces/{id}/logo | /v1/workspaces/.../logo |  vía  |  |
 |  | Subruta legada /v1/workspaces/{id}/background | /v1/workspaces/.../background |  vía  |  |
 | `packages/platform-client/test/edge-context.test.ts:22` | Prueba de `X-Danil-Session` en DELETE del fondo (p-ctx 391ae088) | /v1/workspaces/.../background | `DELETE /v1/workspaces/{id}/background` vía `platformFetch` | Añadida por p-ctx después de 3.1 |
-|  | Subruta legada /v1/workspaces/{id}/restore | /v1/workspaces/.../restore | «se borra» |  |
-|  | Subruta legada /v1/workspaces/{id}/purge | /v1/workspaces/.../purge | «se borra» |  |
 |  | Gate de feature legado | legacyOrganizationGate |  vía  |  |
 |  | Gate de feature legado | legacyOrganizationGate |  vía  |  |
 |  | Gate de feature legado | legacyOrganizationGate |  vía  |  |
 |  | Componente de menú legado | LegacyProfileMenu | «se borra» |  |
 |  | Componente de menú legado | LegacyProfileMenu | «se borra» |  |
+| `packages/shell/src/shell/ProfileMenuItems.tsx:12` | Comentario de las entradas comunes del menú del avatar (p2-2a ec20deb3) | LegacyProfileMenu | «se borra» con LegacyProfileMenu | Añadida por p2-2a después de 3.1 |
 |  | Componente de pie legado | LegacyDanilFooterEntry | «se borra» |  |
 |  | Propiedad legacy de cuenta de grupo | groupAccount.legacy | «se borra» |  |
 |  | Propiedad legacy de cuenta de grupo | groupAccount.legacy | «se borra» |  |
@@ -127,16 +125,16 @@ Patrones disjuntos y exactos para el gate de verificación  y :
 | createMessaging | createMessaging | Mensajería Appv2 (R8) | 0 | Borrado (3.4b) |
 | /terminus/alpha-api | /terminus/alpha-api | BFF alfa legado /terminus/alpha-api | 7 | Se queda lo que usa `apps/mobile` (3.4b: 21→7) |
 | /alpha-api | [^s]/alpha-api | BFF alfa legado /alpha-api | 2 | Se queda lo que usa `apps/mobile` (3.4b: 12→2) |
-| /v1/connections | /v1/connections | Borde viejo /v1/connections | 8 | Se borra |
-| /v1/me/workspaces | /v1/me/workspaces | Borde viejo /v1/me/workspaces | 1 | Se borra |
-| /v1/workspaces/.../github | /v1/workspaces/[^/]+/github | Borde viejo github sync | 7 | Se borra |
-| /v1/workspaces/.../memory | /v1/workspaces/[^/]+/memory | Borde viejo memory | 6 | Se borra |
-| /v1/workspaces/.../logo | /v1/workspaces/[^/]+/logo | Borde viejo logo | 3 | Se borra |
-| /v1/workspaces/.../background | /v1/workspaces/[^/]+/background | Borde viejo background | 2 | Se borra |
-| /v1/workspaces/.../restore | /v1/workspaces/[^/]+/restore | Borde viejo restore | 1 | Se borra |
-| /v1/workspaces/.../purge | /v1/workspaces/[^/]+/purge | Borde viejo purge | 1 | Se borra |
+| /v1/connections | /v1/connections | Borde viejo /v1/connections | 7 | Se queda lo que usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/settings/Connections.tsx`: `listConnections`, `updateConnection`, `revokeConnection`, `connectionCapabilities`); 3.4c borra `connectionAudit` sin uso (8→7) |
+| /v1/me/workspaces | /v1/me/workspaces | Borde viejo /v1/me/workspaces | 1 | Se queda en 3.4c: comentario de `packages/attention/src/workspace-account.ts`, igual en `origin/dev` 9a0ee2ad |
+| /v1/workspaces/.../github | /v1/workspaces/[^/]+/github | Borde viejo github sync | 7 | Se queda en 3.4c: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/web/github-account.ts`, `apps/mobile/src/app/github/[workspace].tsx`) |
+| /v1/workspaces/.../memory | /v1/workspaces/[^/]+/memory | Borde viejo memory | 6 | Se queda en 3.4c: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/projects/memory-account.ts`, `Memoria.tsx`, `MemoryHistory.tsx`, `apps/mobile/src/lib/memory.ts`) |
+| /v1/workspaces/.../logo | /v1/workspaces/[^/]+/logo | Borde viejo logo | 3 | Se queda en 3.4c (assets): `readAccountAsset`/`accountAssetUrl` los usa `origin/dev` 9a0ee2ad (`apps/desktop/src/web/workspace-assets.ts`, `apps/mobile/src/lib/workspaceLogo.ts`) |
+| /v1/workspaces/.../background | /v1/workspaces/[^/]+/background | Borde viejo background | 2 | Se queda en 3.4c (assets): igual que logo |
+| /v1/workspaces/.../restore | /v1/workspaces/[^/]+/restore | Borde viejo restore | 0 | Borrado (3.4c): prueba muerta de `restoreWorkspace`, sin función en `src` ni uso en `origin/dev` |
+| /v1/workspaces/.../purge | /v1/workspaces/[^/]+/purge | Borde viejo purge | 0 | Borrado (3.4c): prueba muerta de `purgeWorkspace`, sin función en `src` ni uso en `origin/dev` |
 | legacyOrganizationGate | legacyOrganizationGate | Gate de organización legado | 3 | Se borra |
-| LegacyProfileMenu | LegacyProfileMenu | Menú de perfil legado | 2 | Se borra |
+| LegacyProfileMenu | LegacyProfileMenu | Menú de perfil legado | 3 | Se borra |
 | LegacyDanilFooterEntry | LegacyDanilFooterEntry | Footer legado | 1 | Se borra |
 | groupAccount.legacy | groupAccount.*legacy | groupAccount legado | 4 | Se borra |
 | machineCompatibility | machineCompatibility | Compatibilidad vieja de máquinas | 0 | Borrado (3.4) |
