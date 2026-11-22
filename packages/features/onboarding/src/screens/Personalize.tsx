@@ -1,6 +1,6 @@
 import { createSignal, onMount, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { renombrarWorkspace } from "../queries";
 import { Button } from "../../../../ui/src/Button";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
@@ -32,7 +32,7 @@ export default function Personalizar(props: {
     setNombre(nuevo);
     setError(null);
     try {
-      await invoke("rename_workspace", { id: w.id, name: nuevo });
+      await renombrarWorkspace(w.id, nuevo);
       window.dispatchEvent(new CustomEvent("harness:workspace"));
     } catch (e) {
       setNombre(antes);

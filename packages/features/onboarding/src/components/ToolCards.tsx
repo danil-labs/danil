@@ -9,9 +9,8 @@ import { createSignal, For, type JSX, Match, onCleanup, onMount, Show, Switch } 
 import { createStore } from "solid-js/store";
 import { mb } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
 import { borrarPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
-import { prosa, type Frase } from "../../../../../apps/desktop/src/lib/prose";
+import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { isMac } from "../../../../host/src/window";
 import { Badge } from "../../../../ui/src/Badge";
@@ -24,69 +23,61 @@ import { GoogleDriveMark, MarcaPlugin, ZoteroMark } from "../../../../ui/src/too
 import { Spinner } from "../../../../ui/src/Spinner";
 import { ErrorDeTarjeta } from "./ConnectAI";
 import { explicar } from "../queries/connect-store";
+import {
+  cancelBrowserLogin,
+  cancelGoogleDriveLogin,
+  cancelInstall,
+  checkGoogleDrive,
+  connectGitHost,
+  connectKnownMcp,
+  disconnectGitHost,
+  disconnectGoogleDrive,
+  disconnectKnownMcp,
+  finishBrowserLogin,
+  finishGoogleDriveLogin,
+  getGoogleDriveDesktopStatus,
+  getGoogleDriveStatus,
+  getInstallSize,
+  getWorkspaceScope,
+  getZoteroBibLinks,
+  getZoteroStatus,
+  installGh,
+  installGoogleDrive,
+  installGoogleDriveDesktop,
+  installIntegration,
+  installZotero,
+  listGitHosts,
+  listIntegrations,
+  listKnownMcp,
+  listMcpProviders,
+  mcpLogin,
+  openExternal,
+  openGoogleDriveDesktop,
+  openZotero,
+  setGoogleDriveDesktopUse,
+  setIntegrationEnabled,
+  startBrowserLogin,
+  startGoogleDriveLogin,
+  syncZoteroBibs,
+  typstLiveStop,
+  uninstallIntegration,
+  unlinkZoteroBib,
+  type AgenteMcp,
+  type AvanceDeDrive,
+  type Conocido,
+  type DriveDeEscritorio,
+  type EstadoDeDrive,
+  type EstadoDeZotero,
+  type InstalacionDeDrive,
+  type Plugin,
+  type Proveedor,
+  type VinculoBib,
+} from "../queries";
 
-type Wait = { code: string; url: string };
-type Campo = { id: string; label: Frase; help: Frase; required: boolean };
-type Proveedor = {
-  id: string;
-  name: string;
-  browser_login: boolean;
-  fields: Campo[];
-  token_label: Frase;
-  token_help: Frase;
-  token_url: string;
-  setup_url: string | null;
-  connected: { identity: { user: string; name: string }; workspace?: string } | null;
-};
-type Conocido = { id: string; grupo: string; pide_sesion: boolean; conectado: boolean; sesiones?: string[] };
-/** Un `.bib` de un proyecto que sigue a Zotero (`zotero_bib_links`). `fallo` viene en inglés: lo leen también los agentes. */
-type VinculoBib = { archivo: string; coleccion?: string; ids?: string[]; sincronizado?: number; fallo?: string };
 const nombreDeArchivo = (ruta: string) => ruta.split(/[\\/]/).pop() || ruta;
-type AgenteMcp = { id: string; label: string; recibe: boolean; instalado: boolean; login?: boolean };
-type Plugin = { id: string; installed: boolean; installing: boolean; supported: boolean };
-type FalloDelMotor = { what: Frase; detail?: string };
-type AvanceDeDrive = {
-  kind: "progress" | "verifying" | "done" | "cancelled" | "error" | "connection";
-  received?: number;
-  total?: number | null;
-  failure?: FalloDelMotor | null;
-};
-type EstadoDeDrive = {
-  supported: boolean;
-  installed: boolean;
-  install: AvanceDeDrive | null;
-  connected: { email: string; name: string } | null;
-  unverified: FalloDelMotor | null;
-};
-/** La app oficial de Google (Windows y Mac); sin `supported` Drive sigue con rclone. */
-type DriveDeEscritorio = {
-  supported: boolean;
-  installed: boolean;
-  running: boolean;
-  mounts: { email: string | null; path: string }[];
-  installer_bytes: number | null;
-  /** La persona pidió que los agentes de este workspace no usen las unidades; lo guarda el motor. */
-  unused?: boolean;
-};
-/** El evento `install` de la app oficial; en `error`, `failure` es una clave del catálogo. */
-type InstalacionDeDrive = {
-  operation: string;
-  kind: "sizing" | "downloading" | "installing" | "done" | "cancelled" | "error";
-  done: number;
-  bytes: number;
-  failure?: string | null;
-};
 const falloDeInstalacion = (clave: string | null | undefined, porOmision = "onboarding.tools.drive_app.install_failed") => {
   const texto = clave ? t(clave) : "";
   return texto && texto !== clave ? texto : t(porOmision);
-};
-/** Zotero en esta máquina: `local_api` dice si su API local contesta, está apagada o no existe. */
-type EstadoDeZotero = {
-  installed: boolean;
-  running: boolean;
-  version: string | null;
-  local_api: "ready" | "disabled" | "unsupported" | "unavailable";
-  installer_bytes: number | null;
 };
 const SIN_USAR_DRIVE = "onboarding.drive-desktop-unused";
 const CADA_CUANTO_SESION = 2500;
@@ -239,7 +230,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
   let finDeInstalacion: ((a: InstalacionDeDrive) => void) | null = null;
   let vigiaDeSesion: ReturnType<typeof setTimeout> | undefined;
   let finDeDescarga: ((a: AvanceDeDrive) => void) | null = null;
-  const scope = invoke<{ active: string | null }>("list_workspaces").then((s) => s.active ?? "pending");
+  const scope = getWorkspaceScope();
   let esperandoMcp: string | null = null;
   let incluidas = false;
   let cerrada = false;
@@ -289,20 +280,20 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
   async function cargar() {
     try {
       const [p, c, a, d, o, z, b] = await Promise.all([
-        invoke<Proveedor[]>("list_git_hosts", { scope: await scope }),
-        invoke<Conocido[]>("list_known_mcp"),
-        invoke<AgenteMcp[]>("list_mcp_providers"),
-        invoke<EstadoDeDrive>("google_drive_status").catch(() => null),
-        invoke<DriveDeEscritorio>("google_drive_desktop_status").catch(() => null),
-        invoke<EstadoDeZotero>("zotero_status").catch(() => null),
-        invoke<VinculoBib[]>("zotero_bib_links").catch(() => []),
+        listGitHosts(await scope),
+        listKnownMcp(),
+        listMcpProviders(),
+        getGoogleDriveStatus().catch(() => null),
+        getGoogleDriveDesktopStatus().catch(() => null),
+        getZoteroStatus().catch(() => null),
+        getZoteroBibLinks().catch(() => []),
       ]);
       if (cerrada) return;
       // Antes la guardaba la ventana; ahora es del motor, que la lee en cada turno.
       if (o && leerPref(SIN_USAR_DRIVE, false)) {
         borrarPref(SIN_USAR_DRIVE);
         if (!o.unused) {
-          await invoke("set_google_drive_desktop_use", { used: false }).catch(() => {});
+          await setGoogleDriveDesktopUse(false).catch(() => {});
           o.unused = true;
         }
       }
@@ -330,7 +321,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
       const c = conocido(i);
       if (!c || c.conectado) continue;
       try {
-        await invoke("connect_known_mcp", { id: i.id });
+        await connectKnownMcp(i.id);
       } catch (e) {
         setErrores(i.id, explicar(e));
       }
@@ -357,10 +348,10 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
   });
   // Al abrir se pregunta a Google si la conexión sigue viva; sin red queda conectada y sin comprobar.
   onMount(async () => {
-    const o = await invoke<DriveDeEscritorio>("google_drive_desktop_status").catch(() => null);
+    const o = await getGoogleDriveDesktopStatus().catch(() => null);
     if (o?.supported) return;
-    void invoke<EstadoDeDrive>("google_drive_status")
-      .then((d) => (d.connected ? invoke<EstadoDeDrive>("check_google_drive") : d))
+    void getGoogleDriveStatus()
+      .then((d) => (d.connected ? checkGoogleDrive() : d))
       .then((d) => {
         if (cerrada) return;
         setDrive(d);
@@ -407,7 +398,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
 
   function usarUnidad(i: Integracion, o: DriveDeEscritorio) {
     setEscritorio({ ...o, unused: false });
-    void invoke("set_google_drive_desktop_use", { used: true }).catch((e) => setErrores(i.id, explicar(e)));
+    void setGoogleDriveDesktopUse(true).catch((e) => setErrores(i.id, explicar(e)));
     setEstados(i.id, guardado(i));
     contarConectadas();
   }
@@ -416,7 +407,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
   function vigilarSesion(i: Integracion, intento: number) {
     clearTimeout(vigiaDeSesion);
     vigiaDeSesion = setTimeout(async () => {
-      const o = await invoke<DriveDeEscritorio>("google_drive_desktop_status").catch(() => null);
+      const o = await getGoogleDriveDesktopStatus().catch(() => null);
       if (cerrada || intento !== intentoDeDrive || estados[i.id]?.k !== "sesion") return;
       if (o && unidad(o)) return usarUnidad(i, o);
       vigilarSesion(i, intento);
@@ -430,18 +421,18 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
     const antes = escritorio()!;
     if (unidad(antes)) return usarUnidad(i, antes);
     try {
-      if (antes.installed) await invoke("open_google_drive_desktop");
+      if (antes.installed) await openGoogleDriveDesktop();
       else {
         setEstados(i.id, { k: "descargando", hecho: 0, total: antes.installer_bytes });
         const terminada = new Promise<InstalacionDeDrive>((resolve) => (finDeInstalacion = resolve));
-        await invoke("install_google_drive_desktop");
+        await installGoogleDriveDesktop();
         const a = await terminada;
         finDeInstalacion = null;
         if (!vigente() || a.kind === "cancelled") return;
         if (a.kind === "error") throw new Error(falloDeInstalacion(a.failure));
       }
       if (!vigente()) return;
-      const o = await invoke<DriveDeEscritorio>("google_drive_desktop_status");
+      const o = await getGoogleDriveDesktopStatus();
       if (!vigente()) return;
       if (unidad(o)) return usarUnidad(i, o);
       setEscritorio(o);
@@ -464,14 +455,14 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
     try {
       if (!d?.installed) {
         setEstados(i.id, { k: "descargando", hecho: 0, total: null });
-        void invoke<number>("install_size", { operation: "google-drive" })
+        void getInstallSize("google-drive")
           .then((b) => {
             const e = estados[i.id];
             if (e?.k === "descargando" && !e.total) setEstados(i.id, { ...e, total: b });
           })
           .catch(() => {});
         const terminado = new Promise<AvanceDeDrive>((resolve) => (finDeDescarga = resolve));
-        await invoke("install_google_drive");
+        await installGoogleDrive();
         const a = await terminado;
         finDeDescarga = null;
         if (a.kind === "cancelled") return void setEstados(i.id, { k: "libre" });
@@ -479,9 +470,9 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
         if (cerrada || estados[i.id]?.k === "libre") return;
       }
       setEstados(i.id, { k: "conectando" });
-      const { url } = await invoke<{ url: string }>("start_google_drive_login");
-      invoke("open_external", { target: url }).catch(() => {});
-      const fresco = await invoke<EstadoDeDrive>("finish_google_drive_login");
+      const { url } = await startGoogleDriveLogin();
+      openExternal(url).catch(() => {});
+      const fresco = await finishGoogleDriveLogin();
       if (cerrada) return;
       setDrive(fresco);
       setEstados(i.id, guardado(i));
@@ -509,7 +500,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
   function vigilarZotero(i: Integracion, intento: number) {
     clearTimeout(vigiaDeZotero);
     vigiaDeZotero = setTimeout(async () => {
-      const z = await invoke<EstadoDeZotero>("zotero_status").catch(() => null);
+      const z = await getZoteroStatus().catch(() => null);
       if (cerrada || intento !== intentoDeZotero || estados[i.id]?.k !== "abriendo") return;
       if (z?.running) return segunZotero(i, z);
       vigilarZotero(i, intento);
@@ -521,21 +512,21 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
     const intento = ++intentoDeZotero;
     const vigente = () => !cerrada && intento === intentoDeZotero;
     try {
-      let z = await invoke<EstadoDeZotero>("zotero_status");
+      let z = await getZoteroStatus();
       if (!vigente()) return;
       if (!z.installed) {
         setEstados(i.id, { k: "descargando", hecho: 0, total: z.installer_bytes });
         const terminada = new Promise<InstalacionDeDrive>((resolve) => (finDeZotero = resolve));
-        await invoke("install_zotero");
+        await installZotero();
         const a = await terminada;
         finDeZotero = null;
         if (!vigente() || a.kind === "cancelled") return;
         if (a.kind === "error") throw new Error(falloDeInstalacion(a.failure, "settings.references.zotero.error_install"));
-        z = await invoke<EstadoDeZotero>("zotero_status");
+        z = await getZoteroStatus();
         if (!vigente()) return;
       }
       if (z.running) return segunZotero(i, z);
-      await invoke("open_zotero");
+      await openZotero();
       if (!vigente()) return;
       setEstados(i.id, { k: "abriendo" });
       vigilarZotero(i, intento);
@@ -558,21 +549,21 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
       if (!p.browser_login) return abrirFormulario(i, null);
       setEstados(i.id, { k: "conectando" });
       try {
-        const espera = await invoke<Wait>("start_browser_login", { id: i.id, scope: await scope });
+        const espera = await startBrowserLogin(i.id, await scope);
         if (cerrada) return;
         setEstados(i.id, { k: "conectando", codigo: espera.code });
-        invoke("open_external", { target: espera.url }).catch(() => {});
+        openExternal(espera.url).catch(() => {});
       } catch (e) {
         if (estados[i.id]?.k !== "conectando") return;
         return abrirFormulario(i, explicar(e));
       }
       try {
-        const fresco = await invoke<Proveedor>("finish_browser_login", { id: i.id, scope: await scope });
-        if (fresco.setup_url) invoke("open_external", { target: fresco.setup_url }).catch(() => {});
+        const fresco = await finishBrowserLogin(i.id, await scope);
+        if (fresco.setup_url) openExternal(fresco.setup_url).catch(() => {});
         // Pasa directo a «Conectada» con lo que devolvió el login, sin mostrar «Conectar» mientras recarga.
         setProveedores((ps) => ps.map((x) => (x.id === fresco.id ? fresco : x)));
         // Los agentes usan gh con esta conexión; en Ajustes se instala a mano, aquí se deja listo.
-        if (i.id === "github") invoke("install_gh").catch(() => {});
+        if (i.id === "github") installGh().catch(() => {});
       } catch (e) {
         if (estados[i.id]?.k !== "conectando") return;
         setErrores(i.id, explicar(e));
@@ -585,10 +576,10 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
     esperandoMcp = i.id;
     setEstados(i.id, { k: "conectando" });
     try {
-      await invoke("connect_known_mcp", { id: i.id });
+      await connectKnownMcp(i.id);
       // Lo autoriza el motor para todos los agentes; `provider` solo dice quién lo pidió.
       if (c.pide_sesion) {
-        await invoke("mcp_login", { provider: agenteDeSesion()?.id ?? "", id: i.id });
+        await mcpLogin(agenteDeSesion()?.id ?? "", i.id);
         return;
       }
     } catch (e) {
@@ -611,7 +602,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
     setEstados(i.id, { k: "conectando" });
     try {
       const data = Object.fromEntries(Object.entries(b.data).map(([k, v]) => [k, v.trim()]));
-      await invoke("connect_git_host", { scope: await scope, id: i.id, data, token: b.token.trim() });
+      await connectGitHost(await scope, i.id, data, b.token.trim());
       setBorradores(i.id, SIN_BORRADOR);
       setMotivos(i.id, null);
       setEstados(i.id, { k: "libre" });
@@ -635,20 +626,20 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
       intentoDeZotero++;
       finDeZotero = null;
       clearTimeout(vigiaDeZotero);
-      if (e === "descargando") void invoke("cancel_install", { operation: "zotero" }).catch(() => {});
+      if (e === "descargando") void cancelInstall("zotero").catch(() => {});
     } else if (i.via === "drive" && oficial()) {
       intentoDeDrive++;
       finDeInstalacion = null;
       clearTimeout(vigiaDeSesion);
-      if (e === "descargando") void invoke("cancel_install", { operation: "google-drive-desktop" }).catch(() => {});
+      if (e === "descargando") void cancelInstall("google-drive-desktop").catch(() => {});
     } else if (i.via === "drive") {
-      if (e === "descargando") void invoke("cancel_install", { operation: "google-drive" }).catch(() => {});
-      if (e === "conectando") void invoke("cancel_google_drive_login").catch(() => {});
+      if (e === "descargando") void cancelInstall("google-drive").catch(() => {});
+      if (e === "conectando") void cancelGoogleDriveLogin().catch(() => {});
     } else if (i.via === "proveedor" && e === "conectando" && !conToken) {
-      void invoke("cancel_browser_login", { id: i.id, scope: await scope }).catch(() => {});
+      void cancelBrowserLogin(i.id, await scope).catch(() => {});
     } else if (i.via !== "proveedor" && esperandoMcp === i.id) {
       esperandoMcp = null;
-      void invoke("disconnect_known_mcp", { id: i.id }).catch(() => {});
+      void disconnectKnownMcp(i.id).catch(() => {});
     }
   }
 
@@ -657,7 +648,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
     // Solo deja de usarla Terminus: la app de Google sigue instalada y con su sesión.
     if (i.via === "drive" && oficial()) {
       try {
-        await invoke("set_google_drive_desktop_use", { used: false });
+        await setGoogleDriveDesktopUse(false);
         setEscritorio((o) => (o ? { ...o, unused: true } : o));
       } catch (e) {
         setErrores(i.id, explicar(e));
@@ -667,9 +658,9 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
     }
     setEstados(i.id, { k: "saliendo" });
     try {
-      if (i.via === "drive") await invoke("disconnect_google_drive");
-      else if (i.via === "proveedor") await invoke("disconnect_git_host", { id: i.id, scope: await scope });
-      else await invoke("disconnect_known_mcp", { id: i.id });
+      if (i.via === "drive") await disconnectGoogleDrive();
+      else if (i.via === "proveedor") await disconnectGitHost(i.id, await scope);
+      else await disconnectKnownMcp(i.id);
     } catch (e) {
       setErrores(i.id, explicar(e));
     }
@@ -801,7 +792,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
               <Button
                 size="compact"
                 variant="secondary"
-                onClick={() => void invoke("open_google_drive_desktop").catch((x) => setErrores(p.i.id, explicar(x)))}
+                onClick={() => void openGoogleDriveDesktop().catch((x) => setErrores(p.i.id, explicar(x)))}
               >
                 {t("onboarding.tools.drive_app.open")}
               </Button>
@@ -845,7 +836,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
             <div class="mt-0.5 flex flex-wrap items-center gap-2">
               <span class="text-xs text-neutral-500">{t("onboarding.tools.references.zotero_permission_why")}</span>
               <span class="flex-1" />
-              <Button size="sm" variant="ghost" onClick={() => void invoke("open_zotero").catch((x) => setErrores("zotero", explicar(x)))}>
+              <Button size="sm" variant="ghost" onClick={() => void openZotero().catch((x) => setErrores("zotero", explicar(x)))}>
                 {t("onboarding.tools.references.zotero_open")}
               </Button>
               <Button size="sm" onClick={() => void conectar(p.i)}>
@@ -895,7 +886,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
     setSincronizandoBibs(true);
     setErrores("zotero", null);
     try {
-      setBibs(await invoke<VinculoBib[]>("sync_zotero_bibs"));
+      setBibs(await syncZoteroBibs());
     } catch (x) {
       setErrores("zotero", explicar(x));
     } finally {
@@ -905,8 +896,8 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
 
   async function desvincularBib(archivo: string) {
     try {
-      await invoke("unlink_zotero_bib", { path: archivo });
-      setBibs(await invoke<VinculoBib[]>("zotero_bib_links"));
+      await unlinkZoteroBib(archivo);
+      setBibs(await getZoteroBibLinks());
     } catch (x) {
       setErrores("zotero", explicar(x));
     }
@@ -990,7 +981,7 @@ export function Integraciones(props: { onCambio: (conectadas: number) => void; s
                       <button
                         type="button"
                         class="inline-flex cursor-pointer items-center gap-0.5 border-0 bg-transparent p-0 text-primary hover:underline"
-                        onClick={() => void invoke("open_external", { target: prov().token_url }).catch(() => {})}
+                        onClick={() => void openExternal(prov().token_url).catch(() => {})}
                       >
                         {t("onboarding.tools.credential.create_token")}
                         <ExternalLink size={11} aria-hidden="true" />
@@ -1084,13 +1075,13 @@ export function Plugins(props: { onCambio: (estado: { instalados: number; instal
 
   async function cargar() {
     try {
-      const c = await invoke<{ workspace: string; plugins: Plugin[] }>("list_integrations");
+      const c = await listIntegrations();
       if (cerrada) return;
       setCatalogo(c);
       avisar();
       for (const p of c.plugins.filter((x) => ORDEN_PLUGINS.includes(x.id) && pesos[x.id] === undefined)) {
         setPesos(p.id, null);
-        invoke<number>("install_size", { operation: `plugin:${p.id}` })
+        getInstallSize(`plugin:${p.id}`)
           .then((b) => setPesos(p.id, b))
           .catch(() => {});
       }
@@ -1119,8 +1110,8 @@ export function Plugins(props: { onCambio: (estado: { instalados: number; instal
     setOcupados(p.id, "instalando");
     avisar();
     try {
-      await invoke("install_integration", { id: p.id });
-      await invoke("set_integration_enabled", { id: p.id, workspace, enabled: true });
+      await installIntegration(p.id);
+      await setIntegrationEnabled(p.id, workspace, true);
     } catch (e) {
       if (!cerrada && ocupados[p.id] !== "cancelado" && !`${prosaDe(e)} ${detalleDe(e)}`.includes("install.cancelled")) setErrores(p.id, explicar(e));
     }
@@ -1133,7 +1124,7 @@ export function Plugins(props: { onCambio: (estado: { instalados: number; instal
   function cancelar(p: Plugin) {
     setOcupados(p.id, "cancelado");
     avisar();
-    void invoke("cancel_install", { operation: `plugin:${p.id}` }).catch(() => {});
+    void cancelInstall(`plugin:${p.id}`).catch(() => {});
   }
 
   async function desinstalar(p: Plugin) {
@@ -1142,8 +1133,8 @@ export function Plugins(props: { onCambio: (estado: { instalados: number; instal
     avisar();
     try {
       // Un Tinymist vivo bloquea en Windows la carpeta que desinstalar borra.
-      if (p.id === "typst") await invoke("typst_live_stop", { key: null, session: null }).catch(() => {});
-      await invoke("uninstall_integration", { id: p.id });
+      if (p.id === "typst") await typstLiveStop().catch(() => {});
+      await uninstallIntegration(p.id);
     } catch (e) {
       setErrores(p.id, explicar(e));
     }
