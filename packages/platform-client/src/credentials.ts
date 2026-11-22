@@ -6,6 +6,18 @@
  */
 import { type CredentialSource, EdgeError, type EdgeTransport } from "@terminus/computers";
 
+/**
+ * Las respuestas de `/v1/credentials` salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7). Este
+ * adaptador pasa el cuerpo tal cual; quien lo lee (`@terminus/computers`, `credentialOf`) lo normaliza desde
+ * `unknown`. Lo que esa lectura usa y el contrato no trae (`workspace_id`, `delivery`, `kind: "github"`,
+ * `name`/`created_at` y los estados `signed_in`/`unsupported` de la máquina, `name`/`online`/
+ * `service_features` del destinatario) es hallazgo para danil-contracts, no un campo aquí.
+ */
+export type {
+  AccountCredential, AccountCredentialEnvelope, CredentialMachine, CredentialProviderList, CredentialRecipient,
+  GithubAuthorizeRequest, GithubAuthorizeResponse, GithubConnection, PutWorkspaceAccount, SealedCopy, WorkspaceAccounts,
+} from "./generated/types.ts";
+
 export function webCredentialSource(origin: string, transport: EdgeTransport): CredentialSource {
   const base = `${origin}/v1/`;
   return {

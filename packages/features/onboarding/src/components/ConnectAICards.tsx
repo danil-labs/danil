@@ -8,6 +8,7 @@ import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { RemoveButton } from "../../../../ui/src/IconAction";
 import { Input } from "../../../../ui/src/Input";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { AvanceDeDescarga, BarraDeCarga, CodigoParaConfirmar, Peso } from "./DownloadProgress";
 import { MarcaDeFila } from "./ConnectAIMap";
@@ -197,14 +198,13 @@ function PanelDeClave(props: { c: Conexiones; f: Fila }) {
             {(url) => (
               <span class="text-xs text-neutral-500">
                 {t(`onboarding.ai.key.help.${props.f.agente}`)}{" "}
-                <button
-                  type="button"
+                <Pressable
                   class="inline-flex cursor-pointer items-center gap-0.5 border-0 bg-transparent p-0 text-primary hover:underline"
                   onClick={() => void openExternal(url()).catch(() => {})}
                 >
                   {url().replace(/^https?:\/\//, "")}
                   <ExternalLink size={11} aria-hidden="true" />
-                </button>
+                </Pressable>
               </span>
             )}
           </Show>

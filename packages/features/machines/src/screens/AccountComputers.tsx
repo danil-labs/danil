@@ -14,6 +14,7 @@ import { capabilities, type AccountComputersSource } from "../../../../host/src/
 import { isMac } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { SettingsBlock, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { workspaceComputersSource } from "../queries/workspace-computers";
 import { machineNamesChanged } from "../queries/store";
@@ -196,8 +197,7 @@ export function AccountComputers(props: AccountComputersProps) {
               <Show
                 when={editing() === c.computer_id}
                 fallback={
-                  <button
-                    type="button"
+                  <Pressable
                     class="group flex max-w-full min-w-0 items-center gap-1.5 rounded-sm text-left hover:text-neutral-950"
                     title={t("danil.computers.rename")}
                     aria-label={t("danil.computers.rename_label", { name: nameOf(c) })}
@@ -210,7 +210,7 @@ export function AccountComputers(props: AccountComputersProps) {
                       <span class="shrink-0 text-neutral-500">{t("danil.computers.this_one")}</span>
                     </Show>
                     <Show when={props.source.rename}><Pencil size={12} class="shrink-0 text-neutral-500 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden="true" /></Show>
-                  </button>
+                  </Pressable>
                 }
               >
                 <form

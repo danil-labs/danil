@@ -5,6 +5,7 @@ import { batch, createSignal, For, onMount, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { SignalDot } from "../../../../ui/src/SignalDot";
 import { ConnectMachine, connectSource } from "./ConnectMachine";
 import { MachineIcon } from "../../../../ui/src/MachineIcon";
@@ -87,7 +88,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
           <div class="py-1">
             <For each={opciones()}>
               {(m) => (
-                <button
+                <Pressable
                   class={`${ITEM_DE_MENU} flex items-center gap-2 disabled:opacity-50`}
                   data-machine-option={m.id}
                   disabled={!!razon(m)}
@@ -105,12 +106,12 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
                       <Check size={12} aria-hidden="true" />
                     </Show>
                   </span>
-                </button>
+                </Pressable>
               )}
             </For>
           </div>
           <Show when={fuente}>
-            <button
+            <Pressable
               class={`${ITEM_DE_MENU} flex items-center gap-2 border-t border-border`}
               data-connect-machine-item=""
               onClick={() => {
@@ -120,7 +121,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
             >
               <Plus size={12} aria-hidden="true" />
               <span class="flex-1 truncate">{t("danil.connect_machine.button")}</span>
-            </button>
+            </Pressable>
           </Show>
         </PopoverContent>
       </Popover>
