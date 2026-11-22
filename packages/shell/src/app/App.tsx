@@ -5,6 +5,7 @@ import { createCeldasDeTareas } from "./conversation-tasks";
 import { createConversacion } from "./conversation";
 import { createServiceListeners } from "./service-listeners";
 import { createTabDrag } from "./tab-drag";
+import { createWindows } from "./windows";
 import { createColumnasDePrincipal } from "./principal-columns";
 import { createPrincipal } from "./principal";
 import { AgentProfile, CarryOriginLabel, CarryProgress,       MachinePicker,      TaskLocation } from "./lazy-screens";
@@ -106,7 +107,7 @@ import {
   
   
   
-  panelReadingOrder,
+  
   type PanelSite as SitioDePanel,
   sameSite,
 } from "../../../../apps/desktop/src/lib/panels";
@@ -114,10 +115,6 @@ import { capabilities } from "../../../host/src/platform";
 import { type SenderTask } from "../../../../apps/desktop/src/lib/recipients";
 import { conservar } from "../../../session/src/sessionRefresh";
 import { readShellCache, shellCacheWriter } from "../../../../apps/desktop/src/lib/shellCache";
-import {
-  destinoDePestana,
-  type NavegacionDePestanas,
-} from "../../../../apps/desktop/src/lib/shortcuts";
 import { comandosConAlMargen } from "../../../../apps/desktop/src/lib/side-question";
 import { createSpaceNavigationOrder } from "../../../../apps/desktop/src/lib/space-navigation-order";
 import {
@@ -133,7 +130,7 @@ import {
   
   
   
-  screenTabId,
+  
   type Tab,
 } from "../../../../apps/desktop/src/lib/tabs";
 import {
@@ -459,6 +456,7 @@ export default function App() {
 
   let lifecycleRevision = 0;
   const { advanceTurn, alMargen, almacenDePreguntas, arrancando, busy, carpetasDeTerminal, cerrarAlMargen, cola, colaDe, comandosDeLaCola, conversationScope, desdeDeTurno, detenidos, editando, enFondo, engineCanDispatch, esDeLaAbierta, esDelWorkspaceAbierto, esperaMaquinaEn, finishedTurns, folder, handoff, handoffAt, injecting, lanzados, liveThreadKey, liveThreads, marcarQuieta, marcarViva, mentionSources, nacenConComando, pasarAlHilo, pendingStarts, permissionError, permissions, placeCandidates, preguntarAlMargen, queueBusy, recipientCandidates, refreshTaskCandidates, reintento, releerCola, respondiendoPermiso, resumeQueue, retenidaPorElMotor, rosterDelProyecto, setArrancando, setCarpetasDeTerminal, setDesdeDeTurno, setEnFondo, setFolder, setInjecting, setMentionSources, setPermissionError, setPermissions, setPreguntasAMedias, setReintento, setRespondiendoPermiso, setSettlingTurns, setSinSteer, setTerminales, setVentana, setVivas, settlingTurns, sinSteer, soltarPreguntas, stopping, taskCandidates, taskQueues, terminales, turnClosed, turnRevisions, turnStarted, ventana, vivas } = createThreadStream({ apagadas, claveAbierta, createConversationHandoff, createEngineQueue, createTaskQueues, deLaTarea, filaDe, input, leerTarea, loadResult, machineName, machineOf, machineWaits, machineWakes, machines, opcionesDeLaTarea, pestanas, project, projectList, sesiones, sessionId, setInput, tareaDelRiel, threads, watchHandlerStatuses, watchProfiles, workspaceActivo, workspaceContext, get enviarFiltro() { return enviarFiltro; }, get lifecycleRevision() { return lifecycleRevision; }, set lifecycleRevision(v) { lifecycleRevision = v; }, get mandarElegido() { return mandarElegido; }, get reconcileActiveTurns() { return reconcileActiveTurns; } });
+  const { abrirObservabilidad, abrirPantalla, activarPestana, cerrarPestanasYa, irAPestanaDe, irAVentanaVecina, mandarVentana, partirLaActiva, partirVentana, puedeSepararseDe, reabrirPestana } = createWindows({ carpetaDelEscritorio, drafts, filaDe, paginaDeAgente, paneles, pestanaActiva, pestanas, project, sessionId, setProyectoAbierto, soltarHilo, vivas, get abrirSesion() { return abrirSesion; }, get irAlBlanco() { return irAlBlanco; }, get olvidarPestana() { return olvidarPestana; } });
 
   const { activityMachine, activityNotice, anadiendoCarpeta, carpetaDelProyecto, inicioDeCarpeta, setActivityMachine, setActivityNotice, setAnadiendoCarpeta, setInicioDeCarpeta, setSettings, settings, sidebar } = createThreadSide({ createSidebar, alta, archivosDeTarea, closeActiveTab: () => closeActiveTab(), irAPestanaDe, irAVentanaVecina, juntarLaActiva, llaveDeBorrador, nuevaSesion: (enProyecto) => nuevaSesion(enProyecto), partirLaActiva, project, projectList, reabrirPestana, sessionId, setBuscando, workspaceActivo });
   const { clonEnCurso, setClonEnCurso, cuentasTocadas, setCuentasTocadas, firmas, modelosEnVivo, esperando, preguntadas, sesionesConEstado, sessionLists, refreshSessions, carpetasDeTarea, refreshSessionsOnEvent, releerTrasHueco, previewDeAdjunto, miniaturaDeAdjunto, documentosEn, opcionesDeAdjunto, } = createCloneFolder({ attention, avisarDeLosArboles, claveDelHilo, colaSuelta, deLaTarea: (id) => deLaTarea(id), draftOptions, esperandoFila, grupos, hiloAbierto, hilos, leerTarea, loadResult, machines, msgs, naciendo, pedidas, pestanas, project, remoteChildScope, retoques, sesiones, sesionesConPestana, sessionId, setSesiones, unconfirmedOpen, vivas: () => vivas(), workspaceActivo, workspaceContext, });
@@ -483,171 +481,6 @@ export default function App() {
 
   const { resolverCierre, setTraspasoPendiente, traspasoPendiente } = createDraftSend({ activarPestana, cerrarPestanasYa, cierreSinGuardar, claveAbierta, pestanas, sessionId, setCierreSinGuardar });
 
-  function cerrarPestanasYa(ids: string[]) {
-    const pedidas = new Set(ids);
-    const cerradas = pestanas.open().filter((x) => pedidas.has(x.id));
-    if (cerradas.length === 0) return;
-    const activaAntes = pestanaActiva();
-    const vecina = pestanas.closeMany(ids, { remember: true });
-    // Closing a task also removes its documents, which can empty several panels.
-    paneles.sync(pestanas.open().map((x) => x.id));
-    // El borrador y el hilo son de la tarea: cerrar un archivo o un
-    // artefacto suyo no los toca, la tarea sigue abierta detrás.
-    for (const p of cerradas.filter(isTaskTab)) {
-      drafts.drop(p.id);
-      olvidarPestana(p.id);
-      if (!vivas().includes(p.id)) soltarHilo(p.id);
-    }
-    // Se pregunta si el cierre se llevó lo que se estaba mirando, no si
-    // el id cerrado era el activo: una tarea arrastra sus archivos, y
-    // cerrándola con uno delante, comparar ids da «no era la activa» y
-    // no carga nada —la tira marca la vecina y el chat sigue enseñando
-    // la tarea recién cerrada.
-    if (activaAntes === null) return;
-    if (pestanas.open().some((x) => x.id === activaAntes)) return;
-    if (vecina) void activarPestana(vecina);
-    else {
-      const owner = cerradas.find((p) => isContentTab(p) && p.session !== "" && !cerradas.some((x) => isTaskTab(x) && x.id === p.session));
-      if (owner) void abrirSesion(owner.project, owner.session);
-      else irAlBlanco(carpetaDelEscritorio(project()));
-    }
-  }
-
-  /**
-   * Lo último que se cerró a mano vuelve a la tira, salvo lo que ya no existe:
-   * una tarea borrada mientras tanto no reaparece como pestaña rota.
-   */
-  function reabrirPestana() {
-    const antes = new Set(pestanas.open().map((x) => x.id));
-    const p = pestanas.reopen((x) => x.session === "" || filaDe(x.session) !== undefined);
-    if (!p) return;
-    // La tira que se pinta es la de la ventana: sin colocarlas, volverían al final.
-    const tira = pestanas.open().map((x) => x.id);
-    paneles.sync(tira);
-    paneles.placeLikeStrip(tira.filter((id) => !antes.has(id)), tira);
-    void activarPestana(p);
-  }
-
-  /**
-   * Poner una pestaña delante, sea de lo que sea. Toda pestaña lleva su
-   * tarea dentro: activar el archivo de otra tarea abre esa tarea detrás.
-   * `abrirSesion` no relee nada cuando ya es la abierta: pasar de un
-   * archivo a su conversación no cuesta un viaje al disco.
-   */
-  async function activarPestana(p: Tab) {
-    // La ventana que la tiene pasa a mandar, y la enseña. Es lo que ata las
-    // tres cosas que decide el mando —la caja, la columna derecha y dónde caen
-    // las pestañas nuevas— a un solo gesto (`lib/panels.ts`).
-    paneles.activate(p.id);
-    setProyectoAbierto(null);
-    // El navegador del «+» tampoco cuelga de ninguna tarea: detrás no se
-    // abre nada.
-    if (p.clase === "observabilidad" || p.clase === "pantalla" || (p.clase === "sitio" && p.navegador)) {
-      pestanas.activate(p.id);
-      return;
-    }
-    // Un archivo abierto antes de que la tarea existiera no cuelga de ninguna:
-    // detrás queda la conversación en blanco de su proyecto, que es la que
-    // decide de qué commit se lee.
-    if (p.session === "") {
-      if (project() !== p.project || sessionId() !== null) irAlBlanco(p.project);
-      paneles.activate(p.id);
-      pestanas.activate(p.id);
-      return;
-    }
-    await abrirSesion(p.project, p.session, p.id);
-  }
-
-  /**
-   * El atajo de teclado, sobre la tira de la ventana activa y no sobre la
-   * tira entera: partida la pantalla, cada ventana lleva la suya y el número
-   * cuenta lo que se ve (`lib/panels.ts`).
-   */
-  function irAPestanaDe(nav: NavegacionDePestanas) {
-    const sitio = paneles.activeSite();
-    const id = destinoDePestana(
-      nav,
-      paneles.tabsAt(sitio),
-      paneles.activeTabAt(sitio),
-    );
-    const p = id ? pestanas.open().find((x) => x.id === id) : null;
-    if (p) void activarPestana(p);
-  }
-
-  /**
-   * Cambiar de ventana con el teclado, que es lo que el ratón hace pulsando
-   * en ella. Con la ventana estrecha solo se pinta la activa, y esto es lo
-   * único que llega a lo que hay en las demás.
-   */
-  function irAVentanaVecina(salto: 1 | -1) {
-    const recorrido = panelReadingOrder(paneles.rowsPerColumn());
-    if (recorrido.length < 2) return;
-    const i = recorrido.findIndex((s) => sameSite(s, paneles.activeSite()));
-    mandarVentana(recorrido[(i + salto + recorrido.length) % recorrido.length]);
-  }
-
-  function abrirObservabilidad() {
-    setProyectoAbierto(null);
-    pestanas.openObservability(t("observability.tab"));
-  }
-
-  /** La pantalla de una computadora, en una ventana al lado de la conversación. */
-  function abrirPantalla(machine: string) {
-    const id = screenTabId(machine);
-    const nueva = !pestanas.open().some((p) => p.id === id);
-    const conversacion = pestanas.active();
-    // Sin batch la pantalla pasa un instante delante de la conversación: esta se
-    // desmonta, vuelve al dividir y su barra de ubicación parpadea mientras relee.
-    batch(() => {
-      setProyectoAbierto(null);
-      pestanas.openScreen(machine, t("screen.tab", { name: machineName(machine) }));
-      paneles.sync(pestanas.open().map((x) => x.id));
-      paneles.activate(id);
-      if (nueva && !paneles.isSplit()) paneles.split(id);
-      // La pantalla se mira al lado; el mando sigue en la conversación, que
-      // sin él queda de solo lectura y sin caja de escritura.
-      const suya = conversacion ? paneles.siteOf(conversacion) : null;
-      const pantalla = paneles.siteOf(id);
-      if (conversacion && suya && pantalla && !sameSite(suya, pantalla)) {
-        pestanas.activate(conversacion);
-        paneles.activate(conversacion);
-      }
-    });
-  }
-
-  /**
-   * Pone una ventana al mando pulsando en cualquier sitio de ella, no
-   * solo en una pestaña, y abre lo que tiene delante: columna derecha y
-   * caja de escritura cuelgan de la sesión abierta, y enfocar sin abrir
-   * dejaría el mando en una ventana y el contexto en otra.
-   */
-  function mandarVentana(sitio: SitioDePanel) {
-    if (sameSite(sitio, paneles.activeSite())) return;
-    paneles.focus(sitio);
-    const id = paneles.activeTabAt(sitio);
-    const p = id ? pestanas.open().find((x) => x.id === id) : null;
-    if (p) void activarPestana(p);
-  }
-
-  // Separar conserva la vista y deja disponible su celda de origen.
-  function partirLaActiva() {
-    partirVentana(paneles.activeSite());
-  }
-
-  /**
-   * Parte esa ventana, no la que esté al mando. Un botón en la fila de
-   * título no pertenece a ninguna ventana —con la rejilla, no diría cuál
-   * partir—; puesto en la tira de cada una, es de su ventana. El atajo de
-   * teclado sigue partiendo la activa: ahí sí es la única respuesta.
-   */
-  function partirVentana(sitio: SitioDePanel) {
-    const id = paneles.activeTabAt(sitio);
-    if (!id) return;
-    if (paneles.split(id)) pestanas.pin(id);
-  }
-
-  const puedeSepararseDe = (sitio: SitioDePanel) =>
-    !paginaDeAgente() && paneles.activeTabAt(sitio) !== null && paneles.canSplit();
 
   /** Recoge la ventana activa en la de al lado. Es el atajo de deshacer. */
   function juntarLaActiva() {
