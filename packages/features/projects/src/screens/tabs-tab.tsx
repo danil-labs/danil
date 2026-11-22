@@ -8,9 +8,9 @@ import { ariaDeAtajo, textoDeAtajo } from "../../../../../apps/desktop/src/lib/s
 import { isTaskTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
-import { WithMentions } from "../../../chat/src/components/WithMentions";
+import { WithMentions } from "../../../../ui/src/WithMentions";
 import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
-import { colorDeMarca, describirEstado, localDe } from "../../../code/src/queries/localStatus";
+import { colorDeMarca, describirEstado, localDe } from "../model/ports";
 import { AstroAvatar } from "./AstroAvatar";
 import { displayName } from "../queries/profiles";
 import SessionGit, { sessionGitDescription } from "../components/SessionGit";

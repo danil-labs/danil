@@ -5,7 +5,7 @@ import FolderOpen from "lucide-solid/icons/folder-open";
 import ImagePlus from "lucide-solid/icons/image-plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { Show } from "solid-js";
-import SelectorDeModelo from "../../../chat/src/components/ModelPicker";
+import { SelectorDeModelo } from "../model/ports";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
@@ -18,7 +18,7 @@ import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { LABEL, SECTION, type AgentProfileProps } from "./agent-profile-model";
 import { createAgentProfile } from "./agent-profile-state";
-const HandlerPolicy = retryableLazy(() => import("../../../settings/src/screens/HandlerPolicy"));
+const HandlerPolicy = retryableLazy(() => import("./HandlerPolicy"));
 
 /**
  * El perfil de un agente, dentro de la pestaña de su conversación.

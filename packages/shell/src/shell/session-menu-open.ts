@@ -6,11 +6,11 @@ export function openRequestedSessionMenu(rail: ReturnType<typeof sessionRail>, u
   open: (open: boolean) => void;
 }) {
   const context = rail.laterContext();
-  const notice = rail.menuNotice();
-  if (!context && !notice) return;
-  update.context(context);
-  update.step(context ? "danil" : "menu");
-  update.open(true);
-  if (context) rail.acknowledgeLater();
-  if (notice) rail.acknowledgeNotice();
+  if (context) {
+    update.context(context);
+    update.step("danil");
+    update.open(true);
+    rail.acknowledgeLater();
+  }
+  if (rail.menuNotice()) rail.acknowledgeNotice();
 }

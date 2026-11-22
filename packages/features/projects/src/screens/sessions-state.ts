@@ -7,7 +7,7 @@ import {
 import { createEffect, createMemo, createSignal, mapArray, on, onCleanup } from "solid-js";
 import { celebrateFinishedTask } from "../../../../ui/src/FinishTaskButton";
 import type { TaskActionFailure } from "../components/TaskActionToast";
-import { bringHereLabel, canBringHere, machines } from "../../../machines/src/queries/store";
+import { bringHereLabel, canBringHere, machines } from "../model/ports";
 import { createTaskHistories } from "../queries/taskHistories";
 import { displayName, watchProfiles } from "../queries/profiles";
 import { matchesTaskQuery } from "../model/taskSearch";

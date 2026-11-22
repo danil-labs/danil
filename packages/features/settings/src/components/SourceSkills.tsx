@@ -12,7 +12,7 @@ import Search from "lucide-solid/icons/search";
 import { SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { lockedBy } from "../../../../../apps/desktop/src/lib/governance";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import { Governed } from "./Governed";
+import { Governed } from "../../../../ui/src/Governed";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
 
 /** Una skill de una carpeta adjunta o de un repositorio. La compone `practices::SkillDeFuente`. */

@@ -7,7 +7,7 @@
 
 import { mcpCallFromName } from "@terminus/chat/tools";
 
-export * from "./transcript-events.ts";
+export * from "./transcript-chat-event.ts";
 export * from "./transcript-live.ts";
 export * from "./transcript-types.ts";
 export * from "./transcript-render.ts";

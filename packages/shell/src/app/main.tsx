@@ -3,6 +3,8 @@
 import "../../../../apps/desktop/src/locales/catalogs";
 import { render } from "solid-js/web";
 import App from "./App";
+import { enchufarProyectos } from "./projectsPorts";
+import { enchufarAlta } from "./onboardingPorts";
 import { Setup } from "../../../features/onboarding/src";
 import { checkEnvironment, installTool, prepareRuntime, restartApp, servicePoll, setupRequired } from "../../../features/settings/src/queries/engine-environment";
 import { listWorkspaces } from "../../../features/settings/src/queries/engine-workspaces";
@@ -20,6 +22,9 @@ import { mountAfterLanguagePacks } from "../../../../apps/desktop/src/locales/st
 import { capabilities, setCapabilities } from "../../../host/src/platform";
 import { askGuestChannels } from "../../../features/machines/src/queries/guestChannels";
 import "../../../../apps/desktop/src/lib/sharedClock";
+// Antes de montar nada: las pantallas de projects leen machines, code y chat por aquí.
+enchufarProyectos();
+enchufarAlta();
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
 void import("../../../../apps/desktop/src/locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));

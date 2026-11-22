@@ -8,7 +8,7 @@ import { MarcaAgente } from "../../../../ui/src/icons";
 import FolderChip from "./FolderChip";
 import { gitAppearance, RailPull, sessionGitDescription } from "../components/SessionGit";
 import { WithTaskHoverCard } from "../components/TaskHoverCardTrigger";
-import { MachineChip } from "../../../machines/src/components/MachineChip";
+import { MachineChip } from "../model/ports";
 import { AstroAvatar } from "./AstroAvatar";
 import { displayName } from "../queries/profiles";
 import EtapaDeTarea from "./TaskStage";

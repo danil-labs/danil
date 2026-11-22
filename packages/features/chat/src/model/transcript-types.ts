@@ -10,7 +10,7 @@ import type { Producido } from "../components/Delivery.tsx";
 import type { HistoryPage } from "./history.ts";
 import type { Pregunta, Respuesta } from "../components/Questions.tsx";
 import type { Author, PermissionDecision } from "./messageTypes";
-import type { McpAppCall } from "./transcript-events.ts";
+import type { McpAppCall } from "./transcript-chat-event.ts";
 
 /** Una herramienta que el agente usó, tal como quedó **guardada** en el turno. */
 export type Tool = {

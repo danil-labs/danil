@@ -8,7 +8,7 @@ export default function WorkspaceSearch(props: { value: string; onInput: (value:
   return (
     <input
       type="search"
-      class="mx-2 mb-1 h-7 w-[calc(100%-1rem)] rounded-sm border border-border bg-surface px-2 text-xs outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
+      class="mx-2 mb-1 h-7 w-[calc(100%-1rem)] rounded-sm border border-border bg-surface px-2 text-xs outline-none focus-visible:bg-surface-muted"
       placeholder={t("shell.directory.search")}
       aria-label={t("shell.directory.search")}
       value={props.value}

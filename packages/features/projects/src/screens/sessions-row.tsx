@@ -9,7 +9,7 @@ import { esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { FinishTaskButton } from "../../../../ui/src/FinishTaskButton";
 import { Input } from "../../../../ui/src/Input";
-import { WithMentions } from "../../../chat/src/components/WithMentions";
+import { WithMentions } from "../../../../ui/src/WithMentions";
 import { canFinishTask, effectiveTaskGit } from "../queries/taskGit";
 import { type TaskActivity, taskPriority } from "@terminus/design";
 import { readableSessionTitle, type SessionRow, type SessionsProps } from "./sessions-model";
