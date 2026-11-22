@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { contextWorkspaces, openContextMenu } from "../helpers/context-workspaces.mjs";
+import { contextCatalog, contextWorkspaces, openContextMenu } from "../helpers/context-workspaces.mjs";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
 import { RESPONSES } from "../helpers/mount-guard.mjs";
 
@@ -22,6 +22,7 @@ test("preferences have no global account entries, group menus scope credits and 
       if (args.path === "/v1/identity/me") return { status: 200, body: { id: "person" } };
       if (args.path === "/v1/credits/balance") return args.context === "b" ? { status: 403, body: { code: "organization_selection_required" } } : { status: 200, body: { organization_id: "org-a", available: { currency: "MXN", amount_micro: "12500000" } } };
       if (args.path === "/v1/workspaces/promo/redeem") throw { detail: "invalid_request" };
+      if (args.path === "/v1/workspaces") return contextCatalog(contexts);
       return { status: 404, body: {} };
     },
   });
@@ -99,6 +100,7 @@ test("the enabled Desk promo route sends a trimmed code and displays rejection c
     danil_edge_fetch: (args) => {
       if (args.path === "/v1/identity/me") return { status: 200, body: { id: "person" } };
       if (args.path === "/v1/workspaces/promo/redeem") { sent.push(args); return replies.shift(); }
+      if (args.path === "/v1/workspaces") return contextCatalog(promoContexts);
       return { status: 404, body: {} };
     },
   });
@@ -135,13 +137,13 @@ test("Desk group can redeem only when its context says owner or admin", async ()
   const roleContexts = roles.map((role, i) => ({ context_id: `role-${i}`, org: `org-${i}`, org_name: `Org ${i}`, plan: "free", workspaces: "all", role }));
   const app = await boot("listo", "promo-context-roles", { ...RESPONSES, ...contextWorkspaces(roleContexts),
     danil_session_status: { state: "connected", sessions: [{ family: "f", email: "one@example.com", contexts: roleContexts }] },
-    danil_edge_fetch: ({ path }) => path === "/v1/identity/me" ? { status: 200, body: { id: "person" } } : { status: 404 },
+    danil_edge_fetch: ({ path }) => path === "/v1/identity/me" ? { status: 200, body: { id: "person" } } : path === "/v1/workspaces" ? contextCatalog(roleContexts) : { status: 404 },
   });
   const doc = app.w.document;
   assert.ok(await until(() => doc.querySelectorAll("[data-workspace-context]").length === roles.length));
   for (let i = 0; i < roles.length; i++) {
     openContextMenu(app, `role-${i}`);
-    assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === `Cerrar sesión de Org ${i}`)));
+    assert.ok(await until(() => doc.querySelector(`[data-account-menu-context="role-${i}"]`)));
     assert.equal([...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Canjear código"), roles[i] === "owner" || roles[i] === "admin", `Desk role ${roles[i]}`);
     escape(app); await sleep(50);
   }

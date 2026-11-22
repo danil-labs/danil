@@ -11,10 +11,8 @@ import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { createNavigationOrder } from "../../../../../apps/desktop/src/lib/navigation-order";
-import { capabilities } from "../../../../host/src/platform";
 import { activeWorkspaceContext, workspaceContextOptions } from "../../../../../apps/desktop/src/lib/workspace-context.ts";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
-import type { RailWorkspace } from "../../../../ui/src/lib/rail-workspace";
 import type { Workspace, MemoriaProveedor, Startup } from "../../../../ui/src/lib/workspace-startup.ts"; export type { Workspace, MemoriaProveedor, Startup };
 
 /**
@@ -150,37 +148,6 @@ export function createWorkspaces() {
     turnosVivos,
     bloqueado,
   };
-}
-
-/**
- * El riel: con el índice del motor (`state_machines`) la lista sale solo de él,
- * los de aquí y los que sirven las otras máquinas de la persona; sin él, de
- * `list_workspaces`, como Configuración. El abierto y cambiar de workspace son
- * los de siempre.
- */
-export function createRail() {
-  const ws = createWorkspaces();
-  const order = createNavigationOrder(() => "workspaces.order");
-  const [revision, setRevision] = createSignal(0);
-  const bump = () => setRevision((n) => n + 1);
-  onMount(() => {
-    window.addEventListener("harness:workspace-name", bump);
-    window.addEventListener("harness:workspace", bump);
-    onCleanup(() => {
-      window.removeEventListener("harness:workspace-name", bump);
-      window.removeEventListener("harness:workspace", bump);
-    });
-  });
-  const lista = createMemo((): RailWorkspace[] | null => {
-    revision();
-    const engine = capabilities().railWorkspaces?.() ?? null;
-    if (!engine) return ws.lista();
-    // El abierto se ve aunque el índice aún no lo traiga (recién creado, o de la cuenta sin máquina).
-    const open = ws.activo();
-    const extra = open && !engine.some((w) => w.id === open) ? (ws.lista() ?? []).filter((w) => w.id === open) : [];
-    return order.arrange([...engine, ...extra]);
-  });
-  return { ...ws, lista };
 }
 
 export { cerrarConEscape } from "../model/workspace-menu-escape.ts";

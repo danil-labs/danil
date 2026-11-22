@@ -40,7 +40,7 @@ test("missing echo discards multi-session mode and does not return a response bo
   assert.equal(sessions.groups(), null);
 });
 
-test("closing one context keeps its siblings, another family, local rows and local hidden state", async () => {
+test("closing one context keeps its siblings and another family; the rail has no local rows", async () => {
   let current = structuredClone(status);
   const invoke: ContextInvoke = async <T>(command: string, args?: Record<string, unknown>) => {
     if (command === "danil_sign_out") current.sessions![0].contexts = current.sessions![0].contexts.filter((c) => c.context_id !== args?.context);
@@ -51,10 +51,7 @@ test("closing one context keeps its siblings, another family, local rows and loc
   await sessions.close({ context: "a" });
   assert.deepEqual(sessions.groups()!.map((g) => g.context_id), ["b", "free", "c"]);
   const groups = sessions.groups()!.map((g) => ({ ...g, person: "person", available: [{ id: g.org, name: g.org }], added: new Set([g.org]) }));
-  const rows = ["a", "local", "hidden"].map((id) => ({ id, name: id, logo: null }));
-  const hidden = new Set(["hidden"]);
-  assert.deepEqual(sessionVisible(rows, "a", hidden, groups, new Set(["a", "b", "free", "c"])).map((w) => w.id), ["local", "b", "free", "c"]);
-  assert.deepEqual([...hidden], ["hidden"]);
+  assert.deepEqual(sessionVisible(null, groups).map((w) => w.id), ["b", "free", "c"]);
 });
 
 test("a late status read cannot undo a newer set", async () => {
@@ -295,7 +292,7 @@ test("the context limit preserves its cause and the other sessions without retry
   assert.equal(sessions.groups()!.length, 4);
 });
 
-test("a context removed by a status refresh loses its Danil tiles while the others and hidden locals stay", async () => {
+test("a context removed by a status refresh loses its Danil tiles while the others stay", async () => {
   let current = structuredClone(status);
   const invoke: ContextInvoke = async <T>() => current as T;
   const sessions = createSessionContexts(invoke, () => {});
@@ -303,11 +300,8 @@ test("a context removed by a status refresh loses its Danil tiles while the othe
   current.sessions![0].contexts = current.sessions![0].contexts.filter((c) => c.context_id !== "a");
   await sessions.refresh();
   const groups = sessions.groups()!.map((g) => ({ ...g, available: [{ id: g.context_id, name: g.org }], added: new Set([g.context_id]), person: "person" }));
-  const index = ["a", "local", "hidden"].map((id) => ({ id, name: id, logo: null }));
-  const hidden = new Set(["hidden"]);
-  const rows = sessionVisible(index, "a", hidden, groups, new Set(["a", "b", "free", "c"]));
-  assert.deepEqual(rows.map((w) => w.id), ["local", "b", "free", "c"]);
-  assert.deepEqual([...hidden], ["hidden"]);
+  const rows = sessionVisible("a", groups);
+  assert.deepEqual(rows.map((w) => w.id), ["b", "free", "c"]);
 });
 
 test("empty reasons from native status, web headers or bodies are empty states, including future values", async () => {

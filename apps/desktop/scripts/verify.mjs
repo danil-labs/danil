@@ -711,7 +711,7 @@ const steps = [
   ["Account return toast, retry and reduced motion mount", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/account-return-mount.test.mjs")], root],
   ["Account return waits for added rows and ignores cancellation", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-add-return.test.ts")], root],
   ["Web group header chooses an organization and closes only the email", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-group-header-mount.test.mjs")], root],
-  ["Organization source timeout retries and accepts a late listing", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/workspace-source-wait-mount.test.mjs")], root],
+  ["The rail lists the catalog with the machine off, keeps «Ocultos» and never paints a machine-only workspace", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/rail-catalog-mount.test.mjs")], root],
   ["A rail menu opened with the pointer focuses its panel, with the keyboard its first row", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/popover-pointer-focus-mount.test.mjs")], root],
   ["First run and the sidebar footer offer the Danil account", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/danil-sign-in-entry.test.mjs")], root],
   ["The first run requires the Danil session and enters the personal Free workspace without creating a local one", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/account-welcome-first-run.test.mjs")], root],

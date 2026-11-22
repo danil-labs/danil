@@ -12,18 +12,24 @@ import test from "node:test";
 import { HOME, MAC, open, openTask, remote, reread, SESSION_A, SESSION_B, TOKEN, until, VM } from "../helpers/desktop-account.mjs";
 import { sleep } from "../helpers/jsdom-app.mjs";
 
-test("a workspace of the account that only another machine has lists with the window's own", async () => {
+test("a catalog workspace lists even when only another machine serves it, and a machine-only one does not", async () => {
   const registry = [
     { id: "w2", name: "Producto", projects: [{ id: "p5", name: "Aplicación", remote_url: "https://github.com/ana/app", home_computer_id: "cmp_vm" }], computers: ["cmp_vm"] },
   ];
-  const { app, doc, registered, relayCalls } = await open("desktop-account-registry", {
+  const context = { context_id: "acct", org: "org_acme", org_name: "Acme", plan: "pro", workspaces: "all" };
+  const { app, doc, relayCalls } = await open("desktop-account-catalog-rail", {
     computers: [HOME, VM],
     registry,
     relays: { cmp_vm: { table: remote("Panel", "Tarea de la VM"), state: "offline" } },
+    extra: {
+      danil_session_status: { state: "connected", sessions: [{ family: "acct-family", email: "ana@example.com", contexts: [context] }] },
+      danil_edge_fetch: ({ path }) => path === "/v1/identity/me" ? { status: 200, body: { id: "person" } }
+        : path === "/v1/workspaces" ? { status: 200, body: { items: [{ id: "acc-w2", org: "org_acme", name: "Producto", engine_workspace_id: "w2" }] } }
+        : { status: 404, body: {} },
+    },
   });
-  assert.ok(registered.includes("Bearer client-tok"), "the registry is read with the client token");
-  assert.ok(await until(() => doc.querySelector('[data-workspace-column] [data-workspace-tile="w2"]')), "the account's workspace is in the column");
-  assert.ok(doc.querySelector('[data-workspace-column] [data-workspace-tile="w"]'), "next to the window's own");
+  assert.ok(await until(() => doc.querySelector('[data-workspace-column] [data-workspace-tile="w2"]')), "the catalog workspace is in the column though its machine is off");
+  assert.equal(doc.querySelector('[data-workspace-column] [data-workspace-tile="w"]'), null, "a workspace only a machine lists is not a tile");
   assert.ok(doc.querySelector('[data-sesion="t1"]'), "and the window stays in its own");
   assert.equal(relayCalls("cmp_vm", "send_message").length, 0, "reading wakes nothing");
   assert.deepEqual(app.failures, []);
@@ -145,36 +151,6 @@ test("a workspace whose account is signed out here keeps the window local", asyn
   assert.equal(listed.length, 0, "no other account's computers");
   assert.equal(f.relays.cmp_vm.sockets.length, 0);
   assert.ok(!app.commands.includes("account_relay_token"), "no token of another account is asked for");
-  assert.deepEqual(app.failures, []);
-});
-
-test("an organization's workspace this engine knows stays in the rail while a local workspace of no account is open, until the engine removes it", async () => {
-  const FOUNDATION = {
-    workspace: "fnd00001",
-    name: "Danil Foundation",
-    local: false,
-    machines: [{ computer_id: "cmp_nube", name: "Nube IA", state: "online", provider: "danil", organization: { organization_id: "org_1" }, resources: { machine: "v1" } }],
-  };
-  const known = { version: "v1", workspaces: [{ workspace: "w", name: "W", local: true, machines: [] }, FOUNDATION] };
-  const { app, doc, listed } = await open("desktop-account-engine-rail", {
-    computers: [HOME, MAC],
-    extra: {
-      danil_sessions: [SESSION_A],
-      danil_workspace_account: { account: null, email: null, signed_in: false, linked: false },
-      machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features: ["light_state_machines_v1"] }],
-      state_machines: (args) => (args?.version === known.version ? { schema: 1, version: known.version, not_modified: true } : { schema: 1, ...known }),
-    },
-  });
-  const tile = (id) => doc.querySelector(`[data-workspace-column] [data-workspace-tile="${id}"]`);
-  assert.ok(listed.length > 0, "a workspace of no account talks as the default session");
-  assert.ok(await until(() => tile("fnd00001")), "the organization's workspace is in the rail");
-  assert.ok(tile("w"), "next to the open one");
-
-  known.version = "v2";
-  known.workspaces = known.workspaces.slice(0, 1);
-  app.emit("state.copy_changed", { workspace: "fnd00001", machine: "cmp_nube", resource: "machine", version: null });
-  assert.ok(await until(() => !tile("fnd00001")), "gone once the engine removed it");
-  assert.ok(tile("w"));
   assert.deepEqual(app.failures, []);
 });
 
