@@ -12,7 +12,21 @@ import {
   untrack,
   type JSX,
 } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import {
+  officePreview,
+  openFileExternal,
+  openTreeExternal,
+  previewFile,
+  previewTreeShow,
+  readTreePart,
+  treeOfficePreview,
+  treePatch,
+  treeShow,
+  treeWrite,
+  typstLiveChange,
+  typstLiveCloseDoc,
+  typstLiveReveal,
+} from "../queries";
 import { machineOf } from "../../../machines/src/queries/store";
 import Navegador from "lucide-solid/icons/external-link";
 import IconoDescarga from "lucide-solid/icons/download";
@@ -360,7 +374,7 @@ export default function VisorDeArchivo(props: {
     setGuardando(true);
     setFallo(null);
     try {
-      await invoke("tree_write", {
+      await treeWrite({
         project: props.project,
         session: props.session,
         tree: props.arbol,
@@ -417,9 +431,9 @@ export default function VisorDeArchivo(props: {
     setFalloAfuera(null);
     try {
       if (props.suelto) {
-        await invoke("open_file_external", { target: props.ruta });
+        await openFileExternal({ target: props.ruta });
       } else {
-        await invoke("tree_open_external", {
+        await openTreeExternal({
           project: props.project,
           session: props.session,
           tree: props.arbol,
@@ -442,7 +456,7 @@ export default function VisorDeArchivo(props: {
     props.suelto || props.session === ""
       ? null
       : (offset, size, revision) =>
-          invoke<TreePart>("tree_read_part", {
+          readTreePart<TreePart>({
             project: props.project,
             session: props.session,
             tree: props.arbol,
@@ -454,9 +468,9 @@ export default function VisorDeArchivo(props: {
 
   // El PDF de un documento de Office; sin archivo en disco (una rama base) no hay.
   function pedirOffice(): Promise<Preview> | null {
-    if (props.suelto) return invoke<Preview>("office_preview", { path: props.ruta }, machineOf(props.session));
+    if (props.suelto) return officePreview<Preview>({ path: props.ruta }, machineOf(props.session));
     if (props.session === "") return null;
-    return invoke<Preview>("tree_office_preview", {
+    return treeOfficePreview<Preview>({
       project: props.project,
       session: props.session,
       tree: props.arbol,
@@ -466,7 +480,7 @@ export default function VisorDeArchivo(props: {
 
   const pedirContenido = async (): Promise<Contenido> => {
     if (props.suelto) {
-      const p = await invoke<Preview>("preview_file", { path: props.ruta, rel: props.ruta }, machineOf(props.session));
+      const p = await previewFile<Preview>({ path: props.ruta, rel: props.ruta }, machineOf(props.session));
       return {
         kind: p.kind === "html" ? "text" : p.kind,
         text: p.text ?? "",
@@ -477,12 +491,12 @@ export default function VisorDeArchivo(props: {
       };
     }
     return props.session === ""
-      ? invoke<Contenido>("preview_tree_show", {
+      ? previewTreeShow<Contenido>({
           project: props.project,
           baseRef: props.base,
           path: props.ruta,
         })
-      : invoke<Contenido>("tree_show", {
+      : treeShow<Contenido>({
           project: props.project,
           session: props.session,
           tree: props.arbol,
@@ -494,7 +508,7 @@ export default function VisorDeArchivo(props: {
   const pedirDiff = () =>
     previa()
       ? Promise.resolve(null)
-      : invoke<string>("tree_patch", {
+      : treePatch({
           project: props.project,
           session: props.session,
           tree: props.arbol,
@@ -633,7 +647,7 @@ export default function VisorDeArchivo(props: {
       porEnviar = null;
       try {
         const path = props.ruta;
-        await invoke("typst_live_change", { key: envio.key, path, text: envio.texto });
+        await typstLiveChange({ key: envio.key, path, text: envio.texto });
         abiertoEn = { key: envio.key, path };
       } catch {
         // Sin reabrir, los errores que se ven son los de un texto que ya no es: la vista nueva lo vuelve a mandar.
@@ -650,7 +664,7 @@ export default function VisorDeArchivo(props: {
   });
   onCleanup(() => {
     // Sin `props.ruta`: al desmontar puede venir de un `<Show>` que ya no se cumple y lanzar «Stale read».
-    if (abiertoEn) void invoke("typst_live_close_doc", abiertoEn).catch(() => {});
+    if (abiertoEn) void typstLiveCloseDoc(abiertoEn).catch(() => {});
   });
 
   // El panel de «@» y las rutas pide a la vista de este árbol; sin ella, el editor no propone nada.
@@ -674,7 +688,7 @@ export default function VisorDeArchivo(props: {
   function mostrarEnLaVista(linea: number, columna: number) {
     const viva = vivaDelArbol();
     if (viva?.estado !== "lista") return;
-    void invoke("typst_live_reveal", { key: viva.key, path: props.ruta, line: linea, column: columna }).catch(() => {});
+    void typstLiveReveal({ key: viva.key, path: props.ruta, line: linea, column: columna }).catch(() => {});
   }
 
   let guardadoEnEspera: ReturnType<typeof setTimeout> | undefined;

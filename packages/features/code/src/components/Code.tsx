@@ -4,7 +4,7 @@ import { alMoverseElArbol, avisarDeLosArboles } from "../queries/refresh";
 import { precargarEditor } from "../model/editorLoad";
 import { Skeleton } from "../../../../ui/src/Skeleton";
 import { Channel } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { listTaskTrees, watchTaskTree, unwatchTaskTree } from "../queries";
 import { machineOf } from "../../../machines/src/queries/store";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
@@ -61,10 +61,11 @@ export default function Codigo(props: {
     const mia = () => props.session === sid && generation === current;
     if (!arboles().length) setCargando(true);
     try {
-      const as = await invoke<ArbolEnTarea[]>("list_task_trees", {
-        project: props.project,
-        session: sid,
-      }, machineOf(sid));
+      const as = await listTaskTrees(
+        props.project,
+        sid,
+        machineOf(sid),
+      );
       recordarArboles(sid, as);
       if (!mia()) return;
       setArboles(siguienteLista(arboles(), { ok: true, lista: as }));
@@ -106,12 +107,12 @@ export default function Codigo(props: {
         if (!disposed) avisarDeLosArboles(props.session);
       }, 700);
     };
-    const watcher = invoke<string>("watch_task_tree", { project: props.project, session: props.session, changes });
+    const watcher = watchTaskTree(props.project, props.session, changes);
     void watcher.catch((error) => { if (!disposed) setWatchFailure(asFailure(error)); });
     onCleanup(() => {
       disposed = true;
       clearTimeout(scheduled);
-      void watcher.then((id) => invoke("unwatch_task_tree", { id })).catch(() => {});
+      void watcher.then((id) => unwatchTaskTree(id)).catch(() => {});
     });
   }));
 
