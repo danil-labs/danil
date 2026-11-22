@@ -8,6 +8,7 @@ import { createTabDrag } from "./tab-drag";
 import { createWindows } from "./windows";
 import { createColumnasDePrincipal } from "./principal-columns";
 import { createPrincipal } from "./principal";
+import { createWindowBackground } from "./window-background";
 import { AgentProfile, CarryOriginLabel, CarryProgress,       MachinePicker,      TaskLocation } from "./lazy-screens";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import {
@@ -93,8 +94,6 @@ import { createSidebar } from "../shell/Sidebar";
 import type { SidebarFilterProps } from "../shell/SidebarFilter";
 import { createUsage } from "../shell/usage";
 import { createEngineQueue, createTaskQueues } from "../../../features/task-queues/src";
-import { VELO_DE_FONDO } from "../../../../apps/desktop/src/lib/chat-background";
-import { fondoDeChat, imagenDelWorkspace, veloDeFondo } from "../../../../apps/desktop/src/lib/chat-background-store";
 import { connected } from "../../../../apps/desktop/src/lib/engineConnection";
 import { pedirElCampo } from "../../../../apps/desktop/src/lib/focus";
 import {  t } from "../../../../apps/desktop/src/lib/i18n";
@@ -148,7 +147,7 @@ import {
 import { Button } from "../../../ui/src/Button";
 import { prosaDe } from "../../../ui/src/Failure";
 import { LazyPart } from "../../../ui/src/LazyPart";
-import { createChatEvents, createSleepSession, createThreadStream, createThreadSide, createAttachments, createAttachmentsMount, createResync, createResyncCommands, createShellCommand, createDraftSend, createHandover, createSend, createSendGates, createSendNow, createPanelDeChat, createChatBackground } from "../../../features/chat/src";
+import { createChatEvents, createSleepSession, createThreadStream, createThreadSide, createAttachments, createAttachmentsMount, createResync, createResyncCommands, createShellCommand, createDraftSend, createHandover, createSend, createSendGates, createSendNow, createPanelDeChat } from "../../../features/chat/src";
 
 export const { sleepSession } = createSleepSession({ machineOf });
 
@@ -1156,22 +1155,7 @@ export default function App() {
     );
   };
 
-  /* La imagen propia del fondo global, leída como `data:` URI: la
-     política de la ventana no deja pintar un `file://`. Sin imagen —o si
-     no se puede leer— la sección cae al atardecer. El fondo propio de un
-     agente se pinta encima, dentro de su chat. */
-  const { fondoPropioUrl } = createChatBackground({ machineOf });
-
-  /* El fondo, la imagen y los velos son del workspace: su motor los recuerda
-     y se leen al abrirlo, aquí y en la web. */
-  createEffect(on(workspaceActivo, (workspace) => void import("../../../../apps/desktop/src/lib/chat-background-engine").then((m) => m.cargarFondoDelWorkspace(workspace))));
-
-  /* El fondo de Estilo cubre la ventana entera, detrás de las columnas de
-     vidrio (`.glass-panel`): así se ve también tras el historial, el árbol y
-     las barras. Cada chat solo pinta encima el fondo propio de su agente. */
-  const imagenDeVentana = () =>
-    fondoDelAgente()?.url ?? (fondoDeChat() === "propia" ? (imagenDelWorkspace() ?? fondoPropioUrl()) : null) ?? null;
-  const veloDeVentana = () => (fondoDelAgente() ? (fondoDelAgente()?.veil ?? VELO_DE_FONDO) : veloDeFondo());
+  const { imagenDeVentana, veloDeVentana } = createWindowBackground({ fondoDelAgente, machineOf, workspaceActivo });
 
   const { CeldasDeContenido } = createCeldasDeContenido({ PanelDeChat, abrirSesion, adjuntarAlProyecto, agent, agents, anchoDeArchivos, anchoDelArbol, archivosDeTarea, carpetaDelProyecto, carpetaEditable, celdaDe, cerrarPestanasYa, claveAbierta, compacta, consumo, deleteTask, draftBases, editorDeletionLocked, estiloDeLaCelda, etaparSesion, fijarSesion, hablarConEncargado, idsDeContenido, llaveDeBorrador, llevaTiraInterior, mandarVentana, materialPedido, modelosParaAgentes, moverSesion, nuevaSesion, paneles, permissions, pestanas, project, projectList, proyectoDeLaVista, quitarDelProyecto, renombrarSesion, sesionesConEstado, sessionId, setMaterialPedido, setSettings, sitiosEnBlanco, sources, tapadoPorElProyecto, vivas, workspaceActivo });
 
