@@ -9,6 +9,7 @@ Exporta desde `src/client.ts` y módulos de dominio:
 - Cliente principal y hooks: `createPlatformClient`, `usePlatform`, `cancelEdgeWrites`, `nextDelay`, `EdgeMethod`, `EdgeRefusal`, `EdgeReply`, `GroupReply`.
 - Constantes y eventos: `ORGANIZATION_CHANGED`, `Admission`.
 - Clientes de dominio: `machines.ts` (`getMachines`, `startMachine`, `wakeMachine`, `createMachineTicket`), `identity.ts`, `workspaces.ts`, `treasury.ts`, `credentials.ts`.
+- `idempotency.ts`: `newIdempotencyKey` (una llave por operación lógica, `crypto.randomUUID()`) y `withIdempotencyKey` (pone `Idempotency-Key` salvo que ya venga). Lo usan `edgeUntil`, `machines.ts`, `treasury.ts` y `credentials.ts`.
 
 ## Qué consume
 - Fetch HTTP nativo hacia el borde `/v1`.
@@ -21,6 +22,7 @@ Exporta desde `src/client.ts` y módulos de dominio:
   - Dominio identidad: `/v1/identity/contexts`, `/v1/identity/login`, `/v1/identity/me`, `/v1/identity/organizations`, `/v1/identity/organizations/select`, `/v1/identity/sessions`, `/v1/identity/sessions/catalog`
   - Dominio workspaces: `/v1/workspaces`, `/v1/workspaces/adopt`, `/v1/workspaces/adopt/challenge`, `/v1/workspaces/promo/redeem`, `/v1/workspaces/select`
   - Dominio máquinas: `/v1/machines`, `/v1/machines/start`, `/v1/machines/ticket`, `/v1/machines/wake`
+- Cabecera `Idempotency-Key` en toda escritura: `edgeUntil`, `/v1/machines` (start y tickets), billing y las cuatro escrituras de `/v1/credentials/workspaces/{ws}/accounts` (`PUT`, `DELETE`, `DELETE …/machines/{machine}`, `POST …/restore`). Quien reintenta repite la misma llave.
 - Comandos RPC1 del motor: `danil_edge_fetch`.
 
 ## Contrato vendorizado (R2 y R7)

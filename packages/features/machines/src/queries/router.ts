@@ -28,8 +28,8 @@ import type { RouterConfig } from "../model/router-config.ts";
 import { headerOf, withoutHeader } from "../model/router-headers.ts";
 import { markUnconfirmedOpen } from "../model/unconfirmedOpen.ts";
 import { createWebEventQueue } from "../model/web-event-queue.ts";
-import { FAN, CONTEXT, STORAGE, LISTING, CREATE, WITH_SPACE, ofThisMachine, OF_THIS_WINDOW, UNKNOWN, REFUSED_WORKSPACE, FILES, SERVICE_KEYS, REFRESH_GAP, NOTIFY_AFTER, REGISTRY_FOR, REGISTRY_WAIT, FRESH_WAIT, FIRST_ANSWER_GRACE, PROGRESSIVE, NO_SETUP, LIGHT_STATE, LIGHT_COPIES, INDEXED, LOCAL_INDEX_FOR, COPY_INDEX_FOR, CHANGES, withoutChannel, gitSlice, type Args, type Options, type Invoke, type Failure, type SliceChange } from "./router-helpers.ts";
-export type { Invoke, SliceChange } from "./router-helpers.ts";
+import { FAN, CONTEXT, STORAGE, LISTING, CREATE, WITH_SPACE, ofThisMachine, OF_THIS_WINDOW, UNKNOWN, REFUSED_WORKSPACE, FILES, SERVICE_KEYS, REFRESH_GAP, NOTIFY_AFTER, REGISTRY_FOR, REGISTRY_WAIT, FRESH_WAIT, FIRST_ANSWER_GRACE, PROGRESSIVE, NO_SETUP, LIGHT_STATE, LIGHT_COPIES, INDEXED, LOCAL_INDEX_FOR, COPY_INDEX_FOR, CHANGES, withoutChannel, gitSlice, type Args, type Options, type Invoke, type Failure, type SliceChange } from "../model/router-commands.ts";
+export type { Invoke, SliceChange } from "../model/router-commands.ts";
 
 export { unconfirmedOpen } from "../model/unconfirmedOpen.ts";
 
