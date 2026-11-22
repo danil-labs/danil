@@ -28,7 +28,7 @@ import Chat, {
 import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies, DelegatedPanel } from "../../../features/chat/src/screens/DelegatedTasks";
 import { agentSwitchBlocked, MACHINE_UNANNOUNCED } from "../../../features/chat/src/model/handover";
 import SearchPanel from "../../../features/chat/src/components/SearchPanel";
-import McpSignInNotice, { noteMcpSignIn } from "../../../features/chat/src/screens/McpSignInNotice";
+import McpSignInNotice, { noteMcpSignIn } from "../../../features/settings/src/screens/McpSignInNotice";
 import PreviousAgentChat from "../../../features/chat/src/screens/PreviousAgentChat";
 import { ThreadSearch } from "../../../features/chat/src/screens/ThreadSearch";
 import TranscriptSource from "../../../features/chat/src/screens/TranscriptSource";

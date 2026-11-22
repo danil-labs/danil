@@ -141,7 +141,7 @@ import { MessageText } from "../components/MessageText";
 import { Select } from "../../../../ui/src/Select";
 import SelectorDeModo from "../components/ModePicker";
 import { AltoMonotono } from "../components/MonotonicHeight";
-import { MARCA_SIN_ELEGIR } from "../model/marks";
+import { MARCA_SIN_ELEGIR } from "../../../../ui/src/lib/surfaceMarks";
 import { siguienteModo } from "../model/modes";
 import { interrumpible, seMandaSinSuperficie } from "../../../../ui/src/lib/queue.ts";
 import TarjetaDeTerminal, { type ComandoEnVivo } from "../components/ShellCard";

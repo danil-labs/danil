@@ -34,7 +34,8 @@ import {
   SidebarMenuItem,
 } from "../../../../ui/src/sidebar";
 import type { MaquinasDeAjustes } from "../model/machines-port";
-import type { ModelChoices } from "../../../projects/src/screens/NewAgent";
+import type { PiezasDeAjustes } from "../model/features-port";
+import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
 import AIProviders from "../components/AIProviders";
 import type { SurfacesState } from "../model/ai-providers-view";
 import Connections from "../components/Connections";
@@ -109,6 +110,7 @@ const pestanasDe = (
   workspace: () => string | null,
   activityMachine: () => string | null,
   maquinas: MaquinasDeAjustes,
+  piezas: PiezasDeAjustes,
   avisoReparacion?: (p: {
     fallas: Falla[];
     reparando: boolean;
@@ -128,12 +130,12 @@ const pestanasDe = (
     plan: capabilities().nativeWindow || capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().nativeWindow ? <Suspense><DeskPlan workspace={workspace()} /></Suspense> : capabilities().personalAccount?.plan?.()) : undefined,
     security: tab("security", () => t("settings.tab.security"), null),
     general: tab("general", () => t("settings.nav.general"), () => <General maquinas={maquinas} />),
-    appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} /></Suspense>),
+    appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} /></Suspense>),
     notify: tab("notify", () => t("settings.tab.notify"), () => <SettingsPanel><SettingsSection title={t("settings.tab.notify")}><NotifyBehavior /></SettingsSection></SettingsPanel>),
     languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
     workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces maquinas={maquinas} />),
     download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
-    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} />; }),
+    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} piezas={piezas} />; }),
     machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" maquinas={maquinas} /></Suspense>) : undefined,
     entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment avisoReparacion={avisoReparacion} />),
     activity: tab("activity", () => t("activity.title"), () => <Suspense fallback={null}><ActivityLogs workspace={workspace()} machine={activityMachine()} /></Suspense>),
@@ -144,6 +146,7 @@ const pestanasDe = (
       <Suspense fallback={null}>
         <Agents
           modelos={agentes.modelos}
+          piezas={piezas}
           proyecto={agentes.proyecto}
           onAgentProfile={agentes.onAgentProfile}
         />
@@ -246,6 +249,8 @@ export default function Settings(props: {
   integraciones?: (p: { solo: string[]; onCambio: () => void }) => JSX.Element;
   /** Lo de máquinas que usan las pestañas: lo enchufa el shell. */
   maquinas: MaquinasDeAjustes;
+  /** Lo de projects y chat que pintan las pestañas: lo enchufa el shell. */
+  piezas: PiezasDeAjustes;
 }) {
   // Lo que se puede elegir para trabajar, que es lo que decide qué proveedores
   // tienen pantalla. Con su estado: aquí no apaga nada, lo enseña.
@@ -330,7 +335,7 @@ export default function Settings(props: {
       setEstadoSuperficies({ k: "loading" });
       cargarSuperficies();
     },
-  }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null, props.maquinas, props.avisoReparacion, props.integraciones);
+  }, props.proyectos, () => props.workspace ?? null, () => props.activityMachine ?? null, props.maquinas, props.piezas, props.avisoReparacion, props.integraciones);
   const ENTRADAS = entradasDe(pestanas);
 
   // Sin soporte del motor activo, Secretos no se ofrece; su enlace directo sí abre el aviso.
