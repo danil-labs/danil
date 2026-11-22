@@ -1,6 +1,7 @@
 import { For } from "solid-js";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /** Las muestras de un estilo: cada una se pinta con su propio tema y estilo. */
 export function StylePicker(props: {
@@ -16,8 +17,7 @@ export function StylePicker(props: {
       <div role="radiogroup" aria-label={props.title} class="flex gap-2">
         <For each={props.options}>
           {({ id, label }) => (
-            <button
-              type="button"
+            <Pressable
               role="radio"
               aria-checked={props.value === id}
               aria-label={label}
@@ -43,7 +43,7 @@ export function StylePicker(props: {
                 </span>
               </span>
               <span class="truncate px-0.5 text-caption text-neutral-950">{label}</span>
-            </button>
+            </Pressable>
           )}
         </For>
       </div>

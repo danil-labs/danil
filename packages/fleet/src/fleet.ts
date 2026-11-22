@@ -15,7 +15,7 @@
  * suma su rebanada con `merge`.
  */
 import { type AccountWorkspace, type Blocked, type CallResult, cachedAt, callWorkspace, type DeferredFrame, type EngineInfo, type EventsPage, isDeferrable, linkedAttention, linkedEvents, linkedListing, type MachineState, requestId, type SystemId, unlinkedWorkspaces } from "../../computers/src/index.ts";
-import { COMMAND_NOT_HERE, isScopeRefusal, isUnknownCommand } from "../../protocol/src/index.ts";
+import { COMMAND_NOT_HERE, isScopeRefusal, isUnknownCommand } from "../../engine-client/src/index.ts";
 import { classOf, DEADLINES, type Deadlines, PASSIVE } from "./deadlines.ts";
 import { FleetError, fromRelay } from "./errors.ts";
 import { argsFor } from "./ids.ts";

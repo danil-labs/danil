@@ -4,7 +4,7 @@ import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { accionDeAtajo, navegacionDePestanas, ventanaVecina } from "../../../../../apps/desktop/src/lib/shortcuts";
 import { type NavegacionDePestanas } from "../../../../../apps/desktop/src/lib/shortcuts.ts";
 import { capabilities } from "../../../../host/src/platform";
-import { type ActivityEvent } from "@terminus/protocol";
+import { type ActivityEvent } from "../../../../engine-client/src/index.ts";
 import { createEffect, createSignal, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 import type { CreateSidebarPort, InicioDeCarpeta, SearchFilter } from "./types.ts";
 import type { createTaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles.ts";

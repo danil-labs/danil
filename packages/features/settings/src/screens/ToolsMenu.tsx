@@ -10,6 +10,7 @@ import { MarcaServicio } from "../../../../ui/src/marcas";
 import { toolMarkId } from "../../../../ui/src/index";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { mcpLoginUrl, mcpPendingSignIn, mcpSignIn, mcpSignInFailure, mcpSignInState } from "./McpSignInNotice";
 import { type Conocido, type Puesto, sinSecretos } from "./ToolsModel";
 
@@ -106,7 +107,7 @@ export function ConexionesMenu(props: {
             </div>
           }
         >
-          <button
+          <Pressable
             role="menuitem"
             class={cn(ITEM_DE_MENU, "flex min-h-8 items-center gap-2 py-1")}
             title={p.detalle ? `${aviso()} · ${p.detalle}` : aviso()}
@@ -128,7 +129,7 @@ export function ConexionesMenu(props: {
                 {mcpLoginUrl() ? t("settings.tools.open_login") : t("settings.tools.opening")}
               </span>
             </Show>
-          </button>
+          </Pressable>
         </Show>
       </li>
     );
@@ -201,7 +202,7 @@ export function ConexionesMenu(props: {
         <Show when={mcpSignInFailure()}>{(f) => <FailureNote f={f()} />}</Show>
 
         <span class="my-1 h-px bg-border" />
-        <button
+        <Pressable
           role="menuitem"
           class={ITEM_DE_MENU}
           onClick={() => {
@@ -210,7 +211,7 @@ export function ConexionesMenu(props: {
           }}
         >
           {t("shell.sidebar.mcp.manage")}
-        </button>
+        </Pressable>
       </PopoverContent>
     </Popover>
   );

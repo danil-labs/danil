@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeaderCell, TableRow } fro
 import { workdirIconKind } from "../../../../ui/src/lib/workdirKind";
 import WorkdirIcon, { workdirKindLabel } from "../../../../ui/src/WorkdirIcon";
 import { SettingsBlock, SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { PickerVisibilityItem } from "../components/PickerVisibilityItem";
 import { TaskCountCell } from "../components/TaskCountCell";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
@@ -120,14 +121,14 @@ export default function ManageProjects(props: { contexto: ContextoDeProyectos })
           >
             <PopoverTrigger
               as={(disparador: object) => (
-                <button
+                <Pressable
                   {...disparador}
                   class="grid size-6 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   aria-label={t("settings.projects.actions", { name: p().name })}
                   aria-haspopup="menu"
                 >
                   <Ellipsis size={15} />
-                </button>
+                </Pressable>
               )}
             />
             <PopoverContent
@@ -138,7 +139,7 @@ export default function ManageProjects(props: { contexto: ContextoDeProyectos })
                 when={confirmando() === p().id}
                 fallback={
                   <>
-                    <button
+                    <Pressable
                       role="menuitem"
                       class={ITEM_DE_MENU}
                       onClick={() => {
@@ -148,10 +149,10 @@ export default function ManageProjects(props: { contexto: ContextoDeProyectos })
                       }}
                     >
                       {t("settings.projects.rename")}
-                    </button>
+                    </Pressable>
                     <Show when={ruta()}>
                       {(r) => (
-                        <button
+                        <Pressable
                           role="menuitem"
                           class={ITEM_DE_MENU}
                           onClick={() => {
@@ -162,10 +163,10 @@ export default function ManageProjects(props: { contexto: ContextoDeProyectos })
                           {isMac()
                             ? t("settings.projects.reveal_finder")
                             : t("settings.projects.reveal_other")}
-                        </button>
+                        </Pressable>
                       )}
                     </Show>
-                    <button
+                    <Pressable
                       role="menuitem"
                       class={ITEM_DE_MENU}
                       onClick={() => {
@@ -174,12 +175,12 @@ export default function ManageProjects(props: { contexto: ContextoDeProyectos })
                       }}
                     >
                       {t("settings.projects.material")}
-                    </button>
+                    </Pressable>
                     <div role="separator" class="my-1 border-t border-border" />
                     <PickerVisibilityItem id={p().id} hidden={props.contexto.hiddenInPicker?.(p().id) ?? false} onSet={props.contexto.onSetHiddenInPicker} onDone={() => setMenu(null)} />
                     <Show when={props.contexto.onRemoveFromSpace}>
                       {(quitar) => (
-                        <button
+                        <Pressable
                           role="menuitem"
                           class={ITEM_DE_MENU}
                           onClick={() => {
@@ -188,16 +189,16 @@ export default function ManageProjects(props: { contexto: ContextoDeProyectos })
                           }}
                         >
                           {t("settings.projects.remove")}
-                        </button>
+                        </Pressable>
                       )}
                     </Show>
-                    <button
+                    <Pressable
                       role="menuitem"
                       class={cn(ITEM_DE_MENU, "text-error-strong")}
                       onClick={() => setConfirmando(p().id)}
                     >
                       {t("settings.projects.delete")}
-                    </button>
+                    </Pressable>
                   </>
                 }
               >

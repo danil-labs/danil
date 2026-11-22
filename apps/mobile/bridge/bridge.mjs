@@ -24,7 +24,7 @@ import { createConnection } from "node:net";
 import { networkInterfaces } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { APP_COMMANDS } from "../../../packages/protocol/src/commands.ts";
+import { APP_COMMANDS } from "../../../packages/engine-client/src/commands.ts";
 
 // The engine lab lives with the desktop app, which downloads and runs it (`scripts/engine.mjs`).
 const DESKTOP = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "desktop");

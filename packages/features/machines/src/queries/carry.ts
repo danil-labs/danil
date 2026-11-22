@@ -5,26 +5,9 @@
  * al enviar a otra máquina: no entra en la carga inicial.
  */
 import { createRoot, createSignal } from "solid-js";
-import {
-  type CarryEngine,
-  type CarryFailure,
-  type CarryJob,
-  type CarryResult,
-  type CarryState,
-  type Exported,
-  type Imported,
-  type Part,
-  type WorkStatus,
-  CarryError,
-  PART_RELAY,
-  cancelCarry,
-  carryWork,
-  type Selection,
-  keyVerdict,
-  needsSheet,
-  newState,
-  withoutRemote,
-} from "@terminus/carry";
+import { type CarryEngine, type Exported, type Imported, type Part, type WorkStatus } from "../model/carryTypes.ts";
+import { type CarryFailure, type CarryJob, type CarryResult, type CarryState, CarryError, cancelCarry, carryWork, newState } from "./carryRun.ts";
+import { PART_RELAY, type Selection, keyVerdict, needsSheet, withoutRemote } from "../model/carryPlan.ts";
 import "../../../../../apps/desktop/src/locales/workPhrases";
 import { invoke } from "../../../../engine-client/src/client";
 import type { Project } from "../../../../../apps/desktop/src/lib/model";

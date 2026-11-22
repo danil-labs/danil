@@ -4,7 +4,7 @@
  * "the file changed", never "the transcript was rewritten". Continuity comes from the turns.
  */
 
-import type { HistoryPage } from "../../protocol/src/types.ts";
+import type { HistoryPage } from "../../engine-client/src/types.ts";
 
 export type { HistoryPage };
 

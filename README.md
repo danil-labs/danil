@@ -131,8 +131,8 @@ packages/chat             shim for apps/mobile: re-exports packages/ui/src/lib/c
 packages/attention        Inbox, channels and customization of the phone
 packages/computers        Danil Machines client: control-plane API, relay session, wake rules
 packages/fleet            several machines behind one panel: envelope, per-machine slices, merge
-packages/carry            carrying work between machines: what travels, parts, base of the new task
-packages/protocol         the commands the mobile app may send to a machine, and their answers
+packages/carry            shim for apps/mobile only; carry lives in packages/features/machines
+packages/protocol         shim for apps/mobile only; the protocol lives in packages/engine-client
 ```
 
 `pnpm <script>` at the root runs the desktop's script (`apps/desktop/package.json`).

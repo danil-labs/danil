@@ -79,18 +79,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../packages/carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../packages/computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../packages/fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../packages/protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../packages/tasks
@@ -209,8 +203,6 @@ importers:
 
   packages/attention: {}
 
-  packages/carry: {}
-
   packages/computers: {}
 
   packages/engine-client:
@@ -291,18 +283,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -481,18 +467,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -671,18 +651,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -861,18 +835,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -1051,18 +1019,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -1241,18 +1203,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -1431,18 +1387,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -1621,18 +1571,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -1811,18 +1755,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -2001,18 +1939,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -2191,18 +2123,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -2381,18 +2307,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -2571,18 +2491,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -2761,18 +2675,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -2951,18 +2859,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -3141,18 +3043,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -3331,18 +3227,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -3521,18 +3411,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -3711,18 +3595,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../../tasks
@@ -3858,9 +3736,6 @@ importers:
       '@terminus/computers':
         specifier: workspace:*
         version: link:../computers
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
@@ -3887,8 +3762,6 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-
-  packages/protocol: {}
 
   packages/session:
     dependencies:
@@ -3974,18 +3847,12 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../carry
       '@terminus/computers':
         specifier: workspace:*
         version: link:../computers
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../protocol
       '@terminus/tasks':
         specifier: workspace:*
         version: link:../tasks

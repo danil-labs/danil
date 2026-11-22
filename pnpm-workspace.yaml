@@ -5,6 +5,8 @@ packages:
   - apps/desk
   - packages/*
   - "!packages/design"
+  - "!packages/protocol"
+  - "!packages/carry"
   - "!packages/chat"
   - packages/features/*
 

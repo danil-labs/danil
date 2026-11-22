@@ -1,5 +1,5 @@
 import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js";
-import type { Activity, ActivityLog, ActivityRow } from "@terminus/protocol";
+import type { Activity, ActivityLog, ActivityRow } from "../../../../engine-client/src/index.ts";
 import { listActivity, readActivity, readActivityLog } from "../queries/engine-activity";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

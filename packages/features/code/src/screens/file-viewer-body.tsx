@@ -3,7 +3,7 @@ import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { peso } from "../../../../../apps/desktop/src/lib/format";
-import { type FilePreview as Preview, mediaKindOf } from "@terminus/protocol";
+import { type FilePreview as Preview, mediaKindOf } from "../../../../engine-client/src/index.ts";
 import type { LeerParte } from "../../../../host/src/tree-download";
 import { comoDiff } from "../model/diff";
 import { CuerpoDeArchivo } from "../components/Changes";
