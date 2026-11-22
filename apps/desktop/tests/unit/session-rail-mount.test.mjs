@@ -27,7 +27,7 @@ test("organization rail omits empty groups and headers, opens the chooser after 
   });
   const doc = app.w.document;
   assert.equal(doc.querySelectorAll("[data-account-header]").length, 0);
-  assert.ok(doc.querySelector('[data-workspace-tile="w"]'), "local workspace stays visible");
+  assert.equal(doc.querySelector('[data-workspace-tile="w"]'), null, "a workspace only a machine lists is not a rail tile");
   assert.ok(await until(() => doc.querySelector('[data-session-context="b"]')));
   assert.equal(doc.querySelectorAll("[data-session-context]").length, 1, "later opens the chosen organization");
   assert.ok(!doc.body.textContent.includes("Tu workspace Free"), "no Free row without E1/W1a data");
@@ -60,7 +60,7 @@ test("organization rail omits empty groups and headers, opens the chooser after 
   doc.activeElement?.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   await sleep(100);
   assert.equal(doc.querySelectorAll("[data-account-header]").length, 0);
-  assert.ok(doc.querySelector('[data-workspace-tile="w"]'));
+  assert.equal(doc.querySelector('[data-workspace-tile="w"]'), null);
   assert.equal(doc.querySelector("[data-organization-menu]"), null);
 });
 

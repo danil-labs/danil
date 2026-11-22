@@ -104,12 +104,6 @@ export type Capabilities = import("../../../apps/desktop/src/lib/group-account")
   accountAssets?: WorkspaceAssetsSource;
   /** Botón extra al lado de la búsqueda de la barra lateral (en la web, volver a Danil Agents). */
   sidebarExtra?: () => JSX.Element;
-  /**
-   * El riel desde el índice del motor (`state_machines`, `light_state_machines_v1`):
-   * los workspaces de aquí y los que sirven las otras máquinas de la persona.
-   * `null` sin ese índice: el riel sale de `list_workspaces`.
-   */
-  railWorkspaces?: () => readonly import("../../features/machines/src/queries/engine-workspaces").RailWorkspace[] | null;
   machineName?: (id: string) => string;
   /** La máquina de la cuenta que guarda una tarea o un space por su id de panel (`<máquina>~<id>`); `null` si es de la ventana. */
   taskMachine?: (id: string) => string | null;

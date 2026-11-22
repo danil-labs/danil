@@ -128,7 +128,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       store,
       scope: () => record.person && active(g.context_id) && !sessions.emptyReason(g.context_id) ? { person: record.person, organization: g.org } : null,
       available: () => sessions.emptyReason(g.context_id) ? [] : active(g.context_id) ? availableFor(g.context_id) : null,
-      shown: () => sessionSeedInputs(active(g.context_id), availableFor(g.context_id), new Set([...leerPref<string[]>("workspaces.order", []), ...(capabilities().railWorkspaces?.() ?? []).map((w) => w.id), ...shown()]), hidden()).shown,
+      shown: () => sessionSeedInputs(active(g.context_id), availableFor(g.context_id), new Set([...leerPref<string[]>("workspaces.order", []), ...shown()]), hidden()).shown,
       hidden: () => sessionSeedInputs(active(g.context_id), availableFor(g.context_id), new Set(), hidden()).hidden,
       onSeeded, onChange: changed,
     });

@@ -43,7 +43,7 @@ import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS } from "../queries/cloud-machine
 import { createConnectedStatus } from "../queries/connected-status";
 import { createCloudRelayFactory } from "../queries/context-relay";
 import { machinesListed, setDanilFleet } from "../queries/danil-source";
-import { createEngineWorkspaces, railOf } from "../queries/engine-workspaces";
+import { createEngineWorkspaces } from "../queries/engine-workspaces";
 import { guestChannels } from "../queries/guestChannels";
 import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "../queries/guestLink";
 import { MachinePicker } from "./MachinePicker";
@@ -177,20 +177,9 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       return Array.isArray(features) ? features.filter((f): f is string => typeof f === "string") : [];
     },
     onChange: () => {
-      bumpRail((n) => n + 1);
       if (!installed) return void window.dispatchEvent(new CustomEvent("harness:workspace-name"));
       observeEngine(installed.fleet);
       slicesChanged(["workspaces"]);
-    },
-  });
-  // El riel sale del índice del motor cuando lo tiene; el capability lo lee con su señal.
-  const [railRead, bumpRail] = createRoot(() => createSignal(0));
-  setCapabilities({
-    ...capabilities(),
-    railWorkspaces: () => {
-      railRead();
-      const rows = engineWorkspaces.workspaces();
-      return rows ? railOf(rows) : null;
     },
   });
   /** Lo que la vista del motor sabe de cada máquina vale hasta que su sesión del relay diga algo. */
