@@ -4,6 +4,7 @@ import { Index } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { NextStepOption } from "../../../../../apps/desktop/src/lib/nextSteps";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
  * Las respuestas rápidas al pie de un mensaje del agente. Cada una se manda
@@ -24,8 +25,7 @@ export default function NextSteps(props: {
         {(opcion) => {
           const usada = () => props.usada(opcion().prompt);
           return (
-            <button
-              type="button"
+            <Pressable
               class={cn(
                 "flex w-full min-w-0 items-start gap-2 rounded-md border border-border bg-transparent px-2.5 py-1.5 text-left text-ui leading-[1.45] text-neutral-700 transition-colors duration-150 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                 "enabled:hover:border-border-strong enabled:hover:bg-surface-muted enabled:hover:text-neutral-950",
@@ -40,7 +40,7 @@ export default function NextSteps(props: {
                 {usada() ? <Check size={14} /> : <ArrowRight size={14} />}
               </span>
               <span class="min-w-0 flex-1 break-words">{opcion().prompt}</span>
-            </button>
+            </Pressable>
           );
         }}
       </Index>

@@ -27,6 +27,7 @@ import { MarcaAgente } from "../../../../ui/src/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import { DANIL_CREDITS } from "../model/danil-credits";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 const DanilServices = lazy(() => import("./DanilServices"));
 
@@ -242,9 +243,8 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
     >
       <PopoverTrigger
         as={(p: object) => (
-          <button
+          <Pressable
             {...p}
-            type="button"
             disabled={props.disabled}
             class={cn(
               DISPARADOR,
@@ -278,7 +278,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               )}
             </Show>
             <ChevronDown size={13} class="shrink-0" />
-          </button>
+          </Pressable>
         )}
       />
 
@@ -323,17 +323,15 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
 
         <div class="grid min-h-0 flex-1 grid-cols-[2.75rem_minmax(0,1fr)]">
           <nav class="scroll-visible flex min-h-0 flex-col gap-1 overflow-y-auto border-r border-border p-1" aria-label={t("chat.model.providers")}>
-            <button
-              type="button"
+            <Pressable
               class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", seccion() === "favorites" && "bg-surface-muted text-primary")}
               aria-label={t("chat.model.favorites")}
               title={t("chat.model.favorites")}
               onClick={() => setSeccion("favorites")}
             >
               <Star size={17} fill={seccion() === "favorites" ? "currentColor" : "none"} />
-            </button>
-            <button
-              type="button"
+            </Pressable>
+            <Pressable
               class={cn("flex size-9 shrink-0 items-center justify-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", seccion() === "danil" && "bg-surface-muted text-neutral-950")}
               aria-label={t("chat.services.label")}
               aria-pressed={seccion() === "danil"}
@@ -341,18 +339,17 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
               onClick={() => { setSeccion("danil"); setActivo(""); }}
             >
               <MarcaAgente id="danil" size={17} />
-            </button>
+            </Pressable>
             <For each={todosLosGrupos()}>
               {(grupo) => (
-                <button
-                  type="button"
+                <Pressable
                   class={cn("flex size-9 shrink-0 flex-col items-center justify-center gap-px rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", seccion() === grupo.id && "bg-surface-muted text-neutral-950")}
                   aria-label={grupo.label}
                   title={grupo.label}
                   onClick={() => setSeccion(grupo.id)}
                 >
                   <MarcaAgente id={grupo.logo} size={17} />
-                </button>
+                </Pressable>
               )}
             </For>
           </nav>
@@ -420,8 +417,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                           </Show>
                           <span class="truncate">{modelPresentation(opcion.model.id, opcion.model.label).label}</span>
                         </span>
-                        <button
-                          type="button"
+                        <Pressable
                           class={cn("rounded-sm p-0.5 text-neutral-500 outline-none hover:text-primary focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary", esFavorito(opcion.key, favoritos()) && "text-primary")}
                           aria-label={esFavorito(opcion.key, favoritos()) ? t("chat.model.unfavorite", { model: modelPresentation(opcion.model.id, opcion.model.label).label }) : t("chat.model.favorite", { model: modelPresentation(opcion.model.id, opcion.model.label).label })}
                           title={esFavorito(opcion.key, favoritos()) ? t("chat.model.unfavorite", { model: modelPresentation(opcion.model.id, opcion.model.label).label }) : t("chat.model.favorite", { model: modelPresentation(opcion.model.id, opcion.model.label).label })}
@@ -431,7 +427,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                           }}
                         >
                           <Star size={15} fill={esFavorito(opcion.key, favoritos()) ? "currentColor" : "none"} />
-                        </button>
+                        </Pressable>
                         <Show when={modelPresentation(opcion.model.id, opcion.model.label).creator}>
                           <span class="rounded-sm border border-border px-1 text-xs text-neutral-500">
                             {modelPresentation(opcion.model.id, opcion.model.label).creator}
@@ -469,8 +465,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
             >
               <For each={niveles()}>
                 {(o) => (
-                  <button
-                    type="button"
+                  <Pressable
                     aria-pressed={o.value === nivel()}
                     class={cn(
                       "h-6 shrink-0 rounded-sm px-2 text-xs text-neutral-500 outline-none hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary",
@@ -479,7 +474,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
                     onClick={() => props.onEffort?.(o.value)}
                   >
                     {nombreDeNivel(o.label)}
-                  </button>
+                  </Pressable>
                 )}
               </For>
             </div>

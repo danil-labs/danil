@@ -6,6 +6,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { formatearDuracion } from "../../../../../apps/desktop/src/lib/steps";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { AnsiText } from "../../../../ui/src/AnsiText";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /** Un `!` mientras corre, armado con los eventos `shell_*` de su ejecución. */
 export type ComandoEnVivo = {
@@ -83,8 +84,7 @@ export default function TarjetaDeTerminal(props: TarjetaDeTerminalProps) {
                 })}
               </span>
               <Show when={botonVisible()}>
-                <button
-                  type="button"
+                <Pressable
                   class="flex size-6 shrink-0 items-center justify-center rounded-full bg-neutral-950 text-neutral-50 outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
                   aria-label={vivo().deteniendo ? t("chat.turn.stopping") : t("chat.shell.stop")}
                   title={vivo().deteniendo ? t("chat.turn.stopping") : t("chat.shell.stop")}
@@ -92,7 +92,7 @@ export default function TarjetaDeTerminal(props: TarjetaDeTerminalProps) {
                   onClick={() => vivo().onDetener()}
                 >
                   <Square size={9} fill="currentColor" aria-hidden="true" />
-                </button>
+                </Pressable>
               </Show>
             </>
           )}
