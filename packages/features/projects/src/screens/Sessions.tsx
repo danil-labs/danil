@@ -50,6 +50,7 @@ import { authorKey, authorKeys, isSubtask } from "../model/taskAuthors";
 import { descendientes, type Rama as RamaDeTareas, taskTree } from "../model/taskTree";
 import { rolledOutcome, type TaskActivity, taskPriority } from "@terminus/design";
 import { taskCard, buildTaskTree, familySubtasks, taskIdentity, withTaskAncestors } from "@terminus/tasks";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 export function readableSessionTitle(title: string): string {
   if (!title.startsWith("/root/")) return title;
@@ -882,7 +883,7 @@ export default function Sessions(props: {
         {/* Sin `onClick` propio: ver la cabecera del módulo. */}
         <PopoverTrigger
           as={(p: object) => (
-            <button
+            <Pressable
               {...p}
               class={m.riel
                 ? cn(
@@ -897,7 +898,7 @@ export default function Sessions(props: {
               title={t("projects.sessions.actions")}
             >
               <MoreVertical size={m.riel ? 14 : 15} />
-            </button>
+            </Pressable>
           )}
         />
         <PopoverContent
@@ -909,7 +910,7 @@ export default function Sessions(props: {
               {/* En la tarjeta del riel fijar va primero: el alfiler ya no
                   tiene botón propio en la fila. */}
               <Show when={props.onPin}>
-                <button
+                <Pressable
                   role="menuitem"
                   data-session-pin
                   aria-label={fijada(f.s) ? t("projects.sessions.unpin_named", { title: f.s.title }) : t("projects.sessions.pin_named", { title: f.s.title })}
@@ -920,7 +921,7 @@ export default function Sessions(props: {
                     <PinOff size={14} class="shrink-0 text-neutral-500" aria-hidden="true" />
                   </Show>
                   {fijada(f.s) ? t("projects.sessions.unpin") : t("projects.sessions.pin")}
-                </button>
+                </Pressable>
                 <span class="my-1 block h-px bg-border" />
               </Show>
               {/* La etapa no se marca desde la tarjeta del riel, que no la enseña. */}
@@ -928,15 +929,15 @@ export default function Sessions(props: {
               <Popover placement="right-start" gutter={6}>
                 <div onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
                   <PopoverTrigger as={(trigger: object) => (
-                    <button {...trigger} role="menuitem" aria-haspopup="menu" class={`${ITEM_DE_MENU} flex items-center justify-between gap-2`}>
+                    <Pressable {...trigger} role="menuitem" aria-haspopup="menu" class={`${ITEM_DE_MENU} flex items-center justify-between gap-2`}>
                       {t("projects.sessions.stage")}<ChevronRight size={14} />
-                    </button>
+                    </Pressable>
                   )} />
                 </div>
                 <PopoverContent role="menu" class="w-56 p-1">
                   <For each={ETAPAS}>
                     {(e) => (
-                      <button
+                      <Pressable
                         role="menuitemradio"
                         aria-checked={f.s.stage === e.id}
                         class={cn(
@@ -950,10 +951,10 @@ export default function Sessions(props: {
                         }}
                       >
                         {e.rotulo()}
-                      </button>
+                      </Pressable>
                     )}
                   </For>
-                  <button
+                  <Pressable
                     role="menuitemradio"
                     aria-checked={!f.s.stage}
                     class={cn(
@@ -967,7 +968,7 @@ export default function Sessions(props: {
                     }}
                   >
                     {t("projects.stage.none")}
-                  </button>
+                  </Pressable>
                 </PopoverContent>
               </Popover>
               <span class="my-1 block h-px bg-border" />
@@ -978,28 +979,28 @@ export default function Sessions(props: {
                 con el teclado no se da: si la única forma de cambiarle el
                 nombre a una tarea fuera un doble clic, para media pantalla
                 no existiría. */}
-              <button
+              <Pressable
                 role="menuitem"
                 class={ITEM_DE_MENU}
                 onClick={() => empezarARenombrar(f.s)}
               >
                 {t("projects.sessions.rename")}
-              </button>
+              </Pressable>
               <span class="my-1 block h-px bg-border" />
 
               <Show when={!f.s.parent && destinosDe(f.s).length > 0}>
                 <Popover placement="right-start" gutter={6}>
                   <div onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
                     <PopoverTrigger as={(trigger: object) => (
-                      <button {...trigger} role="menuitem" aria-haspopup="menu" class={`${ITEM_DE_MENU} flex items-center justify-between gap-2`}>
+                      <Pressable {...trigger} role="menuitem" aria-haspopup="menu" class={`${ITEM_DE_MENU} flex items-center justify-between gap-2`}>
                         {t("projects.sessions.move_to")}<ChevronRight size={14} />
-                      </button>
+                      </Pressable>
                     )} />
                   </div>
                   <PopoverContent role="menu" class="max-h-72 w-56 overflow-y-auto p-1">
                     <For each={destinosDe(f.s)}>
                       {(d) => (
-                        <button
+                        <Pressable
                           role="menuitem"
                           class={`${ITEM_DE_MENU} truncate`}
                           onClick={() => {
@@ -1008,7 +1009,7 @@ export default function Sessions(props: {
                           }}
                         >
                           {d.name}
-                        </button>
+                        </Pressable>
                       )}
                     </For>
                   </PopoverContent>
@@ -1020,15 +1021,15 @@ export default function Sessions(props: {
                 <Popover placement="right-start" gutter={6}>
                   <div onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
                     <PopoverTrigger as={(trigger: object) => (
-                      <button {...trigger} role="menuitem" aria-haspopup="menu" data-move-space={f.s.id} class={`${ITEM_DE_MENU} flex items-center justify-between gap-2`}>
+                      <Pressable {...trigger} role="menuitem" aria-haspopup="menu" data-move-space={f.s.id} class={`${ITEM_DE_MENU} flex items-center justify-between gap-2`}>
                         {t("spaces.move.to")}<ChevronRight size={14} />
-                      </button>
+                      </Pressable>
                     )} />
                   </div>
                   <PopoverContent role="menu" aria-label={t("spaces.move.to")} class="max-h-72 w-60 overflow-y-auto p-1">
                     <For each={otherSpaces(f.s)}>
                       {(d) => (
-                        <button
+                        <Pressable
                           role="menuitem"
                           class={`${ITEM_DE_MENU} truncate`}
                           onClick={() => {
@@ -1037,7 +1038,7 @@ export default function Sessions(props: {
                           }}
                         >
                           {d.name}
-                        </button>
+                        </Pressable>
                       )}
                     </For>
                     <Show when={props.carpetaDe?.(f.s) ?? props.carpeta}>
@@ -1048,7 +1049,7 @@ export default function Sessions(props: {
               </Show>
 
               <Show when={!f.s.parent && projectOf(f.s) !== ""}>
-                <button
+                <Pressable
                   role="menuitem"
                   class={ITEM_DE_MENU}
                   onClick={() => {
@@ -1057,11 +1058,11 @@ export default function Sessions(props: {
                   }}
                 >
                   {t("projects.sessions.remove_from_project")}
-                </button>
+                </Pressable>
               </Show>
 
               <Show when={props.onBringHere && f.s.machine && canBringHere()}>
-                <button
+                <Pressable
                   role="menuitem"
                   class={ITEM_DE_MENU}
                   data-bring-here-menu
@@ -1071,21 +1072,21 @@ export default function Sessions(props: {
                   }}
                 >
                   {bringHereLabel()}
-                </button>
+                </Pressable>
               </Show>
 
               <Show when={!f.s.archived && !fijada(f.s)}>
-                <button
+                <Pressable
                   role="menuitem"
                   class={ITEM_DE_MENU}
                   disabled={archiving().includes(f.s.id)}
                   onClick={() => void intentar(f.s.id, false)}
                 >
                   {t("projects.sessions.archive")}
-                </button>
+                </Pressable>
               </Show>
               <Show when={m.riel}><span class="my-1 block h-px bg-border" /></Show>
-              <button
+              <Pressable
                 role="menuitem"
                 class={`${ITEM_DE_MENU} text-error-strong`}
                 onClick={() => {
@@ -1093,7 +1094,7 @@ export default function Sessions(props: {
                 }}
               >
                 {t("projects.sessions.delete")}
-              </button>
+              </Pressable>
           </>}>
             <div
               data-session-confirm
@@ -1306,8 +1307,7 @@ export default function Sessions(props: {
         </Show>
         <Fila s={rama().tarea} />
         <Show when={rama().hijas.length > 0}>
-          <button
-            type="button"
+          <Pressable
             class="mt-0.5 ml-2.5 flex w-[calc(100%-10px)] cursor-pointer items-center gap-1.5 rounded-sm border-0 bg-transparent px-1.5 py-0.5 text-left text-caption leading-[1.2] text-neutral-500 tabular-nums hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
             aria-expanded={expanded()}
             aria-label={
@@ -1349,7 +1349,7 @@ export default function Sessions(props: {
                 count: escondidas().length,
               })}
             </span>
-          </button>
+          </Pressable>
         </Show>
 
         {/* La sangría con su hilo es la relación entera: encargos de
@@ -1394,22 +1394,22 @@ export default function Sessions(props: {
         <Show
           when={key.startsWith("agent:")}
           fallback={
-            <button
+            <Pressable
               class="relative grid size-[18px] shrink-0 place-items-center rounded-sm focus-visible:outline-2 focus-visible:outline-primary"
               aria-expanded={!collapsedAuthors().includes(key)}
               aria-label={t(collapsedAuthors().includes(key) ? "shell.sidebar.expand_group" : "shell.sidebar.collapse_group", { name: authorLabel(key) })}
               onClick={() => toggleAuthor(key)}>
               <ChevronRight size={14} class={cn("transition-transform", !collapsedAuthors().includes(key) && "rotate-90")} />
-            </button>
+            </Pressable>
           }
         >
-          <button class="group/author-icon relative grid size-[18px] shrink-0 place-items-center rounded-sm focus-visible:outline-2 focus-visible:outline-primary"
+          <Pressable class="group/author-icon relative grid size-[18px] shrink-0 place-items-center rounded-sm focus-visible:outline-2 focus-visible:outline-primary"
             aria-expanded={!collapsedAuthors().includes(key)}
             aria-label={t(collapsedAuthors().includes(key) ? "shell.sidebar.expand_group" : "shell.sidebar.collapse_group", { name: authorLabel(key) })}
             onClick={() => toggleAuthor(key)}>
             <span class="transition-opacity group-hover/task-author:opacity-0 group-focus-visible/author-icon:opacity-0"><AstroAvatar name={key.slice(6)} status="asleep" body={profiles()[key.slice(6)]?.body} avatar={profiles()[key.slice(6)]?.avatar} size={18} /></span>
             <ChevronRight size={14} class={cn("absolute opacity-0 transition-[opacity,transform] group-hover/task-author:opacity-100 group-focus-visible/author-icon:opacity-100", !collapsedAuthors().includes(key) && "rotate-90")} />
-          </button>
+          </Pressable>
         </Show>
         <span class="min-w-0 truncate">{authorLabel(key)}</span>
       </div>

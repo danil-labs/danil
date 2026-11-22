@@ -8,18 +8,19 @@ import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import { prosaDe } from "../../../../ui/src/Failure";
-import { AstroAvatar } from "../../../projects/src/screens/AstroAvatar";
-import NewAgent, { type ModelChoices } from "../../../projects/src/screens/NewAgent";
+import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
 import { createFreeRouterConsent } from "./free-router-consent";
-import { displayName, notifyProfiles } from "../../../projects/src/queries/profiles";
+import type { PiezasDeAjustes } from "../model/features-port";
 import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 export default function Agents(props: {
   modelos: ModelChoices;
+  piezas: PiezasDeAjustes;
   proyecto: string;
   onAgentProfile?: (project: string, name: string) => void;
   after?: JSX.Element;
 }) {
+  const { AstroAvatar, NewAgent, displayName, notifyProfiles } = props.piezas;
   const [agents, setAgents] = createStore<(AgenteDeMaquina & { id: string })[]>([]);
   const [ready, setReady] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);

@@ -14,6 +14,7 @@ import type { Agent } from "../../../../../apps/desktop/src/lib/model";
 import { Button } from "../../../../ui/src/Button";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { deOtraTarea, esDeLaTerminal, interrumpible, type Encolado, type RazonDeRetencion } from "../../../../ui/src/lib/queue.ts";
+import { Pressable } from "../../../../ui/src/Pressable";
 export type { Encolado };
 
 
@@ -166,14 +167,13 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                             {(sender) => (
                               <>
                                 {" — "}
-                                <button
-                                  type="button"
+                                <Pressable
                                   class="cursor-pointer underline underline-offset-2"
                                   aria-label={t("chat.recipients.open_task", { title: sender().title })}
                                   onClick={() => props.onOpenTask?.(sender().folder, sender().task, sender().machine)}
                                 >
                                   {t("chat.task_completed.open")}
-                                </button>
+                                </Pressable>
                               </>
                             )}
                           </Show>

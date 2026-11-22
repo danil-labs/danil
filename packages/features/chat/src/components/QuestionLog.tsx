@@ -4,6 +4,7 @@ import MessageCircle from "lucide-solid/icons/message-circle";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import type { Pregunta, Respuesta } from "./Questions";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
  * Lo que el agente preguntó y lo que se le contestó, como bloque propio del
@@ -40,8 +41,7 @@ export default function RegistroPreguntas(props: {
       class="my-2 grid gap-0.5 rounded-md border border-border bg-surface-raised p-1.5 shadow-sm"
       aria-label={t("chat.questions.log.title")}
     >
-      <button
-        type="button"
+      <Pressable
         aria-expanded={props.abierta}
         onClick={props.onAlternar}
         class="flex w-full min-w-0 items-center gap-2 rounded-sm px-1.5 py-1 text-left transition-colors hover:bg-surface-muted"
@@ -69,7 +69,7 @@ export default function RegistroPreguntas(props: {
                 total: props.items.length,
               })}
         </span>
-      </button>
+      </Pressable>
 
       <Show when={props.abierta}>
         <ul class="m-0 grid list-none gap-2 p-0">

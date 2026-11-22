@@ -141,7 +141,7 @@ import { MessageText } from "../components/MessageText";
 import { Select } from "../../../../ui/src/Select";
 import SelectorDeModo from "../components/ModePicker";
 import { AltoMonotono } from "../components/MonotonicHeight";
-import { MARCA_SIN_ELEGIR } from "../model/marks";
+import { MARCA_SIN_ELEGIR } from "../../../../ui/src/lib/surfaceMarks";
 import { siguienteModo } from "../model/modes";
 import { interrumpible, seMandaSinSuperficie } from "../../../../ui/src/lib/queue.ts";
 import TarjetaDeTerminal, { type ComandoEnVivo } from "../components/ShellCard";
@@ -166,6 +166,7 @@ import { ComposerAction } from "../components/composer/ComposerAction";
 import { PendingHandoff, handoffStatus } from "../components/thread/PendingHandoff";
 import type { HandoffPresentation } from "../../../../ui/src/lib/handoff.ts";
 import { RegistroDeTrabajo } from "../components/activity/TurnActivity";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
 const SelectorDeModelo = sharedLazy(() => import("../components/ModelPicker"));
@@ -2261,8 +2262,7 @@ export default function Chat(props: ChatProps) {
                 <div class="group relative shrink-0">
                   <Adjunto rel={p} miniatura={props.onMiniatura} preview={props.onPreview} renderPdf={props.renderPdf} />
                   {/* Dentro de la esquina: fuera de ella, el scroll horizontal la recorta. */}
-                  <button
-                    type="button"
+                  <Pressable
                     class="absolute top-1 right-1 grid size-[1.125rem] place-items-center rounded-full bg-neutral-950 text-neutral-50 opacity-0 ring-2 ring-surface-raised transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none"
                     aria-label={t("chat.attachments.remove", {
                       name: nombreDe(p),
@@ -2273,7 +2273,7 @@ export default function Chat(props: ChatProps) {
                     }
                   >
                     <X size={11} />
-                  </button>
+                  </Pressable>
                 </div>
               )}
             </For>
@@ -2311,8 +2311,7 @@ export default function Chat(props: ChatProps) {
             <Show
               when={modoTerminal()}
               fallback={
-                <button
-                  type="button"
+                <Pressable
                   class="flex h-5 items-center gap-1 rounded-[5px] px-[7px] text-caption font-medium text-neutral-700 outline-none hover:bg-surface-muted focus-visible:ring-2 focus-visible:ring-primary"
                   onClick={() => {
                     setSoltadoDe(null);
@@ -2321,7 +2320,7 @@ export default function Chat(props: ChatProps) {
                 >
                   <SquareTerminal size={12} aria-hidden="true" />
                   {t("chat.composer.stdin.attach")}
-                </button>
+                </Pressable>
               }
             >
               <Badge forma="dato" tone="terminal" class="h-5 gap-1 rounded-[5px] px-[7px] py-0 font-sans font-medium">
@@ -2724,7 +2723,7 @@ export default function Chat(props: ChatProps) {
                 <Match when={mensaje()?.msg.meta === "history_gap"}>
                   <div class="col-start-1 min-w-0 py-1 text-center text-xs text-neutral-500" data-history-gap>
                     {t("chat.history.gap")}{" "}
-                    <button type="button" class="text-primary underline" onClick={volverAReciente}>{t("chat.history.latest")}</button>
+                    <Pressable class="text-primary underline" onClick={volverAReciente}>{t("chat.history.latest")}</Pressable>
                   </div>
                 </Match>
                 <Match when={trabajoDe(b())}>
@@ -2950,14 +2949,13 @@ export default function Chat(props: ChatProps) {
                             {(sender) => (
                               <>
                                 <Show when={m().encargado}><span aria-hidden="true">·</span></Show>
-                                <button
-                                  type="button"
+                                <Pressable
                                   class={cn("truncate underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-primary", !m().encargado && "font-semibold")}
                                   aria-label={t("chat.recipients.open_task", { title: sender().title })}
                                   onClick={() => props.onOpenTask?.(sender().folder, sender().task, sender().machine)}
                                 >
                                   {sender().title}
-                                </button>
+                                </Pressable>
                               </>
                             )}
                           </Show>
@@ -3161,14 +3159,14 @@ export default function Chat(props: ChatProps) {
           scrollea, el de dentro es lo único medible —tiene el alto de su
           hueco y no cambia—. `lib/paste.ts`. */}
       <div class="relative flex min-h-0 flex-1 flex-col">
-      <Show when={props.masRecientes}><button type="button" class="shrink-0 py-2 text-xs text-primary underline" onClick={volverAReciente}>{t("chat.history.latest")}</button></Show>
+      <Show when={props.masRecientes}><Pressable class="shrink-0 py-2 text-xs text-primary underline" onClick={volverAReciente}>{t("chat.history.latest")}</Pressable></Show>
       {props.coordinator}
       <Show when={!props.agentDraft ? props.chatEncargado : null}>
         {(name) => (
           /* La cabecera entera abre el perfil, como el contacto de un chat:
              un botón aparte al lado sería un segundo destino para lo mismo. */
           <header class="relative z-10 flex shrink-0 items-center gap-3 bg-transparent px-4 py-2.5">
-            <button
+            <Pressable
               class="flex min-w-0 flex-1 items-center gap-3 rounded-sm border-0 bg-transparent p-0 text-left outline-none hover:opacity-80 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               disabled={!props.onOpenProfile}
               title={t("projects.agents.profile_open")}
@@ -3186,7 +3184,7 @@ export default function Chat(props: ChatProps) {
               <div class="min-w-0 truncate text-[0.95rem] leading-tight font-semibold">
                 {props.chatName?.trim() || name()}
               </div>
-            </button>
+            </Pressable>
           </header>
         )}
       </Show>
@@ -3294,7 +3292,7 @@ export default function Chat(props: ChatProps) {
         <div class="absolute top-2 left-1/2 z-30 -translate-x-1/2 rounded-full border border-border bg-surface-raised px-3 py-1 text-xs shadow-sm" role={props.estadoAntiguos === "failed" ? "alert" : "status"}>
           <Show when={props.estadoAntiguos === "failed"} fallback={t("chat.history.older_loading")}>
             {t("chat.history.older_failed")}{" "}
-            <button type="button" class="text-primary underline" onClick={() => void pedirAntiguos()}>{t("chat.history.older_retry")}</button>
+            <Pressable class="text-primary underline" onClick={() => void pedirAntiguos()}>{t("chat.history.older_retry")}</Pressable>
           </Show>
         </div>
       </Show>
@@ -3344,9 +3342,9 @@ export default function Chat(props: ChatProps) {
         >
           <Show when={centrada() ? props.chatEncargado : null}>
             {(name) => <div class="pointer-events-auto mx-auto flex max-w-[860px] flex-col items-center gap-3 px-6 text-center">
-              <button type="button" class="rounded-sm focus-visible:outline-2 focus-visible:outline-primary" aria-label={t("projects.agents.profile_open")} title={t("projects.agents.profile_open")} onClick={() => props.onOpenProfile?.()}>
+              <Pressable class="rounded-sm focus-visible:outline-2 focus-visible:outline-primary" aria-label={t("projects.agents.profile_open")} title={t("projects.agents.profile_open")} onClick={() => props.onOpenProfile?.()}>
                 {props.renderAvatar({ name: name(), status: props.chatEstado ?? "awake", body: props.chatBody, avatar: props.chatAvatar, size: 56 })}
-              </button>
+              </Pressable>
               <h1 class="m-0 font-display text-xl font-bold text-neutral-950">{props.chatName?.trim() || name()}</h1>
               <Show when={props.chatDescription}><p class="m-0 max-w-[36rem] text-sm text-neutral-700">{props.chatDescription}</p></Show>
             </div>}
@@ -3385,9 +3383,9 @@ export default function Chat(props: ChatProps) {
                     aunque la lista de tareas de al lado sea más larga. */}
                 <div class="flex min-w-0 flex-col gap-2.5 pt-10 @5xl:sticky @5xl:top-0 @5xl:min-h-[100cqh] @5xl:justify-center @5xl:py-10">
                   <header class="mb-3 flex min-w-0 items-start gap-4">
-                    <button type="button" class="shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" aria-label={t("projects.agents.profile_open")} title={t("projects.agents.profile_open")} onClick={() => props.onOpenProfile?.()}>
+                    <Pressable class="shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" aria-label={t("projects.agents.profile_open")} title={t("projects.agents.profile_open")} onClick={() => props.onOpenProfile?.()}>
                       {props.renderAvatar({ name: name(), status: props.chatEstado ?? "awake", body: props.chatBody, avatar: props.chatAvatar, size: 52 })}
-                    </button>
+                    </Pressable>
                     <div class="flex min-w-0 flex-1 flex-col gap-1">
                       <div class="flex min-w-0 items-center gap-2">
                         <h1 class="m-0 min-w-0 flex-1 truncate font-display text-2xl font-bold text-neutral-950">{props.chatName?.trim() || name()}</h1>
@@ -3678,14 +3676,13 @@ function FilaDeLaBandeja(props: {
             {(sender) => (
               <>
                 {" — "}
-                <button
-                  type="button"
+                <Pressable
                   class="cursor-pointer underline underline-offset-2"
                   aria-label={t("chat.recipients.open_task", { title: sender().title })}
                   onClick={() => props.onOpenTask?.(sender().folder, sender().task, sender().machine)}
                 >
                   {t("chat.task_completed.open")}
-                </button>
+                </Pressable>
               </>
             )}
           </Show>
@@ -3740,8 +3737,7 @@ function HitoDelHilo(props: {
             {(g) => (
               <>
                 {" — "}
-                <button
-                  type="button"
+                <Pressable
                   class="cursor-pointer underline underline-offset-2"
                   onClick={() =>
                     g().accion === "reintentar"
@@ -3750,7 +3746,7 @@ function HitoDelHilo(props: {
                   }
                 >
                   {t(g().clave)}
-                </button>
+                </Pressable>
               </>
             )}
           </Show>
@@ -3758,14 +3754,13 @@ function HitoDelHilo(props: {
             {(sender) => (
               <>
                 {" — "}
-                <button
-                  type="button"
+                <Pressable
                   class="cursor-pointer underline underline-offset-2"
                   aria-label={t("chat.recipients.open_task", { title: sender().title })}
                   onClick={() => props.onOpenTask?.(sender().folder, sender().task, sender().machine)}
                 >
                   {t("chat.task_completed.open")}
-                </button>
+                </Pressable>
               </>
             )}
           </Show>

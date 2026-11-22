@@ -6,6 +6,7 @@ import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { modelBrand } from "../../../../../apps/desktop/src/lib/models";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import type { HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /** Un input del hilo, con la identidad de quien lo envió si fue un agente. */
 export type InputMessage = {
@@ -127,9 +128,8 @@ export default function YourMessages(props: {
   return (
     <div class="pointer-events-none sticky top-0 z-10 -mt-3 h-3">
       <Popover open={open()} onOpenChange={(next) => { if (!next) setOpen(false); }} anchorRef={() => anchor} placement="right" gutter={8}>
-        <button
+        <Pressable
           ref={rail}
-          type="button"
           class="pointer-events-auto absolute left-0 w-8 rounded-sm outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           style={{ top: `${top()}px`, height: `${height()}px` }}
           aria-label={`${t("chat.rail.label")}: ${excerpt()}`}
@@ -167,7 +167,7 @@ export default function YourMessages(props: {
               );
             }}
           </For>
-        </button>
+        </Pressable>
         <span ref={anchor} class="pointer-events-none absolute left-4 size-px" style={{ top: `${top() + tickTop(preview())}px` }} aria-hidden="true" />
         <PopoverContent
           class="pointer-events-none w-64 p-2"

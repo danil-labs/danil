@@ -32,6 +32,7 @@ import { readableSessionTitle, type SessionRow, threadTitle } from "./Sessions";
 import EstadoDeTarea, { taskLabel } from "./TaskStatus";
 import { taskPriority } from "@terminus/design";
 import { type GitStatus, watchSessionGit } from "../queries/taskGit";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 // Lo que asoma de la pestaña vecina y el padding de la tira, en px.
 const PEEK = 56;
@@ -401,8 +402,7 @@ export default function TabStrip(props: {
               )}
             </Show>
           </div>
-          <button
-            type="button"
+          <Pressable
             tabindex={-1}
             aria-label={t("projects.tabs.close_named", {
               title: detail() ?? text(),
@@ -431,7 +431,7 @@ export default function TabStrip(props: {
                 class="hidden group-hover:block"
               />
             </Show>
-          </button>
+          </Pressable>
         </div>
       </>
     );
@@ -483,8 +483,7 @@ export default function TabStrip(props: {
             </div>
             <Show when={props.onCloseDraft}>
               {(close) => (
-                <button
-                  type="button"
+                <Pressable
                   tabindex={-1}
                   aria-label={t("projects.tabs.close_named", { title: label() })}
                   title={`${t("projects.tabs.close")} (${textoDeAtajo("closeTab")})`}
@@ -493,7 +492,7 @@ export default function TabStrip(props: {
                   class="grid size-5 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:opacity-100"
                 >
                   <X size={13} />
-                </button>
+                </Pressable>
               )}
             </Show>
           </div>

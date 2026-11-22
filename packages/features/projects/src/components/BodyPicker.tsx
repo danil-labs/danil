@@ -2,6 +2,7 @@ import { For } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { AstroAvatar, CUERPOS, type Cuerpo } from "../screens/AstroAvatar";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
  * Las caras del catálogo y, primera, la que sale sola del nombre. La comparten
@@ -18,8 +19,7 @@ export function BodyPicker(props: {
     <div class={cn("flex flex-wrap gap-1.5", props.class)}>
       <For each={[null, ...CUERPOS]}>
         {(option) => (
-          <button
-            type="button"
+          <Pressable
             class={cn(
               "grid size-11 place-items-center rounded-md border border-transparent bg-transparent outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               props.value === option && "border-border-strong bg-surface-muted",
@@ -34,7 +34,7 @@ export function BodyPicker(props: {
             onClick={() => props.onChange(option)}
           >
             <AstroAvatar name={props.name} status="awake" body={option} size={30} />
-          </button>
+          </Pressable>
         )}
       </For>
     </div>

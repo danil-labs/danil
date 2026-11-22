@@ -11,6 +11,7 @@ import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { type DiagnosticoTypst, lugarDe, pedirArreglo, principalElegido } from "../queries/typst";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /** Cuánto espera, desde el último cambio guardado, a volver a compilar: cada vez escribe el PDF entero. */
 const PAUSA_DE_LA_EXPORTACION = 800;
@@ -173,8 +174,7 @@ export default function VistaTypstExportada(props: {
         <Show when={diagnosticos().length > 0}>
           <div class="shrink-0 border-t border-border bg-surface-raised text-caption">
             <div class="flex items-center gap-2 py-1 pr-1.5 pl-3">
-              <button
-                type="button"
+              <Pressable
                 class="flex min-w-0 flex-1 items-center gap-1.5 py-0.5 text-left outline-none focus-visible:outline-2 focus-visible:outline-primary"
                 aria-expanded={desplegada()}
                 onClick={() => setDesplegada(!desplegada())}
@@ -193,7 +193,7 @@ export default function VistaTypstExportada(props: {
                 ) : (
                   <ChevronUp size={13} class="ml-auto shrink-0 text-neutral-500" aria-hidden="true" />
                 )}
-              </button>
+              </Pressable>
               <Show when={errores().length > 0}>
                 <Button variant="secondary" size="compact" class="shrink-0" disabled={enviado()} onClick={arreglar}>
                   {enviado() ? t("code.typst.fix.sent") : errores().length === 1 ? t("code.typst.fix.one") : t("code.typst.fix.all")}
@@ -205,8 +205,7 @@ export default function VistaTypstExportada(props: {
                 <For each={[...errores(), ...avisos()]}>
                   {(d) => (
                     <li>
-                      <button
-                        type="button"
+                      <Pressable
                         class="flex w-full items-start gap-2 px-3 py-1 text-left hover:bg-surface-muted disabled:cursor-default"
                         disabled={d.line === null}
                         onClick={() => props.onIrA(d)}
@@ -220,7 +219,7 @@ export default function VistaTypstExportada(props: {
                           <span class="shrink-0 font-mono text-neutral-500">{lugarDe(d)}</span>
                         </Show>
                         <span class="min-w-0 break-words text-neutral-950">{d.message}</span>
-                      </button>
+                      </Pressable>
                     </li>
                   )}
                 </For>

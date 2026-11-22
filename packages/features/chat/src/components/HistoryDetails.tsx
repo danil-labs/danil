@@ -6,6 +6,7 @@ import { readTurns, readDetailChunk, type MachineOf } from "../queries";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Markdown } from "../../../../ui/src/Markdown";
 import type { Session } from "../model/transcript";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 const REREADS = 5;
 const REREAD_MS = 150;
@@ -75,20 +76,20 @@ export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; ren
   <Show when={textRef()}>{(ref) => <HistoryText reference={ref()} turnId={props.turnId} render={props.renderText} route={props.route} onUnavailable={() => setTextFailed(true)} />}</Show>
   <Show when={listed().length > 0}>
   <div class="my-2 text-xs text-neutral-500">
-    <For each={listed()}>{ref => <button type="button" class="mr-2 underline" onClick={() => void read(ref, 0)}>
+    <For each={listed()}>{ref => <Pressable class="mr-2 underline" onClick={() => void read(ref, 0)}>
       {t("chat.history.open")} ({ref.pointer === "/text" ? t("chat.history.text") : ref.pointer === "/pieces" ? t("chat.history.pieces") : t("chat.history.content")}, {Math.ceil(ref.bytes / 1024)} KiB)
-    </button>}</For>
+    </Pressable>}</For>
     <Show when={selected()}>{ref => <div class="mt-2 rounded border border-border p-2">
-      <button type="button" onClick={close}>{t("chat.history.close")}</button>
+      <Pressable onClick={close}>{t("chat.history.close")}</Pressable>
       <Show when={loading()}><p role="status">{t("chat.history.loading")}</p></Show>
       <Show when={failed()}><p role="alert">{t("chat.history.error")}</p></Show>
       <Show when={chunk()}>{page => <>
         <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-all">{page().text}</pre>
         <span>{page().offset}–{page().next} / {page().total}</span>
-        <button type="button" class="mx-2" disabled={loading() || page().offset === 0} onClick={() => {
+        <Pressable class="mx-2" disabled={loading() || page().offset === 0} onClick={() => {
           const rest = offsets().slice(0, -1); setOffsets(rest); void read(ref(), rest.at(-1) ?? 0, true);
-        }}>{t("chat.history.previous")}</button>
-        <button type="button" disabled={loading() || page().done} onClick={() => void read(ref(), page().next)}>{t("chat.history.next")}</button>
+        }}>{t("chat.history.previous")}</Pressable>
+        <Pressable disabled={loading() || page().done} onClick={() => void read(ref(), page().next)}>{t("chat.history.next")}</Pressable>
       </>}</Show>
     </div>}</Show>
   </div>

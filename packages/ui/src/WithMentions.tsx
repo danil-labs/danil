@@ -3,6 +3,7 @@ import { splitMentions } from "../../../apps/desktop/src/lib/mentions";
 import { capabilities } from "../../host/src/platform";
 import { mentionedSession, type MentionTarget, type TaskMention } from "../../../apps/desktop/src/lib/taskMentions";
 import { cn } from "../../../apps/desktop/src/lib/utils";
+import { Pressable } from "./Pressable";
 
 /**
  * Pinta un texto tratando sus menciones como entidades, no como subcadenas que
@@ -50,15 +51,14 @@ export function WithMentions(props: {
                 </span>
               }
             >
-              <button
-                type="button"
+              <Pressable
                 class={cn("cursor-pointer rounded-sm bg-surface-muted px-1 font-mono text-[0.92em] text-link hover:underline focus-visible:outline-2 focus-visible:outline-primary", props.class)}
                 onClick={() => {
                   if (t.target?.kind === "task") props.onOpenTask?.(t.target.projectId, t.task ?? t.target.sessionId);
                 }}
               >
                 {t.text}
-              </button>
+              </Pressable>
             </Show>
           </Show>
         )}

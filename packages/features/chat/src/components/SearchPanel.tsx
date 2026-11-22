@@ -9,6 +9,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { groupSearchHits, type SearchHit } from "../model/searchCards";
 import type { SearchSurface } from "../screens/ThreadSearch";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 const clock = (at: number) => df({ hour: "numeric", minute: "2-digit" }).format(new Date(at));
 const dayLabel = (at: number) => df({ day: "numeric", month: "short", year: "numeric" }).format(new Date(at));
@@ -50,7 +51,7 @@ export default function SearchPanel(props: { surface: SearchSurface }) {
               <For each={group.items}>{(item) => {
                 const on = () => props.surface.selected() === item.index;
                 return (
-                  <button type="button" data-search-hit={item.index} aria-current={on()}
+                  <Pressable data-search-hit={item.index} aria-current={on()}
                     aria-label={t("chat.search.match", { current: item.index + 1, total: props.surface.cards().length })}
                     class={cn("rounded-md border px-2.5 py-2 text-left", on() ? "border-primary bg-surface-muted" : "border-border hover:bg-surface-muted")}
                     onClick={() => props.surface.choose(item.index)}>
@@ -63,7 +64,7 @@ export default function SearchPanel(props: { surface: SearchSurface }) {
                     <p class="m-0 mt-1 text-sm leading-5 break-words text-neutral-950">
                       {item.hit.before}<mark class="rounded-sm bg-warning/20 px-0.5 text-neutral-950">{item.hit.mark}</mark>{item.hit.after}
                     </p>
-                  </button>
+                  </Pressable>
                 );
               }}</For>
             </div>

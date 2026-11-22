@@ -22,6 +22,7 @@ import { type SessionRow, threadTitle } from "../screens/Sessions";
 import EtapaDeTarea from "../screens/TaskStage";
 import { type GitStatus } from "../queries/taskGit";
 import { type HoverCardPull, hoverCardPull } from "../model/hoverCardPull";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 
 export type TaskHoverCardProps = {
@@ -184,12 +185,12 @@ export function TaskHoverCard(props: TaskHoverCardProps) {
         </Fila>
       </Show>
       <div class="mt-0.5 flex gap-1.5">
-        <button type="button" class={BOTON} onClick={() => props.onOpen()}>{t("projects.hover_card.open")}</button>
-        <button type="button" class={BOTON} onClick={() => props.onPin()}>
+        <Pressable class={BOTON} onClick={() => props.onOpen()}>{t("projects.hover_card.open")}</Pressable>
+        <Pressable class={BOTON} onClick={() => props.onPin()}>
           {props.task.pinned ? t("projects.sessions.unpin") : t("projects.sessions.pin")}
-        </button>
+        </Pressable>
         <Show when={!props.task.archived}>
-          <button type="button" class={BOTON} onClick={() => props.onArchive()}>{t("projects.hover_card.archive")}</button>
+          <Pressable class={BOTON} onClick={() => props.onArchive()}>{t("projects.hover_card.archive")}</Pressable>
         </Show>
       </div>
     </div>

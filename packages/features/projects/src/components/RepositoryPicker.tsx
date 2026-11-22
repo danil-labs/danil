@@ -14,6 +14,7 @@ import { Input } from "../../../../ui/src/Input";
 import { Button } from "../../../../ui/src/Button";
 import { Select } from "../../../../ui/src/Select";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 type Provider = GitHost & { connected: { identity: { user: string } } | null };
 type AvailableRepository = ProjectRepository & { area: string };
@@ -100,14 +101,14 @@ export default function RepositoryPicker(props: {
   }
 
   function RepositoryRows(section: { repositories: ProjectRepository[] }) {
-    return <For each={section.repositories}>{repo => <button type="button" disabled={props.disabled}
+    return <For each={section.repositories}>{repo => <Pressable disabled={props.disabled}
       class="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left hover:bg-surface-muted focus-visible:bg-surface-muted"
       onClick={() => props.onRepository({ ...repo, git_host: providers().some(p => p.id === repo.git_host && p.connected) && repo.url.startsWith("https://") ? repo.git_host : null })}>
       <Show when={repo.git_host} fallback={<GitBranch size={18} class="text-neutral-500" />}><MarcaGitHost id={repo.git_host ?? ""} size={18} /></Show>
       <span class="min-w-0 flex-1"><span class="block truncate text-ui">{repo.name}</span>
         <span class="block truncate text-xs text-neutral-500">{repo.local_path ? t("projects.add.on_this_machine", { path: repo.local_path }) : repo.url}</span></span>
       <ChevronRight size={14} class="shrink-0 text-neutral-500" />
-    </button>}</For>;
+    </Pressable>}</For>;
   }
 
   // Una sola columna que no crece con su contenido: con `auto`, la URL más
@@ -132,14 +133,14 @@ export default function RepositoryPicker(props: {
     </Show>
     <div ref={list} class="flex max-h-[min(520px,65vh)] flex-col">
       <Show when={!provider()}><div class="shrink-0">
-        <For each={visibleChoices()}>{choice => <button type="button" disabled={props.disabled}
+        <For each={visibleChoices()}>{choice => <Pressable disabled={props.disabled}
           class="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left hover:bg-surface-muted focus-visible:bg-surface-muted" onClick={choice.run}>
           <Show when={choice.id === "url"}><GitBranch size={18} class="text-neutral-500" /></Show>
           <Show when={"host" in choice}><MarcaGitHost id={choice.id} size={18} /></Show>
           <Show when={choice.id === "folder"}><FolderOpen size={18} class="text-neutral-500" /></Show>
           <Show when={choice.id === "empty"}><Plus size={18} class="text-neutral-500" /></Show>
           <span class="text-ui">{choice.name}</span><span class="ml-auto max-w-[50%] truncate text-xs text-neutral-500">{choice.detail}</span>
-        </button>}</For>
+        </Pressable>}</For>
       </div></Show>
       <Show when={recent().length}><p class="mb-1 mt-3 shrink-0 px-3 text-xs text-neutral-500">{t("projects.add.workspace_history")}</p>
         <div class="min-h-[96px] flex-1 overflow-y-auto"><RepositoryRows repositories={recent()} /></div></Show>

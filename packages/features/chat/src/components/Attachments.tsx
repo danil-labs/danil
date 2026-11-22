@@ -6,6 +6,7 @@ import FileText from "lucide-solid/icons/file-text";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { extensionDe, nombreDe } from "../../../../../apps/desktop/src/lib/steps";
 import type { Preview } from "../../../../ui/src/lib/preview.ts";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 export default function Adjuntos(props: {
   /** Las rutas del archivo, tal como las guarda el turno. */
@@ -98,8 +99,7 @@ export function Adjunto(props: {
 
   return (
     <>
-      <button
-        type="button"
+      <Pressable
         class="block max-w-full rounded-md text-left focus-visible:outline-2 focus-visible:outline-primary"
         title={t("chat.attachments.open", { name: nombreDe(props.rel) })}
         aria-label={t("chat.attachments.open", { name: nombreDe(props.rel) })}
@@ -114,7 +114,7 @@ export function Adjunto(props: {
             />
           )}
         </Show>
-      </button>
+      </Pressable>
       <Dialog open={abierta()} onOpenChange={setAbierta}>
         <DialogContent
           class="flex max-h-full w-full max-w-[1100px] flex-col gap-3"

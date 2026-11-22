@@ -15,7 +15,7 @@ export * from "./model/handover.ts";
 export * from "./model/history.ts";
 export * from "./model/inboxRows.ts";
 export * from "./model/launchGroups.ts";
-export * from "./model/marks.ts";
+export * from "../../../ui/src/lib/surfaceMarks.ts";
 export * from "./model/mcpAppProxy.ts";
 export * from "./model/messageTypes.ts";
 export * from "./model/modes.ts";

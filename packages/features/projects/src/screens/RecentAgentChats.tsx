@@ -4,6 +4,7 @@ import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "so
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { readableSessionTitle, type SessionRow, threadTitle } from "./Sessions";
 import { type GitStatus, effectiveTaskGit, watchSessionGit } from "../queries/taskGit";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 export default function RecentAgentChats(props: {
   project: string;
@@ -37,7 +38,7 @@ export default function RecentAgentChats(props: {
         <For each={recent()}>{row => {
           const branch = () => effectiveTaskGit(row, gitRows(), props.sessions).branch;
           return <li class="border-b border-border last:border-b-0">
-            <button type="button" class="flex h-10 w-full min-w-0 items-center gap-2.5 rounded-md px-1 text-left text-sm text-neutral-950 hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-primary"
+            <Pressable class="flex h-10 w-full min-w-0 items-center gap-2.5 rounded-md px-1 text-left text-sm text-neutral-950 hover:bg-surface-muted focus-visible:outline-2 focus-visible:outline-primary"
               onClick={() => props.onPick(row.id)}>
               <MessageCircle size={15} class="shrink-0 text-neutral-500" aria-hidden="true" />
               <span class="min-w-0 flex-1 truncate">{readableSessionTitle(threadTitle(row))}</span>
@@ -45,7 +46,7 @@ export default function RecentAgentChats(props: {
                 <GitBranch size={13} class="shrink-0" aria-hidden="true" />
                 <span class="truncate">{name()}</span>
               </span>}</Show>
-            </button>
+            </Pressable>
           </li>;
         }}</For>
       </ul>
