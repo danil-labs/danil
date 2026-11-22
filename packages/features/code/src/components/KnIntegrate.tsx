@@ -1,5 +1,5 @@
 import { For, Show, createSignal } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { knPending, knFinish, knUpdate } from "../queries";
 import { machineOf } from "../../../machines/src/queries/store";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
@@ -46,7 +46,7 @@ export default function KnIntegrate(props: {
     setPendientes(null);
     setAbierto(true);
     try {
-      setPendientes(await invoke<Resumen>("kn_pending", {
+      setPendientes(await knPending<Resumen>({
         project: props.project,
         session: props.session,
       }, machineOf(props.session)));
@@ -60,7 +60,7 @@ export default function KnIntegrate(props: {
     setOcupado("finish");
     setFallo(null);
     try {
-      await invoke("kn_finish", { project: props.project, session: props.session }, machineOf(props.session));
+      await knFinish({ project: props.project, session: props.session }, machineOf(props.session));
       setAbierto(false);
       avisarDeLosArboles(props.session);
     } catch (e) {
@@ -75,8 +75,8 @@ export default function KnIntegrate(props: {
     setOcupado("update");
     setFallo(null);
     try {
-      await invoke("kn_update", { project: props.project, session: props.session }, machineOf(props.session));
-      setPendientes(await invoke<Resumen>("kn_pending", {
+      await knUpdate({ project: props.project, session: props.session }, machineOf(props.session));
+      setPendientes(await knPending<Resumen>({
         project: props.project,
         session: props.session,
       }, machineOf(props.session)));

@@ -1,16 +1,20 @@
-import type { Tool } from "@modelcontextprotocol/client";
 import type { AppBridge } from "@modelcontextprotocol/ext-apps/app-bridge";
 import AppWindow from "lucide-solid/icons/app-window";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client";
+import {
+  hasMcpApp,
+  readMcpApp,
+  closeMcpApp,
+  callMcpAppTool,
+  readMcpAppResource,
+  type AppView,
+} from "../queries";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
 import DrawioMcpCanvas from "./DrawioMcpCanvas";
 import ExcalidrawMcpCanvas from "./ExcalidrawMcpCanvas";
 import { PROXY } from "../model/mcpAppProxy";
 import type { McpAppCall } from "../model/transcript";
-
-type AppView = { html: string; resource_uri: string; tool: Tool; connection_id: string; title?: string | null };
 
 /** Excalidraw guarda su dibujo en el checkpoint del servidor: su vista sigue viva. */
 function esExcalidraw(v: AppView, tool: string) {
@@ -37,10 +41,7 @@ export default function McpAppView(props: { call: McpAppCall }) {
   async function discover() {
     setNoView(true);
     try {
-      const supported = await invoke<boolean>("has_mcp_app", {
-        server: props.call.server,
-        tool: props.call.tool,
-      });
+      const supported = await hasMcpApp(props.call.server, props.call.tool);
       if (!disposed && supported) await open();
     } catch {
       // Sin metadatos de UI no hay una vista que abrir ni un error de vista.
@@ -52,7 +53,7 @@ export default function McpAppView(props: { call: McpAppCall }) {
     void bridge?.close();
     const v = view();
     if (v && !esExcalidraw(v, props.call.tool) && !esDrawio(v))
-      void invoke("close_mcp_app", { connectionId: v.connection_id });
+      void closeMcpApp(v.connection_id);
   });
 
   async function open() {
@@ -61,20 +62,17 @@ export default function McpAppView(props: { call: McpAppCall }) {
     setFailure(null);
     setNoView(false);
     try {
-      const resource = await invoke<AppView | null>("read_mcp_app", {
-        server: props.call.server,
-        tool: props.call.tool,
-      });
+      const resource = await readMcpApp(props.call.server, props.call.tool);
       if (!resource) {
         setNoView(true);
         return;
       }
       if (disposed) {
-        void invoke("close_mcp_app", { connectionId: resource.connection_id });
+        void closeMcpApp(resource.connection_id);
         return;
       }
       setView(resource);
-      if (esDrawio(resource)) void invoke("close_mcp_app", { connectionId: resource.connection_id });
+      if (esDrawio(resource)) void closeMcpApp(resource.connection_id);
     } catch (error) {
       setFailure(asFailure(error));
     } finally {
@@ -100,14 +98,10 @@ export default function McpAppView(props: { call: McpAppCall }) {
         void current.sendSandboxResourceReady({ html: resource.html, sandbox: "allow-scripts" });
       };
       current.oncalltool = async ({ name, arguments: args }) =>
-        await invoke("call_mcp_app_tool", {
-          connectionId: resource.connection_id,
-          name,
-          arguments: args ?? {},
-        });
+        await callMcpAppTool(resource.connection_id, name, args ?? {});
       current.onreadresource = async ({ uri }) => {
         if (uri === resource.resource_uri) return { contents: [{ uri, mimeType: "text/html;profile=mcp-app", text: resource.html }] };
-        return await invoke("read_mcp_app_resource", { connectionId: resource.connection_id, uri });
+        return await readMcpAppResource(resource.connection_id, uri);
       };
       current.oninitialized = () => {
         void (async () => {

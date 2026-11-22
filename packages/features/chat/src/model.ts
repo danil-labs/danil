@@ -22,7 +22,7 @@ export * from "./model/modes.ts";
 export * from "./model/paste.ts";
 export * from "./model/permissionGates.ts";
 export * from "./model/permissionRecovery.ts";
-export * from "./model/queue.ts";
+export * from "../../../ui/src/lib/queue.ts";
 export * from "./model/searchCards.ts";
 export * from "./model/slashOutput.ts";
 export * from "./model/terminalIndent.ts";

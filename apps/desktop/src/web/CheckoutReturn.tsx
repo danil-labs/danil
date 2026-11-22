@@ -1,4 +1,4 @@
-import type { Machine } from "@terminus/computers";
+import type { Machine } from "../../../../packages/platform-client/src/machines.ts";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../lib/i18n";
 import { Button } from "../../../../packages/ui/src/Button";

@@ -26,15 +26,13 @@ import {
   startedOf,
   systemOf,
   wakes,
-  wokeOf,
 } from "@terminus/computers";
+import { cancelEdgeWrites, setMachineRoute, wokeOf } from "../queries";
 import { Fleet, type MachineInfo, unwrap } from "@terminus/fleet";
 import { createRoot, createSignal } from "solid-js";
 import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
-import { cancelEdgeWrites } from "../../../../platform-client/src/client.ts";
 import { whenConnected } from "../../../../../apps/desktop/src/lib/engineConnection";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { setMachineRoute } from "../../../../engine-client/src/client";
 import { type Capabilities, capabilities, setCapabilities } from "../../../../host/src/platform";
 import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
 import { deliver, listen } from "../../../../../apps/desktop/src/lib/serviceEvents";

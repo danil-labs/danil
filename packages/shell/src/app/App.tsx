@@ -28,16 +28,13 @@ import Chat, {
   type VistaDeLaConversacion,
   vistaNueva,
 } from "../../../features/chat/src/screens/Chat";
-import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies } from "../../../features/chat/src/screens/DelegatedTasks";
+import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedDescendants } from "../../../features/chat/src/screens/DelegatedTasks";
 import { agentSwitchBlocked, canHandOverTask, type HandoverPending, handoverInForce, handoverMatches, MACHINE_UNANNOUNCED, shellCli } from "../../../features/chat/src/model/handover";
 import McpSignInNotice, { noteMcpSignIn } from "../../../features/chat/src/screens/McpSignInNotice";
-import type { Encolado } from "../../../features/chat/src/components/MessageQueue";
-import {
-  MODO_AUTOMATICO,
-} from "../../../features/chat/src/model/modes";
+import { MODO_AUTOMATICO, modoInicial, modoRecordado, recordarModo } from "../../../features/chat/src/model/modes";
 import PreviousAgentChat from "../../../features/chat/src/screens/PreviousAgentChat";
 import type { AlmacenDePreguntas, PreguntasAMedias, Respuesta, RespuestaEnviada } from "../../../features/chat/src/components/Questions";
-import { contestaALaTerminal, ENTREGA_SIN_CONFIRMAR, esDeLaTerminal, interrumpible, inyectable, type RazonDeRetencion } from "../../../features/chat/src/model/queue";
+import { contestaALaTerminal, ENTREGA_SIN_CONFIRMAR, esDeLaTerminal, interrumpible, inyectable, type Encolado, type RazonDeRetencion } from "../../../ui/src/lib/queue.ts";
 import type { ComandoEnVivo } from "../../../features/chat/src/components/ShellCard";
 import type { AlMargen } from "../../../features/chat/src/components/SideQuestion";
 import { comandoEscrito } from "../../../features/chat/src/model/slashOutput";
@@ -47,9 +44,7 @@ import { comandoDeTerminal } from "../../../features/chat/src/model/terminalInde
 import type { Lectura } from "../../../features/chat/src/model/threadWindow";
 import {
   type ChatEvent,
-  clave,
   mensajesDelHilo,
-  modeloDeSubtarea,
   type PreguntaEvent,
   type Session,
   type SessionEvent,
@@ -57,11 +52,18 @@ import {
   type Turn,
 } from "../../../features/chat/src/model/transcript";
 import { createComposerStore } from "../../../features/composer/src";
-import { createProjectsStore } from "../../../features/projects/src";
-import { createCloneFolder, createDeskStrip, createNewTask, createRailSessions, createSessionMutations, createWorkspaceSession } from "../../../features/projects/src";
+import {
+  createCloneFolder,
+  createDeskStrip,
+  createNewTask,
+  createRailSessions,
+  createSessionMutations,
+  createWorkspaceSession,
+} from "../../../features/projects/src";
 import type { HandlerTarget } from "../../../features/settings/src/screens/HandlerPolicy";
 import { createThreadsStore } from "../../../features/threads/src";
 import { createWorkspaceStore } from "../../../features/workspace/src";
+import { createContextSource } from "../../../features/workspaces/src";
 import { deliver, listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 
 const VisorDeArchivo = lazy(() => import("../../../features/code/src/screens/FileViewer"));
@@ -80,7 +82,7 @@ import { esDeCodigo } from "../../../features/code/src/model/workdirKind";
 import Observability from "../../../features/observability/src/screens/Observability";
 import AnadirCarpeta, { type InicioDeCarpeta } from "../../../features/projects/src/screens/AddWorkdir";
 import AgentPageTasks from "../../../features/projects/src/screens/AgentPageTasks";
-import { createTaskFiles, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles";
+import { type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles";
 
 // Chunk aparte: el perfil completo de un agente solo se carga al abrirlo.
 const AgentProfile = retryableLazy(() => import("../../../features/projects/src/screens/AgentProfile"));
@@ -98,10 +100,9 @@ const MachinesLicense = lazy(() =>
   })),
 );
 
-import { canonicalAgentId, isFreeRouterModel, lastActivity, launcherOf, OPENCODE, taskDescendants, withRemoteLaunchers } from "@terminus/tasks";
+import { canonicalAgentId, isFreeRouterModel, launcherOf, OPENCODE, taskDescendants } from "@terminus/tasks";
 import type { CarriedBase, CarryCheck } from "../../../features/machines/src/queries/carry";
 import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, rememberedRunOn, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../../../features/machines/src/queries/store";
-import { activeTaskCounts, activityByProject, hiddenIn, picksIn, rememberPick, setHidden, storedPicks, taskCountOf } from "../../../features/projects/src";
 import { createdTasks } from "../../../features/projects/src/model/agentPageFilters";
 import BaseBranchPicker from "../../../features/projects/src/screens/BaseBranchPicker";
 import { watchHandlerStatus, watchHandlerStatuses } from "../../../features/projects/src/queries/handlerPresence";
@@ -146,7 +147,7 @@ import TaskNotifier from "../shell/TaskNotifier";
 const DeleteSpace = lazy(() => import("../shell/DeleteSpace"));
 
 import type { ActivityEvent } from "@terminus/protocol";
-import { ATTACHMENT_DOCUMENTS_FEATURE, PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
+import { PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
 import { mergeGates } from "../../../features/chat/src/model/permissionGates";
 import { openChatVisual, readChatVisual } from "../../../features/chat/src/queries/readVisual";
 import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../../../features/code/src/queries/typst";
@@ -180,7 +181,6 @@ import { VELO_DE_FONDO } from "../../../../apps/desktop/src/lib/chat-background"
 import { fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo } from "../../../../apps/desktop/src/lib/chat-background-store";
 import { connected } from "../../../../apps/desktop/src/lib/engineConnection";
 import { pedirElCampo } from "../../../../apps/desktop/src/lib/focus";
-import { recordarCarpetas } from "../../../../apps/desktop/src/lib/folderKinds";
 import { lista } from "../../../../apps/desktop/src/lib/format";
 import { lastRoster, rememberRoster } from "../../../../apps/desktop/src/lib/handlerRoster";
 import { aplicarLenguaDeWorkspace, t } from "../../../../apps/desktop/src/lib/i18n";
@@ -188,7 +188,6 @@ import { captureWorkspaceContext, displayWorkspaceSnapshot, invoke, requestedWor
 import type { InternalTaskLink } from "../../../../apps/desktop/src/lib/links";
 import type { MentionSources } from "../../../../apps/desktop/src/lib/mentions";
 import type {
-  AgentProfile as AgentProfileData,
   HandlerDefinition,
   HandlerList,
   HandlerStatusRow,
@@ -196,10 +195,8 @@ import type {
 } from "../../../../apps/desktop/src/lib/model";
 import { carpetaDeTrabajo } from "../../../../apps/desktop/src/lib/model";
 import { type OpcionDeModelo } from "../../../../apps/desktop/src/lib/models";
-import { threadPreview } from "../../../../apps/desktop/src/lib/nextSteps";
 import {
   createPanels,
-  deleteLayout,
   gridCell,
   gridTracks,
   MIN_PANEL_HEIGHT,
@@ -209,14 +206,12 @@ import {
   readLayout,
   type PanelSite as SitioDePanel,
   sameSite,
-  spacesWithLayout,
 } from "../../../../apps/desktop/src/lib/panels";
 import { capabilities, openMachineScreen } from "../../../host/src/platform";
 import { createPointerDrag } from "../../../../apps/desktop/src/lib/pointer-drag";
-import { createPref, escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs";
 import { type Recipient, type RecipientCandidate, recipientCandidatesOf, type SenderTask, trimDraft } from "../../../../apps/desktop/src/lib/recipients";
 import { attachmentsOn, NotMovable } from "../../../../apps/desktop/src/lib/remoteAttachments";
-import { conservar, sessionRefresh } from "../../../session/src/sessionRefresh";
+import { conservar } from "../../../session/src/sessionRefresh";
 import { readShellCache, shellCacheMatches, shellCacheWriter } from "../../../../apps/desktop/src/lib/shellCache";
 import {
   accionDeAtajo,
@@ -229,47 +224,31 @@ import { alHilo, comandosConAlMargen, preguntaAlMargen } from "../../../../apps/
 import { sidebarViewKey } from "../../../../apps/desktop/src/lib/sidebarView";
 import { createSpaceNavigationOrder } from "../../../../apps/desktop/src/lib/space-navigation-order";
 import {
-  carpetasDelEscritorio,
-  enEscritorio,
-  escritorioDeFila,
   type Space,
   spaceName,
 } from "../../../../apps/desktop/src/lib/spaces";
 import { pasoDe } from "../../../../apps/desktop/src/lib/steps";
 import {
   type ArtifactTab,
-  appendToStoredStrip,
-  artifactTabId,
-  browserTabId,
-  createTabs,
-  deleteStoredStrip,
   type FileTab,
   fileTabId,
   isContentTab,
   isTaskTab,
-  migrateLegacyStrip,
   OBSERVABILITY_TAB_ID,
   type ScreenTab,
   type SiteTab,
   screenTabId,
-  siteTabId,
-  spacesWithStoredStrip,
-  storedStrip,
   type Tab,
 } from "../../../../apps/desktop/src/lib/tabs";
 import {
-  claveDeBorrador,
   esProvisional,
   idProvisional,
   proyectoDeNuevaTarea,
-  sameSources,
   tituloProvisional,
-  unirFuentes,
 } from "../../../../apps/desktop/src/lib/taskDraft";
 import { type PlaceCandidate, type TaskCandidate, type TaskMention } from "../../../../apps/desktop/src/lib/taskMentions";
 import { aplicarTemaDeTerminal } from "../../../../apps/desktop/src/lib/terminal-themes";
 import {
-  type SessionUsage,
   type UsageRecord,
   type Ventana,
   ventanaDe,
@@ -344,7 +323,20 @@ export default function App() {
    * primero, antes de pedir proveedores de IA y source control.
    */
   const [alta, setAlta] = createSignal(false);
-  const { fondoDelAgente, setFondoDelAgente, workspaceContext, contextRoot, contextConfirmed, workspaceMode, workspaceActivo, confirmContext, attention, draftBases, setDraftBases, hablandoCon, setHablandoCon, projectCatalog, projectList, sources, setSources, draftMachine, draftOptions, composerProjects, materialError, setMaterialError, taskSourcesError, setTaskSourcesError, draftProjectError, setDraftProjectError, projectReadError, setProjectReadError, startupReadError, setStartupReadError, connectionError, setConnectionError, readRevision, setReadRevision, draftMachineOn, taskSources, setTaskSources, setError, errorVisible, bloqueo, setBloqueo, grupos, project, setProject, sesiones, setSesiones, actividadDeProyectos, elegidosAqui, recordarEleccion, tareasActivas, ocultosAqui, ocultarDelSelector, naciendo, setNaciendo, retoques, setRetoques, retirarNaciendo, sessionId, setSessionId, materialPedido, setMaterialPedido, proyectoAbierto, setProyectoAbierto, pestanas, archivosDeTarea, llaveDeBorrador, anchoDeArchivos, setAnchoDeArchivos, anchoDelArbol, setAnchoDelArbol, bridge } = createWorkspaceSession({ activeTaskCounts, activityByProject, asleep, createAttention, createEffect, createMemo, createPref, createProjectsStore, createSignal, createTabs, createTaskFiles, createWorkspaceStore, hiddenIn, invoke, lastActivity, machineName, machines, on, onCleanup, picksIn, prosaDe, recordarCarpetas, rememberPick, runOn, setHidden, storedPicks, t });
+  const {
+    fondoDelAgente, setFondoDelAgente, workspaceContext, contextRoot, contextConfirmed, workspaceMode,
+    workspaceActivo, confirmContext, attention, draftBases, setDraftBases, hablandoCon, setHablandoCon,
+    projectCatalog, projectList, sources, setSources, draftMachine, draftOptions, composerProjects,
+    materialError, setMaterialError, taskSourcesError, setTaskSourcesError, draftProjectError,
+    setDraftProjectError, projectReadError, setProjectReadError, startupReadError, setStartupReadError,
+    connectionError, setConnectionError, readRevision, setReadRevision, draftMachineOn, taskSources,
+    setTaskSources, setError, errorVisible, bloqueo, setBloqueo, grupos, project,
+    setProject, sesiones, setSesiones, actividadDeProyectos, elegidosAqui, recordarEleccion,
+    tareasActivas, ocultosAqui, ocultarDelSelector, naciendo, setNaciendo, retoques, setRetoques,
+    retirarNaciendo, sessionId, setSessionId, materialPedido, setMaterialPedido, proyectoAbierto,
+    setProyectoAbierto, pestanas, archivosDeTarea, llaveDeBorrador, anchoDeArchivos,
+    setAnchoDeArchivos, anchoDelArbol, setAnchoDelArbol,
+  } = createWorkspaceSession({ asleep, createAttention, createWorkspaceStore, machineName, machines, runOn });
   const pestanaActiva = () => (proyectoAbierto() ? null : pestanas.active());
   // Los escritorios del workspace (`lib/spaces.ts`). Sin lista —un servicio
   // que no los conoce— la ventana se pinta como antes de los espacios.
@@ -633,7 +625,66 @@ export default function App() {
       },
     ),
   );
-  const { tareasEnVentanas, proyectoDePestana, sesionesConPestana, agentesEnUso, pedidas, esperandoFila, cambiarEscritorio, carpetaDelEscritorio, asentarEscritorio, reloadSpaces, aviso, setAviso, deletingSpace, setDeletingSpace, createSpace, renameSpace, removeFromActiveSpace, moveToSpace, spaceDeleted, senalDe, claveDelHilo, claveAbierta, drafts, borrador, input, setInput, navigateMentionHistory, sourceIds, excludedSourceIds, archivos, setArchivos, agregarArchivos, adjuntas, materialPendiente, contexto, composer, agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes, model, effort, modo, modos, skills, cliCommands, sideCommand, threads, hilos, hiloAbierto, msgs, cargandoHilo, origenes, apagadas, machineWaits, traspasos, conAntiguos, conRecientes, estadoAntiguos, colaSuelta, leerTarea, cargarAntiguos, soltarHilo, avisar, loadResult } = createDeskStrip({ _bridge: bridge, abrirSesion, activarPestana, activeSpace, adjuntosEn, appendToStoredStrip, attention, batch, carpetasDelEscritorio, claveDeBorrador, connected, conservar, createComposerStore, createDraftsStore, createEffect, createMemo, createSignal, createThreadsStore, deLaTarea, deleteLayout, deleteStoredStrip, enMaquina, esProvisional, escribirPref, escritorio, escritorioDeFila, filaDe, grupos, hablandoCon, invoke, isTaskTab, leerPref, loadWindowThreads, machineOf, machines, migrateLegacyStrip, modeloDeSubtarea, naciendo, olvidarPestana, on, onCleanup, paneles, pegadasEn, pestanaActiva, pestanas, project, projectList, prosaDe, readLayout, sesiones, sessionId, setBuscando, setError, setEscritorio, setProyectoAbierto, setSpaces, spaceName, spaces, spacesWithLayout, spacesWithStoredStrip, storedStrip, t, taskSources, topState, withLastAnswer, workspaceActivo, workspaceContext, workspaceMode, _live: { composerMachine: () => composerMachine, liveThreads: () => liveThreads, serviceStream: () => serviceStream, vivas: () => vivas } });
+  const {
+    tareasEnVentanas, proyectoDePestana, sesionesConPestana, agentesEnUso, pedidas, esperandoFila, cambiarEscritorio,
+    carpetaDelEscritorio, asentarEscritorio, reloadSpaces, aviso, setAviso, deletingSpace, setDeletingSpace,
+    createSpace, renameSpace, removeFromActiveSpace, moveToSpace, spaceDeleted, senalDe, claveDelHilo,
+    claveAbierta, drafts, borrador, input, setInput, navigateMentionHistory, sourceIds, excludedSourceIds,
+    archivos, setArchivos, agregarArchivos, adjuntas, materialPendiente, contexto, composer, agents,
+    agent, superficies, superficie, catalogos, models, modelosParaAgentes, model, effort, modo, modos,
+    skills, cliCommands, sideCommand, threads, hilos, hiloAbierto, msgs, cargandoHilo, origenes, apagadas,
+    machineWaits, traspasos, conAntiguos, conRecientes, estadoAntiguos, colaSuelta, leerTarea, cargarAntiguos,
+    soltarHilo, avisar, loadResult,
+  } = createDeskStrip({
+    abrirSesion: (proyecto, id, activar, propagateError) => abrirSesion(proyecto, id, activar, propagateError),
+    activarPestana: (p) => activarPestana(p),
+    activeSpace,
+    adjuntosEn,
+    attention,
+    composerMachine: () => composerMachine(),
+    connected,
+    createComposerStore,
+    createDraftsStore,
+    createThreadsStore,
+    deLaTarea: (id) => deLaTarea(id),
+    escritorio,
+    filaDe: (id) => filaDe(id),
+    grupos,
+    hablandoCon,
+    irAlBlanco: (enProyecto) => irAlBlanco(enProyecto),
+    get liveThreads() { return liveThreads; },
+    loadWindowThreads: (skip) => loadWindowThreads(skip),
+    machineOf: (id) => machineOf(id),
+    machines,
+    modoInicial,
+    modoRecordado,
+    recordarModo,
+    naciendo,
+    olvidarPestana: (session) => olvidarPestana(session),
+    paneles,
+    pegadasEn,
+    pestanaActiva,
+    pestanas,
+    project,
+    projectList,
+    refreshSessions: (proyectos) => refreshSessions(proyectos),
+    get serviceStream() { return serviceStream; },
+    sesiones,
+    sessionId,
+    setBuscando,
+    setError,
+    setEscritorio,
+    setProyectoAbierto,
+    setSpaces,
+    spaces,
+    taskSources,
+    topState,
+    vivas: () => vivas(),
+    withLastAnswer,
+    workspaceActivo,
+    workspaceContext,
+    workspaceMode,
+  });
   /**
    * El destino que demora el envío. Si la tarea aún no tiene id,
    * la espera se muestra en su pestaña provisional o en el borrador.
@@ -1025,7 +1076,41 @@ export default function App() {
 
   const [anadiendoCarpeta, setAnadiendoCarpeta] = createSignal(false);
   const [inicioDeCarpeta, setInicioDeCarpeta] = createSignal<InicioDeCarpeta | null>(null);
-  const { clonEnCurso, setClonEnCurso, cuentasTocadas, setCuentasTocadas, firmas, modelosEnVivo, esperando, preguntadas, sesionesConEstado, sessionLists, refreshSessions, carpetasDeTarea, refreshSessionsOnEvent, releerTrasHueco, previewDeAdjunto, miniaturaDeAdjunto, documentosEn, opcionesDeAdjunto } = createCloneFolder({ _bridge: bridge, ATTACHMENT_DOCUMENTS_FEATURE, attention, avisarDeLosArboles, clave, claveDelHilo, colaSuelta, createMemo, createSignal, deLaTarea, draftOptions, esperandoFila, grupos, hiloAbierto, hilos, invoke, leerTarea, loadResult, machines, msgs, naciendo, onCleanup, pedidas, pestanas, project, remoteChildScope, retoques, sesiones, sesionesConPestana, sessionId, sessionRefresh, setSesiones, threadPreview, unconfirmedOpen, vivas, withRemoteLaunchers, workspaceActivo, workspaceContext });
+  const {
+    clonEnCurso, setClonEnCurso, cuentasTocadas, setCuentasTocadas, firmas, modelosEnVivo,
+    esperando, preguntadas, sesionesConEstado, sessionLists, refreshSessions, carpetasDeTarea,
+    refreshSessionsOnEvent, releerTrasHueco, previewDeAdjunto, miniaturaDeAdjunto,
+    documentosEn, opcionesDeAdjunto,
+  } = createCloneFolder({
+    attention,
+    avisarDeLosArboles,
+    claveDelHilo,
+    colaSuelta,
+    deLaTarea: (id) => deLaTarea(id),
+    draftOptions,
+    esperandoFila,
+    grupos,
+    hiloAbierto,
+    hilos,
+    leerTarea,
+    loadResult,
+    machines,
+    msgs,
+    naciendo,
+    pedidas,
+    pestanas,
+    project,
+    remoteChildScope,
+    retoques,
+    sesiones,
+    sesionesConPestana,
+    sessionId,
+    setSesiones,
+    unconfirmedOpen,
+    vivas: () => vivas(),
+    workspaceActivo,
+    workspaceContext,
+  });
 
   /**
    * Los adjuntos con las rutas de la máquina donde corre el turno. Un archivo
@@ -2570,333 +2655,55 @@ export default function App() {
     onCleanup(() => window.removeEventListener(DEFAULT_PERMISSION_MODE_EVENT, onDefaultMode));
   });
 
-  /**
-   * Lo que esta tarea le va a adjuntar al turno: lo que ya lee más lo que está
-   * puesto en la caja y todavía no ha viajado.
-   */
-  const fuentesDeLaTarea = createMemo(
-    () => unirFuentes(adjuntas(), sourceIds()),
-    undefined,
-    { equals: sameSources },
-  );
+  const {
+    abrirBorradorDeAgente, requestedProfile, setRequestedProfile, proyectosEnAjustes,
+    cerrarAjustes, openAgentProfile, enLaMaquinaDelGrupo, nuevaSesion, irAlBlanco,
+    closeActiveTab, cerrarPestana, cerrarPestanas, cierreSinGuardar, setCierreSinGuardar,
+  } = createNewTask({
+    abrirProyecto: (id) => abrirProyecto(id),
+    alta,
+    arrancando,
+    borrarProyecto: (id) => borrarProyecto(id),
+    carpetaDelEscritorio,
+    cerrarBorrador,
+    cerrarPestanasYa,
+    composer,
+    drafts,
+    enBorrador,
+    hablandoCon,
+    hablarConEncargado: (enProyecto, name) => hablarConEncargado(enProyecto, name),
+    multipleSpaces,
+    ocultarDelSelector,
+    ocultosAqui,
+    paneles,
+    pedirElCampo,
+    pestanaActiva,
+    pestanas,
+    project,
+    proyectosDelRiel: () => proyectosDelRiel(),
+    proyectoDeNuevaTarea,
+    removeFromActiveSpace: (folder) => removeFromActiveSpace(folder),
+    renombrarProyecto: (id, name) => renombrarProyecto(id, name),
+    restoreDraftConfiguration,
+    setAnadiendoCarpeta,
+    setAntesDelBorrador,
+    setCuentasTocadas,
+    setFolder,
+    setHablandoCon,
+    setMaterialPedido,
+    setProject,
+    setProyectoAbierto,
+    setRunOn,
+    setSessionId,
+    setSettings,
+    settings,
+    soltarCola: () => soltarCola(),
+    soltarHilo,
+    tareasActivas,
+    workspaceActivo,
+  });
 
-  // Las menciones @ salen de la carpeta de trabajo (`session`) y de lo adjunto.
-  // Se relee al cambiar de tarea o de fuentes, no en cada turno: recorrer
-  // una fuente entera es caro, y el material es de SOLO LECTURA. Se le pasa
-  // el proyecto, la sesión y las fuentes, no las rutas ya resueltas: armarlo
-  // aquí escribiría la misma regla en dos lenguajes, y su divergencia no
-  // daría error, solo resolvería a otro archivo al mandar la mención.
-  createEffect(
-    on([project, fuentesDeLaTarea, excludedSourceIds, sessionId], ([p, fs, excluidas, session]) => {
-      let current = true;
-      onCleanup(() => {
-        current = false;
-      });
-      invoke<MentionSources>("list_mentions", {
-        project: p,
-        sources: fs,
-        excludedSources: excluidas,
-        session,
-      }, deLaTarea(session))
-        .then((result) => {
-          if (current) setMentionSources(result);
-        })
-        .catch(() => {
-          if (current) setMentionSources(null);
-        });
-    }),
-  );
-
-  // La ocupación de la ventana se deriva del registro cada vez que se abre. No
-  // se guarda en la sesión ni se acumula: manda el último turno registrado.
-  createEffect(
-    on([sessionId, project], ([id, p]) => {
-      if (!id || !p) {
-        setVentana(null);
-        return;
-      }
-      invoke<SessionUsage>("session_usage", { project: p, session: id }, deLaTarea(id))
-        .then((s) => setVentana(ventanaDe(s.records)))
-        .catch(() => setVentana(null));
-    }),
-  );
-
-  /** La fuente de contexto del workspace: su raíz de gobierno, una sola. */
-  async function elegirCarpetaDelWorkspace() {
-    const r = await open({ directory: true, multiple: false });
-    if (typeof r !== "string") return;
-    try {
-      await invoke("set_workspace_source", { kind: "folder", locator: r });
-      await aplicar(await invoke<Startup>("list_workspaces"));
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  /**
-   * Relee la lista del disco sin tocar nada. El tipo de una carpeta se mide
-   * en disco: la que el agente convirtió en repositorio con `git init` se
-   * seguía viendo como carpeta hasta reabrir la app, y sin repositorio no hay
-   * ni árbol propio ni rama base.
-   */
-  async function releerProyectos() {
-    const workspace = workspaceActivo();
-    try {
-      await projectCatalog.changed();
-      if (workspace === workspaceActivo()) setProjectReadError(null);
-    } catch {
-      // La lista anterior sigue sirviendo: releer es una puesta al día.
-    }
-  }
-
-  async function renombrarProyecto(id: string, name: string) {
-    try {
-      await projectCatalog.rename(id, name);
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  // Abre el proyecto en el panel principal. Cambia además el contexto activo
-  // —es `elegirProyecto`—: la tarea que se empiece desde aquí es suya, y
-  // mirar un proyecto mientras se escribe contra otro es justo el error que
-  // el selector de la caja existe para evitar.
-  function abrirProyecto(id: string) {
-    elegirProyecto(id);
-    setProyectoAbierto(id);
-  }
-
-  /** Material que leerá toda tarea del proyecto, no solo la abierta. */
-  async function adjuntarAlProyecto(id: string, source: string) {
-    try {
-      await projectCatalog.attach(id, source);
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  async function quitarDelProyecto(id: string, source: string) {
-    try {
-      await projectCatalog.detach(id, source);
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  // Registra —o quita— la carpeta de trabajo del proyecto. Avisa al panel del
-  // árbol de trabajo, que la enseña sin que alguien reabra nada.
-  async function carpetaEditable(id: string, dir: string | null) {
-    try {
-      await projectCatalog.workTree(id, dir);
-      window.dispatchEvent(new CustomEvent("harness:copia"));
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  async function borrarProyecto(id: string) {
-    try {
-      await projectCatalog.remove(id);
-      if (proyectoAbierto() === id) setProyectoAbierto(null);
-      if (project() === id) {
-        nuevaSesion();
-        setProject("");
-      }
-      const quedan = await projectCatalog.refresh();
-      void reloadSpaces();
-      await refreshSessions(["", ...quedan.map((p) => p.id)]);
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  // Elegir proyecto en el selector cambia el contexto entero: sesiones, chat
-  // y artefactos son del proyecto y no se arrastran. Es un gesto, no un valor
-  // derivado de un efecto sobre `project`: ahí no se distingue elegir de
-  // restituir, y abrir una sesión de otro proyecto cambia el mismo valor,
-  // corriendo el efecto después y quitándole el id a la sesión recién
-  // abierta.
-  function elegirProyecto(name: string) {
-    // Lo que la tarea que se deja ya lee no es de la conversación en blanco.
-    // Su borrador —lo pendiente, lo escrito— se queda en su pestaña y no viaja:
-    // el de la conversación en blanco es el suyo, y si tenía algo puesto antes
-    // de nombrar el trabajo, sigue ahí.
-    batch(() => {
-      drafts.replaceAttached([]);
-      setProject(name);
-      setSessionId(null);
-      restoreDraftConfiguration();
-      setFolder(null);
-      soltarCola();
-    });
-  }
-
-  // Sin cola en la mano: se llama al moverse de sesión o de proyecto, en un
-  // solo lote —de eso depende que no se borre lo que se deja atrás—. Cada
-  // asignación suelta corre los efectos antes de la siguiente: `setCola([])`
-  // con `colaDe` todavía nombrando la sesión que se abandona es un
-  // `save_queue` con la cola vacía, y el `.cola.json` de esa tarea desaparece
-  // con lo que se había escrito para ella.
-  const soltarCola = taskQueues.detach;
-
-  // Abrir una sesión de otro proyecto cambia el contexto entero: la sesión
-  // pertenece a su proyecto y arrastrarla al activo la sacaría de sitio.
-  async function abrirSesion(proyecto: string, id: string, activar = id, propagateError = false) {
-    // Rust no sabe de ella todavía: leerla daría un fallo por una fila que la
-    // pantalla pinta a propósito.
-    if (esProvisional(id)) return;
-    setHablandoCon(null);
-    // Una tarea se abre en su escritorio: su pestaña va en esa tira.
-    const suyo = escritorioDeFila(filaDe(id), spaces());
-    if (suyo && suyo !== escritorio()) cambiarEscritorio(suyo, false);
-    // Abrir es tener a mano: la tarea gana pestaña si no la tenía, y si la
-    // tenía se activa esa — nunca una segunda.
-  // Antes de cargar nada: `activar` es un parámetro. Poner la pestaña delante
-  // después del `await` enseñaría la conversación un cuadro antes que el
-  // archivo que se acaba de pulsar. Juntas: entre una y otra la pestaña nueva
-  // queda detrás de la que estaba, y `montadas` la desmontaría.
-    batch(() => {
-      if (activar === id) pestanas.ensure({ id, project: proyecto, titulo: filaDe(id)?.title ?? "" });
-      pestanas.activate(activar);
-    });
-    if (id === sessionId() && proyecto === project()) {
-      // Ya estaba cargada: volver a ella desde una pestaña suya no relee la
-      // transcripción ni la cola. Releerlas tiraría lo que el turno vivo lleva
-      // dicho y volvería a poner en la caja lo que quedó encolado.
-      setProyectoAbierto(null);
-      return;
-    }
-    setProyectoAbierto(null);
-    setProject(proyecto);
-    setSessionId(id);
-    soltarCola();
-  // Antes del `await`: el hueco que hay que tapar empieza en el
-  // `setSessionId` de arriba, no cuando la lectura del disco tarda. Ver
-  // `cargandoHilo`. Solo se marca si su hilo NO está ya en memoria: con
-  // varias ventanas, pulsar en una para darle el mando vuelve a pasar por
-  // aquí aunque su transcripción lleve rato pintada, y marcarla como «viene
-  // en camino» la mandaría al esqueleto y de vuelta.
-    if (!hilos()[id]) threads.startLoading(id);
-    const generation = workspaceContext.generation();
-    const current = () => generation === workspaceContext.generation() && sessionId() === id && project() === proyecto;
-    try {
-      const s = await leerTarea(proyecto, id);
-      if (!current()) return;
-      // Reanudar conserva con qué corrió: una sesión continuada con otro agente
-      // o con otro modelo ya no es la misma sesión.
-      // Una tarea de un motor anterior guarda `opencode-zen`; el modelo decide si es OpenCode o el Free Router.
-      composer.resumeTask({ provider: canonicalAgentId(s.provider, modeloDeSubtarea(s)), model: modeloDeSubtarea(s) ?? "", effort: s.effort ?? "" });
-      // La transcripción ya llegó; las preferencias opcionales no retienen su pintura.
-      loadResult(id, s, false, generation);
-      void refreshFolder(proyecto, id);
-      // El chat de un encargado no es una tarea que se reabre para releer
-      // su historial: es su conversación de siempre, y su perfil dice con
-      // qué prefiere seguir. Una preferencia guardada gana a lo último que
-      // corrió — sin tocar los turnos ya escritos, solo la caja.
-      if (s.chat_de_agente && s.agent) {
-        try {
-          const perfiles = await invoke<Record<string, AgentProfileData>>(
-            "list_agent_profiles",
-            { project: proyecto },
-          );
-          const perfil = perfiles[s.agent];
-          if (!current()) return;
-          if (perfil) composer.useProfile(perfil);
-        } catch {
-          // Un perfil que no se pudo leer deja la caja con lo de la sesión.
-        }
-      }
-  // Y con cuánta vigilancia corrió: una tarea escrita antes de que esto
-  // existiera no lo dice, y ahí se deja vacío. El efecto de arriba lo baja al
-  // que el agente sostenga, lo mismo que hace el backend con lo que nadie
-  // eligió (`agents::Permisos::resolver`).
-      composer.runtimeFact({ kind: "mode", value: s.permission_mode ?? "" });
-      // Lo que esta tarea ya lee. No son pendientes: están guardados en ella.
-      drafts.replaceAttached(s.sources ?? []);
-      drafts.restoreSession(id, s.excluded_sources ?? []);
-      // Y encima, lo que se eligió en su caja sin llegar a mandar nada.
-      restoreSessionConfiguration(s);
-    } catch (e) {
-      if (!current()) return;
-      try {
-        const state = await invoke<Session>("load_session", {
-          project: proyecto, id, history_request: { version: 1, kind: "state" },
-        }, deLaTarea(id));
-        if (!current()) return;
-        composer.resumeTask({ provider: canonicalAgentId(state.provider, modeloDeSubtarea(state)), model: modeloDeSubtarea(state) ?? "", effort: state.effort ?? "", mode: state.permission_mode ?? "" });
-        drafts.replaceAttached(state.sources ?? []);
-        restoreSessionConfiguration(state);
-        void refreshFolder(proyecto, id);
-      } catch { /* Sin estado autoritativo se conserva el error de la lectura original. */ }
-      if (!current()) return;
-      threads.replaceHistory(id, [{ role: "system", text: prosaDe(e) }], false);
-      if (propagateError) throw e;
-    } finally {
-      // Solo si sigue siendo esta la que se espera: con dos aperturas
-      // solapadas, la respuesta tardía de la primera apagaría el
-      // indicador de la segunda y su hilo se pintaría a medias.
-      threads.finishLoading(id);
-    }
-    // Después de la transcripción, que la reemplaza entera: un aviso
-    // escrito antes de este punto no dejaría rastro.
-    try {
-      await taskQueues.openSession(id, proyecto, current, engineCanDispatch(id));
-      // Lo que ya esperaba cuando se le pide al motor queda retenido por él: se relee tras pedírselo.
-      if (engineCanDispatch(id) && sessionId() === id) void taskQueues.persist(id, proyecto, cola()).then(() => releerCola(id), () => {});
-    } catch (e) {
-      if (!current()) return;
-      // Sin esto la cola queda sin dueño: no es «no pude leerla», es que
-      // la de esta tarea deja de funcionar —el despacho exige que la cola
-      // en la mano sea la de la tarea abierta. Lo no leído se conserva en
-      // su archivo: el guardado cuelga del contenido, y adoptar una mano
-      // vacía no lo pisa.
-      taskQueues.adopt(id);
-      threads.appendLive(id, [{
-                  role: "system",
-                  text: t("shell.queue.load_failed", { error: prosaDe(e) }),
-                  meta: "aviso",
-                }]);
-    }
-  }
-
-  /**
-   * Trae la transcripción de una tarea sin abrirla: la usan las ventanas que
-   * vuelven de un reparto guardado, para que su panel enseñe lo suyo aunque el
-   * mando esté en otra. No toca la sesión abierta —eso lo hace `abrirSesion` al
-   * pulsarla—: solo deja su hilo en memoria.
-   */
-  async function loadThread(project: string, id: string) {
-    if (esProvisional(id) || hilos()[id]) return;
-    const generation = workspaceContext.generation();
-    try {
-      const s = await leerTarea(project, id);
-      if (generation !== workspaceContext.generation()) return;
-      loadResult(id, s, false, generation);
-    } catch {
-      // Sin hilo, su panel queda vacío hasta pulsarla, y ahí `abrirSesion` lo
-      // reintenta. No hay nada que avisar de una ventana que nadie pidió.
-    }
-  }
-
-  /**
-   * Carga la tarea de delante de cada ventana del reparto, menos `skip`, que es
-   * la que abre `abrirSesion`. Es lo que hace que volver a un espacio no deje
-   * sus ventanas en blanco, sin cargar ninguna pestaña que no esté delante.
-   */
-  function loadWindowThreads(skip: string | null) {
-    for (const site of paneles.sites()) {
-      const id = paneles.activeTabAt(site);
-      if (!id || id === skip || id === sessionId()) continue;
-      const tab = pestanas.open().find((p) => p.id === id);
-      if (tab && isTaskTab(tab)) void loadThread(tab.project, tab.session);
-    }
-  }
-
-  function hablarConEncargado(enProyecto: string, name: string) {
-    abrirBorradorDeAgente(enProyecto, name);
-  }
-
-  const { abrirBorradorDeAgente, requestedProfile, setRequestedProfile, proyectosEnAjustes, cerrarAjustes, openAgentProfile, enLaMaquinaDelGrupo, nuevaSesion, irAlBlanco, closeActiveTab, cerrarPestana, cerrarPestanas, cierreSinGuardar, setCierreSinGuardar } = createNewTask({ _bridge: bridge, _live: {}, abrirProyecto, alta, arrancando, batch, borrarProyecto, carpetaDelEscritorio, cerrarBorrador, cerrarPestanasYa, composer, createSignal, drafts, enBorrador, hablandoCon, hablarConEncargado, invoke, multipleSpaces, ocultarDelSelector, ocultosAqui, paneles, pedirElCampo, pestanaActiva, pestanas, project, proyectoDeNuevaTarea, removeFromActiveSpace, renombrarProyecto, restoreDraftConfiguration, setAnadiendoCarpeta, setAntesDelBorrador, setCuentasTocadas, setFolder, setHablandoCon, setMaterialPedido, setProject, setProyectoAbierto, setRunOn, setSessionId, setSettings, settings, soltarCola, soltarHilo, tareasActivas, taskCountOf, workspaceActivo });
+  const { elegirCarpetaDelWorkspace, releerProyectos, renombrarProyecto, abrirProyecto, adjuntarAlProyecto, quitarDelProyecto, carpetaEditable, borrarProyecto, elegirProyecto, soltarCola, abrirSesion, loadThread, loadWindowThreads, hablarConEncargado } = createContextSource({ abrirBorradorDeAgente, adjuntas, aplicar, cambiarEscritorio, cola, composer, deLaTarea, drafts, engineCanDispatch, escritorio, excludedSourceIds, filaDe, hilos, leerTarea, loadResult, nuevaSesion, open, paneles, pestanas, project, projectCatalog, proyectoAbierto, refreshFolder, refreshSessions, releerCola, reloadSpaces, restoreDraftConfiguration, restoreSessionConfiguration, sessionId, setError, setFolder, setHablandoCon, setMentionSources, setProject, setProjectReadError, setProyectoAbierto, setSessionId, setVentana, sourceIds, spaces, taskQueues, threads, workspaceActivo, workspaceContext });
 
   /** El cambio de CLI con el que se está a punto de mandar el siguiente turno. */
   const [traspasoPendiente, setTraspasoPendiente] = createSignal<
@@ -3270,8 +3077,65 @@ export default function App() {
     if (p) void activarPestana(p);
   }
 
-  const { deleteTarget, setDeleteTarget, setDeletingEditors, editorDeletionLocked, deleteTask, deletedTaskMembers, dirtyTaskFiles, moverSesion, etaparSesion, fijarSesion, renombrarSesion, adjuntarFuente, quitarFuente, taskMaterialOptions, materialTarget, cambiarRama, abrirRuta, archivoMovido, archivoBorrado, reatarVistaPrevia, abrirEnlace, abrirNavegador, carpetasDelMas, abrirSitio, abrirPorRel, exportarChat, forkDesde } = createSessionMutations({ _bridge: bridge, abrirBorradorDeAgente, abrirSesion, activarPestana, activeSpace, arbolesDe, archivosDeTarea, artifactTabId, browserTabId, capabilities, carpetasDelEscritorio, cerrarPestana, claveAbierta, contextConfirmed, contiene, createEffect, createSignal, deLaTarea, draftBases, draftOptions, drafts, esDeCodigo, filaDe, fileTabId, folder, invoke, irAlBlanco, machineName, machineOf, machines, nuevaSesion, olvidarPestana, on, opcionesDeLaTarea, paneles, pestanas, project, projectCatalog, projectList, prosaDe, proyectoAbierto, readRevision, refreshSessions, senderTaskId, sesiones, sessionId, setError, setProject, setProyectoAbierto, setRetoques, setRunOn, setTaskSources, setTaskSourcesError, siteTabId, soltarHilo, sources, t, threads, ubicar, workspaceActivo, workspaceContext, _live: { maquinaDeLaVentana: () => maquinaDeLaVentana } });
-
+  const {
+    deleteTarget, setDeleteTarget, setDeletingEditors, editorDeletionLocked, deleteTask,
+    deletedTaskMembers, dirtyTaskFiles, moverSesion, etaparSesion, fijarSesion,
+    renombrarSesion, adjuntarFuente, quitarFuente, taskMaterialOptions, materialTarget,
+    cambiarRama, abrirRuta, archivoMovido, archivoBorrado, reatarVistaPrevia,
+    abrirEnlace, abrirNavegador, carpetasDelMas, abrirSitio, abrirPorRel,
+    exportarChat, forkDesde,
+  } = createSessionMutations({
+    abrirBorradorDeAgente,
+    abrirSesion,
+    activarPestana,
+    activeSpace,
+    arbolesDe,
+    archivosDeTarea,
+    capabilities,
+    cerrarPestana,
+    claveAbierta,
+    contiene,
+    contextConfirmed,
+    deLaTarea,
+    draftBases,
+    draftOptions,
+    drafts,
+    esDeCodigo,
+    filaDe,
+    folder,
+    irAlBlanco,
+    machineName,
+    machineOf,
+    machines,
+    get maquinaDeLaVentana() { return maquinaDeLaVentana; },
+    nuevaSesion,
+    olvidarPestana,
+    opcionesDeLaTarea,
+    paneles,
+    pestanas,
+    project,
+    projectCatalog,
+    projectList,
+    proyectoAbierto,
+    readRevision,
+    refreshSessions,
+    senderTaskId,
+    sesiones,
+    sessionId,
+    setError,
+    setProject,
+    setProyectoAbierto,
+    setRetoques,
+    setRunOn,
+    setTaskSources,
+    setTaskSourcesError,
+    soltarHilo,
+    sources,
+    threads,
+    ubicar,
+    workspaceActivo,
+    workspaceContext,
+  });
 
   const botonDeNuevaPestana = () => (
     <NewTabButton
@@ -3280,7 +3144,6 @@ export default function App() {
       onBrowser={() => abrirNavegador()}
     />
   );
-
 
   /**
    * Elegir en el único menú del chat: la fila ya trae agente,
@@ -6006,7 +5869,18 @@ export default function App() {
     </section>
   );
 
-  const { proyectosDelRiel, sesionesDelRiel, opcionesDeMover } = createRailSessions({ _bridge: bridge, activeSpace, carpetasDelEscritorio, createMemo, delegatedAttention, delegatedFamilies, enEscritorio, escritorio, multipleSpaces, permissions, projectList, remoteChildScope, sesiones, sesionesConEstado, spaceName, spaces, vivas, withRemoteLaunchers });
+  const { proyectosDelRiel, sesionesDelRiel, opcionesDeMover } = createRailSessions({
+    activeSpace,
+    escritorio,
+    multipleSpaces,
+    permissions,
+    projectList,
+    remoteChildScope,
+    sesiones,
+    sesionesConEstado,
+    spaces,
+    vivas,
+  });
 
   const Principal = () => (
     // UNA superficie continua, no tres tarjetas flotando: las columnas

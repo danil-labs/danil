@@ -9,7 +9,9 @@ import {
   onCleanup,
   onMount,
 } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { checkEnvironment, installTool, restartApp } from "../queries/engine-environment";
+import { listDependencies } from "../queries/engine-misc";
+import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import SquareArrowOutUpRight from "lucide-solid/icons/square-arrow-out-up-right";
@@ -94,8 +96,8 @@ export default function Environment() {
     setFallo(null);
     try {
       const [deps, env] = await Promise.all([
-        invoke<Dependency[]>("list_dependencies", { force }),
-        invoke<EnvReport>("check_environment", { force }),
+        listDependencies<Dependency[]>({ force }),
+        checkEnvironment<EnvReport>({ force }),
       ]);
       setFilas(deps);
       setReporte(env);
@@ -151,7 +153,7 @@ export default function Environment() {
   });
 
   async function revelar(d: Dependency) {
-    await invoke("open_external", { target: d.location }).catch(() => {});
+    await openExternal({ target: d.location }).catch(() => {});
   }
 
   function origin(source: string | null) {
@@ -173,7 +175,7 @@ export default function Environment() {
     setReparando(true);
     setFalloDeReparar(null);
     try {
-      await invoke("install_tool", { tool: "bundled-work-tools" });
+      await installTool({ tool: "bundled-work-tools" });
     } catch (e) {
       setFalloDeReparar({ ...asFailure(e), what: t("setup.functions.repair_failed") });
     } finally {
@@ -257,7 +259,7 @@ export default function Environment() {
                   reparando={reparando()}
                   error={falloDeReparar()}
                   onReparar={() => void reparar()}
-                  onReiniciar={() => void invoke("restart_app")}
+                  onReiniciar={() => void restartApp()}
                 />
               </Show>
             </div>

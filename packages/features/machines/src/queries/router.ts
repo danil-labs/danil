@@ -18,6 +18,9 @@
 import { callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
 import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "@terminus/fleet";
 import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { setMachineRoute as engineSetMachineRoute } from "../../../../engine-client/src/client";
+
+export const setMachineRoute = (route: Parameters<typeof engineSetMachineRoute>[0]) => engineSetMachineRoute(route);
 import { readActiveTurns } from "./active-turns-read.ts";
 import { type ContextRouterConfig, createContextRouter } from "./context-router.ts";
 import type { EngineWorkspace } from "./engine-workspaces.ts";

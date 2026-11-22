@@ -1,5 +1,5 @@
 import { Show, createSignal, onMount } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { listWorkspaces, setWorkspacePermissionMode } from "../queries/engine-workspaces";
 import { Select } from "../../../../ui/src/Select";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -22,7 +22,7 @@ export function DefaultPermissions() {
   const [failure, setFailure] = createSignal<Failure | null>(null);
 
   onMount(() => {
-    void invoke<Startup>("list_workspaces")
+    void listWorkspaces<Startup>()
       .then((s) => {
         const active = s.workspaces.find((w) => w.id === s.active);
         if (!active) return;
@@ -36,7 +36,7 @@ export function DefaultPermissions() {
     const id = workspace();
     if (!id) return;
     try {
-      const saved = await invoke<Workspace>("set_workspace_permission_mode", {
+      const saved = await setWorkspacePermissionMode<Workspace>({
         id,
         mode: mode || null,
       });

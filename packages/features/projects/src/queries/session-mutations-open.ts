@@ -1,13 +1,57 @@
-import type { ArbolEnTarea, Source } from "../../../../../apps/desktop/src/lib/model.ts";
-import type { ArtifactTab, SiteTab } from "../../../../../apps/desktop/src/lib/tabs.ts";
-import type { ChatExportado } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
-export function createSessionMutationOpen(deps: { abrirBorradorDeAgente: (enProyecto: string, name: string) => void; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activeSpace: () => import("../../../../../apps/desktop/src/lib/spaces").Space | null; arbolesDe: (project: string, session: string) => Promise<ArbolEnTarea[]>; archivosDeTarea: { panel: (task: string) => import("../../../../../apps/desktop/src/lib/taskFiles").TaskFilesPanel; setOpen: (task: string, open: boolean) => void; present: (task: string, mode: import("../../../../../apps/desktop/src/lib/taskFiles").TaskSideMode) => void; toggle: (task: string) => void; setExpanded: (task: string, expanded: boolean) => void; setTree: (task: string, tree: boolean) => void; setSide: (task: string, side: import("../../../../../apps/desktop/src/lib/taskFiles").TaskFilesSide) => void; open: (task: string, file: { tree: string; path: string; changes: boolean; changed?: boolean; pinned?: boolean; }) => void; pin: (task: string, id: string) => void; activate: (task: string, id: string) => void; setDirty: (task: string, id: string, dirty: boolean) => void; close: (task: string, ids: string[]) => string[]; renamed: (task: string, tree: string, from: string, to: string) => void; removed: (task: string, tree: string, path: string) => void; dirtyOf: (task: string) => string[]; forget: (task: string) => void; }; artifactTabId: (a: { session: string; rel: string; }) => string; browserTabId: () => string; carpetasDelEscritorio: < P extends { id: string; }>(projects: readonly P[], desk: import("../../../../../apps/desktop/src/lib/spaces").Space | null, sesiones: Record<string, readonly (import("../../../../tasks/src/flat").LauncherRow & { id?: string; space?: string | null; archived?: boolean | null; pinned?: boolean | null; machine?: string | null; })[]>) => P[]; cerrarPestana: (id: string) => void; claveAbierta: () => string; contiene: (carpeta: string, absoluta: string) => boolean; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; draftBases: import("solid-js").Accessor<Record<string, string>>; drafts: { peek: (key: string) => import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; current: () => import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; sourceIds: import("solid-js").Accessor<string[]>; excludedSourceIds: import("solid-js").Accessor<string[]>; attached: import("solid-js").Accessor<string[]>; pendingMaterial: import("solid-js").Accessor<Source[]>; context: import("solid-js").Accessor<Source[]>; input: () => string; files: () => string[]; changeText: (value: string, inputType?: string, change?: import("../../../../../apps/desktop/src/lib/taskMentions").TextEdit) => void; history: (redo: boolean) => boolean; addFiles: (paths: string[]) => Promise<void>; addSource: (id: string) => void; removeSource: (id: string) => void; recipient: (name: string, label: string, trigger: import("../../../../../apps/desktop/src/lib/mentions").Trigger) => void; reference: (target: import("../../../../../apps/desktop/src/lib/taskMentions").MentionTarget, label: string, trigger: import("../../../../../apps/desktop/src/lib/mentions").Trigger) => void; replaceFiles: (files: string[]) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; }; replaceAttached: (ids: string[]) => string[]; acceptSources: (ids: string[]) => string[]; configure: (configuration: import("../../../../../apps/desktop/src/lib/project-block-types.ts").DraftConfiguration, key?: string) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; }; handover: (provider: import("../../../../../apps/desktop/src/lib/project-block-types.ts").HandoverPending | null | undefined, key?: string) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; }; invalidateProvider: (key: string, provider: string) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft | { input: string; task_mentions?: import("../../../../../apps/desktop/src/lib/taskMentions").TaskMention[]; recipients?: import("../../../../../apps/desktop/src/lib/recipients").Recipient[]; mentionHistory?: { text: string; task_mentions?: import("../../../../../apps/desktop/src/lib/taskMentions").TaskMention[]; recipients?: import("../../../../../apps/desktop/src/lib/recipients").Recipient[]; }[]; mentionFuture?: { text: string; task_mentions?: import("../../../../../apps/desktop/src/lib/taskMentions").TaskMention[]; recipients?: import("../../../../../apps/desktop/src/lib/recipients").Recipient[]; }[]; sourceIds: string[]; excludedSourceIds: string[]; archivos: string[]; configuration?: import("../../../../../apps/desktop/src/lib/project-block-types.ts").DraftConfiguration; }; }; restoreSession: (key: string, excluded: string[]) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; }; retryText: (text: string, mentions?: import("../../../../../apps/desktop/src/lib/taskMentions").TaskMention[]) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; }; takeFiles: (key: string, files: string[]) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; }; restoreFailed: (key: string, message: { text: string; task_mentions?: import("../../../../../apps/desktop/src/lib/taskMentions").TaskMention[]; recipients?: import("../../../../../apps/desktop/src/lib/recipients").Recipient[]; }, files: string[]) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; }; sentSources: (key: string, ids: string[]) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; }; continueFrom: (prompt: string, path: string, sources: string[], excluded: string[]) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; }; promote: (from: string, to: string) => { [x: string]: import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft; }; drop: (key: string) => Record<string, import("../../../../../apps/desktop/src/lib/project-block-types.ts").Draft>; reset: () => void; dispose: () => void; }; esDeCodigo: (kind: string) => boolean; filaDe: (id: string) => import("../screens/Sessions").SessionRow | undefined; fileTabId: (a: { project: string; session: string; arbol: string; ruta: string; }) => string; folder: import("solid-js").Accessor<string | null>; invoke: < T>(command: string, args?: import("@tauri-apps/api/core").InvokeArgs, options?: import("@tauri-apps/api/core").InvokeOptions) => Promise< T>; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; nuevaSesion: (enProyecto?: string) => void; paneles: { columns: import("solid-js").Accessor<import("../../../../../apps/desktop/src/lib/panels").PanelGroup[][]>; widths: import("solid-js").Accessor<number[]>; heights: import("solid-js").Accessor<number[]>; rowCount: () => number; activeSite: import("solid-js").Accessor<import("../../../../../apps/desktop/src/lib/panels").PanelSite>; sites: () => import("../../../../../apps/desktop/src/lib/panels").PanelSite[]; siteOf: (id: string) => import("../../../../../apps/desktop/src/lib/panels").PanelSite | null; groupAt: (site: import("../../../../../apps/desktop/src/lib/panels").PanelSite) => import("../../../../../apps/desktop/src/lib/panels").PanelGroup | null; groupCount: () => number; rowsPerColumn: () => number[]; isSplit: () => boolean; canSplit: () => boolean; tabsAt: (site: import("../../../../../apps/desktop/src/lib/panels").PanelSite) => string[]; activeTabAt: (site: import("../../../../../apps/desktop/src/lib/panels").PanelSite) => string | null; isVisible: (id: string) => boolean; focus(site: import("../../../../../apps/desktop/src/lib/panels").PanelSite): void; showDraft(): void; activate(id: string): void; renameTabs(pairs: [string, string][]): void; placeLikeStrip(ids: string[], strip: string[]): void; sync(ids: string[]): boolean; close(id: string): string | null; move(id: string, a: import("../../../../../apps/desktop/src/lib/panels").PanelSite, index?: number): boolean; split(id: string): boolean; canSplitAt: (id: string, reference: import("../../../../../apps/desktop/src/lib/panels").PanelSite, side: import("../../../../../apps/desktop/src/lib/panels").Side, unplaced?: boolean) => boolean; splitAt: (id: string, reference: import("../../../../../apps/desktop/src/lib/panels").PanelSite, side: import("../../../../../apps/desktop/src/lib/panels").Side) => boolean; join(): boolean; resizeColumns(i: number, a: number, b: number): void; resizeRows(i: number, a: number, b: number): void; layout: () => import("../../../../../apps/desktop/src/lib/panels").Layout; restore(layout: import("../../../../../apps/desktop/src/lib/panels").Layout | null, live: readonly string[]): void; bindTo(workspace: string | null, space: string | null): void; reset(): void; }; pestanas: { pinned: import("solid-js").Accessor<ReadonlySet<string>>; isPinned: (id: string) => boolean; pin: (id: string) => void; restorable: () => string[]; replacePreviews(groups: readonly (readonly string[])[], visible: readonly (string | null)[]): void; open: import("solid-js").Accessor<import("../../../../../apps/desktop/src/lib/tabs").Tab[]>; active: import("solid-js").Accessor<string | null>; activeTab: () => import("../../../../../apps/desktop/src/lib/tabs").Tab | null; load(ws: string | null, desk?: string | null): string | null; ensure(p: { id: string; project: string; titulo: string; }): void; commitDraft(draft: string, p: { id: string; project: string; titulo: string; }): void; openObservability(title: string): void; openScreen(machine: string, title: string): void; openContent(p: import("../../../../../apps/desktop/src/lib/tabs").ContentTab): void; activate: (id: string | null) => void; close: (id: string) => import("../../../../../apps/desktop/src/lib/tabs").Tab | null; closeMany: (ids: readonly string[], opts?: { remember?: boolean; }) => import("../../../../../apps/desktop/src/lib/tabs").Tab | null; canReopen: () => boolean; reopen(alive: (p: import("../../../../../apps/desktop/src/lib/tabs").Tab) => boolean): import("../../../../../apps/desktop/src/lib/tabs").Tab | null; attachPreviewFiles(project: string, session: string, tree: string): [string, string][]; renameFiles(session: string, tree: string, from: string, end: string): [string, string][]; navigate(id: string, url: string): void; moveToProject(session: string, project: string): void; markChanged(id: string): void; dirty: import("solid-js").Accessor<ReadonlySet<string>>; setDirty(id: string, dirty: boolean): void; registerSaver(id: string, save: (() => Promise<boolean>) | null): void; dirtyTabsToClose(ids: string | readonly string[]): import("../../../../../apps/desktop/src/lib/tabs").FileTab[]; saveFiles(ids: string[]): Promise<boolean>; sync(find: (id: string) => { project: string; titulo: string; } | null): string[]; }; project: import("solid-js").Accessor<string>; projectList: import("solid-js").Accessor<import("../../../../../apps/desktop/src/lib/model").Project[]>; prosaDe: (e: unknown, datos?: { [x: string]: string | number; }) => string; sesiones: import("solid-js").Accessor<Record<string, import("../screens/Sessions").SessionRow[]>>; sessionId: import("solid-js").Accessor<string | null>; setError: import("solid-js").Setter<string | null>; setProyectoAbierto: import("solid-js").Setter<string | null>; setRunOn: (workspace: string | null, id: string | null) => void; siteTabId: (a: { session: string; url: string; }) => string; t: (clave: string, datos?: Record<string, string | number>) => string; ubicar: (arboles: readonly ArbolEnTarea[], absoluta: string) => { arbol: ArbolEnTarea; rel: string; } | null; workspaceActivo: import("solid-js").Accessor<string | null> } & { _bridge: Record<string, any>; _live: Record<string, () => any> }) {
-  const _bridge = deps._bridge;
-  const _mk = (read: () => any): any => new Proxy(function () {} as any, { get(_t: any, p: any) { return read()[p]; }, apply(_t: any, _th: any, args: any[]) { return read()(...args); } });
-  const _late: any = {};
-  for (const [n, via] of [["adjuntarFuente",1],["materialTarget",1],["quitarFuente",1],["taskMaterialOptions",1],["maquinaDeLaVentana",0]] as [string, 0 | 1][]) _late[n] = _mk(() => via ? _bridge[n] : deps._live[n]());
-  const { adjuntarFuente, materialTarget, quitarFuente, taskMaterialOptions, maquinaDeLaVentana } = _late;
-  const { abrirBorradorDeAgente, abrirSesion, activeSpace, arbolesDe, archivosDeTarea, artifactTabId, browserTabId, carpetasDelEscritorio, cerrarPestana, claveAbierta, contiene, deLaTarea, draftBases, drafts, esDeCodigo, filaDe, fileTabId, folder, invoke, machineOf, nuevaSesion, paneles, pestanas, project, projectList, prosaDe, sesiones, sessionId, setError, setProyectoAbierto, setRunOn, siteTabId, t, ubicar, workspaceActivo } = deps;
+import type { Accessor, Setter } from "solid-js";
+import { invoke } from "../../../../engine-client/src/client.ts";
+import { prosaDe } from "../../../../ui/src/Failure.tsx";
+import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { carpetasDelEscritorio, type Space } from "../../../../../apps/desktop/src/lib/spaces.ts";
+import { artifactTabId, browserTabId, fileTabId, siteTabId, type ArtifactTab, type SiteTab } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { ArbolEnTarea, Project, Source } from "../../../../../apps/desktop/src/lib/model.ts";
+import type { ChatExportado, DraftsStore, PanelsStore, TabsStore, TaskFilesStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
+import type { SessionRow } from "../screens/Sessions.tsx";
+
+export type SessionMutationsOpenDeps = {
+  abrirBorradorDeAgente: (enProyecto: string, name: string) => void;
+  abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>;
+  activeSpace: Accessor<Space | null>;
+  adjuntarFuente: (id: string) => Promise<void>;
+  arbolesDe: (project: string, session: string) => Promise<ArbolEnTarea[]>;
+  archivosDeTarea: TaskFilesStore;
+  cerrarPestana: (id: string) => void;
+  claveAbierta: () => string;
+  contiene: (carpeta: string, absoluta: string) => boolean;
+  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
+  draftBases: Accessor<Record<string, string>>;
+  drafts: DraftsStore;
+  esDeCodigo: (kind: string) => boolean;
+  filaDe: (id: string) => SessionRow | undefined;
+  folder: Accessor<string | null>;
+  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined;
+  maquinaDeLaVentana: () => string;
+  materialTarget: () => string;
+  nuevaSesion: (enProyecto?: string) => void;
+  paneles: PanelsStore;
+  pestanas: TabsStore;
+  project: Accessor<string>;
+  projectList: Accessor<Project[]>;
+  quitarFuente: (id: string) => Promise<void>;
+  sesiones: Accessor<Record<string, SessionRow[]>>;
+  sessionId: Accessor<string | null>;
+  setError: Setter<string | null>;
+  setProyectoAbierto: Setter<string | null>;
+  setRunOn: (workspace: string | null, id: string | null) => void;
+  taskMaterialOptions: () => { headers: Record<string, string> } | undefined;
+  ubicar: (arboles: readonly ArbolEnTarea[], absoluta: string) => { arbol: ArbolEnTarea; rel: string } | null;
+  workspaceActivo: Accessor<string | null>;
+};
+
+export function createSessionMutationOpen(deps: SessionMutationsOpenDeps) {
+  const maquinaDeLaVentana = () => deps.maquinaDeLaVentana();
+  const adjuntarFuente = (id: string) => deps.adjuntarFuente(id);
+  const quitarFuente = (id: string) => deps.quitarFuente(id);
+  const materialTarget = () => deps.materialTarget();
+  const taskMaterialOptions = () => deps.taskMaterialOptions();
+
+  const { abrirBorradorDeAgente, abrirSesion, activeSpace, arbolesDe, archivosDeTarea, cerrarPestana, claveAbierta, contiene, deLaTarea, draftBases, drafts, esDeCodigo, filaDe, folder, machineOf, nuevaSesion, paneles, pestanas, project, projectList, sesiones, sessionId, setError, setProyectoAbierto, setRunOn, ubicar, workspaceActivo } = deps;
+
   /**
    * Cambiar la rama de una fuente sustituyéndola: su identidad incluye la
    * rama (`context::repo_identity`), otra rama es otra fuente. La nueva entra
@@ -149,23 +193,10 @@ export function createSessionMutationOpen(deps: { abrirBorradorDeAgente: (enProy
   }
 
   /**
-   * El servidor que levantó una tarea, pestaña más del centro. Se abre
-   * la tarea primero: `pestanas.abrir` mete la de contenido detrás de
-   * las de su tarea, o dejaría un hueco al cerrarla (`lib/tabs.ts`).
-   * El puerto puede ser de una tarea no abierta: pasa por `abrirSesion`.
-   */
-
-  /**
    * Un enlace, en una pestaña de esta ventana. Dos entradas y un solo
    * camino: el clic en un enlace del chat (evento `harness:abrir-sitio`)
    * y el guarda de navegación (`lib.rs` · `sitio-pedido`) —así el
    * «abrir enlace» del menú nativo acaba en el mismo sitio que un clic.
-   */
-
-  /**
-   * Un sitio cuelga de una tarea (`lib/tabs.ts`): se cuelga de la que
-   * esté delante. Sin ninguna se entrega al navegador del sistema: un
-   * enlace que no hace nada se lee como que la app está rota.
    */
   async function abrirEnlace(url: string) {
     // `activa()` es el id, no la pestaña: se busca en las abiertas.
@@ -234,7 +265,7 @@ export function createSessionMutationOpen(deps: { abrirBorradorDeAgente: (enProy
   /** El árbol recuenta por `harness:copia`, como al guardar un archivo desde su pestaña. */
   async function exportarChat(id: string, proyecto: string) {
     try {
-      const salida = await invoke< ChatExportado>("export_chat", { project: proyecto, id }, deLaTarea(id));
+      const salida = await invoke<ChatExportado>("export_chat", { project: proyecto, id }, deLaTarea(id));
       abrirArtefacto(salida.rel, salida.path);
       window.dispatchEvent(new CustomEvent("harness:copia"));
     } catch (e) {
@@ -266,7 +297,10 @@ export function createSessionMutationOpen(deps: { abrirBorradorDeAgente: (enProy
     else nuevaSesion(proyecto);
     drafts.continueFrom(prompt, context.path, context.sources, context.excluded_sources);
   }
-  const _out = { cambiarRama, abrirRuta, archivoMovido, archivoBorrado, reatarVistaPrevia, abrirEnlace, abrirNavegador, carpetasDelMas, abrirSitio, abrirPorRel, exportarChat, forkDesde };
-  Object.assign(_bridge, _out);
-  return _out;
+
+  return {
+    cambiarRama, abrirRuta, archivoMovido, archivoBorrado, reatarVistaPrevia,
+    abrirEnlace, abrirNavegador, carpetasDelMas, abrirSitio, abrirPorRel,
+    exportarChat, forkDesde,
+  };
 }

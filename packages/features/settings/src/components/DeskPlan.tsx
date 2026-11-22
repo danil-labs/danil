@@ -1,6 +1,6 @@
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client";
+import { openExternal } from "../queries/engine-open";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { sessionRailState } from "../../../../shell/src/shell";
@@ -40,7 +40,7 @@ export default function DeskPlan(props: { workspace: string | null }) {
     const url = new URL("/billing", webOrigin);
     url.search = new URLSearchParams({ org, return: "desk" }).toString();
     setFailed(false);
-    try { await invoke("open_external", { target: url.href }); }
+    try { await openExternal({ target: url.href }); }
     catch { setFailed(true); }
   }
   return <SettingsPanel>

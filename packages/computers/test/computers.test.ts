@@ -335,7 +335,10 @@ test("lápidas: la lista con borrados, restaurar, purgar y el 409 con su código
   const restored = await restoreWorkspace("https://c.example", "t", "w9", reply(200, { id: "w9", name: "Viejo", projects: [], computers: [] }));
   assert.equal(restored.kind === "ok" && restored.value?.id, "w9");
   assert.equal((await purgeWorkspace("https://c.example", "t", "w9", reply(204, null))).kind, "ok");
-  assert.deepEqual(asked.slice(1), [["https://c.example/v1/workspaces/w9/restore", "POST"], ["https://c.example/v1/workspaces/w9/purge", "POST"]]);
+  assert.deepEqual(asked.slice(1), [
+    ["https://c.example/v1/workspaces/w9/restore", "POST"],
+    ["https://c.example/v1/workspaces/w9/purge", "POST"]
+  ]);
   assert.deepEqual(await purgeWorkspace("https://c.example", "t", "w", reply(409, { error: "workspace_not_deleted" })), { kind: "error", status: 409, code: "workspace_not_deleted" });
 });
 

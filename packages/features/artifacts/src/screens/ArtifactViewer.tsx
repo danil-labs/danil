@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { previewFile } from "../queries";
 import { machineOf } from "../../../machines/src/queries/store";
 import { FileMachine } from "../../../../ui/src/fileMachine";
 import PreviewPane, { type Preview } from "../components/Preview";
@@ -43,7 +43,7 @@ export default function VisorDeArtefacto(props: {
         onCleanup(() => { current = false; });
         setPreview(null);
         setFallo(null);
-        invoke<Preview>("preview_file", { path, rel }, machineOf(props.session))
+        previewFile(path, rel, machineOf(props.session))
           .then((value) => { if (current) setPreview(value); })
           .catch((e) => {
             if (current) setFallo(prosaDe(e));

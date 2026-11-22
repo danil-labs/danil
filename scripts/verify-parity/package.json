@@ -1,0 +1,7 @@
+{
+  "name": "verify-parity",
+  "private": true,
+  "type": "module",
+  "description": "Gate de paridad visual: misma pantalla en apps/desktop (web, local) y en apps/workspace, diff de píxeles.",
+  "dependencies": { "playwright": "1.49.1", "pixelmatch": "6.0.0", "pngjs": "7.0.0" }
+}

@@ -6,7 +6,8 @@ import Sun from "lucide-solid/icons/sun";
 import Trash2 from "lucide-solid/icons/trash-2";
 import X from "lucide-solid/icons/x";
 import { For, Show, createResource, createSignal, onCleanup, onMount, type Component } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { listMachineAgents, setAgentAvatar } from "../queries/engine-agents";
+import { previewFile } from "../queries/engine-workspaces";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { elegirArchivoDeImagen } from "../../../../host/src/pick-image";
 import type { AgentProfile, AgenteDeMaquina, CatalogoDeAgentes } from "../../../../../apps/desktop/src/lib/model";
@@ -111,7 +112,7 @@ export default function Appearance(props: { proyecto: string }) {
   async function recargar() {
     const esta = ++lectura;
     try {
-      const catalogo = await invoke<CatalogoDeAgentes>("list_machine_agents");
+      const catalogo = await listMachineAgents<CatalogoDeAgentes>();
       if (esta !== lectura) return;
       setFilas(filasDe(catalogo));
       setFallo(null);
@@ -161,7 +162,7 @@ export default function Appearance(props: { proyecto: string }) {
     setOcupada(fila.id);
     setFallo(null);
     try {
-      await invoke<AgentProfile>("set_agent_avatar", {
+      await setAgentAvatar<AgentProfile>({
         project: fila.project,
         name: fila.name,
         source,
@@ -189,7 +190,7 @@ export default function Appearance(props: { proyecto: string }) {
   const [vistaPropia] = createResource(propia, async (ruta) => {
     if (!ruta) return null;
     try {
-      return (await invoke<Preview>("preview_file", { path: ruta, rel: ruta }, machineOf(ruta))).data_url;
+      return (await previewFile<Preview>({ path: ruta, rel: ruta }, machineOf(ruta))).data_url;
     } catch {
       return null;
     }

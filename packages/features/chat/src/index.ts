@@ -1,7 +1,6 @@
 export { modoInicial, modoRecordado, recordarModo } from "./model/modes.ts";
 export type { HandoverPending } from "./model/handover.ts";
-export { guardable } from "./model/queue.ts";
-export type { Encolado } from "./components/MessageQueue.tsx";
+export { guardable, type Encolado } from "../../../ui/src/lib/queue.ts";
 export type { Msg } from "./screens/Chat.tsx";
 export { lotesDeDeltas, type Programar } from "./model/deltaFrames.ts";
 export { hasOlder, hasRecentGap, HistoryPager, type OlderState } from "./model/history.ts";

@@ -1,5 +1,10 @@
-import { Channel } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import {
+  cloneProject,
+  cancelProjectClone,
+  createProject,
+  getProjectDirectory,
+  reuseProject,
+} from "../queries";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Show, createEffect, createMemo, createSignal, on } from "solid-js";
 import { type ProjectRepository } from "../../../../../apps/desktop/src/lib/projectRepositories";
@@ -191,12 +196,11 @@ export default function AnadirCarpeta(props: {
     setProgress(null);
     setCancelling(false);
     setIntentado(true);
-    await terminar(invoke<Project>("clone_project", {
+    await terminar(cloneProject({
       url: url(), name: nombre(), directory: destino(), operation: id,
       workspace: props.workspace, gitHost: provider(), space: props.space ?? undefined,
-      progress: new Channel<{ phase: string; percent: number | null }>(value => {
-        if (operation() === id) setProgress(value);
-      }),
+    }, value => {
+      if (operation() === id) setProgress(value);
     }, enElegida()));
     setOperation(null);
   }
@@ -208,7 +212,7 @@ export default function AnadirCarpeta(props: {
     const otra = clonEnOtra();
     try {
       if (otra) await (await import("../queries/remoteClone")).cancelClone(otra);
-      else await invoke("cancel_project_clone", { operation: id });
+      else await cancelProjectClone(id);
     } catch (error) {
       setFallo(asFailure(error));
       setCancelling(false);
@@ -267,7 +271,7 @@ export default function AnadirCarpeta(props: {
     if (typeof dir !== "string" || workspace !== props.workspace) return false;
     // Sin nombre, Rust usa el de la carpeta y lo recorta al tope (`projects::crear`).
     await terminar(
-      invoke<Project>("create_project", { name: "", workingDirectory: dir, space: props.space ?? undefined }, enElegida()),
+      createProject({ name: "", workingDirectory: dir, space: props.space ?? undefined }, enElegida()),
     );
     return true;
   }
@@ -288,7 +292,7 @@ export default function AnadirCarpeta(props: {
     setTrabajando(true);
     setFallo(null);
     try {
-      const directory = await invoke<string>("get_project_directory", {}, enElegida());
+      const directory = await getProjectDirectory(enElegida());
       if (workspace !== props.workspace) return;
       setDirectorio(directory);
       setCamino(value);
@@ -322,7 +326,7 @@ export default function AnadirCarpeta(props: {
     // del workspace; en otra elegida se clona ahí.
     const deLaElegida = remota() ? remota()?.lead === true : machines().find((m) => m.local)?.hosts !== false;
     if (repo.project && props.workspace && deLaElegida) {
-      await terminar(invoke<Project>("reuse_project", {
+      await terminar(reuseProject({
         workspace: props.workspace, project: repo.project, space: props.space ?? undefined,
       }));
       return;
@@ -438,7 +442,7 @@ export default function AnadirCarpeta(props: {
               onSubmit={(e) => {
                 e.preventDefault();
                 void terminar(
-                  invoke<Project>("create_project", {
+                  createProject({
                     name: nombre(), space: spaceAlli(), directory: remota() ? undefined : (destino() ?? undefined),
                   }, enElegida()),
                 );

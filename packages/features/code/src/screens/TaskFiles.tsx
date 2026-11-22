@@ -12,11 +12,16 @@ import { arbolesDe } from "../queries/treeKind";
 import { Button } from "../../../../ui/src/Button";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import {
+  listTaskTrees,
+  openExternal,
+  openTreeExternal,
+  readTreePart,
+  treeChanges,
+} from "../queries";
 import { copyText } from "../../../../host/src/clipboard";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
-import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
 import type { TaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles";
 import { machineOf } from "../../../machines/src/queries/store";
 import type { Cambios } from "../components/Changes";
@@ -93,19 +98,19 @@ export default function TaskFilesCard(props: {
   const openOutside = async () => {
     const tab = activeTab();
     if (!tab) return;
-    await invoke("tree_open_external", { project: props.project, session: props.session, tree: tab.tree, path: tab.path }, machineOf(props.session)).catch(() => {});
+    await openTreeExternal({ project: props.project, session: props.session, tree: tab.tree, path: tab.path }, machineOf(props.session)).catch(() => {});
   };
   const showInFolder = async () => {
     const tab = activeTab();
     const path = tab && (await absolute(tab));
     if (!path) return;
     const folder = path.slice(0, Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")));
-    await invoke("open_external", { target: folder }).catch(() => {});
+    await openExternal(folder).catch(() => {});
   };
   const treeRoot = async () => (await arbolesDe(props.project, props.session))[0]?.path ?? null;
   const openTaskFolder = async () => {
     const path = await treeRoot();
-    if (path) await invoke("open_external", { target: path }).catch(() => {});
+    if (path) await openExternal(path).catch(() => {});
   };
   const copyTaskPath = async () => {
     const path = await treeRoot();
@@ -121,7 +126,7 @@ export default function TaskFilesCard(props: {
     const tab = activeTab();
     if (!tab) return;
     const { descargar } = await import("../../../viewers/src/screens/Media");
-    await descargar(tab.path, (offset, size, revision) => invoke<TreePart>("tree_read_part", {
+    await descargar(tab.path, (offset, size, revision) => readTreePart<TreePart>({
       project: props.project, session: props.session, tree: tab.tree, path: tab.path, offset, size, revision: revision ?? null,
     }, machineOf(props.session))).catch(() => {});
   };
@@ -287,9 +292,9 @@ function ChangesList(props: {
   onOpen: (tree: string, path: string) => void;
 }) {
   const [rows, { refetch }] = createResource(() => [props.project, props.session] as const, async ([project, session]) => {
-    const trees = await invoke<ArbolEnTarea[]>("list_task_trees", { project, session }, machineOf(session));
+    const trees = await listTaskTrees(project, session, machineOf(session));
     const all = await Promise.all(trees.map(async (tree) => {
-      const changes = await invoke<Cambios>("tree_changes", { project, session, tree: tree.key }, machineOf(session));
+      const changes = await treeChanges<Cambios>({ project, session, tree: tree.key }, machineOf(session));
       return changes.files.map((file) => ({ ...file, tree: tree.key }));
     }));
     return { files: all.flat(), dirtyBefore: trees.reduce((n, tree) => n + (tree.dirty_before ?? 0), 0) };

@@ -1,4 +1,5 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { listGovernedMcpLogins, listRadiantConnections, radiantConnectAccount, radiantGovernDisable, radiantGovernEnable, radiantGovernRefresh, radiantUsageSetOptIn, radiantUsageStatus } from "../queries/engine-harness";
+import { listMcpProviders, mcpLogin } from "../queries/engine-mcp";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import {
@@ -52,7 +53,7 @@ function UsageReporting(props: { workspace: string }) {
   async function load() {
     const mine = ++request;
     try {
-      const next = await invoke<UsageReport>("radiant_usage_status");
+      const next = await radiantUsageStatus<UsageReport>();
       if (mine === request) setReport(next);
     } catch {
       if (mine === request) setReport(null);
@@ -63,7 +64,7 @@ function UsageReporting(props: { workspace: string }) {
     setFailure(null);
     const mine = ++request;
     try {
-      const next = await invoke<UsageReport>("radiant_usage_set_opt_in", { enabled });
+      const next = await radiantUsageSetOptIn<UsageReport>({ enabled });
       if (mine === request) setReport(next);
     } catch (error) {
       setFailure(asFailure(error));
@@ -160,7 +161,7 @@ export default function HarnessGovernance(props: { remote: { id: string; name: s
   async function loadConnections() {
     const mine = ++connectionsRequest;
     try {
-      const list = await invoke<RemoteConnection[]>("list_radiant_connections");
+      const list = await listRadiantConnections<RemoteConnection[]>();
       if (mine === connectionsRequest) setConnections(list);
     } catch {
       // Sin respuesta en vivo queda el estado que trajo el gobierno.
@@ -177,8 +178,8 @@ export default function HarnessGovernance(props: { remote: { id: string; name: s
     const mine = ++loginsRequest;
     try {
       const [targets, list] = await Promise.all([
-        invoke<GovernedLogin[]>("list_governed_mcp_logins"),
-        invoke<McpAgent[]>("list_mcp_providers"),
+        listGovernedMcpLogins<GovernedLogin[]>(),
+        listMcpProviders<McpAgent[]>(),
       ]);
       if (mine !== loginsRequest) return;
       setLogins(targets);
@@ -192,7 +193,7 @@ export default function HarnessGovernance(props: { remote: { id: string; name: s
     setFailure(null);
     setLoginNote(null);
     try {
-      setLoginNote(prosa(await invoke<Frase>("mcp_login", { provider: agent, id })));
+      setLoginNote(prosa(await mcpLogin<Frase>({ provider: agent, id })));
     } catch (error) {
       setFailure(asFailure(error));
     }
@@ -235,14 +236,14 @@ export default function HarnessGovernance(props: { remote: { id: string; name: s
   }
 
   function toggle(enabled: boolean) {
-    if (enabled) void act(() => invoke<GovernanceStatus>("radiant_govern_enable"));
-    else void act(() => invoke<GovernanceStatus>("radiant_govern_disable"));
+    if (enabled) void act(() => radiantGovernEnable<GovernanceStatus>());
+    else void act(() => radiantGovernDisable<GovernanceStatus>());
   }
 
   async function connect(id: string) {
     setFailure(null);
     try {
-      await invoke("radiant_connect_account", { id });
+      await radiantConnectAccount({ id });
     } catch (error) {
       setFailure(asFailure(error));
     }
@@ -298,7 +299,7 @@ export default function HarnessGovernance(props: { remote: { id: string; name: s
                   size="compact"
                   variant="ghost"
                   disabled={busy()}
-                  onClick={() => void act(() => invoke<GovernanceStatus>("radiant_govern_refresh"))}
+                  onClick={() => void act(() => radiantGovernRefresh<GovernanceStatus>())}
                 >
                   {t("harness.governance.refresh")}
                 </Button>

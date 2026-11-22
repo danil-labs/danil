@@ -13,7 +13,9 @@ import { createStore, reconcile } from "solid-js/store";
 import { createCopied } from "../../../../host/src/clipboard";
 import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { accountStatus, addAccount, cancelLogin, discardAccount, installProvider, listAccounts, listProviders, loginAccount, removeAccount, resumeAwaitingQuota, setActiveAccount, setApiKey, submitLoginCode, tasksAwaitingQuota } from "../queries/engine-accounts";
+import { checkEnvironment } from "../queries/engine-environment";
+import { openExternal } from "../queries/engine-open";
 
 import { revocada } from "../../../../../apps/desktop/src/lib/limits";
 import { textoDeFalta } from "../../../../../apps/desktop/src/lib/no-space";
@@ -186,8 +188,8 @@ export default function Accounts(props: {
   async function comprobarCli() {
     setRevisandoCli(true);
     try {
-      await invoke("check_environment", { force: true });
-      setAgentes(await invoke<AgentOpt[]>("list_providers"));
+      await checkEnvironment({ force: true });
+      setAgentes(await listProviders<AgentOpt[]>());
       setFallo(null);
     } catch (e) {
       setFallo({ what: t("settings.accounts.error.check_provider"), detail: detalleDe(e) });
@@ -237,7 +239,7 @@ export default function Accounts(props: {
     if (!id || !clave().trim()) return;
     setGuardandoClave(true);
     try {
-      await invoke("set_api_key", { provider: agente(), id, key: clave() }, machineOf(id));
+      await setApiKey({ provider: agente(), id, key: clave() }, machineOf(id));
       setPidiendoClave(null);
       // No se conserva ni un instante más de lo necesario: ya está en el
       // llavero, y dejarla en una señal la mantendría en memoria sin uso.
@@ -257,7 +259,7 @@ export default function Accounts(props: {
   }
 
   onMount(() => {
-    invoke<AgentOpt[]>("list_providers").then(setAgentes)
+    listProviders<AgentOpt[]>().then(setAgentes)
       .catch((e) => setFallo({ what: t("settings.accounts.error.check_provider"), detail: detalleDe(e) }));
   });
 
@@ -276,13 +278,13 @@ export default function Accounts(props: {
     try {
       const external = externalInstallUrl();
       if (external) {
-        await invoke("open_external", { target: external });
+        await openExternal({ target: external });
         setPidioExterno(true);
         setFallo(null);
         return;
       }
-      await invoke("install_provider", { provider: agente() });
-      setAgentes(await invoke<AgentOpt[]>("list_providers"));
+      await installProvider({ provider: agente() });
+      setAgentes(await listProviders<AgentOpt[]>());
       setFallo(null);
     } catch (e) {
       const sinEspacio = await textoDeFalta(e, `provider:${agente()}`);
@@ -298,7 +300,7 @@ export default function Accounts(props: {
     // a vaciar la sección, y cada tarjeta dice su propia carga.
     if (lista() === null) setCargando(true);
     try {
-      setLista(await invoke<AccountList>("list_accounts", { provider: agente() }));
+      setLista(await listAccounts<AccountList>({ provider: agente() }));
       setFallo(null);
       await mirarEspera();
     } catch (e) {
@@ -405,7 +407,7 @@ export default function Accounts(props: {
         cancelarEspera();
         setUrl(text);
         // El navegador de la persona ya tiene su sesión; el webview no.
-        invoke("open_external", { target: text }).catch(() => {});
+        openExternal({ target: text }).catch(() => {});
         return;
       }
       if (kind === "confirm") {
@@ -442,7 +444,7 @@ export default function Accounts(props: {
         // si faltaba, y sin esto el botón «Instalar» se quedaba pegado tras
         // conectar. El listener de `"providers"` cubre cuando la conexión
         // instaló algo; esta línea cierra el caso de un agente ya instalado.
-        void invoke<AgentOpt[]>("list_providers").then(setAgentes).catch(() => {});
+        void listProviders<AgentOpt[]>().then(setAgentes).catch(() => {});
         setConectadaVez((c) => ({ ...c, [account]: (c[account] ?? 0) + 1 }));
         return;
       }
@@ -485,7 +487,7 @@ export default function Accounts(props: {
    */
   onMount(() => {
     const cambios = listen("providers", () => {
-      void invoke<AgentOpt[]>("list_providers").then(setAgentes).catch(() => {});
+      void listProviders<AgentOpt[]>().then(setAgentes).catch(() => {});
     });
     onCleanup(() => void cambios.then((f) => f()));
   });
@@ -515,7 +517,7 @@ export default function Accounts(props: {
     if (id === enCurso()) return null;
     setComprobando((c) => ({ ...c, [id]: true }));
     try {
-      const st = await invoke<AccountStatus>("account_status", {
+      const st = await accountStatus<AccountStatus>({
         provider: agente(),
         id,
       }, machineOf(id));
@@ -555,7 +557,7 @@ export default function Accounts(props: {
     if (recienCreada !== id || !hubaFallo) return;
     recienCreada = null;
     try {
-      if (await invoke<boolean>("discard_account", { provider: agente(), id }, machineOf(id))) {
+      if (await discardAccount<boolean>({ provider: agente(), id }, machineOf(id))) {
         await refrescar();
       }
     } catch {
@@ -569,12 +571,12 @@ export default function Accounts(props: {
     setAgregando(true);
     try {
       // Apagada, esto la enciende (intent del relay) antes de conectar.
-      const a = await invoke<Account>("add_account", {
+      const a = await addAccount<Account>({
         provider: agente(),
         label: "",
       }, options);
       if (!proveedor()) {
-        await invoke<AgentOpt[]>("list_providers").then(setAgentes).catch(() => {});
+        await listProviders<AgentOpt[]>().then(setAgentes).catch(() => {});
       }
       // Agregar crea la carpeta antes del login: ahí escribe el CLI la
       // credencial. Si el login no llega a nada, esto permite deshacerlo en
@@ -648,7 +650,7 @@ export default function Accounts(props: {
       if (!agentes().find((a) => a.id === agente())?.available) {
         await instalarCli();
       }
-      await invoke("login_account", { provider: agente(), id, mode: modo }, machineOf(id));
+      await loginAccount({ provider: agente(), id, mode: modo }, machineOf(id));
       if (modo === "terminal") {
         // El login ocurre fuera de la app: no llega ningún evento aquí, y no
         // hay nada que esperar ni panel que sostener.
@@ -680,7 +682,7 @@ export default function Accounts(props: {
     const id = enCurso();
     if (!id || !codigo().trim()) return;
     try {
-      await invoke("submit_login_code", { id, code: codigo() }, machineOf(id));
+      await submitLoginCode({ id, code: codigo() }, machineOf(id));
       setPideCodigo(false);
       setCodigo("");
     } catch (e) {
@@ -694,7 +696,7 @@ export default function Accounts(props: {
   async function usar(id: string) {
     try {
       setRepuestas(null);
-      await invoke("set_active_account", { provider: agente(), id }, machineOf(id));
+      await setActiveAccount({ provider: agente(), id }, machineOf(id));
       await refrescar();
     } catch (e) {
       setFallo({ what: t("settings.accounts.error.activate"), detail: detalleDe(e) });
@@ -703,7 +705,7 @@ export default function Accounts(props: {
 
   async function mirarEspera() {
     try {
-      setEsperando(await invoke<EnEspera[]>("tasks_awaiting_quota", { provider: agente() }));
+      setEsperando(await tasksAwaitingQuota<EnEspera[]>({ provider: agente() }));
     } catch {
       setEsperando([]);
     }
@@ -712,7 +714,7 @@ export default function Accounts(props: {
   async function reponer() {
     setReponiendo(true);
     try {
-      const n = await invoke<number>("resume_awaiting_quota", { provider: agente() });
+      const n = await resumeAwaitingQuota<number>({ provider: agente() });
       setRepuestas(n);
       await mirarEspera();
     } catch (e) {
@@ -725,7 +727,7 @@ export default function Accounts(props: {
   async function quitar(id: string) {
     setPorQuitar(null);
     try {
-      await invoke("remove_account", { provider: agente(), id }, machineOf(id));
+      await removeAccount({ provider: agente(), id }, machineOf(id));
       setConexionFallida((f) => (f?.id === id ? null : f)); // Su panel ofrecería «Reintentar» sobre una cuenta que ya no existe.
       await refrescar();
     } catch (e) {
@@ -765,7 +767,7 @@ export default function Accounts(props: {
 
   function cancelarConexion() {
     const id = enCurso();
-    if (id) invoke("cancel_login", { id }, machineOf(id)).catch(() => {});
+    if (id) cancelLogin({ id }, machineOf(id)).catch(() => {});
     cancelarEspera();
     setEnCurso(null);
     setPideCodigo(false);
@@ -1243,7 +1245,7 @@ export default function Accounts(props: {
                         <Button
                           variant="secondary"
                           size="sm"
-                          onClick={() => invoke("open_external", { target: u() }).catch(() => {})}
+                          onClick={() => openExternal({ target: u() }).catch(() => {})}
                         >
                           <ExternalLink size={14} />
                           {t("settings.accounts.open_browser")}
@@ -1297,7 +1299,7 @@ export default function Accounts(props: {
                       variant="outline"
                       size="compact"
                       onClick={() => {
-                        invoke("cancel_login", { id: id() }, machineOf(id())).catch(() => {});
+                        cancelLogin({ id: id() }, machineOf(id())).catch(() => {});
                         void conectar(id(), "terminal");
                       }}
                     >
@@ -1338,7 +1340,7 @@ export default function Accounts(props: {
                 setClave("");
                 // El alta creó la cuenta antes de tener la clave, igual que con
                 // el login del CLI. Sin esto queda un objeto vacío en la lista.
-                if (id) void invoke("discard_account", { provider: agente(), id }, machineOf(id)).then(refrescar);
+                if (id) void discardAccount({ provider: agente(), id }, machineOf(id)).then(refrescar);
               }}
             >
               {t("settings.accounts.cancel")}

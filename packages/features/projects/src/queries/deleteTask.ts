@@ -34,6 +34,18 @@ export function failureText(failure: unknown): string {
   return detail && detail !== message ? `${message}\n${detail}` : message;
 }
 
+export const previewTaskLifecycle = (
+  args: Record<string, unknown>,
+  options?: InvokeOptions,
+): Promise<(DeletePreview)> =>
+  invoke<(DeletePreview)>("task_lifecycle_preview", args, options);
+
+export const applyTaskLifecycle = (
+  args: Record<string, unknown>,
+  options?: InvokeOptions,
+): Promise<(DeleteResult)> =>
+  invoke<(DeleteResult)>("task_lifecycle_apply", args, options);
+
 // The preview's `integration` decides. Older engines fall back to the finish check, whose `not_finished` also
 // flags a worktree without commits of its own and does not tell unmerged from unchecked: those stay unconfirmed.
 export async function integrationChecks(list: DeleteMember[], options: InvokeOptions): Promise<ReadonlyMap<string, Integration>> {

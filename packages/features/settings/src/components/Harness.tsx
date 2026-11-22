@@ -3,7 +3,8 @@
  * motor (`radiant.error.*`, `radiant.governance.*`, `radiant.usage.*`) siguen en
  * `radiant.json` porque son el nombre del contrato, no de la pantalla.
  */
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { getRadiantIdentity, listRadiantWorkspaces, radiantCancelLogin, radiantLogin, radiantLogout, radiantSelectOrganization, radiantSelectWorkspace, radiantSetServer, radiantStatus } from "../queries/engine-harness";
+import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -87,7 +88,7 @@ export default function Harness() {
   async function refresh() {
     const current = ++request;
     try {
-      const next = await invoke<Status>("radiant_status");
+      const next = await radiantStatus<Status>();
       if (current === request) adopt(next);
     } catch (error) {
       if (current === request) setFailure(asFailure(error));
@@ -98,7 +99,7 @@ export default function Harness() {
     if (!status()?.signed_in) return;
     const current = ++identityRequest;
     try {
-      const who = await invoke<Identity>("get_radiant_identity");
+      const who = await getRadiantIdentity<Identity>();
       if (current !== identityRequest) return;
       setIdentity(who);
       if (who.status === "ok") await loadWorkspaces();
@@ -112,7 +113,7 @@ export default function Harness() {
   async function loadWorkspaces() {
     const current = ++workspacesRequest;
     try {
-      const list = await invoke<RemoteWorkspace[]>("list_radiant_workspaces");
+      const list = await listRadiantWorkspaces<RemoteWorkspace[]>();
       if (current === workspacesRequest) setWorkspaces(list);
     } catch (error) {
       if (current !== workspacesRequest) return;
@@ -147,7 +148,7 @@ export default function Harness() {
     setMode(next);
     const cloud = status()?.cloud_server;
     if (next === "cloud" && cloud && status()?.server !== cloud) {
-      void act(() => invoke<Status>("radiant_set_server", { server: cloud }), true);
+      void act(() => radiantSetServer<Status>({ server: cloud }), true);
     }
   };
 
@@ -229,7 +230,7 @@ export default function Harness() {
                   disabled={busy() || running()}
                   onClick={() => {
                     const cloud = status()?.cloud_server;
-                    if (cloud) void act(() => invoke<Status>("radiant_set_server", { server: cloud }), true);
+                    if (cloud) void act(() => radiantSetServer<Status>({ server: cloud }), true);
                   }}
                 >
                   {t("harness.server.use")}
@@ -242,7 +243,7 @@ export default function Harness() {
             class="flex flex-wrap items-center gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              void act(() => invoke<Status>("radiant_set_server", { server: url() }), true);
+              void act(() => radiantSetServer<Status>({ server: url() }), true);
             }}
           >
             <Input
@@ -279,12 +280,12 @@ export default function Harness() {
                 <Show
                   when={status()?.signed_in}
                   fallback={
-                    <Button size="sm" disabled={busy()} onClick={() => void act(() => invoke<Status>("radiant_login"), true)}>
+                    <Button size="sm" disabled={busy()} onClick={() => void act(() => radiantLogin<Status>(), true)}>
                       {t("harness.session.login")}
                     </Button>
                   }
                 >
-                  <Button size="sm" variant="outline" disabled={busy()} onClick={() => void act(() => invoke<Status>("radiant_logout"), true)}>
+                  <Button size="sm" variant="outline" disabled={busy()} onClick={() => void act(() => radiantLogout<Status>(), true)}>
                     {busy() ? t("harness.session.logging_out") : t("harness.session.logout")}
                   </Button>
                 </Show>
@@ -312,13 +313,13 @@ export default function Harness() {
                   variant="secondary"
                   onClick={() => {
                     const uri = login()?.prompt?.uri;
-                    if (uri) void invoke("open_external", { target: uri }).catch((e) => setFailure(asFailure(e)));
+                    if (uri) void openExternal({ target: uri }).catch((e) => setFailure(asFailure(e)));
                   }}
                 >
                   {t("harness.session.open_browser")}
                 </Button>
               </Show>
-              <Button size="sm" variant="outline" onClick={() => void act(() => invoke<Status>("radiant_cancel_login"))}>
+              <Button size="sm" variant="outline" onClick={() => void act(() => radiantCancelLogin<Status>())}>
                 {t("harness.session.cancel")}
               </Button>
             </div>
@@ -334,7 +335,7 @@ export default function Harness() {
               value=""
               onChange={(e) => {
                 const id = e.currentTarget.value;
-                void act(() => invoke<Status>("radiant_select_organization", { id }), true);
+                void act(() => radiantSelectOrganization<Status>({ id }), true);
               }}
             >
               <option value="" disabled>
@@ -376,7 +377,7 @@ export default function Harness() {
                   onChange={(e) => {
                     const id = e.currentTarget.value;
                     // Elegir un workspace pasa la sesión a su organización: la cuenta se relee.
-                    void act(() => invoke<Status>("radiant_select_workspace", { id })).then(verify);
+                    void act(() => radiantSelectWorkspace<Status>({ id })).then(verify);
                   }}
                 >
                   <option value="" disabled>

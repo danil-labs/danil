@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { openExternal } from "../queries/engine-open";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
@@ -47,7 +47,7 @@ export function Consentir(props: {
             </For>
             <div class="flex flex-wrap gap-x-3 gap-y-1">
               <For each={props.texto.policy.terms}>{(term) => (
-                <Button variant="ghost" size="sm" onClick={() => void invoke("open_external", { target: term.url })}>{term.url.includes("privacy") ? t("settings.accounts.free.privacy", { provider: term.label }) : t("settings.accounts.free.terms", { provider: term.label })}</Button>
+                <Button variant="ghost" size="sm" onClick={() => void openExternal({ target: term.url })}>{term.url.includes("privacy") ? t("settings.accounts.free.privacy", { provider: term.label }) : t("settings.accounts.free.terms", { provider: term.label })}</Button>
               )}</For>
             </div>
             <Show when={props.error}>{(error) => <p role="alert" class="m-0 text-xs text-error-strong">{error()}</p>}</Show>

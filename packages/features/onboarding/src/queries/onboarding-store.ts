@@ -11,6 +11,8 @@ async function activar(w: { id: string; name: string }) {
 }
 export const crearWorkspace = async (name: string) => activar({ ...(await invoke<{ id: string }>("add_workspace", { name })), name });
 export const entrarAlWorkspaceFree = async () => activar(await sealFirstFreeWorkspace(invoke));
+export const renombrarWorkspace = (id: string, name: string) =>
+  invoke("rename_workspace", { id, name });
 
 /** Antigravity lleva también Gemini, que es como más se le conoce. */
 export const nombreDeAgente = (a: { id: string; label: string }) => {

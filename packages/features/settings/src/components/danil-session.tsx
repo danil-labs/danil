@@ -5,7 +5,8 @@
 import "../../../../../apps/desktop/src/locales/danilPhrases";
 import { createSignal, For, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client";
+import { danilAccountRefresh } from "../queries/engine-github";
+import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { Button } from "../../../../ui/src/Button";
 import {
@@ -102,10 +103,10 @@ export function createDanilSession({ oneClick = ONE_CLICK_SIGN_IN } = {}) {
     signOut: () => run(signOut),
     /** Tras activar la licencia: con sesión se vuelve a preguntar a Danil; sin ella, se entra de nuevo. */
     retry: () =>
-      status()?.state === "connected" ? run(() => invoke<DanilConnectStatus>("danil_account_refresh", {})) : run(() => signInWithBrowser(name())),
+      status()?.state === "connected" ? run(() => danilAccountRefresh<DanilConnectStatus>({})) : run(() => signInWithBrowser(name())),
     reopen: () => {
       const url = status()?.verification_uri_complete;
-      if (url) void invoke("open_external", { target: url }).catch(() => {});
+      if (url) void openExternal({ target: url }).catch(() => {});
     },
   };
 }

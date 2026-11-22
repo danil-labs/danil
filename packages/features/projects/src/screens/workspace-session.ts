@@ -1,10 +1,65 @@
+import { createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js";
+import { lastActivity } from "@terminus/tasks";
+import { createProjectsStore, invoke } from "../queries/store.ts";
+import { prosaDe } from "../../../../ui/src/Failure.tsx";
+import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { createPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
+import { recordarCarpetas } from "../../../../../apps/desktop/src/lib/folderKinds.ts";
+import { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import { createTaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles.ts";
 import type { Frase } from "../../../../../apps/desktop/src/lib/prose.ts";
 import type { Project, Source } from "../../../../../apps/desktop/src/lib/model.ts";
-import type { HiddenProjects, PickedAt } from "../model/recent.ts";
+import type { Machine, ProjectPlace } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
+import { activeTaskCounts, activityByProject, hiddenIn, type HiddenProjects, type PickedAt, picksIn, rememberPick, setHidden, storedPicks } from "../model/recent.ts";
 import type { SessionRow } from "./Sessions.tsx";
-export function createWorkspaceSession(deps: { activeTaskCounts: <T extends { archived?: boolean | null; }>(tasks: Readonly<Record<string, readonly T[]>>) => Record<string, number>; activityByProject: <T>(tasks: Readonly<Record<string, readonly T[]>>, lastActivity: (task: T) => number) => Record<string, number>; asleep: (error: unknown) => boolean; createAttention: () => { list: import("solid-js").Accessor<import("../../../../shell/src/shell/attention").WorkspaceAttention[]>; of: (workspace: string | null) => import("../../../../shell/src/shell/attention").TaskAttention[]; unseen: (workspace: string | null) => Set<string>; markSeen(workspace: string, session: string): void; }; createEffect: { <Next>(fn: import("solid-js").EffectFunction<undefined | import("solid-js").NoInfer<Next>, Next>): void; <Next, Init = Next>(fn: import("solid-js").EffectFunction<Init | Next, Next>, value: Init, options?: import("solid-js").EffectOptions & { render?: boolean; }): void; }; createMemo: { <Next extends Prev, Prev = Next>(fn: import("solid-js").EffectFunction<undefined | import("solid-js").NoInfer<Prev>, Next>): import("solid-js").Accessor<Next>; <Next extends Prev, Init = Next, Prev = Next>(fn: import("solid-js").EffectFunction<Init | Prev, Next>, value: Init, options?: import("solid-js").MemoOptions<Next>): import("solid-js").Accessor<Next>; }; createPref: <T>(clave: string, porOmision: T) => [import("solid-js").Accessor<T>, (valor: T) => void]; createProjectsStore: (deps: { scope: () => import("../index").ProjectsScope; invoke: <T>(command: string, args?: Record<string, unknown>, options?: { headers: Record<string, string>; }) => Promise<T>; timeoutMs?: number; }) => { rows: import("solid-js").Accessor<Project[]>; readyScope: import("solid-js").Accessor<(import("../index").ProjectsScope & { revision: number; }) | null>; state: import("solid-js").Accessor<import("../../../../../apps/desktop/src/lib/resource").ResourceState<string, Project[]>>; refresh: () => Promise<Project[]>; changed: () => Promise<Project[]>; fromCache(projects: Project[]): void; workspaceChanged(preserveCached?: boolean): void; discardUnconfirmedCache(): void; readForMachine(machine: string): Promise<Project[]>; rename: (id: string, name: string) => Promise<void>; attach: (id: string, source: string) => Promise<void>; detach: (id: string, source: string) => Promise<void>; workTree: (id: string, dir: string | null) => Promise<void>; remove: (id: string) => Promise<void>; dispose(): void; }; createSignal: { <T>(): import("solid-js").Signal<T | undefined>; <T>(value: T, options?: import("solid-js").SignalOptions<T>): import("solid-js").Signal<T>; }; createTabs: (options?: { transient?: boolean; }) => { pinned: import("solid-js").Accessor<ReadonlySet<string>>; isPinned: (id: string) => boolean; pin: (id: string) => void; restorable: () => string[]; replacePreviews(groups: readonly (readonly string[])[], visible: readonly (string | null)[]): void; open: import("solid-js").Accessor<import("../../../../../apps/desktop/src/lib/tabs").Tab[]>; active: import("solid-js").Accessor<string | null>; activeTab: () => import("../../../../../apps/desktop/src/lib/tabs").Tab | null; load(ws: string | null, desk?: string | null): string | null; ensure(p: { id: string; project: string; titulo: string; }): void; commitDraft(draft: string, p: { id: string; project: string; titulo: string; }): void; openObservability(title: string): void; openScreen(machine: string, title: string): void; openContent(p: import("../../../../../apps/desktop/src/lib/tabs").ContentTab): void; activate: (id: string | null) => void; close: (id: string) => import("../../../../../apps/desktop/src/lib/tabs").Tab | null; closeMany: (ids: readonly string[], opts?: { remember?: boolean; }) => import("../../../../../apps/desktop/src/lib/tabs").Tab | null; canReopen: () => boolean; reopen(alive: (p: import("../../../../../apps/desktop/src/lib/tabs").Tab) => boolean): import("../../../../../apps/desktop/src/lib/tabs").Tab | null; attachPreviewFiles(project: string, session: string, tree: string): [string, string][]; renameFiles(session: string, tree: string, from: string, end: string): [string, string][]; navigate(id: string, url: string): void; moveToProject(session: string, project: string): void; markChanged(id: string): void; dirty: import("solid-js").Accessor<ReadonlySet<string>>; setDirty(id: string, dirty: boolean): void; registerSaver(id: string, save: (() => Promise<boolean>) | null): void; dirtyTabsToClose(ids: string | readonly string[]): import("../../../../../apps/desktop/src/lib/tabs").FileTab[]; saveFiles(ids: string[]): Promise<boolean>; sync(find: (id: string) => { project: string; titulo: string; } | null): string[]; }; createTaskFiles: () => { panel: (task: string) => import("../../../../../apps/desktop/src/lib/taskFiles").TaskFilesPanel; setOpen: (task: string, open: boolean) => void; present: (task: string, mode: import("../../../../../apps/desktop/src/lib/taskFiles").TaskSideMode) => void; toggle: (task: string) => void; setExpanded: (task: string, expanded: boolean) => void; setTree: (task: string, tree: boolean) => void; setSide: (task: string, side: import("../../../../../apps/desktop/src/lib/taskFiles").TaskFilesSide) => void; open: (task: string, file: { tree: string; path: string; changes: boolean; changed?: boolean; pinned?: boolean; }) => void; pin: (task: string, id: string) => void; activate: (task: string, id: string) => void; setDirty: (task: string, id: string, dirty: boolean) => void; close: (task: string, ids: string[]) => string[]; renamed: (task: string, tree: string, from: string, to: string) => void; removed: (task: string, tree: string, path: string) => void; dirtyOf: (task: string) => string[]; forget: (task: string) => void; }; createWorkspaceStore: () => { active: import("solid-js").Accessor<string | null>; mode: import("solid-js").Accessor<string | null>; root: import("solid-js").Accessor<string | null>; confirmed: import("solid-js").Accessor<boolean>; generation: () => number; beginTransition: (startup: { active: string | null; workspaces: { id: string; context_root: string | null; default_permission_mode: string | null; }[]; }) => Readonly<{ generation: number; material: number; }> & Readonly<{ previous: string | null; workspace: string | null; }>; activate: (token: Readonly<{ generation: number; material: number; }> & Readonly<{ previous: string | null; workspace: string | null; }>) => boolean; beginMaterial: () => Readonly<{ generation: number; material: number; }>; current: (token: Readonly<{ generation: number; material: number; }>) => boolean; currentMaterial: (token: Readonly<{ generation: number; material: number; }>) => boolean; confirmContext: (token: Readonly<{ generation: number; material: number; }>, candidate: string | null, listed: { id: string; root: boolean; missing: boolean; }[]) => "obsolete" | "unavailable" | "accepted"; modeChanged: (workspace: string | null, value: string | null, requestedGeneration?: number) => void; dispose: () => void; }; hiddenIn: (hidden: unknown, workspace: string | null | undefined) => Set<string>; invoke: <T>(command: string, args?: import("@tauri-apps/api/core").InvokeArgs, options?: import("@tauri-apps/api/core").InvokeOptions) => Promise<T>; lastActivity: (task: import("../../../../tasks/src/view").SidebarTask) => number; machineName: (id: string, local?: boolean) => string; machines: import("solid-js").Accessor<import("../../../../../apps/desktop/src/lib/project-block-types.ts").Machine[]>; on: { <S, Next extends Prev, Prev = Next>(deps: import("solid-js").AccessorArray<S> | import("solid-js").Accessor<S>, fn: import("solid-js").OnEffectFunction<S, undefined | import("solid-js").NoInfer<Prev>, Next>, options?: import("solid-js").OnOptions & { defer?: false; }): import("solid-js").EffectFunction<undefined | import("solid-js").NoInfer<Next>, import("solid-js").NoInfer<Next>>; <S, Next extends Prev, Prev = Next>(deps: import("solid-js").AccessorArray<S> | import("solid-js").Accessor<S>, fn: import("solid-js").OnEffectFunction<S, undefined | import("solid-js").NoInfer<Prev>, Next>, options: import("solid-js").OnOptions | { defer: true; }): import("solid-js").EffectFunction<undefined | import("solid-js").NoInfer<Next>>; }; onCleanup: <T extends () => any>(fn: T) => T; picksIn: (stored: unknown, workspace: string) => PickedAt; prosaDe: (e: unknown, datos?: { [x: string]: string | number; }) => string; recordarCarpetas: (projects: readonly Project[]) => void; rememberPick: (picked: Readonly<PickedAt>, id: string, now: number, existing: Iterable<string>) => PickedAt; runOn: (workspace: string | null, project?: import("../../../../../apps/desktop/src/lib/project-block-types.ts").ProjectPlace) => string | null; setHidden: (hidden: unknown, workspace: string, id: string, hide: boolean, existing: Iterable<string>) => HiddenProjects; storedPicks: (stored: unknown) => Record<string, PickedAt>; t: (clave: string, datos?: Record<string, string | number>) => string }) {
-  const _bridge: Record<string, any> = {};
-  const { activeTaskCounts, activityByProject, asleep, createAttention, createEffect, createMemo, createPref, createProjectsStore, createSignal, createTabs, createTaskFiles, createWorkspaceStore, hiddenIn, invoke, lastActivity, machineName, machines, on, onCleanup, picksIn, prosaDe, recordarCarpetas, rememberPick, runOn, setHidden, storedPicks, t } = deps;
+
+export type AttentionState = "unseen" | "asked" | "approving" | "failed";
+
+export type TaskAttention = {
+  session: string;
+  project: string;
+  state: AttentionState;
+};
+
+export type WorkspaceAttention = {
+  workspace: string;
+  tasks: TaskAttention[];
+};
+
+export type AttentionStore = {
+  list: Accessor<WorkspaceAttention[]>;
+  of: (workspace: string | null) => TaskAttention[];
+  unseen: (workspace: string | null) => Set<string>;
+  markSeen(workspace: string, session: string): void;
+};
+
+export type WorkspaceStore = {
+  active: Accessor<string | null>;
+  mode: Accessor<string | null>;
+  root: Accessor<string | null>;
+  confirmed: Accessor<boolean>;
+  generation: () => number;
+  beginTransition: (startup: { active: string | null; workspaces: { id: string; context_root: string | null; default_permission_mode: string | null; }[]; }) => Readonly<{ generation: number; material: number; }> & Readonly<{ previous: string | null; workspace: string | null; }>;
+  activate: (token: Readonly<{ generation: number; material: number; }> & Readonly<{ previous: string | null; workspace: string | null; }>) => boolean;
+  beginMaterial: () => Readonly<{ generation: number; material: number; }>;
+  current: (token: Readonly<{ generation: number; material: number; }>) => boolean;
+  currentMaterial: (token: Readonly<{ generation: number; material: number; }>) => boolean;
+  confirmContext: (token: Readonly<{ generation: number; material: number; }>, candidate: string | null, listed: { id: string; root: boolean; missing: boolean; }[]) => "obsolete" | "unavailable" | "accepted";
+  modeChanged: (workspace: string | null, value: string | null, requestedGeneration?: number) => void;
+  dispose: () => void;
+};
+
+export type WorkspaceSessionDeps = {
+  asleep: (error: unknown) => boolean;
+  createAttention: () => AttentionStore;
+  createWorkspaceStore: () => WorkspaceStore;
+  machineName: (id: string, local?: boolean) => string;
+  machines: Accessor<Machine[]>;
+  runOn: (workspace: string | null, project?: ProjectPlace) => string | null;
+};
+
+export function createWorkspaceSession(deps: WorkspaceSessionDeps) {
+  const { asleep, createAttention, createWorkspaceStore, machineName, machines, runOn } = deps;
   /* El fondo propio del agente de la conversación con el mando: lo publica su
      celda y se pinta detrás del área de trabajo, no solo detrás de su chat. */
   const [fondoDelAgente, setFondoDelAgente] = createSignal<{ url: string; veil?: number } | null>(null);
@@ -29,7 +84,7 @@ export function createWorkspaceSession(deps: { activeTaskCounts: <T extends { ar
   const [sources, setSources] = createSignal<Source[]>([]);
   // `rows: null`: la máquina está apagada y no contestó; el selector ofrece lo que se sabe de ella.
   const [draftProjects, setDraftProjects] = createSignal<{ workspace: string; machine: string; rows: Project[] | null } | null>(null);
-  const draftMachine = () => runOn(workspaceActivo()) ?? machines().find(m => m.active)?.id ?? null;
+  const draftMachine = () => runOn(workspaceActivo()) ?? machines().find((m) => m.active)?.id ?? null;
   const draftOptions = () => {
     const machine = draftMachine();
     return machine ? { headers: { "x-terminus-machine": machine } } : undefined;
@@ -43,12 +98,12 @@ export function createWorkspaceSession(deps: { activeTaskCounts: <T extends { ar
    */
   const projectsWhileOff = (machine: string) =>
     projectList()
-      .filter(p => p.machines?.includes(machine) || !!p.remote_url)
-      .map(p => ({ ...p, working_directory: null, work_tree: null }));
+      .filter((p) => p.machines?.includes(machine) || !!p.remote_url)
+      .map((p) => ({ ...p, working_directory: null, work_tree: null }));
   const composerProjects = createMemo(() => {
     const machine = draftMachine();
     if (!machine) return projectList();
-    if (machines().find(m => m.id === machine)?.local) return projectList().filter(p => !p.machines || p.machines.includes(machine));
+    if (machines().find((m) => m.id === machine)?.local) return projectList().filter((p) => !p.machines || p.machines.includes(machine));
     const found = draftProjects();
     if (found?.machine !== machine || found.workspace !== workspaceActivo()) return [];
     return found.rows ?? projectsWhileOff(machine);
@@ -60,22 +115,27 @@ export function createWorkspaceSession(deps: { activeTaskCounts: <T extends { ar
   const [startupReadError, setStartupReadError] = createSignal<string | null>(null);
   const [connectionError, setConnectionError] = createSignal<string | null>(null);
   const [readRevision, setReadRevision] = createSignal(0);
-  const draftMachineOn = () => machines().find(m => m.id === draftMachine())?.on;
+  const draftMachineOn = () => machines().find((m) => m.id === draftMachine())?.on;
   createEffect(on([workspaceActivo, draftMachine], () => setDraftProjectError(null)));
   createEffect(on([workspaceActivo, draftMachine, draftMachineOn, projectList, readRevision], ([workspace, machine, encendida]) => {
-    setDraftProjects(previous => previous?.workspace === workspace && previous.machine === machine ? previous : null);
-    if (!workspace || !machine || machines().find(m => m.id === machine)?.local) return;
+    setDraftProjects((previous) => (previous?.workspace === workspace && previous.machine === machine ? previous : null));
+    if (!workspace || !machine || machines().find((m) => m.id === machine)?.local) return;
     if (encendida === false) {
       setDraftProjects({ workspace, machine, rows: null });
       return;
     }
     let current = true;
     onCleanup(() => { current = false; });
-    void projectCatalog.readForMachine(machine).then(rows => {
-      if (current) { setDraftProjectError(null); setDraftProjects({ workspace, machine, rows: rows.map(row => ({
-        ...row, machines: projectList().find(p => p.id === row.id)?.machines ?? [machine],
-      })) }); }
-    }).catch(e => {
+    void projectCatalog.readForMachine(machine).then((rows) => {
+      if (current) {
+        setDraftProjectError(null);
+        setDraftProjects({
+          workspace, machine, rows: rows.map((row) => ({
+            ...row, machines: projectList().find((p) => p.id === row.id)?.machines ?? [machine],
+          })),
+        });
+      }
+    }).catch((e) => {
       if (!current) return;
       // Se apagó entre la lista de máquinas y la pregunta, o la pregunta la está
       // encendiendo: lo mismo que apagada.
@@ -91,7 +151,7 @@ export function createWorkspaceSession(deps: { activeTaskCounts: <T extends { ar
   const [error, setError] = createSignal<string | null>(null);
   const errorVisible = () => {
     const message = error();
-    return machines().some(machine => message === t("web.machines.off_wakes", { name: machineName(machine.id) })) ? null : message;
+    return machines().some((machine) => message === t("web.machines.off_wakes", { name: machineName(machine.id) })) ? null : message;
   };
   // Por qué esta ventana no puede abrir estos datos, si es que no puede: una
   // instalación con una forma que este binario ya no sabe convertir
@@ -172,9 +232,7 @@ export function createWorkspaceSession(deps: { activeTaskCounts: <T extends { ar
   // conversación es lo que ocupa ese sitio.
   /** La carpeta que se abrió para ver lo que lee: su página entra una vez por Configuración. */
   const [materialPedido, setMaterialPedido] = createSignal<string | null>(null);
-  const [proyectoAbierto, setProyectoAbierto] = createSignal<string | null>(
-    null,
-  );
+  const [proyectoAbierto, setProyectoAbierto] = createSignal<string | null>(null);
   // Con la tarea delante, un turno que cierra tampoco queda sin ver.
   createEffect(() => {
     const workspace = workspaceActivo();
@@ -194,7 +252,21 @@ export function createWorkspaceSession(deps: { activeTaskCounts: <T extends { ar
   const llaveDeBorrador = (proyecto: string | undefined) => (proyecto ? `borrador:${proyecto}` : "");
   const [anchoDeArchivos, setAnchoDeArchivos] = createPref("taskFiles.width", 0.55);
   const [anchoDelArbol, setAnchoDelArbol] = createPref("taskFiles.treeWidth", 330);
-  const _out = { fondoDelAgente, setFondoDelAgente, workspaceContext, contextRoot, contextConfirmed, workspaceMode, workspaceActivo, confirmContext, attention, draftBases, setDraftBases, hablandoCon, setHablandoCon, projectCatalog, projectList, sources, setSources, draftMachine, draftOptions, composerProjects, materialError, setMaterialError, taskSourcesError, setTaskSourcesError, draftProjectError, setDraftProjectError, projectReadError, setProjectReadError, startupReadError, setStartupReadError, connectionError, setConnectionError, readRevision, setReadRevision, draftMachineOn, taskSources, setTaskSources, error, setError, errorVisible, bloqueo, setBloqueo, grupos, project, setProject, sesiones, setSesiones, actividadDeProyectos, elegidosAqui, recordarEleccion, tareasActivas, ocultosAqui, ocultarDelSelector, naciendo, setNaciendo, retoques, setRetoques, retirarNaciendo, sessionId, setSessionId, materialPedido, setMaterialPedido, proyectoAbierto, setProyectoAbierto, pestanas, archivosDeTarea, llaveDeBorrador, anchoDeArchivos, setAnchoDeArchivos, anchoDelArbol, setAnchoDelArbol };
-  Object.assign(_bridge, _out);
-  return { ..._out, bridge: _bridge };
+
+  return {
+    fondoDelAgente, setFondoDelAgente, workspaceContext, contextRoot, contextConfirmed,
+    workspaceMode, workspaceActivo, confirmContext, attention, draftBases, setDraftBases,
+    hablandoCon, setHablandoCon, projectCatalog, projectList, sources, setSources,
+    draftMachine, draftOptions, composerProjects, materialError, setMaterialError,
+    taskSourcesError, setTaskSourcesError, draftProjectError, setDraftProjectError,
+    projectReadError, setProjectReadError, startupReadError, setStartupReadError,
+    connectionError, setConnectionError, readRevision, setReadRevision, draftMachineOn,
+    taskSources, setTaskSources, error, setError, errorVisible, bloqueo, setBloqueo,
+    projects, grupos, project, setProject, sesiones, setSesiones, actividadDeProyectos,
+    elegidosAqui, recordarEleccion, tareasActivas, ocultosAqui, ocultarDelSelector,
+    naciendo, setNaciendo, retoques, setRetoques, retirarNaciendo, sessionId, setSessionId,
+    materialPedido, setMaterialPedido, proyectoAbierto, setProyectoAbierto, pestanas,
+    archivosDeTarea, llaveDeBorrador, anchoDeArchivos, setAnchoDeArchivos, anchoDelArbol,
+    setAnchoDelArbol,
+  };
 }

@@ -1,7 +1,8 @@
 import { For, Show, Suspense, createSignal, lazy, onCleanup, onMount } from "solid-js";
 import { SignalDot } from "../../../../ui/src/SignalDot";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { addMcpServers, checkMcp, connectKnownMcp, disconnectKnownMcp, listKnownMcp, listMcpProviders, listMcpServers, mcpLogin, mcpLogout, removeMcpServer } from "../queries/engine-mcp";
+import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
@@ -235,7 +236,7 @@ export default function Herramientas(props: { solo?: string | string[] }) {
     // La del motor no es de un agente: `provider` solo dice quién la pidió.
     const provider = agentId === MOTOR ? (reciben()[0]?.id ?? "") : agentId;
     try {
-      const m = await invoke<Frase>("mcp_login", { provider, id: servicioId });
+      const m = await mcpLogin<Frase>({ provider, id: servicioId });
       setAviso(prosa(m));
     } catch (e) {
       setFallo(asFailure(e));
@@ -251,7 +252,7 @@ export default function Herramientas(props: { solo?: string | string[] }) {
   async function cerrarSesion(agentId: string, servicioId: string) {
     setFallo(null);
     try {
-      await invoke("mcp_logout", { provider: agentId, id: servicioId });
+      await mcpLogout({ provider: agentId, id: servicioId });
     } catch (e) {
       setFallo(asFailure(e));
     }
@@ -261,9 +262,9 @@ export default function Herramientas(props: { solo?: string | string[] }) {
   async function cargar() {
     try {
       const [c, p, a] = await Promise.all([
-        invoke<Conocido[]>("list_known_mcp"),
-        invoke<Puesto[]>("list_mcp_servers"),
-        invoke<AgenteMcp[]>("list_mcp_providers"),
+        listKnownMcp<Conocido[]>(),
+        listMcpServers<Puesto[]>(),
+        listMcpProviders<AgenteMcp[]>(),
       ]);
       setConocidos(c);
       setPuestos(sinSecretos(p));
@@ -401,9 +402,9 @@ export default function Herramientas(props: { solo?: string | string[] }) {
     try {
       if (c.conectado) {
         // Quitar revoca también la sesión del motor: es la de todos los agentes.
-        await invoke("disconnect_known_mcp", { id: c.id });
+        await disconnectKnownMcp({ id: c.id });
       } else {
-        await invoke("connect_known_mcp", { id: c.id });
+        await connectKnownMcp({ id: c.id });
       }
       await cargar();
       // Conectar uno con cuenta abre ya su inicio de sesión: sin él no sirve.
@@ -424,7 +425,7 @@ export default function Herramientas(props: { solo?: string | string[] }) {
   async function probar() {
     setProbando(true);
     try {
-      const rs = await invoke<[string, string][]>("check_mcp");
+      const rs = await checkMcp<[string, string][]>();
       setSalud(Object.fromEntries(rs));
     } catch (e) {
       setFallo(asFailure(e));
@@ -547,7 +548,7 @@ export default function Herramientas(props: { solo?: string | string[] }) {
                                 variant="ghost"
                                 size="sm"
                                 class="px-2 text-xs"
-                                onClick={() => void invoke("open_external", { target: u() })}
+                                onClick={() => void openExternal({ target: u() })}
                               >
                                 {t("settings.tools.open_login")}
                               </Button>
@@ -781,7 +782,7 @@ export default function Herramientas(props: { solo?: string | string[] }) {
                                         size="sm"
                                         class="px-2 text-xs"
                                         onClick={() => {
-                                          void invoke("open_external", { target: u() });
+                                          void openExternal({ target: u() });
                                         }}
                                       >
                                         {t("settings.tools.open_login")}
@@ -856,7 +857,7 @@ export default function Herramientas(props: { solo?: string | string[] }) {
                   size="sm"
                   disabled={!bloque().trim()}
                   onClick={() =>
-                    void invoke("add_mcp_servers", { bloque: bloque() })
+                    void addMcpServers({ bloque: bloque() })
                       .then(() => {
                         setBloque("");
                         setPegando(false);
@@ -900,7 +901,7 @@ export default function Herramientas(props: { solo?: string | string[] }) {
                       class="shrink-0"
                       disabled={p.managed || bloqueado()}
                       onClick={() =>
-                        void invoke("remove_mcp_server", { name: p.name })
+                        void removeMcpServer({ name: p.name })
                           .then(cargar)
                           .catch((e) => setFallo(asFailure(e)))
                       }
@@ -971,8 +972,8 @@ export function ConexionesMenu(props: {
   async function cargar() {
     try {
       const [c, p] = await Promise.all([
-        invoke<Conocido[]>("list_known_mcp"),
-        invoke<Puesto[]>("list_mcp_servers"),
+        listKnownMcp<Conocido[]>(),
+        listMcpServers<Puesto[]>(),
       ]);
       setConocidos(c);
       setPuestos(sinSecretos(p));
@@ -1040,7 +1041,7 @@ export function ConexionesMenu(props: {
               // lanza otro login.
               if (estado() !== "waiting") return void mcpSignIn(p.name);
               const u = mcpLoginUrl();
-              if (u) void invoke("open_external", { target: u });
+              if (u) void openExternal({ target: u });
             }}
           >
             {contenido()}
