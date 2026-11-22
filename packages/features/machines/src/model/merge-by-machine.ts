@@ -1,4 +1,4 @@
-import type { Machine } from "@terminus/computers";
+import type { Machine } from "../../../../platform-client/src/machines.ts";
 import type { MachineStatus } from "../../../../../apps/desktop/src/web/SyncNote";
 
 /** Una organización donde está inscrita la máquina, con el nombre que ve la persona. */

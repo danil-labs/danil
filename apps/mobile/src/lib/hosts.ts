@@ -6,7 +6,6 @@
  * otro. Sin React Native: se prueba en Node.
  */
 import {
-  type MachineAdmission as Admission,
   type Computer,
   type MachineState,
   type Power,
@@ -19,6 +18,9 @@ import {
   orderComputers,
   wakes,
 } from "@terminus/computers";
+import {
+  type Admission,
+} from "../../../../packages/platform-client/src/machines.ts";
 import { Fleet, relayLink, type FleetEvent, type Slice, type StorageLike, classOf, isFleetError, isRead } from "@terminus/fleet";
 import { type AppCommand, type AppFeature, COMMAND_NOT_HERE, COMMAND_UNSUPPORTED, CommandSupport, type EngineError, type EngineEvent, type Support, isAppCommand, isScopeRefusal } from "@terminus/protocol";
 

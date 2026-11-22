@@ -1,4 +1,4 @@
-import { DEFAULT_RELAY_ORIGINS } from "@terminus/computers";
+import { DEFAULT_RELAY_ORIGINS } from "../../platform-client/src/machines.ts";
 
 export type WebSessionDeployment = { origin: string; timeoutMs: number };
 

@@ -184,7 +184,6 @@ export { type SealOptions, type SealRecipient, SEAL_MAX_BYTES, canSeal, fromBase
 export { arrangeSpaces, spaceOrder, type SpaceOrderSource } from "./space-order.ts";
 export { ACCOUNT_ASSET_MAX_BYTES, ACCOUNT_ASSET_TYPES, type AccountAssetKind, type BlobFetch, accountAssetUrl, readAccountAsset } from "./assets.ts";
 
-export { type Machine, type MachineOperation, type MachinesAnswer, type MachinesConfig, type MachinesTransport, type Admission as MachineAdmission, DEFAULT_RELAY_ORIGINS, admissionUrl, machineToComputer, machinesClient, retryUnavailable, wokeOf } from "./machines.ts";
 export { type CapabilityList, announces, capabilityList, mayCall } from "./capabilities.ts";
 export { type EdgeDeployment, type EdgePerson, type EdgeTransport, EdgeError, edgeIdentity, edgeTransport, personOf } from "./edge.ts";
 export {

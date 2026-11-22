@@ -10,9 +10,14 @@
  *   las rutas de la sesión misma.
  * - Un 401 de un contexto se queda en ese contexto (W4). Solo la lectura del conjunto sin
  *   cookie viva cierra la página.
+ * - Una lectura por recurso y carga (plan front-move 3.2): el conjunto, el catálogo y `me` de cada
+ *   contexto son lecturas compartidas (`sharedRead`); la ventana, el riel y el shell reciben la misma.
+ *   Cualquier escritura de la sesión (o `invalidate()`, que llama el transporte en cada escritura de
+ *   identity o workspaces) las olvida.
  */
 import { EdgeError, type EdgeTransport } from "@terminus/computers";
-import { SESSION_ROUTES } from "../../../../packages/platform-client/src/identity.ts";
+import { SESSION_ROUTES, SHARED_SESSION_READS } from "../../../../packages/platform-client/src/identity.ts";
+import { sharedRead, sharedReads } from "../../../../packages/platform-client/src/shared-read.ts";
 
 type Args = Record<string, unknown>;
 type Context = { context_id: string; org: string; org_name: string | null; plan: string | null; role?: string | null; personal?: boolean };
@@ -26,6 +31,7 @@ const METHODS = new Set(["GET", "POST", "PUT", "DELETE"]);
 /** Las rutas de la sesión misma: no son de una organización y no llevan contexto. */
 
 const text = (value: unknown) => (typeof value === "string" && value ? value : null);
+const shared = (args: Args) => String(args.method ?? "GET").toUpperCase() === "GET" && typeof args.path === "string" && SHARED_SESSION_READS.has(args.path);
 const refused = (detail: string, extra: Args = {}) => ({ detail, ...extra });
 
 function parseStatus(body: unknown): WebSessionStatus {
@@ -52,9 +58,15 @@ export function webSessionCommands(transport: EdgeTransport, options: { expired:
   let last: WebSessionStatus | null = null;
   const known = new Map<string, { org: string; sub: string; family: string }>();
 
+  // Un conjunto leído de nuevo puede traer otros contextos: lo guardado de cada contexto se olvida.
+  const sessionSet = sharedRead(async () => { const read = parseStatus(await (await transport.call("identity/sessions")).json()); reads.invalidate(); return read; });
+  /** Clave: la petición misma (ruta y contexto); solo se guarda una respuesta 200. */
+  const reads = sharedReads((key) => edgeRequest(JSON.parse(key) as Args), { keep: (reply) => reply.status === 200 });
+  const invalidate = () => { sessionSet.invalidate(); reads.invalidate(); };
+
   async function status(): Promise<WebSessionStatus> {
     try {
-      last = parseStatus(await (await transport.call("identity/sessions")).json());
+      last = await sessionSet.read();
     } catch (error) {
       if (error instanceof EdgeError && error.status === 401) {
         last = { state: "disconnected", sessions: [] };
@@ -81,12 +93,13 @@ export function webSessionCommands(transport: EdgeTransport, options: { expired:
     const headers = new Headers({ ...(context ? { "X-Danil-Session": context } : {}) });
     const key = text(args.idempotencyKey);
     if (method !== "GET") {
+      invalidate();
       headers.set("Content-Type", "application/json");
       headers.set("Idempotency-Key", key && /^[\x21-\x7e]{1,128}$/.test(key) ? key : crypto.randomUUID());
     }
     let response: Response;
     try {
-      response = method === "GET" ? await transport.call(path.slice(4), { headers }) : await transport.mutation(path.slice(4), { method, headers, body: JSON.stringify(args.body ?? {}) });
+      response = method === "GET" ? await transport.call(path.slice(4), { headers }) : await transport.mutation(path.slice(4), { method, headers, body: JSON.stringify(args.body ?? {}) }).finally(invalidate);
     } catch (error) {
       if (!(error instanceof EdgeError)) throw refused("unavailable");
       if (error.status === 401) throw refused(error.code ?? "session_expired", { status: 401, ...(context ? { context } : {}) });
@@ -108,7 +121,8 @@ export function webSessionCommands(transport: EdgeTransport, options: { expired:
     const family = args.family === undefined ? null : text(args.family);
     if ((args.context !== undefined && (!context || !OPAQUE.test(context))) || (args.family !== undefined && (!family || !OPAQUE.test(family)))) throw refused("invalid_request");
     const path = context ? `identity/contexts/${context}/logout` : family ? `identity/sessions/${family}/logout` : "identity/logout";
-    await transport.mutation(path, { headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: "{}" });
+    invalidate();
+    await transport.mutation(path, { headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: "{}" }).finally(invalidate);
     if (!context && !family) { options.expired(); return { state: "disconnected", sessions: [] }; }
     return status();
   }
@@ -117,7 +131,7 @@ export function webSessionCommands(transport: EdgeTransport, options: { expired:
     answers: (command: string) => COMMANDS.has(command),
     handle(command: string, args: Args = {}): Promise<unknown> {
       if (command === "danil_session_status") return status();
-      if (command === "danil_edge_fetch") return edgeRequest(args);
+      if (command === "danil_edge_fetch") return shared(args) && (args.context === undefined || known.has(String(args.context))) ? reads.read(JSON.stringify({ method: "GET", path: args.path, ...(args.context === undefined ? {} : { context: args.context }) })) : edgeRequest(args);
       if (command === "danil_sign_out") return signOut(args);
       return Promise.reject(refused("command"));
     },
@@ -125,6 +139,8 @@ export function webSessionCommands(transport: EdgeTransport, options: { expired:
     contextOf: (sub: string, org: string) => [...known].find(([, v]) => v.sub === sub && v.org === org)?.[0] ?? null,
     scopeOf: (context: string) => known.get(context) ?? null,
     last: () => last,
+    /** Olvida las lecturas compartidas: el transporte la llama en cada escritura de identity o workspaces. */
+    invalidate,
   };
 }
 
