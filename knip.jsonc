@@ -42,9 +42,9 @@
     "packages/shell/src/shell/workspace-added-wiring.ts": ["exports"],
     "packages/shell/src/shell/workspace-added-sync.ts": ["exports"],
     "packages/features/machines/src/queries/store.ts": ["exports"],
-    "packages/computers/src/api.ts": ["exports"],
+    "packages/platform-client/src/api.ts": ["exports"],
     // isManaged es el alias de wakes con nombre del dominio; lo prueba packages/computers/test/computers.test.ts.
-    "packages/computers/src/machine.ts": ["duplicates"],
+    "packages/platform-client/src/machine.ts": ["duplicates"],
 
     // El setter sale en la misma desestructuración que la señal que sí se lee
     // (`export const [x, setX] = createRoot(...)`): no se puede exportar solo una mitad.
