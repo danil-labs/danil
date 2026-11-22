@@ -3,6 +3,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { createCeldasDeContenido } from "./conversation-content";
 import { createCeldasDeTareas } from "./conversation-tasks";
 import { createConversacion } from "./conversation";
+import { createServiceListeners } from "./service-listeners";
 import { createColumnasDePrincipal } from "./principal-columns";
 import { createPrincipal } from "./principal";
 import { AgentProfile, CarryOriginLabel, CarryProgress,       MachinePicker,      TaskLocation } from "./lazy-screens";
@@ -36,10 +37,10 @@ import PreviousAgentChat from "../../../features/chat/src/screens/PreviousAgentC
 import TranscriptSource from "../../../features/chat/src/screens/TranscriptSource";
 import { modoInicial, modoRecordado, recordarModo } from "../../../features/chat/src/model/modes";
 import {
-  type ChatEvent,
+  
   mensajesDelHilo,
-  type PreguntaEvent,
-  type SessionEvent,
+  
+  
 } from "../../../features/chat/src/model/transcript";
 import { createComposerStore } from "../../../features/composer/src";
 import { createCloneFolder, createDeskStrip, createNewTask, createSpaceOps, createRailSessions, createSessionMutations, createWorkspaceSession } from "../../../features/projects/src";
@@ -47,7 +48,6 @@ import type { HandlerTarget } from "../../../features/settings/src/screens/Handl
 import { createThreadsStore } from "../../../features/threads/src";
 import { createWorkspaceStore } from "../../../features/workspace/src";
 import { createContextSource } from "../../../features/workspaces/src";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 
 
 import { avisarDeLosArboles } from "../../../features/code/src/queries/refresh";
@@ -79,11 +79,11 @@ import {
 
 
 import { listaBasta, reconciliar } from "../../../features/settings/src/model/early-startup";
-import { createWorkspaces, type Startup } from "../../../features/settings/src/queries/workspaces-store";
+import { createWorkspaces } from "../../../features/settings/src/queries/workspaces-store";
 import { createAttention, topState } from "../shell/attention";
 
 import { openChatVisual, readChatVisual } from "../../../features/chat/src/queries/readVisual";
-import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../../../features/code/src/queries/typst";
+import {   soltarVistasHuerfanas } from "../../../features/code/src/queries/typst";
 import { createConversationHandoff } from "../../../features/conversation-handoff/src";
 import { createDraftsStore } from "../../../features/drafts/src";
 import { asleep, withLastAnswer } from "../../../features/machines/src/queries/lastAnswer";
@@ -99,9 +99,8 @@ import { VELO_DE_FONDO } from "../../../../apps/desktop/src/lib/chat-background"
 import { fondoDeChat, imagenDelWorkspace, veloDeFondo } from "../../../../apps/desktop/src/lib/chat-background-store";
 import { connected } from "../../../../apps/desktop/src/lib/engineConnection";
 import { pedirElCampo } from "../../../../apps/desktop/src/lib/focus";
-import { aplicarLenguaDeWorkspace, t } from "../../../../apps/desktop/src/lib/i18n";
+import {  t } from "../../../../apps/desktop/src/lib/i18n";
 import { captureWorkspaceContext, invoke } from "../../../engine-client/src/client.ts";
-import type { InternalTaskLink } from "../../../../apps/desktop/src/lib/links";
 import { carpetaDeTrabajo, type HandlerList } from "../../../../apps/desktop/src/lib/model";
 import {
   createPanels,
@@ -145,10 +144,6 @@ import {
   esProvisional,
   proyectoDeNuevaTarea,
 } from "../../../../apps/desktop/src/lib/taskDraft";
-import {
-  type UsageRecord,
-  ventanaDe,
-} from "../../../../apps/desktop/src/lib/usage";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import {
   
@@ -481,241 +476,7 @@ export default function App() {
 
   const { alEventoDeChat } = createChatEvents({ advanceTurn, agent, avisarDeLosArboles, carpetasDeTarea, cola, composer, conversationScope, editando, enFondo, enviarFiltro, esDelWorkspaceAbierto, filaDe, finishedTurns, firmas, handoff, liveThreadKey, liveThreads, marcarViva, modelosEnVivo, noteMcpSignIn, pendingStarts, permissions, refreshSessionsOnEvent, reintento, releerCola, releerUna, sessionId, setEnFondo, setPermissionError, setPermissions, setReintento, setSettlingTurns, settleTurn, threads, turnClosed, turnStarted, workspaceActivo, get alComando() { return alComando; }, get gateSeq() { return gateSeq; }, set gateSeq(v) { gateSeq = v; }, get mandarAhora() { return mandarAhora; }, get permissionReads() { return permissionReads; }, get reponerGates() { return reponerGates; } });
 
-  onMount(() => {
-    const chat = listen<ChatEvent>("chat", alEventoDeChat);
-    onCleanup(() => void chat.then((f) => f()));
-
-  // El agente preguntó algo. Llega por su propio evento y no por el del chat:
-  // es estructura —opciones que se eligen—, no texto que se pinta. El nombre
-  // va en inglés y los campos no, sin ser una inconsistencia: el nombre del
-  // evento es una ruta entre dos procesos y los campos son el vocabulario ya
-  // persistido en `session.json`.
-    const question = listen<PreguntaEvent>("question", (e) => {
-      const { workspace, session, turno, preguntas, request_id } = e.payload;
-      // Con qué agente se contesta: el de ESA tarea, que puede no ser la
-      // abierta. El historial lo sabe por fila; el selector solo sabe el de la
-      // que se mira.
-      const conAgente = filaDe(session)?.provider ?? (session === sessionId() ? agent() : undefined);
-      threads.question(session, { turno, preguntas, questionRequestId: request_id, agent: conAgente }, workspace ?? workspaceActivo());
-    });
-    onCleanup(() => void question.then((f) => f()));
-
-    // El consumo llega como dato y se conserva por turno. No entra a `msgs`:
-    // una línea de tokens es diagnóstico, no una intervención en la conversación.
-    const usageEv = listen<UsageRecord>("usage", (e) => {
-      const rec = e.payload;
-      // `UsageRecord` trae su workspace desde que existe: cada línea del
-      // registro tiene que saber de dónde salió aunque se lea suelta.
-      if (!esDeLaAbierta(rec.session) || !esDelWorkspaceAbierto(rec.workspace))
-        return;
-      setVentana(ventanaDe([rec]));
-      composer.refreshCommands(agent());
-    });
-    onCleanup(() => void usageEv.then((f) => f()));
-
-    // Instalar un agente lo deja usable aquí, no solo en la pantalla
-    // donde se instaló. Esta lista se leía una vez en `onMount`: quien
-    // conectaba una cuenta desde Ajustes veía ahí su consumo, y en el
-    // chat el mismo agente seguía diciendo «no está instalado», con el
-    // campo muerto hasta cerrar y volver a abrir la app.
-    const agentsEv = listen("providers", () => {
-      void composer.refreshProviders();
-      // Y qué se puede usar, que es lo que decide el menú. Conectar una cuenta
-      // desde Configuración añade una entrada aquí; desinstalar un CLI se la
-      // lleva. Sin esto había que cerrar la app para verlo.
-      void composer.refreshSurfaces(false);
-    });
-    onCleanup(() => void agentsEv.then((f) => f()));
-
-    // Un plugin instalado o activado trae skills: sin esto `/typst` no se
-    // reconoce hasta el siguiente turno.
-    const pluginsEv = listen("integrations-changed", () => composer.refreshCommands(agent()));
-    onCleanup(() => void pluginsEv.then((f) => f()));
-
-    // Cambió qué cuenta va a correr: cambió qué se puede usar.
-    // `surfaces::sin_cuenta` pregunta por la cuenta activa, y la sonda de
-    // estado la quita en cuanto una deja de responder
-    // (`accounts::account_status`). Sin escuchar esto, el selector sigue
-    // ofreciendo un agente que ya no puede correr, y el turno muere
-    // contra el guarda con un muro de texto.
-    const cuentaEv = listen("account", () => {
-      void composer.refreshSurfaces(false);
-      // El reloj de cupo cambia la activa sin pasar por Configuración: sin esto la franja enseña la agotada.
-      setCuentasTocadas((n) => n + 1);
-    });
-    onCleanup(() => void cuentaEv.then((f) => f()));
-
-    // La otra ventana escribió en esta carpeta de datos: hay que releer,
-    // igual que el `done` de un turno propio, con dos diferencias. Rust
-    // ya descartó el eco (`sync::arrancar` compara la firma); y un turno
-    // vivo AQUÍ manda —si esta ventana contesta esa misma tarea, releer
-    // con `vaciarVivo` borraría `vivo` a media respuesta.
-
-    // Lo que la ventana no puede pintar. Ver `abrirEnlace`.
-    const sitioPedido = listen<string>("sitio-pedido", (e) => {
-      void abrirEnlace(e.payload);
-    });
-    onCleanup(() => void sitioPedido.then((f) => f()));
-    const enlaceDelChat = (e: Event) => {
-      void abrirEnlace((e as CustomEvent<string>).detail);
-    };
-    window.addEventListener("harness:abrir-sitio", enlaceDelChat);
-    onCleanup(() => window.removeEventListener("harness:abrir-sitio", enlaceDelChat));
-    const localFileLink = (e: Event) => {
-      const path = (e as CustomEvent<string>).detail;
-      if (typeof path === "string") void abrirRuta(path);
-    };
-    window.addEventListener("harness:open-file", localFileLink);
-    onCleanup(() => window.removeEventListener("harness:open-file", localFileLink));
-    // «Que lo arregle el agente» en un documento Typst: sale como si la persona lo escribiera, en su tarea.
-    const pedirAlAgente = (e: Event) => {
-      const pedido = (e as CustomEvent<{ project: string; session: string; texto: string } | null>).detail;
-      if (!pedido?.texto || !pedido.session) return;
-      void (async () => {
-        if (sessionId() !== pedido.session) await abrirSesion(pedido.project, pedido.session);
-        if (sessionId() === pedido.session) await mandarTexto(pedido.texto);
-      })();
-    };
-    window.addEventListener("harness:pedir-al-agente", pedirAlAgente);
-    onCleanup(() => window.removeEventListener("harness:pedir-al-agente", pedirAlAgente));
-    const taskLink = (e: Event) => {
-      const target = (e as CustomEvent<InternalTaskLink>).detail;
-      if (!target || target.workspace !== workspaceActivo()) {
-        setError(t("markdown.link.other_workspace"));
-        return;
-      }
-      void leerTarea(target.folder, target.task)
-        .then(() => {
-          if (target.workspace === workspaceActivo()) void abrirSesion(target.folder, target.task);
-        })
-        .catch((error) => setError(prosaDe(error)));
-    };
-    window.addEventListener("harness:open-task-link", taskLink);
-    onCleanup(() => window.removeEventListener("harness:open-task-link", taskLink));
-    // Con proyecto lo avisa un gesto de `Sessions.tsx`; sin él, `cli-changed`.
-    const tasksChanged = (event: Event) => {
-      const project = (event as CustomEvent<{ project?: string } | null>).detail?.project;
-      void (project !== undefined ? refreshSessions([project]) : refreshSessionsOnEvent(grupos()));
-    };
-    window.addEventListener("harness:tasks-changed", tasksChanged);
-    onCleanup(() => window.removeEventListener("harness:tasks-changed", tasksChanged));
-    // Otra máquina de la cuenta trajo una rebanada distinta (`features/machines/router.ts`): se relee solo eso.
-    const machineSlices = (event: Event) => {
-      const changes = (event as CustomEvent<{ changes?: string[] } | null>).detail?.changes ?? [];
-      if (changes.includes("sessions")) {
-        void refreshSessionsOnEvent(grupos());
-        reconcileSoon();
-      }
-      if (changes.includes("spaces")) void reloadSpaces();
-      if (changes.includes("mentions") && input().includes("@")) void refreshTaskCandidates();
-      if (changes.includes("projects")) {
-        const workspace = workspaceActivo();
-        void projectCatalog.changed().then(() => {
-          if (workspace === workspaceActivo()) setProjectReadError(null);
-        }).catch(() => {});
-      }
-    };
-    window.addEventListener("harness:machine-slices", machineSlices);
-    onCleanup(() => window.removeEventListener("harness:machine-slices", machineSlices));
-    // La otra mitad de la elección del enlace (`ui/Markdown.tsx`): sale al
-    // navegador de la persona por una puerta más estrecha que la de dentro.
-    // Ver `sites::abrible_fuera`.
-    const enlaceFuera = (e: Event) => {
-      void invoke("site_open_external", {
-        url: (e as CustomEvent<string>).detail,
-      }).catch(() => {});
-    };
-    window.addEventListener("harness:abrir-fuera", enlaceFuera);
-    onCleanup(() => window.removeEventListener("harness:abrir-fuera", enlaceFuera));
-
-    const cliChanged = listen<{ workspace: string | null; command: string }>("cli-changed", (e) => {
-      window.dispatchEvent(new CustomEvent("harness:workspace-name"));
-      if (!esDelWorkspaceAbierto(e.payload.workspace ?? undefined)) return;
-      const workspace = workspaceActivo();
-      void projectCatalog.changed().then(() => {
-        if (workspace === workspaceActivo()) setProjectReadError(null);
-      }).catch((error) => { if (workspace === workspaceActivo() && !asleep(error)) setProjectReadError(prosaDe(error)); });
-      void reloadSpaces();
-      void composer.refreshSurfaces(false);
-      setCuentasTocadas((n) => n + 1);
-      window.dispatchEvent(new CustomEvent("harness:tasks-changed"));
-      // El mismo aviso que dan `NewAgent.tsx` y `AgentProfile.tsx`: sin él, lo
-      // creado o cambiado desde el CLI no sale en el riel hasta cambiar de carpeta.
-      if (e.payload.command === "handler.create" || e.payload.command === "handler.update") {
-        window.dispatchEvent(new CustomEvent("harness:encargados"));
-        window.dispatchEvent(new CustomEvent("harness:profiles"));
-      }
-      if (e.payload.command === "config.set") {
-        const modeGeneration = workspaceContext.generation();
-        void invoke<Startup>("list_workspaces").then((startup) => {
-          if (workspace !== workspaceActivo()) return;
-          const current = startup.workspaces.find((w) => w.id === workspace);
-          aplicarLenguaDeWorkspace(current?.lengua ?? null);
-          workspaceContext.modeChanged(workspace, current?.default_permission_mode ?? null, modeGeneration);
-          setStartupReadError(null);
-        }).catch((error) => { if (workspace === workspaceActivo() && !asleep(error)) setStartupReadError(prosaDe(error)); });
-      }
-    });
-    onCleanup(() => void cliChanged.then((stop) => stop()));
-    const cliOpen = listen<{ workspace: string; folder: string; task: string; operation: string; by_agent?: boolean }>("cli-open-task", (e) => {
-      void (async () => {
-        if (e.payload.workspace !== workspaceActivo()) {
-          // Un agente que abre una tarea de otro workspace no se lleva a la
-          // persona del que está mirando: lo pidió ella para lo suyo.
-          if (e.payload.by_agent) {
-            await invoke("cli_task_opened", { operation: e.payload.operation, error: "workspace_not_shown" });
-            return;
-          }
-          await invoke("set_active_workspace", { id: e.payload.workspace });
-          await aplicar(await invoke<Startup>("list_workspaces"));
-        }
-        await abrirSesion(e.payload.folder, e.payload.task, e.payload.task, true);
-        const opened = sessionId() === e.payload.task && project() === e.payload.folder;
-        await invoke("cli_task_opened", { operation: e.payload.operation, error: opened ? null : "open_superseded" });
-      })().catch((error) => {
-        setError(prosaDe(error));
-        void invoke("cli_task_opened", { operation: e.payload.operation, error: prosaDe(error) }).catch(() => {});
-      });
-    });
-    onCleanup(() => void cliOpen.then((stop) => stop()));
-
-    const sesionEv = listen<SessionEvent>("session", (e) => {
-      const generation = workspaceContext.generation();
-      const { session, project, workspace } = e.payload;
-      if (!esDelWorkspaceAbierto(workspace)) return;
-      // El historial primero, y para todos: una tarea que la otra ventana
-      // acaba de crear no está en ningún hilo de esta. Releer solo la abierta
-      // la dejaría invisible hasta cambiar de proyecto. Su carpeta basta: el
-      // aviso la trae, y releerlas todas esperaba a la más lenta.
-      void refreshSessionsOnEvent(carpetasDeTarea(session, project));
-      reconcileSoon();
-      // La otra instancia escribió esa tarea: su árbol también pudo moverse.
-      // Mismo motivo que en el cierre de turno.
-      avisarDeLosArboles(session);
-      // Borrada desde el CLI con su vista de Typst abierta: su Tinymist no tiene ya árbol que servir.
-      if (hayVistasDe(session))
-        void leerTarea(project, session).catch(() => void apagarVistasDe(session));
-      if (vivas().includes(session)) return;
-      if (esDeLaAbierta(session)) {
-        void leerTarea(project, session)
-          .then((s) => loadResult(session, s, true, generation))
-          .catch(() => {});
-        return;
-      }
-      const pestana = pestanas.open().find((p) => p.id === session);
-      if (pestana)
-        void leerTarea(pestana.project, session)
-          .then((s) => loadResult(session, s, true, generation))
-          .catch(() => {});
-    });
-    onCleanup(() => void sesionEv.then((f) => f()));
-    // Los eventos de otra máquina llegan por el relay, no por `service_poll`:
-    // un hueco ahí se llevó sus `session` y el sondeo de esta ventana no lo ve.
-    const trasHueco = () => releerTrasHueco();
-    window.addEventListener("harness:service-gap", trasHueco);
-    onCleanup(() => window.removeEventListener("harness:service-gap", trasHueco));
-    serviceListenersReady = Promise.all([chat, question, usageEv, agentsEv, cuentaEv, cliChanged, cliOpen, sesionEv]);
-  });
+  createServiceListeners({ agent, alEventoDeChat, aplicar, carpetasDeTarea, composer, esDeLaAbierta, esDelWorkspaceAbierto, filaDe, grupos, input, leerTarea, loadResult, pestanas, project, projectCatalog, reconcileSoon, refreshSessions, refreshSessionsOnEvent, refreshTaskCandidates, releerTrasHueco, reloadSpaces, sessionId, setCuentasTocadas, setError, setProjectReadError, setStartupReadError, setVentana, threads, vivas, workspaceActivo, workspaceContext, get abrirEnlace() { return abrirEnlace; }, get abrirRuta() { return abrirRuta; }, get abrirSesion() { return abrirSesion; }, get mandarTexto() { return mandarTexto; }, get serviceListenersReady() { return serviceListenersReady; }, set serviceListenersReady(v) { serviceListenersReady = v; } });
 
   const { alComando, ponerTerminal, porContestar, quitarDeLaCola, responderPermiso, setPorContestar, soltarTerminal } = createResyncCommands({ advanceTurn, cola, comandosDeLaCola, detenidos, engineCanDispatch, finishedTurns, lanzados, marcarViva, opcionesDeLaTarea, pendingStarts, retenidaPorElMotor, sessionId, setCarpetasDeTerminal, setPermissionError, setPermissions, setRespondiendoPermiso, setSettlingTurns, setTerminales, settleTurn, superficies, taskQueues, terminales, threads, workspaceActivo, get adoptarComando() { return adoptarComando; }, get contestarALaTerminal() { return contestarALaTerminal; }, get pendientesDe() { return pendientesDe; }, get reanudarCola() { return reanudarCola; }, get reponerGates() { return reponerGates; } });
   const { abrirConComando, adoptarComando, composerMachine, contestarALaTerminal, detener, ejecutarComando, enviarDeLaCola, mandarCola, mandarElegido, razonDeLaCola, teclearAlComando } = createShellCommand({ DEFAULT_PERMISSION_MODE_EVENT, agent, agents, busy, carpetasDeTerminal, claveAbierta, cola, comandosDeLaCola, composer, conversationScope, deLaTarea, draftBases, draftMachine, draftOptions, effort, enCache, engineCanDispatch, escritorio, espacioPara, esperando, grupos, hablandoCon, handoff, handoffAt, injecting, lanzados, machineOf, machines, marcarQuieta, marcarViva, model, modo, nacenConComando, pendingStarts, pestanas, ponerTerminal, project, projectCatalog, quitarDeLaCola, refreshFolder, refreshSessions, retenidaPorElMotor, retirarNaciendo, sesiones, sessionId, setArrancando, setHablandoCon, setInjecting, setPermissionError, setPorContestar, setSessionId, setTerminales, settleTurn, settlingTurns, soltarTerminal, stopping, taskQueues, terminales, threads, vivas, workspaceActivo, workspaceContext, get adoptarNacida() { return adoptarNacida; }, get configDeLaSesion() { return configDeLaSesion; }, get detenerYEnviar() { return detenerYEnviar; }, get enviar() { return enviar; }, get lifecycleRevision() { return lifecycleRevision; }, set lifecycleRevision(v) { lifecycleRevision = v; }, get olvidarPestana() { return olvidarPestana; }, get pintarNaciendo() { return pintarNaciendo; }, get reanudarCola() { return reanudarCola; } });
