@@ -2,8 +2,8 @@
 /**
  * Genera `src/generated/` desde el OpenAPI vendorizado (`contract/openapi.json`, commit en `contract/PIN`).
  * Sin dependencias: solo el subconjunto de JSON Schema que usa el contrato (type, enum, $ref, properties,
- * required, items, additionalProperties). Por ahora solo el dominio machines (tarea 4.2 del plan front-move):
- * los esquemas que alcanzan sus operaciones. Uso: `node packages/platform-client/scripts/generate.mjs [--check]`.
+ * required, items, additionalProperties, oneOf/anyOf). Los dominios machines, identity y workspaces (tarea 4.2 del
+ * plan front-move): los esquemas que alcanzan sus operaciones. Uso: `node packages/platform-client/scripts/generate.mjs [--check]`.
  */
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -17,7 +17,11 @@ const raw = readFileSync(SOURCE);
 const spec = JSON.parse(raw.toString("utf8"));
 
 /** Operaciones por dominio; un dominio nuevo se añade aquí y se regenera. */
-const DOMAINS = { machines: ["getMachines", "getMachine", "startMachine", "stopMachine", "createMachineTicket", "getOperation"] };
+const DOMAINS = {
+  machines: ["getMachines", "getMachine", "startMachine", "stopMachine", "createMachineTicket", "getOperation"],
+  identity: ["getMe", "getOrganizations", "selectOrganization"],
+  workspaces: ["getWorkspaces", "selectWorkspace"],
+};
 
 const refName = (ref) => /^#\/components\/schemas\/(.+)$/.exec(ref)?.[1] ?? (() => { throw new Error(`ref no soportada: ${ref}`); })();
 const schemas = spec.components?.schemas ?? {};
@@ -46,6 +50,8 @@ const prim = { string: "string", integer: "number", number: "number", boolean: "
 function tsOf(s, indent) {
   if (!s || typeof s !== "object") return "unknown";
   if (s.$ref) return refName(s.$ref);
+  const union = s.oneOf ?? s.anyOf;
+  if (Array.isArray(union)) return union.map((u) => tsOf(u, indent)).join(" | ");
   if (Array.isArray(s.enum)) return s.enum.map(lit).join(" | ");
   const types = Array.isArray(s.type) ? s.type : s.type ? [s.type] : [];
   if (!types.length) return s.properties ? objectOf(s, indent) : "unknown";
