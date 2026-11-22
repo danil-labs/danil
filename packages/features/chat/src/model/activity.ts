@@ -1,5 +1,5 @@
 import { observedActivityUpdate, type ActivityObservationKind, type ObservedTurnActivity as TurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
-import type { Msg } from "../../../chat/src/index.ts";
+import type { Msg } from "../screens/Chat.tsx";
 import { ActivityAnchor, savedActivityTurn as savedTurn } from "./activityAnchor.ts";
 export type { TurnActivity } from "../../../../../apps/desktop/src/lib/turnActivity.ts";
 type RecordOfActivity = { key: string; active: boolean; startConfirmed: boolean; startedAt: number | null; saved: Set<string>; baseline: readonly string[] | null; lastObserved: Msg | null; lastObservedKind: ActivityObservationKind | null; anchor: ActivityAnchor; alias?: RecordOfActivity };

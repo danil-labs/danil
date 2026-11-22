@@ -1,7 +1,9 @@
 import { For, Show, createSignal, type JSX } from "solid-js";
 import AlertTriangle from "lucide-solid/icons/triangle-alert";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
-import { SESION_INICIADA, type Account, type AccountStatus } from "../queries/accounts-store";
+import type { Account, AccountStatus } from "../queries/accounts-store";
+import { accountPresentation } from "../../../../ui/src/lib/accounts.ts";
+export { accountPresentation };
 import { Badge } from "../../../../ui/src/Badge";
 import { ProgressBar } from "../../../../ui/src/ProgressBar";
 import {
@@ -440,30 +442,4 @@ function inferAuthenticated(limits?: Query): boolean | undefined {
   if (limits?.mode === "read") return true;
   if (limits?.mode === "no_account") return false;
   return undefined;
-}
-
-/**
- * `account_status` persiste la identidad que acaba de leer, pero el objeto que
- * ya devolvió `list_accounts` no cambia retroactivamente. Mientras llega la
- * siguiente lista, `detail` es la lectura fresca y tiene prioridad sobre la
- * etiqueta de relleno.
- */
-export function accountPresentation(
-  account: Account,
-  status?: AccountStatus,
-  limits?: Query,
-  lastGood?: Read,
-) {
-  const detail = status?.detail.trim() ?? "";
-  const [detailName = "", detailPlan = ""] = detail.split(" · ", 2);
-  const statusIdentity =
-    status?.authenticated && detailName && detailName !== SESION_INICIADA
-      ? detailName
-      : "";
-  const name = statusIdentity || account.identity?.trim() || account.label;
-  const read = limits?.mode === "read" ? limits : lastGood;
-  const plan = read?.plan?.trim() || (statusIdentity ? detailPlan.trim() : "") || null;
-  const visibleDetail =
-    detail && detail !== name && detail !== `${name} · ${plan}` ? detail : null;
-  return { name, plan, detail: visibleDetail };
 }

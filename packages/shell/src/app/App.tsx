@@ -40,8 +40,8 @@ import {
 } from "../../../features/chat/src/model/transcript";
 import { createComposerStore } from "../../../features/composer/src";
 import { createCloneFolder, createDeskStrip, createNewTask, createSpaceOps, createRailSessions, createSessionMutations, createWorkspaceSession } from "../../../features/projects/src";
+import { createThreadsStore } from "../../../features/chat/src/index.ts";
 import type { HandlerTarget } from "../../../features/projects/src/screens/HandlerPolicy";
-import { createThreadsStore } from "../../../features/threads/src";
 import { createWorkspaceStore } from "../../../features/workspace/src";
 import { createContextSource } from "../../../features/workspaces/src";
 import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
@@ -213,7 +213,6 @@ import { Button } from "../../../ui/src/Button";
 import { prosaDe } from "../../../ui/src/Failure";
 import { LazyPart, retryableLazy } from "../../../ui/src/LazyPart";
 import { Toast, ToastStack } from "../../../ui/src/Toast";
-
 import { createSleepSession, createThreadStream, createThreadSide, createAttachments, createAttachmentsMount, createResync, createResyncCommands, createShellCommand, createDraftSend, createHandover, createSend, createSendGates, createSendNow, createPanelDeChat, createChatBackground } from "../../../features/chat/src";
 
 export const { sleepSession } = createSleepSession({ machineOf });
