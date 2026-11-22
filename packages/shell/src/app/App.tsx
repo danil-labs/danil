@@ -4043,7 +4043,7 @@ export default function App() {
           classList={{ hidden: celdaDe(OBSERVABILITY_TAB_ID) === undefined || tapadoPorElProyecto(paneles.siteOf(OBSERVABILITY_TAB_ID)), "pt-8": llevaTiraInterior(paneles.siteOf(OBSERVABILITY_TAB_ID)) }}
           style={celdaDe(OBSERVABILITY_TAB_ID)}
         >
-          <Observability onManage={() => setSettings("plugins")} />
+          <Observability onManage={() => setSettings("plugins")} renderSite={(url) => <Sitio url={url} visible />} />
         </div>
       </Show>
 
