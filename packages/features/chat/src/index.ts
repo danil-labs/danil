@@ -9,3 +9,18 @@ export { anexarDeltas, anexarImagen, anexarRazonamiento, mcpCallFromName, mensaj
 export { vivoTrasLeer } from "./model/threadOrder.ts";
 export type { PermissionRequest } from "./screens/Chat.tsx";
 export { mergeGates, type PendingPermission } from "./model/permissionGates.ts";
+export { createSleepSession, TRANSPORTE, type ComandoQueNace, type Corrida, type LiveTurn, type TerminalLanzada } from "./queries/sleepSession.ts";
+export { createChatBackground } from "./queries/chat-background.ts";
+export { createPanelDeChat } from "./screens/PanelDeChat.tsx";
+export { createSendNow } from "./queries/send-now.ts";
+export { createSendGates } from "./queries/send-gates.ts";
+export { createSend } from "./queries/send.ts";
+export { createHandover } from "./queries/handover.ts";
+export { createDraftSend } from "./queries/draft-send.ts";
+export { createShellCommand } from "./queries/shell-command.ts";
+export { createResyncCommands } from "./queries/resync-commands.ts";
+export { createResync } from "./queries/resync.ts";
+export { createAttachmentsMount } from "./queries/attachments-mount.ts";
+export { createAttachments } from "./queries/attachments.ts";
+export { createThreadSide } from "./queries/thread-side.ts";
+export { createThreadStream } from "./queries/thread-stream.ts";
