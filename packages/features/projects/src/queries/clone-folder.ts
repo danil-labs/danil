@@ -1,4 +1,4 @@
-import { ATTACHMENT_DOCUMENTS_FEATURE } from "@terminus/protocol";
+import { ATTACHMENT_DOCUMENTS_FEATURE } from "../../../../engine-client/src/index.ts";
 import { createMemo, createSignal, onCleanup, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { sessionRefresh } from "../../../../session/src/sessionRefresh.ts";

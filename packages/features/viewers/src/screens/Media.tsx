@@ -1,4 +1,4 @@
-import { readTreeFile } from "@terminus/protocol";
+import { readTreeFile } from "../../../../engine-client/src/index.ts";
 import { Show, createResource, createSignal, onCleanup } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";

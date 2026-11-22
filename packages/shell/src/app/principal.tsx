@@ -19,7 +19,7 @@ import { type AttentionStore } from "../../../features/projects/src/screens/work
 import { type ContextoDeProyectos } from "../../../features/settings/src/screens/ManageProjects.tsx";
 import McpSignInNotice from "../../../features/settings/src/screens/McpSignInNotice";
 import { UnsavedCloseDialog } from "../../../features/tabs/src";
-import { type ActivityEvent } from "../../../protocol/src/activity.ts";
+import { type ActivityEvent } from "../../../engine-client/src/activity.ts";
 import { Button } from "../../../ui/src/Button";
 import { Toast, ToastStack } from "../../../ui/src/Toast";
 import CloseGuard from "../shell/CloseGuard";

@@ -1,4 +1,4 @@
-import { mergeAttention } from "@terminus/protocol";
+import { mergeAttention } from "../../../engine-client/src/index.ts";
 import { displayWorkspaceContext } from "../../../../apps/desktop/src/lib/workspace-context.ts";
 
 export function mergeContextAttention<E extends { workspace: string; context?: string }>(current: E[], next: E[]): E[] {

@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 import Check from "lucide-solid/icons/check";
-import type { CarryStep } from "@terminus/carry";
+import type { CarryStep } from "../queries/carryRun.ts";
 import { Button } from "../../../../ui/src/Button";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { prosaDe } from "../../../../ui/src/Failure";
