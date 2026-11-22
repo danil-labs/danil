@@ -263,7 +263,7 @@ test("organization selection stays in the legacy menu only without a session set
 });
 
 test("unscoped or mismatched machine data never enters a context group", async () => {
-  const { availableInContext, contextSourceMatches } = await import("../../src/features/machines/context-source.ts");
+  const { availableInContext, contextSourceMatches } = await import("../../../../packages/features/machines/src/model/context-source.ts");
   let context: string | undefined;
   let reads = 0;
   const rows = [{ id: "private-workspace", name: "Private" }];
