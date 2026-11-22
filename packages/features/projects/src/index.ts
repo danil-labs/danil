@@ -10,3 +10,4 @@ export { createRailSessions, type RailSessionsDeps } from "./model/rail-sessions
 export { createTaskWork } from "./screens/TaskHistory";
 export type { HandlerTarget } from "./screens/HandlerPolicy";
 export type { default as AgentProfileScreen } from "./screens/AgentProfile";
+export type { default as AgentPageTasksScreen } from "./screens/AgentPageTasks";

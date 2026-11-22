@@ -3,3 +3,5 @@ export { createContextRelayPool } from "./queries/context-relay-pool.ts";
 export { danilAvailable, danilAvailableContext, danilMachines, isDanilWorkspace, machinesListed, readDanil, readDanilContext } from "./queries/danil-source.ts";
 export { contextMachinesQuery, machinesQuery, type MachinesQuery } from "./queries/machines-query.ts";
 export { type MachineOrganization, type MergedMachineRow, type SessionMachineRow, mergeByMachineId } from "./model/merge-by-machine.ts";
+export type { MachinePicker } from "./screens/MachinePicker";
+export type { default as CarryProgressScreen, CarryOriginLabel as CarryOriginLabelScreen } from "./screens/CarryProgress";
