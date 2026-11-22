@@ -214,7 +214,7 @@ export function createPanelDeChat(deps: PanelDeChatDeps) {
                   activeId={pestanaDelanteEn(sitio)}
                   draftLabel={enBorrador(sitio) ? t("projects.tabs.draft") : undefined}
                   onCloseDraft={vueltaDelBorrador(sitio) !== null ? () => cerrarBorrador(sitio) : undefined}
-                  liveIds={vivas()}
+                  liveIds={/* chat */ vivas()}
                   approvingIds={permissions().map((p) => p.session)}
                   waitingIds={preguntadas()}
                   onPick={(id) => {
@@ -223,7 +223,7 @@ export function createPanelDeChat(deps: PanelDeChatDeps) {
                   }}
                   onClose={cerrarPestana}
                   dirtyIds={pestanas.dirty()}
-                  onCloseMany={cerrarPestanas}
+                  onCloseMany={/* chat */ cerrarPestanas}
                   canReopen={pestanas.canReopen()}
                   onReopen={reabrirPestana}
                   onDrag={arrastrarPestana}

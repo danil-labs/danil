@@ -1,18 +1,18 @@
-import { type ObservedTurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
-import { pasoDe } from "../../../../../apps/desktop/src/lib/steps";
-import { type Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
-import { type TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
-import { type OlderState } from "../model/history.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
-import { prosaDe } from "../../../../ui/src/Failure";
-import { type Encolado } from "../components/MessageQueue.tsx";
-import { type ComandoEnVivo } from "../components/ShellCard";
-import { type HandoverState } from "../model/handover.ts";
-import { contestaALaTerminal } from "../model/queue";
-import { type Turn } from "../model/transcript";
-import { type ChatEvent, type Session, type TranscriptOrigin } from "../model/transcript.ts";
-import { type Msg, type PermissionRequest } from "../screens/Chat";
-import { type TerminalLanzada } from "./sleepSession.ts";
+import { type ObservedTurnActivity } from "../../../../../../apps/desktop/src/lib/activityObservation.ts";
+import { pasoDe } from "../../../../../../apps/desktop/src/lib/steps";
+import { type Superficie } from "../../../../../../apps/desktop/src/lib/surfaces.ts";
+import { type TaskMention } from "../../../../../../apps/desktop/src/lib/taskMentions.ts";
+import { type OlderState } from "../../model/history.ts";
+import { invoke } from "../../../../../engine-client/src/client.ts";
+import { prosaDe } from "../../../../../ui/src/Failure";
+import { type Encolado } from "../../components/MessageQueue.tsx";
+import { type ComandoEnVivo } from "../../components/ShellCard";
+import { type HandoverState } from "../../model/handover.ts";
+import { contestaALaTerminal } from "../../model/queue";
+import { type Turn } from "../../model/transcript";
+import { type ChatEvent, type Session, type TranscriptOrigin } from "../../model/transcript.ts";
+import { type Msg, type PermissionRequest } from "../../screens/Chat";
+import { type TerminalLanzada } from "../sleepSession.ts";
 import { batch, createSignal, type Accessor, type Setter } from "solid-js";
 
 type Hilo = any; // pendiente: el tipo llega de otra feature por el shell (R3)
@@ -61,7 +61,7 @@ export function createResyncCommands(deps: ResyncCommandsDeps) {
       threads.replaceTurn(p.session, fila);
       setPermissions((ps) => ps.filter((x) => x.session !== p.session || x.requestId !== p.requestId));
     } catch (e) {
-      const { sinRespuesta } = await import("../model/permissionRecovery");
+      const { sinRespuesta } = await import("../../model/permissionRecovery");
       const cerrada = sinRespuesta(p, await pendientesDe(p.session, workspace), e);
       if (cerrada) {
         setPermissions(ps => ps.filter(x => x.session !== p.session || x.requestId !== p.requestId));

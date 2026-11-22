@@ -1,5 +1,5 @@
-import { fondoPropio } from "../../../../../apps/desktop/src/lib/chat-background-store";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { fondoPropio } from "../../../../../../apps/desktop/src/lib/chat-background-store";
+import { invoke } from "../../../../../engine-client/src/client.ts";
 import { createResource } from "solid-js";
 
 type Preview = any; // pendiente: el tipo llega de otra feature por el shell (R3)

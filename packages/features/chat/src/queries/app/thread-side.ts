@@ -1,10 +1,10 @@
-import { carpetaDeTrabajo } from "../../../../../apps/desktop/src/lib/model";
-import { type Project } from "../../../../../apps/desktop/src/lib/model.ts";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import { accionDeAtajo, navegacionDePestanas, ventanaVecina } from "../../../../../apps/desktop/src/lib/shortcuts";
-import { type NavegacionDePestanas } from "../../../../../apps/desktop/src/lib/shortcuts.ts";
-import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../../apps/desktop/src/lib/taskFiles.ts";
-import { capabilities } from "../../../../host/src/platform";
+import { carpetaDeTrabajo } from "../../../../../../apps/desktop/src/lib/model";
+import { type Project } from "../../../../../../apps/desktop/src/lib/model.ts";
+import { listen } from "../../../../../../apps/desktop/src/lib/serviceEvents";
+import { accionDeAtajo, navegacionDePestanas, ventanaVecina } from "../../../../../../apps/desktop/src/lib/shortcuts";
+import { type NavegacionDePestanas } from "../../../../../../apps/desktop/src/lib/shortcuts.ts";
+import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../../../apps/desktop/src/lib/taskFiles.ts";
+import { capabilities } from "../../../../../host/src/platform";
 import { type ActivityEvent } from "@terminus/protocol";
 import { createEffect, createSignal, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 

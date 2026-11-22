@@ -1,25 +1,25 @@
-import { type ObservedTurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
-import { type Trigger } from "../../../../../apps/desktop/src/lib/mentions.ts";
-import { type Agent, type AgentModels, type ModoDePermiso, type Source } from "../../../../../apps/desktop/src/lib/model.ts";
-import { type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
-import { type CatalogosDeModelos } from "../../../../../apps/desktop/src/lib/models.ts";
-import { type Recipient } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import { type CliCommand, type Skill } from "../../../../../apps/desktop/src/lib/skills.ts";
-import { type Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
-import { type ContentTab, type FileTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
-import { idProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
-import { type MentionTarget, type TaskMention, type TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
-import { type OlderState } from "../model/history.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
-import { capabilities } from "../../../../host/src/platform";
-import { prosaDe } from "../../../../ui/src/Failure";
-import { canHandOverTask, handoverMatches, shellCli, type HandoverPending } from "../model/handover";
-import { type HandoverState } from "../model/handover.ts";
-import { type Msg } from "../model/messageTypes.ts";
-import { MODO_AUTOMATICO } from "../model/modes";
-import { type Session } from "../model/transcript";
-import { type ChatEvent, type TranscriptOrigin } from "../model/transcript.ts";
-import { type PermissionRequest } from "../screens/Chat.tsx";
+import { type ObservedTurnActivity } from "../../../../../../apps/desktop/src/lib/activityObservation.ts";
+import { type Trigger } from "../../../../../../apps/desktop/src/lib/mentions.ts";
+import { type Agent, type AgentModels, type ModoDePermiso, type Source } from "../../../../../../apps/desktop/src/lib/model.ts";
+import { type OpcionDeModelo } from "../../../../../../apps/desktop/src/lib/models";
+import { type CatalogosDeModelos } from "../../../../../../apps/desktop/src/lib/models.ts";
+import { type Recipient } from "../../../../../../apps/desktop/src/lib/recipients.ts";
+import { type CliCommand, type Skill } from "../../../../../../apps/desktop/src/lib/skills.ts";
+import { type Superficie } from "../../../../../../apps/desktop/src/lib/surfaces.ts";
+import { type ContentTab, type FileTab, type Tab } from "../../../../../../apps/desktop/src/lib/tabs.ts";
+import { idProvisional } from "../../../../../../apps/desktop/src/lib/taskDraft";
+import { type MentionTarget, type TaskMention, type TextEdit } from "../../../../../../apps/desktop/src/lib/taskMentions.ts";
+import { type OlderState } from "../../model/history.ts";
+import { invoke } from "../../../../../engine-client/src/client.ts";
+import { capabilities } from "../../../../../host/src/platform";
+import { prosaDe } from "../../../../../ui/src/Failure";
+import { canHandOverTask, handoverMatches, shellCli, type HandoverPending } from "../../model/handover";
+import { type HandoverState } from "../../model/handover.ts";
+import { type Msg } from "../../model/messageTypes.ts";
+import { MODO_AUTOMATICO } from "../../model/modes";
+import { type Session } from "../../model/transcript";
+import { type ChatEvent, type TranscriptOrigin } from "../../model/transcript.ts";
+import { type PermissionRequest } from "../../screens/Chat.tsx";
 import { PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
 import { batch, type Accessor, type Setter } from "solid-js";
 
@@ -124,7 +124,7 @@ export function createHandover(deps: HandoverDeps) {
     if (agente !== cliDeLaSesion(id) || drafts.peek(claveAbierta())?.provider || !anunciaEnLaTarea(id, SESSION_MODEL_FEATURE)) return;
     const proyecto = project();
     const opciones = opcionesDeLaTarea(id, workspaceActivo());
-    void import("./handoverSend")
+    void import("../handoverSend")
       .then((m) => m.saveSessionModel(proyecto, id, modelo, nivel, opciones, effortOnly))
       .catch(avisar(id));
   }

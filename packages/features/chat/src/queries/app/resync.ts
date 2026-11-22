@@ -1,17 +1,17 @@
-import { type ObservedTurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import { type ContentTab, type FileTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
-import { esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
-import { type OlderState } from "../model/history.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
-import { claveDe } from "../../../../ui/src/Failure";
-import { type ComandoEnVivo } from "../components/ShellCard.tsx";
-import { type HandoverState } from "../model/handover.ts";
-import { type Msg } from "../model/messageTypes.ts";
-import { type ChatEvent, type Session, type TranscriptOrigin } from "../model/transcript.ts";
-import { type PermissionRequest } from "../screens/Chat.tsx";
-import { type LiveTurn } from "./sleepSession.ts";
+import { type ObservedTurnActivity } from "../../../../../../apps/desktop/src/lib/activityObservation.ts";
+import { t } from "../../../../../../apps/desktop/src/lib/i18n";
+import { type SenderTask } from "../../../../../../apps/desktop/src/lib/recipients.ts";
+import { type ContentTab, type FileTab, type Tab } from "../../../../../../apps/desktop/src/lib/tabs.ts";
+import { esProvisional } from "../../../../../../apps/desktop/src/lib/taskDraft";
+import { type OlderState } from "../../model/history.ts";
+import { invoke } from "../../../../../engine-client/src/client.ts";
+import { claveDe } from "../../../../../ui/src/Failure";
+import { type ComandoEnVivo } from "../../components/ShellCard.tsx";
+import { type HandoverState } from "../../model/handover.ts";
+import { type Msg } from "../../model/messageTypes.ts";
+import { type ChatEvent, type Session, type TranscriptOrigin } from "../../model/transcript.ts";
+import { type PermissionRequest } from "../../screens/Chat.tsx";
+import { type LiveTurn } from "../sleepSession.ts";
 import { createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 
 type ContextSource = any; // pendiente: el tipo llega de otra feature por el shell (R3)

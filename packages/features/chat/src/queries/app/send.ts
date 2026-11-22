@@ -1,26 +1,26 @@
-import { type ObservedTurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type Trigger } from "../../../../../apps/desktop/src/lib/mentions.ts";
-import { type Agent, type Source } from "../../../../../apps/desktop/src/lib/model.ts";
-import { type CatalogosDeModelos } from "../../../../../apps/desktop/src/lib/models.ts";
-import { type Recipient } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import { type ContentTab, type FileTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
-import { esProvisional, tituloProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
-import { type MentionTarget, type TaskMention, type TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
-import { type OlderState } from "../model/history.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
-import { capabilities } from "../../../../host/src/platform";
-import { claveDe, prosaDe } from "../../../../ui/src/Failure";
-import { type Encolado } from "../components/MessageQueue";
-import { type Respuesta, type RespuestaEnviada } from "../components/Questions";
-import { mensajeDeFallo } from "../model/failures";
-import { handoverInForce } from "../model/handover";
-import { type HandoverPending, type HandoverState } from "../model/handover.ts";
-import { type Author } from "../model/messageTypes.ts";
-import { comandoEscrito } from "../model/slashOutput";
-import { type Signatures } from "../model/transcript";
-import { type ChatEvent, type Session, type TranscriptOrigin } from "../model/transcript.ts";
-import { type Msg } from "../screens/Chat";
+import { type ObservedTurnActivity } from "../../../../../../apps/desktop/src/lib/activityObservation.ts";
+import { t } from "../../../../../../apps/desktop/src/lib/i18n";
+import { type Trigger } from "../../../../../../apps/desktop/src/lib/mentions.ts";
+import { type Agent, type Source } from "../../../../../../apps/desktop/src/lib/model.ts";
+import { type CatalogosDeModelos } from "../../../../../../apps/desktop/src/lib/models.ts";
+import { type Recipient } from "../../../../../../apps/desktop/src/lib/recipients.ts";
+import { type ContentTab, type FileTab, type Tab } from "../../../../../../apps/desktop/src/lib/tabs.ts";
+import { esProvisional, tituloProvisional } from "../../../../../../apps/desktop/src/lib/taskDraft";
+import { type MentionTarget, type TaskMention, type TextEdit } from "../../../../../../apps/desktop/src/lib/taskMentions.ts";
+import { type OlderState } from "../../model/history.ts";
+import { invoke } from "../../../../../engine-client/src/client.ts";
+import { capabilities } from "../../../../../host/src/platform";
+import { claveDe, prosaDe } from "../../../../../ui/src/Failure";
+import { type Encolado } from "../../components/MessageQueue";
+import { type Respuesta, type RespuestaEnviada } from "../../components/Questions";
+import { mensajeDeFallo } from "../../model/failures";
+import { handoverInForce } from "../../model/handover";
+import { type HandoverPending, type HandoverState } from "../../model/handover.ts";
+import { type Author } from "../../model/messageTypes.ts";
+import { comandoEscrito } from "../../model/slashOutput";
+import { type Signatures } from "../../model/transcript";
+import { type ChatEvent, type Session, type TranscriptOrigin } from "../../model/transcript.ts";
+import { type Msg } from "../../screens/Chat";
 import { OPENCODE, canonicalAgentId, isFreeRouterModel } from "@terminus/tasks";
 import { batch, type Accessor, type Setter } from "solid-js";
 
@@ -228,14 +228,14 @@ export function createSend(deps: SendDeps) {
       if (pendiente && !vigente) {
         drafts.handover(null, claveBorrador);
       }
-      const { sendWithHandover } = await import("./handoverSend");
+      const { sendWithHandover } = await import("../handoverSend");
       const traspaso = await sendWithHandover({
         session: abierta,
         pending: vigente?.to ?? null,
         current: actual,
         provider: m.provider,
         command: m.text.trimStart().startsWith("!"),
-        setProvider: (provider) =>
+        setProvider: (provider: any) =>
           invoke("set_session_provider", { project: proyecto, session: abierta ?? "", provider }, opcionesDeLaTarea(abierta, workspaceActivo())),
         send: () => {
           const target = opciones?.headers?.["x-terminus-machine"];
