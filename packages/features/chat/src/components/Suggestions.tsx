@@ -5,6 +5,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /** Una fila del menú. `clave` es lo que se inserta al elegirla. */
 export type Suggestion = {
@@ -86,8 +87,7 @@ export default function Suggestions(props: {
                     </Show>
                   </p>
                 </Show>
-                <button
-                  type="button"
+                <Pressable
                   disabled={s.disabled}
                   // `mousedown` y no `click`: el clic quitaría el foco de la
                   // caja antes de insertar, y el cursor volvería al principio.
@@ -138,7 +138,7 @@ export default function Suggestions(props: {
                       </span>
                     )}
                   </Show>
-                </button>
+                </Pressable>
               </li>
             )}
           </For>

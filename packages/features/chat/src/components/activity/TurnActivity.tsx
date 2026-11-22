@@ -11,6 +11,7 @@ import McpAppView from "../McpAppView";
 import type { Msg, Razonamiento } from "../../model/messageTypes";
 import LineaDeTiempo, { SUPERFICIE_DE_EJECUCION } from "../Timeline";
 import { currentActivityAction, presentActivity, type ActivityAction } from "../../model/activityPresentation";
+import { Pressable } from "../../../../../ui/src/Pressable";
 type Avance = ActivityChunk<Msg>;
 const SIN_AVANCE: Avance[] = [];
 /** La cabecera de un tramo, entera o partida (ver `RegistroDeTrabajo`). */
@@ -77,12 +78,12 @@ export function RegistroDeTrabajo(props: {
         <div class={cn("flex flex-wrap items-center gap-2", !desplegado() && "mb-2")}>
           <Show when={!inspectable()}><span class={FILA_DEL_TRAMO}><span class="activity-label inline-flex min-w-0 items-center">{girando()}{caption()}</span><Show when={props.corriendo && !props.stopping && !props.blocked}>{props.status?.()}</Show></span></Show>
           <Show when={inspectable()}>
-            <button type="button" aria-expanded={desplegado()} aria-controls={panelId} onClick={() => props.onAlternar(!desplegado())} class={FILA_DEL_TRAMO}>
+            <Pressable aria-expanded={desplegado()} aria-controls={panelId} onClick={() => props.onAlternar(!desplegado())} class={FILA_DEL_TRAMO}>
               <span class="activity-label inline-flex min-w-0 items-center">{girando()}{caption()}</span><Show when={props.corriendo && !props.stopping && !props.blocked}>{props.status?.()}</Show>{chevron()}
-            </button>
+            </Pressable>
           </Show>
           <Show when={hasChanges()}>
-            <button type="button" onClick={() => props.onVerCambios?.()} class={FILA_DEL_TRAMO}>{t("chat.work.open_changes")}</button>
+            <Pressable onClick={() => props.onVerCambios?.()} class={FILA_DEL_TRAMO}>{t("chat.work.open_changes")}</Pressable>
           </Show>
         </div>
 

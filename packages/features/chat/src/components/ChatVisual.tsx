@@ -13,6 +13,7 @@ import { Spinner } from "../../../../ui/src/Spinner";
 import { asFailure, FailureNote } from "../../../../ui/src/Failure";
 import type { VisualBudget } from "../model/visualBudget";
 import type { ChatVisual as Visual } from "../model/visualDirective";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 export default function ChatVisual(props: {
   visual: Visual;
@@ -183,7 +184,7 @@ export default function ChatVisual(props: {
           línea gris en medio de la respuesta no parecía algo que se pudiera
           abrir, y cambiarla por «Cargando…» hacía saltar el mensaje. */}
       <Show when={!opened() || (!html.error && !painted())}>
-        <button type="button" onClick={() => setOpened(true)} aria-busy={opened()} data-chat-visual-closed={opened() ? undefined : ""} data-chat-visual-loading={opened() ? "" : undefined}
+        <Pressable onClick={() => setOpened(true)} aria-busy={opened()} data-chat-visual-closed={opened() ? undefined : ""} data-chat-visual-loading={opened() ? "" : undefined}
           class="flex w-full items-center gap-3 rounded-lg border border-border bg-surface-raised px-3 py-2.5 text-left outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
           classList={{ "cursor-default": opened(), "hover:border-primary": !opened() }}>
           <span class="min-w-0 flex-1">
@@ -193,7 +194,7 @@ export default function ChatVisual(props: {
           <span class="grid size-8 shrink-0 place-items-center text-neutral-500">
             <Show when={opened()} fallback={<Maximize2 class="size-4" />}><Spinner size={16} label={t("chat.visual.loading")} /></Show>
           </span>
-        </button>
+        </Pressable>
       </Show>
       <Show when={opened()}>
         {/* Ocupa el sitio del visual y nombra su archivo: el texto del mensaje

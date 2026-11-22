@@ -6,6 +6,7 @@ import FilePlus2 from "lucide-solid/icons/file-plus-2";
 import { peso } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /** Un artefacto que un turno dejó en la carpeta de trabajo, según `workspace/artifacts.rs`. */
 export type Producido = {
@@ -109,8 +110,7 @@ export default function Entrega(props: {
 
                 <For each={visibles()}>
                   {(a) => (
-                    <button
-                      type="button"
+                    <Pressable
                       class={cn(
                         "flex w-full min-w-0 items-center gap-2 rounded-sm px-1.5 py-1 text-left transition-colors hover:bg-surface-muted",
                         items().length > 1 && "pl-3",
@@ -142,18 +142,17 @@ export default function Entrega(props: {
                       <span class="ml-auto shrink-0 font-mono text-caption text-neutral-500 tabular-nums">
                         {peso(a.bytes)}
                       </span>
-                    </button>
+                    </Pressable>
                   )}
                 </For>
 
                 <Show when={ocultos() > 0}>
-                  <button
-                    type="button"
+                  <Pressable
                     class="justify-self-start rounded-sm py-0.5 pr-1.5 pl-3 text-caption text-neutral-500 transition-colors hover:text-neutral-950"
                     onClick={() => setTodos(true)}
                   >
                     {t("chat.delivery.more", { count: ocultos() })}
-                  </button>
+                  </Pressable>
                 </Show>
               </div>
             </Show>

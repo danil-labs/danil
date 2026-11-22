@@ -35,6 +35,7 @@ import type { Source } from "../../../../../apps/desktop/src/lib/model";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
  * Las fuentes de la tarea, encima de la caja: lo que el agente lee, con su
@@ -350,8 +351,7 @@ export default function Alcance(props: {
   const extras = () => (
     <>
       <li>
-        <button
-          type="button"
+        <Pressable
           class="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left hover:bg-surface-muted hover:text-neutral-950"
           onClick={() => setPaso({ que: "direccion" })}
         >
@@ -359,17 +359,16 @@ export default function Alcance(props: {
           <span class="min-w-0 flex-1 truncate">
             {t("chat.scope.paste_url_or_path")}
           </span>
-        </button>
+        </Pressable>
       </li>
       <li>
-        <button
-          type="button"
+        <Pressable
           class="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left hover:bg-surface-muted hover:text-neutral-950"
           onClick={() => void traerCarpeta()}
         >
           <FolderOpen size={12} aria-hidden="true" />
           <span class="min-w-0 flex-1 truncate">{t("chat.scope.pick_folder")}</span>
-        </button>
+        </Pressable>
       </li>
     </>
   );
@@ -446,8 +445,7 @@ export default function Alcance(props: {
                             >
                               {(b) => (
                                 <li>
-                                  <button
-                                    type="button"
+                                  <Pressable
                                     class="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left font-mono hover:bg-surface-muted hover:text-neutral-950 disabled:cursor-default disabled:opacity-60"
                                     disabled={b === f.branch || ocupado()}
                                     onClick={() => void cambiarDeRama(f, b)}
@@ -456,7 +454,7 @@ export default function Alcance(props: {
                                     <Show when={b === f.branch}>
                                       <span class="font-sans">{t("chat.scope.branch.current")}</span>
                                     </Show>
-                                  </button>
+                                  </Pressable>
                                 </li>
                               )}
                             </For>
@@ -480,8 +478,7 @@ export default function Alcance(props: {
               )}
             </Show>
 
-            <button
-              type="button"
+            <Pressable
               class="grid size-4 place-items-center rounded-sm hover:bg-surface hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={props.bloqueado}
               aria-label={t("chat.scope.source.remove", { name: f.name })}
@@ -489,7 +486,7 @@ export default function Alcance(props: {
               onClick={() => props.onQuitar(f.id)}
             >
               <X size={11} aria-hidden="true" />
-            </button>
+            </Pressable>
 
           </span>
         )}
@@ -537,8 +534,7 @@ export default function Alcance(props: {
                         <For each={ps()}>
                           {(pr) => (
                             <li>
-                              <button
-                                type="button"
+                              <Pressable
                                 class="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left hover:bg-surface-muted hover:text-neutral-950"
                                 onClick={() => void verAreas(pr.id)}
                               >
@@ -546,7 +542,7 @@ export default function Alcance(props: {
                                 <span class="min-w-0 flex-1 truncate">
                                   {pr.name}
                                 </span>
-                              </button>
+                              </Pressable>
                             </li>
                           )}
                         </For>
@@ -560,14 +556,13 @@ export default function Alcance(props: {
                 <Match when={p().que === "areas"}>
                   <div class="flex items-center gap-1 border-b border-border px-1.5 py-1">
                     <Show when={(proveedores()?.length ?? 0) > 1}>
-                      <button
-                        type="button"
+                      <Pressable
                         class="grid size-5 place-items-center rounded-sm hover:bg-surface-muted hover:text-neutral-950"
                         aria-label={t("chat.scope.accounts.back")}
                         onClick={() => setPaso({ que: "proveedores" })}
                       >
                         <ChevronLeft size={12} aria-hidden="true" />
-                      </button>
+                      </Pressable>
                     </Show>
                     <span class="font-medium text-neutral-950">
                       {t("chat.scope.orgs.title")}
@@ -583,8 +578,7 @@ export default function Alcance(props: {
                           >
                             {(x) => (
                               <li>
-                                <button
-                                  type="button"
+                                <Pressable
                                   class="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left hover:bg-surface-muted hover:text-neutral-950"
                                   onClick={() =>
                                     void verRepos(
@@ -596,7 +590,7 @@ export default function Alcance(props: {
                                   <span class="min-w-0 flex-1 truncate">
                                     {x.name}
                                   </span>
-                                </button>
+                                </Pressable>
                               </li>
                             )}
                           </For>
@@ -611,8 +605,7 @@ export default function Alcance(props: {
                 {/* 3 · El repositorio. Aquí termina: la rama se elige después. */}
                 <Match when={p().que === "repos"}>
                   <div class="flex items-center gap-1 border-b border-border px-1.5 py-1">
-                    <button
-                      type="button"
+                    <Pressable
                       class="grid size-5 place-items-center rounded-sm hover:bg-surface-muted hover:text-neutral-950"
                       aria-label={t("chat.scope.orgs.back")}
                       onClick={() =>
@@ -620,7 +613,7 @@ export default function Alcance(props: {
                       }
                     >
                       <ChevronLeft size={12} aria-hidden="true" />
-                    </button>
+                    </Pressable>
                     <span class="font-medium text-neutral-950">
                       {t("chat.scope.repos.title")}
                     </span>
@@ -635,8 +628,7 @@ export default function Alcance(props: {
                           >
                             {(x) => (
                               <li>
-                                <button
-                                  type="button"
+                                <Pressable
                                   class="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left hover:bg-surface-muted hover:text-neutral-950 disabled:opacity-60"
                                   disabled={ocupado()}
                                   onClick={() =>
@@ -658,7 +650,7 @@ export default function Alcance(props: {
                                       {t("chat.scope.repos.read_only")}
                                     </Badge>
                                   </Show>
-                                </button>
+                                </Pressable>
                               </li>
                             )}
                           </For>
@@ -674,14 +666,13 @@ export default function Alcance(props: {
                        conexión (`context::add_repo_url`). */}
                 <Match when={p().que === "direccion"}>
                   <div class="flex items-center gap-1 border-b border-border px-1.5 py-1">
-                    <button
-                      type="button"
+                    <Pressable
                       class="grid size-5 place-items-center rounded-sm hover:bg-surface-muted hover:text-neutral-950"
                       aria-label={t("chat.scope.back")}
                       onClick={() => void abrirAnadir()}
                     >
                       <ChevronLeft size={12} aria-hidden="true" />
-                    </button>
+                    </Pressable>
                     <span class="font-medium text-neutral-950">
                       {t("chat.scope.address_or_path")}
                     </span>

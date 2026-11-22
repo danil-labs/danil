@@ -17,6 +17,7 @@ import { balance, comparado } from "../model/diff";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { Glifo, HUECO_DE_GLIFO } from "./StepGlyph";
 import { carpetaDe, desplegable, salidaDe, tituloDeFila, verboVisible } from "../../../../../apps/desktop/src/lib/stepRow";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
  * El carril de un tramo: una raya bajo el chevron de su cabecera y ningún
@@ -209,8 +210,7 @@ function FilaDePaso(props: {
           </p>
         }
       >
-        <button
-          type="button"
+        <Pressable
           data-fila
           tabindex={props.enfocada ? 0 : -1}
           aria-expanded={props.abierta}
@@ -220,7 +220,7 @@ function FilaDePaso(props: {
           class={cn(clases, "rounded-sm hover:bg-surface-muted")}
         >
           <Cabecera />
-        </button>
+        </Pressable>
       </Show>
 
       <Show when={abre() && props.abierta}>

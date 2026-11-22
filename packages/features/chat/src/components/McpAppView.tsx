@@ -15,6 +15,7 @@ import DrawioMcpCanvas from "./DrawioMcpCanvas";
 import ExcalidrawMcpCanvas from "./ExcalidrawMcpCanvas";
 import { PROXY } from "../model/mcpAppProxy";
 import type { McpAppCall } from "../model/transcript";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /** Excalidraw guarda su dibujo en el checkpoint del servidor: su vista sigue viva. */
 function esExcalidraw(v: AppView, tool: string) {
@@ -131,9 +132,9 @@ export default function McpAppView(props: { call: McpAppCall }) {
             when={!loading() && !noView()}
             fallback={<Show when={loading()}><p class="m-0 text-xs text-neutral-500">{t("chat.mcp_app.loading")}</p></Show>}
           >
-            <button type="button" class="text-xs text-primary underline" onClick={() => void open()}>
+            <Pressable class="text-xs text-primary underline" onClick={() => void open()}>
               {t("chat.mcp_app.open")}
-            </button>
+            </Pressable>
           </Show>
         </Show>
         <Show when={failure()}>{(f) => <FailureNote f={f()} />}</Show>
