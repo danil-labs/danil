@@ -62,7 +62,7 @@ test("creating sends the CLI key as Idempotency-Key, seals here and two dispatch
   const second = await runAccountRequest(request({ name: "Docs" }), deps);
   assert.equal(api.created.size, 1, "una sola creación con la misma llave");
   assert.deepEqual(api.posts.map((p) => [p.context, p.key]), [["c-free", "key-1"], ["c-free", "key-1"]]);
-  assert.deepEqual(api.posts[0].body, { name: "Docs", placement: { kind: "member_computer" } });
+  assert.deepEqual(api.posts[0].body, { name: "Docs", placement: { kind: "member_computer" }, access: { member_computers: true, machines: [] } });
   assert.deepEqual(first.outcome, { result: { workspace: { id: "qw0xyz0", name: "Docs", org: "org_free", account_id: "1000" }, materialized: true } });
   assert.deepEqual(second.outcome, first.outcome);
   assert.deepEqual(sealed[0], ["org_free", "1000", "qw0xyz0", "Docs"]);

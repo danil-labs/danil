@@ -91,8 +91,8 @@ export async function runAccountRequest(row: AccountRequest, deps: AccountReques
   let reply: ContextReply;
   try {
     // La llave de la CLI es la del servidor: dos despachos de la misma petición crean un solo workspace.
-    // El Free corre en la computadora de la persona; en una organización de pago decide su admin (el valor por omisión del servidor).
-    const body = group.plan === "free" ? { name, placement: { kind: "member_computer" } } : { name };
+    // El Free corre en las computadoras de las personas (access; placement para un servidor viejo); en una de pago decide su admin.
+    const body = group.plan === "free" ? { name, placement: { kind: "member_computer" }, access: { member_computers: true, machines: [] } } : { name };
     reply = await deps.send(group.context_id, "POST", "/v1/workspaces", body, row.key);
   } catch {
     return { outcome: { error: { code: "operation_failed" } } };
