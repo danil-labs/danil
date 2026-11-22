@@ -8,6 +8,7 @@ import {
   createSignal,
   onCleanup,
   onMount,
+  type JSX,
 } from "solid-js";
 import { checkEnvironment, installTool, restartApp } from "../queries/engine-environment";
 import { listDependencies } from "../queries/engine-misc";
@@ -27,8 +28,7 @@ import {
 } from "../model/environment-store";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
-import { esIncluida, fallasIncluidas } from "../../../onboarding/src/model/bundled";
-import { FuncionesAfectadas } from "../../../onboarding/src/components/Repair";
+import { esIncluida, fallasIncluidas, type Falla } from "../../../../ui/src/lib/bundled";
 import { peso } from "../../../../../apps/desktop/src/lib/format";
 import { Skeleton } from "../../../../ui/src/Skeleton";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../../ui/src/Tooltip";
@@ -78,7 +78,17 @@ const AJENAS = new Set(["node", "npm", "pnpm", "bun", "cargo", "rust", "rustc"])
 const esExtra = (id: string) => !esIncluida(id) && !AJENAS.has(id) && id !== "browser-navigation";
 type Fila = Requirement & { dependency?: Dependency };
 
-export default function Environment() {
+export type EnvironmentProps = {
+  avisoReparacion?: (p: {
+    fallas: Falla[];
+    reparando: boolean;
+    error: Failure | null;
+    onReparar: () => void;
+    onReiniciar: () => void;
+  }) => JSX.Element;
+};
+
+export default function Environment(props?: EnvironmentProps) {
   const [appVersion, setAppVersion] = createSignal<string | null>(null);
   const [filas, setFilas] = createSignal<Dependency[]>([]);
   const [reporte, setReporte] = createSignal<EnvReport | null>(null);
@@ -253,14 +263,14 @@ export default function Environment() {
               <p class="m-0 text-sm text-neutral-950">
                 {fallas().length ? t("settings.environment.bundled.attention") : t("settings.environment.bundled.ready")}
               </p>
-              <Show when={fallas().length > 0}>
-                <FuncionesAfectadas
-                  fallas={fallas()}
-                  reparando={reparando()}
-                  error={falloDeReparar()}
-                  onReparar={() => void reparar()}
-                  onReiniciar={() => void restartApp()}
-                />
+              <Show when={fallas().length > 0 && props?.avisoReparacion}>
+                {(aviso) => aviso()({
+                  fallas: fallas(),
+                  reparando: reparando(),
+                  error: falloDeReparar(),
+                  onReparar: () => void reparar(),
+                  onReiniciar: () => void restartApp(),
+                })}
               </Show>
             </div>
           </SettingsBlock>
