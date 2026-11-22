@@ -35,9 +35,9 @@ export function esTransitorio(e: unknown): boolean {
 }
 
 /** Uno, tres, diez y treinta segundos: unos 45 s antes de enseñar el fallo. */
-export const ESPERAS = [1_000, 3_000, 10_000, 30_000];
+const ESPERAS = [1_000, 3_000, 10_000, 30_000];
 /** Una lectura que pasa de esto ya no frena a las demás. `tree_files` suele tardar ~1 s. */
-export const LENTA_TRAS = 15_000;
+const LENTA_TRAS = 15_000;
 
 export type Lector = {
   /** Pedir una lectura (un turno que acabó, volver a la ventana, abrir una carpeta). */

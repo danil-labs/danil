@@ -5,7 +5,7 @@ import { machineOf } from "../../../features/machines/src/queries/store";
 import { contextAttentionOf, mergeContextAttention } from "./context-attention";
 
 /** Espejo de `workspace/attention.rs`. El orden es la prioridad. */
-export const ATTENTION_STATES = ["approving", "asked", "failed", "unseen"] as const;
+const ATTENTION_STATES = ["approving", "asked", "failed", "unseen"] as const;
 export type AttentionState = (typeof ATTENTION_STATES)[number];
 
 export type TaskAttention = { session: string; project: string; state: AttentionState };

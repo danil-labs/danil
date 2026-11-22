@@ -32,7 +32,7 @@ import { capabilities } from "../../../../host/src/platform";
 import { detalleDe, type Failure } from "../../../../ui/src/Failure";
 import type { Startup } from "./workspaces-store";
 
-export type CredentialsView =
+type CredentialsView =
   | { kind: "loading" }
   /** El workspace no está en una cuenta de Danil, o el motor o el Worker no saben de credenciales. */
   | { kind: "none" }
@@ -54,7 +54,7 @@ export type CredentialsBackend = {
 };
 
 /** Una credencial por crear o rotar, sin el valor ni sus copias. */
-export type SealedDraft = Omit<CredentialPut, "hint" | "copies">;
+type SealedDraft = Omit<CredentialPut, "hint" | "copies">;
 
 /** Los códigos que el motor manda como `credentials.error.<código>` (el del Worker o uno propio), en palabras de la persona. */
 const ENGINE_CODES: Record<string, string> = {

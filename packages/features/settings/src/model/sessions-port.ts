@@ -15,7 +15,7 @@ type GrupoDelRiel = {
 };
 
 /** Lo mínimo del riel de sesiones del shell que usa Configuración (y el diálogo de mover que pinta). */
-export type RielDeAjustes = {
+type RielDeAjustes = {
   groups: () => readonly GrupoDelRiel[] | null | undefined;
   refresh: () => void;
   sessions: {

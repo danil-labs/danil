@@ -2,7 +2,7 @@ import type { AccountWorkspace, SystemId } from "@terminus/computers";
 import type { Fleet } from "@terminus/fleet";
 import type { EngineWorkspace } from "../queries/engine-workspaces.ts";
 export type Invoke = (command: string, args?: Record<string, unknown>, options?: { headers?: HeadersInit }) => Promise<unknown>;
-export type SliceChange = "sessions" | "projects" | "spaces" | "attention" | "mentions" | "workspaces";
+type SliceChange = "sessions" | "projects" | "spaces" | "attention" | "mentions" | "workspaces";
 export type RouterConfig = {
   /** La máquina de la ventana; `null` en la web. */
   self: string | null;

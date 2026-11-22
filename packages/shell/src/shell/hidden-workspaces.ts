@@ -1,7 +1,7 @@
 import { createPref } from "../../../../apps/desktop/src/lib/prefs.ts";
 
 /** Los workspaces que la persona quitó del riel, por id del motor. En la web, por persona. */
-export const HIDDEN_KEY = "workspaces.hidden";
+const HIDDEN_KEY = "workspaces.hidden";
 
 const fold = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase();
 

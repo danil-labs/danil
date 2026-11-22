@@ -8,7 +8,7 @@ export type AdoptionProgress = { org: string; finished: boolean; rows: { id: str
 type Status = { state?: string; email?: string | null; sessions?: { email?: string | null }[] } | null;
 export type FirstLoginPhase = { t: "hidden" } | { t: "sign_in" } | { t: "continue"; email: string } | { t: "linking" };
 
-export { firstLoginSignedIn, noteFirstLoginSignedIn } from "../../../session/src/first-login-run.ts";
+export { firstLoginSignedIn } from "../../../session/src/first-login-run.ts";
 
 export function firstLoginPhase(input: { done: boolean; status: Status; signedInThisRun: boolean }): FirstLoginPhase {
   if (input.done) return { t: "hidden" };

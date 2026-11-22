@@ -28,7 +28,7 @@ import { type Workspace } from "../queries/workspaces-store";
 export const NAV_LIST_ROW_TRIPLE_LAYOUT =
   "grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-2.5 py-2";
 
-export function navigationListRowClass(opciones: {
+function navigationListRowClass(opciones: {
   interactive?: boolean;
   class?: string;
 } = {}) {

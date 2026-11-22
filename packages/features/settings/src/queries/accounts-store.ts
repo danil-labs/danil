@@ -12,7 +12,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { detalleDe } from "../../../../ui/src/Failure";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 
-export { SESION_INICIADA, type Account, type AccountList, type AccountStatus, type AgentOpt, type EnEspera, type LoginEvent } from "../../../../ui/src/lib/accounts.ts";
+export { type Account, type AccountList, type AccountStatus, type AgentOpt, type EnEspera, type LoginEvent } from "../../../../ui/src/lib/accounts.ts";
 
 /**
  * La lectura de límites de una cuenta en Configuración.

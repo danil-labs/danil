@@ -16,7 +16,7 @@ export type ShownTurn = LiveTurn & { title: string; named: boolean; waiting: boo
 type Call = (cmd: string, args?: Record<string, unknown>, options?: { headers: Record<string, string> }) => Promise<unknown>;
 
 /** Los turnos viven en el workspace que los lanzó, no en el que mira la ventana. */
-export const scope = (workspace: string) => ({ headers: { "x-terminus-workspace": workspace } });
+const scope = (workspace: string) => ({ headers: { "x-terminus-workspace": workspace } });
 
 export async function stopTurns(turns: LiveTurn[], call: Call = routedInvoke) {
   return await Promise.allSettled(

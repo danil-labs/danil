@@ -25,7 +25,7 @@ import { createHiddenWorkspaces, keepSlots } from "./hidden-workspaces";
 import KeepAwake from "./KeepAwake";
 import { AttentionBadge, MarcaDeWorkspace } from "./WorkspaceMarks";
 
-export { AttentionBadge, MarcaDeWorkspace, monogram } from "./WorkspaceMarks";
+export { AttentionBadge } from "./WorkspaceMarks";
 
 import { organizationStartTarget, requestedStartTarget } from "./organization-start-target";
 import ProfileMenu from "./ProfileMenu";

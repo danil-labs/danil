@@ -42,7 +42,7 @@ const [pluginTypst, setPluginTypst] = createSignal(false);
 
 /** Si esta ventana registra `typst_live_*`; `null` hasta saberlo, y entonces no hay vista que ofrecer. */
 const [servida, setVistaServida] = createSignal<boolean | null>(null);
-export const vistaServida = () => servida() === true;
+const vistaServida = () => servida() === true;
 
 /** El ojo y el PDF al lado: el plugin activo y una ventana que sirve la vista. */
 export const conVistaTypst = () => pluginTypst() && vistaServida();
@@ -255,7 +255,7 @@ export const lugarDe = (d: DiagnosticoTypst) =>
   d.path === null ? "" : d.line === null ? d.path : `${d.path}:${d.line}:${d.column ?? 1}`;
 
 /** Lo que recibe el agente al pulsar «Que lo arregle el agente»: el principal y cada error con su lugar. */
-export function mensajeDeArreglo(main: string, errores: DiagnosticoTypst[]): string {
+function mensajeDeArreglo(main: string, errores: DiagnosticoTypst[]): string {
   // El mensaje puede venir del documento (`panic`): sin comillas triples no cierra el bloque.
   const lista = errores
     .map((d) => `- ${lugarDe(d) ? `${lugarDe(d)}: ` : ""}${d.message.replaceAll("```", "'''")}`)

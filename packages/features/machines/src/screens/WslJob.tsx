@@ -11,7 +11,7 @@ import { MB, mb } from "./wsl-common";
 const DISTRO_STEPS = ["download", "verify", "register", "user"] as const;
 const ENGINE_STEPS = ["check", "deps", "engine_download", "engine_verify", "engine", "service", "connect"] as const;
 
-export function StepList(props: { steps: readonly string[]; current: string; done: boolean; labels?: string }) {
+function StepList(props: { steps: readonly string[]; current: string; done: boolean; labels?: string }) {
   const index = () => props.steps.indexOf(props.current);
   return (
     <ol class="m-0 grid list-none gap-1 p-0">

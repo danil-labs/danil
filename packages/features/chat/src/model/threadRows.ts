@@ -52,7 +52,7 @@ export function createBlockKeys() {
   };
 }
 
-export const ESTIMATED_LINE = 22;
+const ESTIMATED_LINE = 22;
 const ESTIMATED_CHARS_PER_LINE = 96;
 const ESTIMATED_MAX = 1200;
 

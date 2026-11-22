@@ -11,5 +11,4 @@
  * Trozo perezoso: lo carga quien abre la sección.
  */
 import "../../../../../apps/desktop/src/locales/danilPhrases";
-export { normalizeSecretName } from "./SecretsModel";
 export { default } from "./SecretsList";

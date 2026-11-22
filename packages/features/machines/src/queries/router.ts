@@ -122,7 +122,7 @@ function gitSlice(slice: Slice): Slice {
     [id, row && typeof row === "object" ? { ...row, stale: true } : row])) };
 }
 
-export function createRouterCore(config: RouterConfig) {
+function createRouterCore(config: RouterConfig) {
   const { self, fleet } = config;
   const rawNative: Invoke = config.native ?? (() => Promise.reject(new FleetError("unknown_machine", null)));
   const native: Invoke = (command, args, options) => rawNative(command, args, withoutHeader(options, "x-terminus-machine"));

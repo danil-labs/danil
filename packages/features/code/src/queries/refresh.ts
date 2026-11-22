@@ -64,7 +64,7 @@ export function comoEntra(hayBorrador: boolean, sucio: boolean): Entrada {
  * es lo que impide que una tarea con ocho pestañas pague ocho pares de pasadas
  * de git en cada turno sin que nadie las vea.
  */
-export function decidir(
+function decidir(
   estado: { mio: boolean; visible: boolean; pendiente: boolean },
   senal: "aviso" | "asoma",
 ): { pendiente: boolean; refrescar: boolean } {

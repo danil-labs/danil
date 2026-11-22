@@ -30,7 +30,7 @@ function providerName(c: Pick<Credential, "kind" | "provider" | "config">): stri
 const list = (names: string[]) => new Intl.ListFormat(manifiesto().formato).format(names);
 
 /** «En uso en: Mac y vm-alberto · pendiente en vm-x»: de un vistazo, sin abrir nada. */
-export function usageSummary(credential: Pick<Credential, "machines">): string {
+function usageSummary(credential: Pick<Credential, "machines">): string {
   const ms = credentialMachines(credential);
   const using = ms.filter((m) => m.state === "active" || m.state === "signed_in").map(nameOf);
   const pending = ms.filter((m) => m.state === "pending").map(nameOf);

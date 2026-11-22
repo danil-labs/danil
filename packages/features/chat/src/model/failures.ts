@@ -40,7 +40,7 @@ export type CambioPorCupo = {
  * «vuelve a las 3:03 PM» manda a reintentar esta tarde contra una pared que
  * sigue en pie una semana.
  */
-export function horaDeVuelta(ms: number) {
+function horaDeVuelta(ms: number) {
   const fecha = new Date(ms);
   const hoy = fecha.toDateString() === new Date().toDateString();
   return df(hoy ? { timeStyle: "short" } : { dateStyle: "medium", timeStyle: "short" }).format(

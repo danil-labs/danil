@@ -2,7 +2,7 @@ import type { ContextGroup } from "./session-context-types.ts";
 
 /** Una petición de la CLI (`account_requests_v1`), como la entrega `account_request_take`. */
 export type AccountRequest = { request_id: string; op: string; args?: { name?: string; org?: string }; key: string; caller_task?: string | null };
-export type AccountError = { code: string; options?: unknown[] };
+type AccountError = { code: string; options?: unknown[] };
 export type AccountOutcome = { result: unknown } | { error: AccountError };
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 type AccountRequestDeps = { groups: () => readonly ContextGroup[] | null };
@@ -19,7 +19,7 @@ export function listOrgs(groups: readonly ContextGroup[]) {
   });
 }
 
-export function runAccountRequest(row: AccountRequest, deps: AccountRequestDeps): AccountOutcome {
+function runAccountRequest(row: AccountRequest, deps: AccountRequestDeps): AccountOutcome {
   const groups = deps.groups() ?? [];
   if (row.op === "orgs.list") return groups.length ? { result: listOrgs(groups) } : { error: { code: "no_session" } };
   if (row.op === "workspace.create") return { error: { code: "unavailable" } };
