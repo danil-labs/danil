@@ -44,65 +44,29 @@ Inventario exhaustivo de todo el código en el front que consume o adapta sistem
 | `packages/features/machines/src/screens/ConnectMachine.tsx:23` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
 | `packages/fleet/src/fleet.ts:213` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
 | `packages/fleet/src/fleet.ts:249` | Endpoint legado /v1/computers | /v1/computers | Se queda en 3.4: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/machines/account.tsx:453`, `:279`, `:292`) | Comentario del flujo que sigue vivo (`GET /v1/computers` en `origin/dev`): se queda |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Reglas, contratos o referencias de Appv2 | appv2 | «se borra» |  |
-|  | Cliente de mensajería Appv2 | createMessaging | «se borra» |  |
-|  | Cliente de mensajería Appv2 | createMessaging | «se borra» |  |
-|  | Cliente de mensajería Appv2 | createMessaging | «se borra» |  |
-|  | Cliente de mensajería Appv2 | createMessaging | «se borra» |  |
-|  | Cliente de mensajería Appv2 | createMessaging | «se borra» |  |
-|  | Cliente de mensajería Appv2 | createMessaging | «se borra» |  |
-|  | Cliente de mensajería Appv2 | createMessaging | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
-|  | BFF alfa legado /alpha-api | /alpha-api | «se borra» |  |
+| `packages/ui/src/styles/global.css:237` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: comentario de tokens vivos (`--color-inbox-*`); sin cambiar clases ni estilos | Solo comentario de procedencia, no consume Appv2 |
+| `packages/ui/src/styles/global.css:244` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: comentario de tokens vivos (`--color-inbox-*`); sin cambiar clases ni estilos | Solo comentario de procedencia, no consume Appv2 |
+| `packages/features/settings/src/model/fiscal.ts:3` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: comentario de procedencia de reglas fiscales vivas | Solo comentario; no consume Appv2 ni su BFF |
+| `packages/attention/src/inbox.ts:5` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/src/inbox.ts:16` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/src/inbox.ts:111` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/src/inbox.ts:169` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/src/inbox.ts:178` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/src/channels.ts:7` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/test/inbox.test.ts:37` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/test/inbox.test.ts:51` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/test/channels.test.ts:7` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/README.md:4` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/README.md:26` | Reglas, contratos o referencias de Appv2 | appv2 | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/src/inbox.ts:55` | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/src/channels.ts:23` | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/test/inbox.test.ts:32` | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/test/channels.test.ts:29` | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/README.md:6` | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/README.md:20` | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/README.md:27` | BFF alfa legado /terminus/alpha-api | /terminus/alpha-api | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Módulo o prueba de `inbox.ts`/`channels.ts` que usa el teléfono: se queda con el paquete |
+| `packages/attention/README.md:7` | BFF alfa legado /alpha-api | /alpha-api | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Documenta el prefijo `<base>alpha-api` que el teléfono pasa a `createInbox`/`createChannels` (`apps/mobile/src/lib/alpha-mode.ts:10`): se queda con el paquete |
+| `packages/attention/README.md:21` | BFF alfa legado /alpha-api | /alpha-api | Se queda en 3.4b: `apps/mobile` lo importa también en `origin/dev` 9a0ee2ad (`apps/mobile/src/lib/inbox.tsx:2`, `apps/mobile/src/app/channels.tsx:4`; corrección del CTO 2026-11-21) | Documenta el prefijo `<base>alpha-api` que el teléfono pasa a `createInbox`/`createChannels` (`apps/mobile/src/lib/alpha-mode.ts:10`): se queda con el paquete |
 |  | Endpoint legado /v1/connections | /v1/connections |  / ticket relay vía  |  |
 |  | Endpoint legado /v1/connections | /v1/connections |  / ticket relay vía  |  |
 |  | Endpoint legado /v1/connections | /v1/connections |  / ticket relay vía  |  |
@@ -156,10 +120,10 @@ Patrones disjuntos y exactos para el gate de verificación  y :
 |---|---|---|---:|---|
 | /v1/computers | /v1/computers | Borde viejo /v1/computers (R8) | 24 | Se queda lo que usa `origin/dev` (3.4: 31→24) |
 | DANIL_COMPUTERS_URL | DANIL_COMPUTERS_URL | Variable de entorno de computers | 0 | Borrado (3.4) |
-| appv2 | [aA]ppv2 | Appv2 / Danil Agents (R8) | 19 | Se borra |
-| createMessaging | createMessaging | Mensajería Appv2 (R8) | 7 | Se borra |
-| /terminus/alpha-api | /terminus/alpha-api | BFF alfa legado /terminus/alpha-api | 21 | Se borra |
-| /alpha-api | [^s]/alpha-api | BFF alfa legado /alpha-api | 12 | Se borra |
+| appv2 | [aA]ppv2 | Appv2 / Danil Agents (R8) | 14 | Se queda lo que usa `apps/mobile` y comentarios (3.4b: 19→14) |
+| createMessaging | createMessaging | Mensajería Appv2 (R8) | 0 | Borrado (3.4b) |
+| /terminus/alpha-api | /terminus/alpha-api | BFF alfa legado /terminus/alpha-api | 7 | Se queda lo que usa `apps/mobile` (3.4b: 21→7) |
+| /alpha-api | [^s]/alpha-api | BFF alfa legado /alpha-api | 2 | Se queda lo que usa `apps/mobile` (3.4b: 12→2) |
 | /v1/connections | /v1/connections | Borde viejo /v1/connections | 7 | Se queda lo que usa `origin/dev` 9a0ee2ad (`apps/desktop/src/features/settings/Connections.tsx`: `listConnections`, `updateConnection`, `revokeConnection`, `connectionCapabilities`); 3.4c borra `connectionAudit` sin uso (8→7) |
 | /v1/me/workspaces | /v1/me/workspaces | Borde viejo /v1/me/workspaces | 1 | Se queda en 3.4c: comentario de `packages/attention/src/workspace-account.ts`, igual en `origin/dev` 9a0ee2ad |
 | /v1/workspaces/.../github | /v1/workspaces/[^/]+/github | Borde viejo github sync | 7 | Se queda en 3.4c: lo usa `origin/dev` 9a0ee2ad (`apps/desktop/src/web/github-account.ts`, `apps/mobile/src/app/github/[workspace].tsx`) |

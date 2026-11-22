@@ -10,6 +10,7 @@ import { Input } from "../../../../ui/src/Input";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 type Branch = {
   reference: string;
@@ -222,22 +223,20 @@ export default function BaseBranchPicker(props: {
           <div class="flex gap-1 overflow-x-auto border-b border-border px-2 pb-2">
             <For each={["", ...remotes()]}>
               {(source) => (
-                <button
-                  type="button"
+                <Pressable
                   aria-pressed={scope() === source}
                   class="shrink-0 rounded-md px-2 py-1 text-xs text-neutral-500 outline-none hover:bg-surface-muted aria-pressed:bg-surface-muted aria-pressed:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   onClick={() => setScope(source)}
                 >
                   {source || t("worktrees.base.locals")}
-                </button>
+                </Pressable>
               )}
             </For>
           </div>
           <div class="max-h-56 overflow-y-auto p-1">
             <For each={matching()}>
               {(branch) => (
-                <button
-                  type="button"
+                <Pressable
                   disabled={props.disabled || saving()}
                   aria-pressed={reference() === branch.reference}
                   title={
@@ -255,7 +254,7 @@ export default function BaseBranchPicker(props: {
                   <Show when={reference() === branch.reference}>
                     <Check size={13} class="shrink-0" aria-hidden="true" />
                   </Show>
-                </button>
+                </Pressable>
               )}
             </For>
             <Show when={data() && !matching().length}>

@@ -7,6 +7,7 @@ import type { ModoDePermiso } from "../../../../../apps/desktop/src/lib/model";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 type Props = {
   modo: string;
@@ -63,9 +64,8 @@ export default function SelectorDeModo(props: Props) {
     <Popover open={abierto()} onOpenChange={setAbierto}>
       <PopoverTrigger
         as={(p: object) => (
-          <button
+          <Pressable
             {...p}
-            type="button"
             disabled={props.disabled}
             class={cn(
               "flex min-h-8 min-w-0 items-center gap-1 rounded-sm px-1.5 text-xs text-neutral-500 outline-none transition-colors hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60",
@@ -80,7 +80,7 @@ export default function SelectorDeModo(props: Props) {
               {elegido() ? prosa(elegido()!.label) : t("chat.mode.placeholder")}
             </span>
             <ChevronDown size={13} class="shrink-0" />
-          </button>
+          </Pressable>
         )}
       />
 
@@ -88,8 +88,7 @@ export default function SelectorDeModo(props: Props) {
         <div role="listbox" aria-label={t("chat.mode.listbox")}>
           <For each={props.modos}>
             {(m) => (
-              <button
-                type="button"
+              <Pressable
                 role="option"
                 aria-selected={m.id === props.modo}
                 disabled={!!m.falta}
@@ -121,7 +120,7 @@ export default function SelectorDeModo(props: Props) {
                     )}
                   </Show>
                 </span>
-              </button>
+              </Pressable>
             )}
           </For>
         </div>

@@ -14,6 +14,7 @@ import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { enfocar, enfocarSiNadieEscribe } from "../../../../../apps/desktop/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import BloqueDeInterrupcion from "./InterruptionBlock";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /** Espejo de `Opcion` en `src-tauri/src/runtime/questions.rs`. */
 export type Opcion = { value: string; label: string; detail?: string | null };
@@ -385,8 +386,7 @@ export default function Preguntas(props: {
                   const puesta = () => de(actual()).elegidas.includes(o.value);
                   return (
                     <li>
-                      <button
-                        type="button"
+                      <Pressable
                         aria-pressed={puesta()}
                         aria-label={`${i() + 1}. ${o.label}`}
                         data-option={o.value}
@@ -409,7 +409,7 @@ export default function Preguntas(props: {
                         </Show>
                         <span class="min-w-0 flex-1 break-words">{o.label}</span>
                         <Insignia puesta={puesta()}>{i() + 1}</Insignia>
-                      </button>
+                      </Pressable>
                     </li>
                   );
                 }}
@@ -419,8 +419,7 @@ export default function Preguntas(props: {
                   <Show
                     when={de(actual()).otra}
                     fallback={
-                      <button
-                        type="button"
+                      <Pressable
                         aria-pressed={false}
                         aria-label={`${actual().options.length + 1}. ${t("chat.questions.other")}`}
                         data-option="other"
@@ -435,7 +434,7 @@ export default function Preguntas(props: {
                         <Insignia puesta={false}>
                           <Pencil size={11} />
                         </Insignia>
-                      </button>
+                      </Pressable>
                     }
                   >
                     <Campo conLapiz />
