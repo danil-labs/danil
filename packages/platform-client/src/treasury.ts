@@ -5,6 +5,7 @@ import type {
   Balance, Catalog, Checkout, CheckoutStatusActive, CheckoutStatusNotActive, OrganizationBilling, PortalSession, Purchase, TransactionPage,
 } from "./generated/billing.ts";
 import type { GroupReply } from "./treasury-config.ts";
+import { withIdempotencyKey } from "./idempotency.ts";
 
 /**
  * Las respuestas del dominio salen del OpenAPI de billing-v2 vendorizado (`contract/billing-v2/`, R2 y R7). Los
@@ -56,7 +57,7 @@ function promotionCode(code: string | undefined) {
 export function billingV2(transport: Transport, organizationId: string | null) {
   const read = async <T>(path: string, schema: z.ZodType<T>, signal?: AbortSignal) => schema.parse(await (await transport.call(path, { signal: signal ?? AbortSignal.timeout(15000) })).json());
   const write = async <T>(path: string, body: unknown, key: string, schema: z.ZodType<T>) => schema.parse(await (await transport.mutation(path, {
-    signal: AbortSignal.timeout(15000), headers: { "Content-Type": "application/json", "Idempotency-Key": key }, body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(15000), headers: withIdempotencyKey({ "Content-Type": "application/json" }, key), body: body === undefined ? undefined : JSON.stringify(body),
   })).json());
   const pagePath = (path: string, cursor?: string) => cursor ? `${path}?${new URLSearchParams({ cursor })}` : path;
   return {

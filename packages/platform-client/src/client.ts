@@ -4,6 +4,7 @@
  * rutas. `edgeUntil` reintenta 404, 429, 501 y 503 con backoff e idempotencia.
  */
 import { invoke } from "../../engine-client/src/client.ts";
+import { newIdempotencyKey } from "./idempotency.ts";
 
 
 export type Patience = {
@@ -91,7 +92,7 @@ export function edgeFetch<T = unknown>(method: EdgeMethod, path: string, body?: 
 export async function edgeUntil<T = unknown>(method: EdgeMethod, path: string, body?: unknown, patience: Patience = {}, transport: { send: typeof edgeFetch; onProblem?: (e: EdgeRefusal) => void } = { send: edgeFetch, onProblem: e => problemListener?.(e) }): Promise<EdgeReply<T>> {
   const write = method !== "GET";
   const signal = write ? AbortSignal.any([context.signal, ...(patience.signal ? [patience.signal] : [])]) : patience.signal;
-  const key = write ? patience.idempotencyKey ?? crypto.randomUUID() : undefined;
+  const key = write ? patience.idempotencyKey ?? newIdempotencyKey() : undefined;
   const deadline = Date.now() + (patience.retryBudgetMs ?? Infinity);
   let last: unknown;
   for (let attempt = 0; ; attempt++) {

@@ -5,6 +5,7 @@
  * sale de la cuenta aunque la VM esté apagada y no pasa por el motor.
  */
 import { type CredentialSource, EdgeError, type EdgeTransport } from "@terminus/computers";
+import { withIdempotencyKey } from "./idempotency.ts";
 
 /**
  * Las respuestas de `/v1/credentials` salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7). Este
@@ -26,7 +27,7 @@ export function webCredentialSource(origin: string, transport: EdgeTransport): C
       try {
         const response = method === "GET"
           ? await transport.call(relative)
-          : await transport.mutation(relative, { method, headers: init?.headers, ...(init?.body === undefined ? {} : { body: init.body }) });
+          : await transport.mutation(relative, { method, headers: withIdempotencyKey(init?.headers), ...(init?.body === undefined ? {} : { body: init.body }) });
         const text = response.status === 204 ? "" : await response.text();
         return { status: response.status, ok: response.ok, json: async () => (text ? JSON.parse(text) : null) };
       } catch (e) {
