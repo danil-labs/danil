@@ -2,7 +2,7 @@ import { handlerMutation, handlerOperationRunning, pendingHandlerOperation, resu
 import "../../../../../apps/desktop/src/locales/handlerPhrases";
 import "../../../../../apps/desktop/src/locales/failurePhrases";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
-import { handlerAction } from "../queries/engine-consent";
+import { handlerAction } from "../queries/handler-action";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { detalleDe } from "../../../../../apps/desktop/src/lib/failure";
 import type { HandlerApproval, HandlerMemory, HandlerRelease, HandlerRequests } from "../../../../../apps/desktop/src/lib/model";
