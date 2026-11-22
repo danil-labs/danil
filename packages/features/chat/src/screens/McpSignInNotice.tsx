@@ -1,6 +1,6 @@
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { mcpLogin } from "../queries";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
 
 /** Espeja `dialects::claude::mcp_sin_sesion`. */
@@ -87,7 +87,7 @@ export async function mcpSignIn(name: string) {
   setInProgress((s) => new Set(s).add(key));
   timers.set(key, window.setTimeout(() => stopWaiting(key), 120_000));
   try {
-    await invoke("mcp_login", { provider: agent, id: name });
+    await mcpLogin(agent, name);
   } catch (e) {
     setFailure(asFailure(e));
     stopWaiting(key);

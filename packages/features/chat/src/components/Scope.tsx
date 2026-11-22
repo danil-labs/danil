@@ -7,7 +7,16 @@ import {
   type JSX,
 } from "solid-js";
 import type { InvokeOptions } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import {
+  getRepoBranches,
+  getGitHostAreas,
+  getGitHostProjects,
+  attachRepo,
+  addRepoUrl,
+  addFolder,
+  type RepoRemoto,
+  type Area,
+} from "../queries";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { open } from "@tauri-apps/plugin-dialog";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
@@ -36,18 +45,7 @@ import { Button } from "../../../../ui/src/Button";
  * del proyecto, y la enseña el panel `features/code/Code.tsx`.
  */
 
-/** Un repositorio del proveedor, como lo devuelve `repos_of`. */
-type RepoRemoto = {
-  slug: string;
-  name: string;
-  clone_url: string;
-  /** La principal, que ya publica la API: con ella se trae y no se pregunta. */
-  branch: string;
-  /** `null` es «no lo sé», que no es «no puedes». */
-  can_push: boolean | null;
-};
 type Proveedor = GitHost;
-type Area = { key: string; name: string };
 
 /** Por dónde va el panel de añadir. */
 type Paso =
@@ -159,13 +157,7 @@ export default function Alcance(props: {
     setEligiendo(f);
     setRamas(null);
     try {
-      const r = await invoke<{ default: string; branches: string[] }>(
-        "repo_branches",
-        // Sin `gitHost`: el backend mira el host y usa la conexión del
-        // workspace si existe, y si no lo intenta como público. Quien adjuntó
-        // no tiene por qué saber cuál de los dos es.
-        { cloneUrl: f.location },
-      );
+      const r = await getRepoBranches(f.location);
       setRamas(r.branches);
     } catch (e) {
       // Sin red o sin permiso no hay lista que enseñar, y callarlo dejaría un
@@ -225,7 +217,7 @@ export default function Alcance(props: {
     setAreas(null);
     setBusca("");
     try {
-      const as = await invoke<Area[]>("git_host_areas", { id: proveedor });
+      const as = await getGitHostAreas(proveedor);
       setAreas(as);
       if (as.length === 1) void verRepos(proveedor, as[0].key);
     } catch (e) {
@@ -239,7 +231,7 @@ export default function Alcance(props: {
     setBusca("");
     try {
       setRepos(
-        await invoke<RepoRemoto[]>("git_host_projects", { id: proveedor, area }),
+        await getGitHostProjects(proveedor, area),
       );
     } catch (e) {
       decir(e);
@@ -272,7 +264,7 @@ export default function Alcance(props: {
 
   const traerRepo = (proveedor: string, r: RepoRemoto) =>
     void traer(() =>
-      invoke<{ id: string }>("attach_repo", {
+      attachRepo({
         project: "",
         gitHost: proveedor,
         cloneUrl: r.clone_url,
@@ -300,10 +292,10 @@ export default function Alcance(props: {
     const options = props.materialOptions;
     if (esDireccionWeb(t)) {
       return void traer(() =>
-        invoke<{ id: string }>("add_repo_url", { cloneUrl: t }, options),
+        addRepoUrl({ cloneUrl: t }, options),
       );
     }
-    void traer(() => invoke<{ id: string }>("add_folder", { locator: t }, options));
+    void traer(() => addFolder({ locator: t }, options));
   };
 
   async function traerCarpeta() {
@@ -315,7 +307,7 @@ export default function Alcance(props: {
       const ruta = await open({ directory: true, multiple: false });
       if (typeof ruta !== "string") return;
       if (target !== props.materialTarget) throw { what: t("projects.context.target_changed") };
-      await traer(() => invoke<{ id: string }>("add_folder", { locator: ruta }, options), target);
+      await traer(() => addFolder({ locator: ruta }, options), target);
     } catch (e) {
       decir(e);
     }

@@ -2,7 +2,7 @@ import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { copyText } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client";
+import { readDrawioAsset, listIntegrations, openExternal } from "../queries";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { MermaidDiagram } from "../../../../ui/src/Mermaid";
@@ -11,13 +11,11 @@ import type { McpAppCall } from "../model/transcript";
 
 /** Un archivo del visor que instala el plugin `drawio`: `environment/drawio.rs`. */
 function asset(path: string): Promise<string> {
-  return invoke<string>("read_drawio_asset", { path });
+  return readDrawioAsset(path);
 }
 
-type Plugins = { plugins: { id: string; enabled: boolean }[] };
-
 async function pluginActivo(): Promise<boolean> {
-  const catalog = await invoke<Plugins>("list_integrations");
+  const catalog = await listIntegrations();
   return catalog.plugins.some((plugin) => plugin.id === "drawio" && plugin.enabled);
 }
 
@@ -125,7 +123,7 @@ export default function DrawioMcpCanvas(props: { call: McpAppCall }) {
 
   async function abrir() {
     if (!xml) return;
-    await invoke("open_external", { target: drawioEditUrl(xml) }).catch((e) => setFailure(asFailure(e)));
+    await openExternal(drawioEditUrl(xml)).catch((e) => setFailure(asFailure(e)));
   }
 
   return (
