@@ -29,6 +29,7 @@ import {
   TooltipTrigger,
 } from "../../../ui/src/Tooltip";
 import { prosaDe } from "../../../ui/src/Failure";
+import { Pressable } from "../../../ui/src/Pressable";
 
 /**
  * Qué puertos hay escuchando, quién los abrió y qué se puede hacer con ellos.
@@ -237,7 +238,7 @@ export default function PuertosAbiertos(props: {
       <TooltipRoot openDelay={RETARDO_TOOLTIP} placement="bottom">
         <TooltipTrigger
           as={(p: object) => (
-            <button
+            <Pressable
               {...p}
               type="button"
               class="flex size-5 shrink-0 items-center justify-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary disabled:opacity-60"
@@ -253,7 +254,7 @@ export default function PuertosAbiertos(props: {
               }}
             >
               {props2.children}
-            </button>
+            </Pressable>
           )}
         />
         <TooltipContent class="whitespace-nowrap">
@@ -368,7 +369,7 @@ export default function PuertosAbiertos(props: {
           `onOpenChange`. */}
       <PopoverTrigger
         as={(p: object) => (
-          <button
+          <Pressable
             {...p}
             class={cn(
               "flex shrink-0 items-center text-neutral-500 outline-none transition-colors hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary data-[expanded]:bg-surface-muted",
@@ -390,7 +391,7 @@ export default function PuertosAbiertos(props: {
                 {mios() + processes()}
               </span>
             </Show>
-          </button>
+          </Pressable>
         )}
       />
 
@@ -469,8 +470,7 @@ export default function PuertosAbiertos(props: {
               {/* Plegada por omisión: son decenas y no son accionables. Se abre
                   para contestar «¿quién tiene el 3000?», que es la pregunta que
                   trae aquí a alguien cuando lo suyo está vacío. */}
-              <button
-                type="button"
+              <Pressable
                 class="flex w-full items-center gap-1.5 px-3 py-2 text-left text-caption font-semibold uppercase tracking-wide text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
                 aria-expanded={externosAbiertos()}
                 onClick={() => setExternosAbiertos((v) => !v)}
@@ -483,7 +483,7 @@ export default function PuertosAbiertos(props: {
                 </Show>
                 <span>{t("shell.ports.external")}</span>
                 <span class="ml-auto font-mono tabular-nums">{externos()}</span>
-              </button>
+              </Pressable>
               <Show when={externosAbiertos()}>
                 <Show
                   when={datos()?.externos.length}

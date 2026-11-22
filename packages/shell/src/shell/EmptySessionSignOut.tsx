@@ -6,6 +6,7 @@ import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import { emptySessionEmails } from "./empty-session-emails";
 import { confirmEmailClose, emailContextCount } from "./session-close-confirm";
 import { sessionRailState } from "./session-groups";
+import { Pressable } from "../../../ui/src/Pressable";
 
 /** Un correo sin ningún cuadro en el riel pierde su menú de cuenta: su «Cerrar sesión» queda en el pie. */
 export function EmptySessionSignOut(props: { open: string | null; onDone: () => void }) {
@@ -23,10 +24,10 @@ export function EmptySessionSignOut(props: { open: string | null; onDone: () => 
   };
   return <Show when={rows().length}>
     <div class="my-1 h-px bg-border" />
-    <For each={rows()}>{(row) => <button type="button" class={cn(ITEM_DE_MENU, "flex items-center gap-2")} data-empty-session-sign-out={row.family} disabled={busy()} onClick={() => void close(row)}>
+    <For each={rows()}>{(row) => <Pressable class={cn(ITEM_DE_MENU, "flex items-center gap-2")} data-empty-session-sign-out={row.family} disabled={busy()} onClick={() => void close(row)}>
       <LogOut size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
       <span class="min-w-0 flex-1 truncate">{t("shell.workspaces.close_email", { email: row.email ?? "" })}</span>
-    </button>}</For>
+    </Pressable>}</For>
     <Show when={failed()}><p role="alert" class="m-0 px-2 py-1 text-caption text-error-strong">{t("shell.workspaces.sessions_failed")}</p></Show>
   </Show>;
 }

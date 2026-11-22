@@ -8,6 +8,7 @@ import { ProgressBar } from "../../../ui/src/ProgressBar";
 import { type Machine, machineName } from "../../../features/machines/src/queries/store";
 import { UPDATE_FEATURE, active, engineVersion, hasUsage, heaviest, history, leftovers, level, split, topProcesses, updateState } from "./machineUsage";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
+import { Pressable } from "../../../ui/src/Pressable";
 
 /** El título y la carpeta de una tarea de la ventana, si se conocen. */
 export type TaskLookup = (session: string) => { title: string; project?: string } | undefined;
@@ -151,8 +152,7 @@ export function MachineCard(props: {
       data-machine-card={props.machine.id}
       class={cn("rounded-lg border border-border", props.selected && "border-primary/55")}
     >
-    <button
-      type="button"
+    <Pressable
       aria-expanded={props.selected}
       disabled={props.disabled}
       class={cn(
@@ -217,7 +217,7 @@ export function MachineCard(props: {
               : t("shell.machine_panel.off", { when: props.when(props.cachedAt ?? r()!.measured_at) })}
         </span>
       </Show>
-    </button>
+    </Pressable>
       <Show when={(!!version() && !usage()) || (updatable() && (version()?.updateAvailable || update() !== "idle" || !!updateError() || !!rejected()))}>
         <div class={cn("flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-3 pb-2.5 text-caption text-neutral-500", !on() && "opacity-60")} data-machine-engine="">
           <Show when={version()}>
@@ -233,19 +233,19 @@ export function MachineCard(props: {
           <Show when={updatable()}>
             <span class="ml-auto flex items-center gap-1.5">
               <Show when={props.onRefresh}>
-                <button type="button" class="grid size-6 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60"
+                <Pressable class="grid size-6 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-60"
                   aria-label={t("shell.machine_panel.update_check")} title={t("shell.machine_panel.update_check")} disabled={refreshing()} onClick={() => void refresh()}>
                   <RefreshCw size={12} class={refreshing() ? "animate-spin" : undefined} aria-hidden />
-                </button>
+                </Pressable>
               </Show>
               <Show when={update() === "idle" || update() === "sending"}>
-                <button type="button" class={small} disabled={update() === "sending"} onClick={() => void ask(false)}>
+                <Pressable class={small} disabled={update() === "sending"} onClick={() => void ask(false)}>
                   {t("shell.machine_panel.update")}
-                </button>
+                </Pressable>
               </Show>
               <Show when={update() === "scheduled"}>
                 <span role="status" class="text-neutral-950">{t("shell.machine_panel.update_scheduled")}</span>
-                <button type="button" class={small} onClick={() => setLocal("confirm")}>{t("shell.machine_panel.update_now")}</button>
+                <Pressable class={small} onClick={() => setLocal("confirm")}>{t("shell.machine_panel.update_now")}</Pressable>
               </Show>
               <Show when={update() === "now"}>
                 <span role="status" class="text-neutral-950">{t("shell.machine_panel.updating")}</span>
@@ -255,8 +255,8 @@ export function MachineCard(props: {
           <Show when={update() === "confirm"}>
             <span role="alertdialog" aria-label={t("shell.machine_panel.update_now")} class="mt-1 flex w-full flex-wrap items-center gap-2 rounded-md bg-warning/10 px-2 py-1.5 text-warning-strong">
               <span class="min-w-0 flex-1">{t("shell.machine_panel.update_now_confirm")}</span>
-              <button type="button" class={cn(small, "border-error-strong text-error-strong")} onClick={() => void ask(true)}>{t("shell.machine_panel.update_now")}</button>
-              <button type="button" class={small} onClick={() => setLocal("scheduled")}>{t("shell.machine_panel.cancel")}</button>
+              <Pressable class={cn(small, "border-error-strong text-error-strong")} onClick={() => void ask(true)}>{t("shell.machine_panel.update_now")}</Pressable>
+              <Pressable class={small} onClick={() => setLocal("scheduled")}>{t("shell.machine_panel.cancel")}</Pressable>
             </span>
           </Show>
           <Show when={updateError() || rejected()}>
@@ -289,7 +289,7 @@ function TaskRow(props: {
   return (
     <li class={cn("rounded-md", open() && "bg-surface-muted/60")} data-machine-task={props.task.session}>
       <div class="flex min-w-0 items-center gap-2 rounded-md pr-1.5 hover:bg-surface-muted/60">
-        <button type="button" aria-expanded={open()} onClick={() => setOpen((v) => !v)}
+        <Pressable aria-expanded={open()} onClick={() => setOpen((v) => !v)}
           class="min-w-0 flex-1 py-1.5 pl-1.5 text-left outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary">
           <span class="block truncate text-xs font-medium text-neutral-950">{title()}</span>
           <span class="flex min-w-0 flex-wrap items-center gap-x-1.5 text-caption text-neutral-500">
@@ -303,14 +303,14 @@ function TaskRow(props: {
             </Show>
             <span>{t("shell.machine_panel.task.processes", { count: props.task.processes })}</span>
           </span>
-        </button>
+        </Pressable>
         <span class="shrink-0 font-mono text-caption tabular-nums text-neutral-950">{peso(props.task.memory_bytes)}</span>
         <Show when={props.left && props.canStop}>
-          <button type="button" disabled={props.stopping} onClick={() => props.onStop?.()}
+          <Pressable disabled={props.stopping} onClick={() => props.onStop?.()}
             aria-label={t("shell.machine_panel.stop_aria", { title: title() })}
             class="shrink-0 rounded-[5px] border border-border px-2 py-0.5 text-caption text-neutral-950 outline-none hover:border-error-strong hover:text-error-strong focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary disabled:opacity-60">
             {props.stopping ? t("shell.machine_panel.stopping") : t("shell.machine_panel.stop")}
-          </button>
+          </Pressable>
         </Show>
       </div>
       <div class="px-1.5 pb-1.5">

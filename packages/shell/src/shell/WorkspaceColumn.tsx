@@ -24,6 +24,7 @@ import ProfileMenu from "./ProfileMenu";
 import { SessionWorkspaceRows } from "./SessionWorkspaceRows";
 import { sessionRail } from "./session-groups";
 import { sessionVisible } from "./session-rail-view";
+import { Pressable } from "../../../ui/src/Pressable";
 
 /** Cambiar de workspace con un clic y ver, sin entrar, qué espera en cada uno. */
 
@@ -152,7 +153,7 @@ export default function WorkspaceColumn(props: {
           }}
         >
           <p class="m-0 truncate px-2 pt-1 pb-1 text-caption font-medium text-neutral-500">{p.w.name}</p>
-          <button
+          <Pressable
             role="menuitem"
             class={ITEM_DE_MENU}
             onClick={() => {
@@ -161,11 +162,11 @@ export default function WorkspaceColumn(props: {
             }}
           >
             {t("settings.workspaces.manage")}
-          </button>
+          </Pressable>
           <Show when={!active()}>
-            <button role="menuitem" class={ITEM_DE_MENU} onClick={() => (setMenuOf(null), danil.isDanil(p.w.id) ? danil.remove(p.w.id) : hidden.hide(p.w.id))}>
+            <Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => (setMenuOf(null), danil.isDanil(p.w.id) ? danil.remove(p.w.id) : hidden.hide(p.w.id))}>
               {danil.isDanil(p.w.id) ? t("shell.workspaces.remove") : t("shell.workspaces.hide")}
-            </button>
+            </Pressable>
           </Show>
         </PopoverContent>
       </Popover>
@@ -263,9 +264,9 @@ function ColumnFoot(props: {
       </Show>
       {/* Sólo la computadora de esta ventana: en la web la orden iría a una máquina remota. */}
       <Show when={import.meta.env.MODE !== "web"}><KeepAwake /></Show>
-      <button type="button" class={boton} aria-label={t("settings.title")} title={t("settings.title")} onClick={() => props.onSettings()}>
+      <Pressable class={boton} aria-label={t("settings.title")} title={t("settings.title")} onClick={() => props.onSettings()}>
         <SettingsIcon size={17} aria-hidden="true" />
-      </button>
+      </Pressable>
       <ProfileMenu open={props.open} onAccount={() => props.onSettings("cuenta-danil")} onReportarBug={props.onReportarBug} />
     </div>
   );

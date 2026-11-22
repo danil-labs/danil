@@ -15,6 +15,7 @@ import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../
 import type { AttentionState } from "./attention";
 import { NewSpaceForm } from "./SpaceBar";
 import { AttentionBadge } from "./WorkspaceColumn";
+import { Pressable } from "../../../ui/src/Pressable";
 
 /** El tope de `spaces::NAME_MAX_CHARS`. */
 const NOMBRE_MAX = 30;
@@ -109,8 +110,7 @@ export default function SpaceMenu(props: {
                 const elegida = () => space.id === props.activa;
                 const senal = () => (elegida() ? null : props.senal(space.id));
                 return (
-                  <button
-                    type="button"
+                  <Pressable
                     class={cn(ITEM_DE_MENU, "flex items-center gap-2")}
                     data-space={space.id}
                     aria-current={elegida() ? "true" : undefined}
@@ -124,25 +124,24 @@ export default function SpaceMenu(props: {
                     </span>
                     <span class="min-w-0 flex-1 truncate">{spaceName(space)}</span>
                     <Show when={senal()}>{(s) => <AttentionBadge state={s()} />}</Show>
-                  </button>
+                  </Pressable>
                 );
               }}
             </For>
             <div class="my-1 h-px bg-border" />
-            <button type="button" class={cn(ITEM_DE_MENU, "flex items-center gap-2")} onClick={() => setModo({ kind: "new" })}>
+            <Pressable class={cn(ITEM_DE_MENU, "flex items-center gap-2")} onClick={() => setModo({ kind: "new" })}>
               <Plus size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
               {t("spaces.new.title")}
-            </button>
+            </Pressable>
             <Show when={actual()}>
               {(space) => (
                 <>
-                  <button type="button" class={cn(ITEM_DE_MENU, "flex items-center gap-2")} onClick={() => renombrar(space())}>
+                  <Pressable class={cn(ITEM_DE_MENU, "flex items-center gap-2")} onClick={() => renombrar(space())}>
                     <Pencil size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
                     {t("spaces.menu.rename")}
-                  </button>
+                  </Pressable>
                   <Show when={props.spaces.length > 1}>
-                    <button
-                      type="button"
+                    <Pressable
                       class={cn(ITEM_DE_MENU, "flex items-center gap-2 text-error-strong")}
                       onClick={() => {
                         setAbierto(false);
@@ -151,7 +150,7 @@ export default function SpaceMenu(props: {
                     >
                       <Trash2 size={14} aria-hidden="true" class="shrink-0" />
                       {t("spaces.menu.delete")}
-                    </button>
+                    </Pressable>
                   </Show>
                 </>
               )}

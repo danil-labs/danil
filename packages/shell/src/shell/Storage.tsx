@@ -39,6 +39,7 @@ import { UPDATE_FEATURE, USAGE_FEATURE, hasUsage, remember, worst } from "./mach
 import { errorCode } from "../../../../apps/desktop/src/lib/errorCode";
 import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
 import { prosaDe } from "../../../ui/src/Failure";
+import { Pressable } from "../../../ui/src/Pressable";
 
 type Clase = "recuperable" | "git" | "fuente" | "trabajo" | "registro";
 
@@ -573,7 +574,7 @@ export default function Almacenamiento(props: {
       <TooltipRoot openDelay={RETARDO_TOOLTIP} placement="bottom">
         <TooltipTrigger
           as={(p: object) => (
-            <button
+            <Pressable
               {...p}
               type="button"
               class={cn(
@@ -594,7 +595,7 @@ export default function Almacenamiento(props: {
               }}
             >
               {props2.children}
-            </button>
+            </Pressable>
           )}
         />
         <TooltipContent class="whitespace-nowrap">
@@ -647,8 +648,7 @@ export default function Almacenamiento(props: {
     return (
       <li class={cn("group rounded-md", abierta() && "bg-surface-muted/60")}>
         <div class="flex min-w-0 items-center gap-1 rounded-md pr-1.5 hover:bg-surface-muted focus-within:bg-surface-muted">
-          <button
-            type="button"
+          <Pressable
             class="flex min-w-0 flex-1 items-center gap-1.5 py-1.5 pl-1.5 text-left outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
             aria-expanded={abierta()}
             onClick={() =>
@@ -672,7 +672,7 @@ export default function Almacenamiento(props: {
                 <Estado session={props2.t.session} />
               </span>
             </span>
-          </button>
+          </Pressable>
           <span class="shrink-0 font-mono text-xs tabular-nums text-neutral-950 group-hover:hidden group-focus-within:hidden">
             {peso(props2.t.bytes)}
           </span>
@@ -741,18 +741,16 @@ export default function Almacenamiento(props: {
             </For>
 
             <li class="flex flex-wrap items-center gap-2 pt-1.5">
-              <button
-                type="button"
+              <Pressable
                 class="flex items-center gap-1.5 rounded-md border border-border-strong bg-surface px-2 py-1 text-caption font-medium text-neutral-950 outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
                 disabled={!selected()?.active}
                 onClick={() => abrirTarea(props2.t)}
               >
                 <SquareArrowOutUpRight size={12} aria-hidden />
                 {t("shell.storage.open_task")}
-              </button>
+              </Pressable>
               <Show when={tirables().length}>
-                <button
-                  type="button"
+                <Pressable
                   class="flex items-center gap-1.5 rounded-md border border-warning-strong/40 bg-warning/10 px-2 py-1 text-caption font-medium text-warning-strong outline-none hover:bg-warning/20 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary disabled:opacity-60"
                   disabled={!canClean()}
                   onClick={vaciarTodo}
@@ -761,7 +759,7 @@ export default function Almacenamiento(props: {
                   {t("shell.storage.empty_task", {
                     size: peso(props2.t.recuperable),
                   })}
-                </button>
+                </Pressable>
               </Show>
             </li>
 
@@ -787,8 +785,7 @@ export default function Almacenamiento(props: {
     const abiertoG = () => grupoAbierto(props2.g.clave);
     return (
       <li>
-        <button
-          type="button"
+        <Pressable
           class="flex w-full min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1.5 text-left outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
           aria-expanded={abiertoG()}
           onClick={() =>
@@ -813,7 +810,7 @@ export default function Almacenamiento(props: {
               {peso(props2.g.bytes)}
             </span>
           </span>
-        </button>
+        </Pressable>
         <Show when={abiertoG()}>
           <ul class="m-0 list-none pl-3">
             <For each={props2.g.tareas}>{(tarea) => <Fila t={tarea} />}</For>
@@ -952,8 +949,7 @@ export default function Almacenamiento(props: {
             <div class="flex items-center gap-0.5 rounded-md bg-surface-muted p-0.5" role="group">
               <For each={["proyecto", "tarea"] as const}>
                 {(v) => (
-                  <button
-                    type="button"
+                  <Pressable
                     class={cn(
                       "rounded-sm px-2 py-0.5 text-caption outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary",
                       vista() === v
@@ -964,7 +960,7 @@ export default function Almacenamiento(props: {
                     onClick={() => setVista(v)}
                   >
                     {v === "proyecto" ? t("shell.storage.view.by_project") : t("shell.storage.view.by_task")}
-                  </button>
+                  </Pressable>
                 )}
               </For>
             </div>
@@ -1018,8 +1014,7 @@ export default function Almacenamiento(props: {
                 contestar «¿y el resto de dónde sale?», que es la pregunta que
                 deja un total mayor que la suma de las filas. */}
             <section class="border-t border-border">
-              <button
-                type="button"
+              <Pressable
                 class="flex w-full items-center gap-1.5 px-1.5 py-2 text-left text-caption font-semibold uppercase tracking-wide text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary"
                 aria-expanded={compartidoAbierto()}
                 onClick={() => setCompartidoAbierto((v) => !v)}
@@ -1036,7 +1031,7 @@ export default function Almacenamiento(props: {
                     (datos()?.compartido ?? []).reduce((n, s) => n + s.bytes, 0),
                   )}
                 </span>
-              </button>
+              </Pressable>
               <Show when={compartidoAbierto()}>
                 {/* El motor limita esta caché al workspace capturado. */}
                 <ul
@@ -1126,7 +1121,7 @@ export default function Almacenamiento(props: {
           `onOpenChange`. */}
       <PopoverTrigger
         as={(p: object) => (
-          <button
+          <Pressable
             {...p}
             class={cn(
               "relative flex shrink-0 items-center text-neutral-500 outline-none transition-colors hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary data-[expanded]:bg-surface-muted",
@@ -1151,7 +1146,7 @@ export default function Almacenamiento(props: {
                 )} />
               )}
             </Show>
-          </button>
+          </Pressable>
         )}
       />
 
@@ -1205,11 +1200,11 @@ export default function Almacenamiento(props: {
                     <div class="flex items-center gap-1 px-1" role="tablist">
                       <For each={(hasUsage(summaryOf(m.id)?.resources) ? ["memory", "disk"] : ["disk"]) as ("memory" | "disk")[]}>
                         {(v) => (
-                          <button type="button" role="tab" aria-selected={tab() === v} onClick={() => setTabChoice(v)}
+                          <Pressable role="tab" aria-selected={tab() === v} onClick={() => setTabChoice(v)}
                             class={cn("rounded-md px-2.5 py-1 text-xs outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary",
                               tab() === v ? "bg-surface-muted font-semibold text-neutral-950" : "text-neutral-500 hover:text-neutral-950")}>
                             {v === "memory" ? t("shell.machine_panel.tab.memory") : t("shell.machine_panel.tab.disk")}
-                          </button>
+                          </Pressable>
                         )}
                       </For>
                     </div>

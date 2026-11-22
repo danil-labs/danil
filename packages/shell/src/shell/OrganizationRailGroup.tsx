@@ -20,6 +20,7 @@ import { WebOrganizationStep } from "./WebOrganizationStep";
 export type OrganizationRailActions = { sessions: Pick<ReturnType<typeof sessionRail>["sessions"], "sendOptional" | "families" | "close" | "closeEmail">; remove: ReturnType<typeof sessionRail>["remove"] };
 
 import { AttentionBadge } from "./WorkspaceMarks";
+import { Pressable } from "../../../ui/src/Pressable";
 
 export function OrganizationRailGroup(props: { org: RailOrganization; web?: boolean; stacked: boolean; sessions: OrganizationRailActions; active: { workspace: string; context: string } | null; tasksOf: (id: string, context: string) => TaskAttention[]; staleOf?: (id: string, context: string) => boolean; stateLabel: (state: ReturnType<typeof topState>) => string; onOpen: (tile: OrgTile) => void; onManage: () => void; onChange: (action: "pin" | "up" | "down") => void; index: number; count: number; credits: ReturnType<typeof watchOrganizationCredits> }) {
   const [menu, setMenu] = createSignal<{ key: string; stack: boolean; target: HTMLElement; rect: DOMRect } | null>(null);
@@ -53,7 +54,7 @@ export function OrganizationRailGroup(props: { org: RailOrganization; web?: bool
           <KeyedList each={accountRows().filter((row) => !promo() || row.context.context_id === promo())} by={(row) => row.context.context_id}>{(row) => <OrganizationAccountMenu
             web={props.web} stack={menu()?.stack} organizationControls={!menu()?.stack || accountRows().length === 1}
             group={{ context: row().context.context_id, org: props.org.id, name: props.org.name, plan: row().context.plan, role: row().context.role }}
-            notice={<><Show when={row().context.empty_reason}>{(reason) => <p role="status" class="m-0 px-2 py-1 text-caption text-neutral-500">{t(emptyReasonKey(reason()))}</p>}</Show><Show when={props.web && webOrganizationAttention()}><p role="status" class="m-0 px-2 py-1 text-caption text-neutral-500">{t("shell.workspaces.web_organization_required")}</p><button type="button" role="menuitem" class={ITEM_DE_MENU} onClick={() => setOrganizationPicker(true)}>{t("shell.workspaces.choose_organization")}</button></Show></>}
+            notice={<><Show when={row().context.empty_reason}>{(reason) => <p role="status" class="m-0 px-2 py-1 text-caption text-neutral-500">{t(emptyReasonKey(reason()))}</p>}</Show><Show when={props.web && webOrganizationAttention()}><p role="status" class="m-0 px-2 py-1 text-caption text-neutral-500">{t("shell.workspaces.web_organization_required")}</p><Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => setOrganizationPicker(true)}>{t("shell.workspaces.choose_organization")}</Pressable></Show></>}
             email={row().context.email} workspace={row().name} canHide={!active(row())} pinned={props.org.pinned} index={props.index} count={props.count} promo={promo() === row().context.context_id}
             send={props.sessions.sessions.sendOptional} onPromo={() => setPromo(row().context.context_id)}
             onOpen={() => { props.onOpen(row()); dismiss(); }} onManage={() => { dismiss(); props.onManage(); }}

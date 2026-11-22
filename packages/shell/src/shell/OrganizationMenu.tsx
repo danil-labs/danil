@@ -6,6 +6,7 @@ import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import { organizationMenuReady } from "./organization-menu-state";
 import { hasSessionGroups } from "./session-groups";
+import { Pressable } from "../../../ui/src/Pressable";
 
 /** Lo mismo que un `createSignal` sobre el store, sin que el store dependa de Solid. */
 export function useOrganizations(selection: OrganizationSelection) {
@@ -58,8 +59,7 @@ export default function OrganizationMenu(props: { selection: OrganizationSelecti
           >
             <For each={s().items}>
               {(org) => (
-                <button
-                  type="button"
+                <Pressable
                   class={cn(ITEM_DE_MENU, "flex items-center gap-2")}
                   aria-pressed={s().active === org.id}
                   disabled={s().busy}
@@ -77,7 +77,7 @@ export default function OrganizationMenu(props: { selection: OrganizationSelecti
                   <Show when={s().active === org.id}>
                     <Check size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
                   </Show>
-                </button>
+                </Pressable>
               )}
             </For>
           </Show>

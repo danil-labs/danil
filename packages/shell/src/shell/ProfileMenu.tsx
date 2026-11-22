@@ -11,6 +11,7 @@ import DanilFooterEntry from "./DanilFooterEntry";
 import { EmptySessionSignOut } from "./EmptySessionSignOut";
 import { GroupOrganizationWatch } from "./GroupOrganizationWatch";
 import { noteWebAccountMode, usesGroupAccounts } from "./session-menu-mode";
+import { Pressable } from "../../../ui/src/Pressable";
 
 const LegacyProfileMenu = lazy(() => import("./LegacyProfileMenu"));
 
@@ -66,15 +67,14 @@ export default function ProfileMenu(props: {
         <div role="radiogroup" aria-label={t("shell.profile.theme")} class={cn(SEGMENTO, "mx-2 mb-2")}>
           <For each={TEMAS}>
             {(a) => (
-              <button
-                type="button"
+              <Pressable
                 role="radio"
                 aria-checked={tema() === a}
                 class={cn(OPCION, tema() === a && ELEGIDA)}
                 onClick={() => setTema(elegirApariencia(a))}
               >
                 {nombreDeTema(a)}
-              </button>
+              </Pressable>
             )}
           </For>
         </div>
@@ -83,11 +83,10 @@ export default function ProfileMenu(props: {
           <Bug size={12} aria-hidden="true" />
           {t("usage.bug_report")}
         </p>
-        <button type="button" class={ITEM_DE_MENU} onClick={() => { setOpen(false); props.onReportarBug(); }}>
+        <Pressable class={ITEM_DE_MENU} onClick={() => { setOpen(false); props.onReportarBug(); }}>
           {t("usage.bug_report.ask_agent")}
-        </button>
-        <button
-          type="button"
+        </Pressable>
+        <Pressable
           class={ITEM_DE_MENU}
           onClick={() => {
             setOpen(false);
@@ -95,16 +94,16 @@ export default function ProfileMenu(props: {
           }}
         >
           {t("usage.bug_report.open_web")}
-        </button>
+        </Pressable>
         <Show when={capabilities().nativeWindow}><EmptySessionSignOut open={props.open ?? null} onDone={() => setOpen(false)} /></Show>
         <Show when={capabilities().webAccounts}>
           {(cuentas) => (
             <>
               <div class="my-1 h-px bg-border" />
-              <button type="button" class={cn(ITEM_DE_MENU, "flex items-center gap-2")} data-sign-out="" onClick={() => { setOpen(false); cuentas().signOut(); }}>
+              <Pressable class={cn(ITEM_DE_MENU, "flex items-center gap-2")} data-sign-out="" onClick={() => { setOpen(false); cuentas().signOut(); }}>
                 <LogOut size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
                 <span class="min-w-0 flex-1 truncate">{t("danil.account.sign_out")}</span>
-              </button>
+              </Pressable>
             </>
           )}
         </Show>
