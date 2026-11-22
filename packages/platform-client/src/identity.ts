@@ -15,9 +15,8 @@ import { CAPABILITIES_PATH } from "./machines.ts";
 import type { Me, SelectOrganizationResponse } from "./generated/types.ts";
 
 /**
- * Las respuestas del dominio salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7). Lo que el front
- * leía antes y el contrato no trae (`workspace` como cadena en `Me`, `next_cursor` de la lista y
- * `organization`/`workspace` en la respuesta de `select`) es hallazgo para danil-contracts, no un campo aquí.
+ * Las respuestas del dominio salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7), que ya declara
+ * `Me.workspace` como id, `next_cursor` de la lista y `organization`/`workspace` en la respuesta de `select`.
  */
 export type { Me } from "./generated/types.ts";
 

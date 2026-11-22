@@ -1,4 +1,5 @@
 import type { AgentProfile as AgentProfileData } from "../../../../../apps/desktop/src/lib/model.ts";
+import type { Session } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { MentionSources } from "../../../../../apps/desktop/src/lib/mentions.ts";
 import { escritorioDeFila } from "../../../../../apps/desktop/src/lib/spaces.ts";
 import { esProvisional, sameSources, unirFuentes } from "../../../../../apps/desktop/src/lib/taskDraft.ts";
@@ -9,10 +10,9 @@ import { invoke } from "../../../../engine-client/src/client.ts";
 import { canonicalAgentId } from "../../../../ui/src/lib/tasks/agents.ts";
 import { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
+import type { Startup } from "../../../../ui/src/lib/workspace-startup.ts";
 import { batch, createEffect, createMemo, on, onCleanup } from "solid-js";
 
-type Startup = any;
-type Session = any;
 type Deps = {
   adjuntas: () => string[];
   excludedSourceIds: () => string[];

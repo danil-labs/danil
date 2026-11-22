@@ -235,17 +235,47 @@
               }
             }
           },
-          "422": {
-            "description": "Petición inválida",
+          "400": {
+            "description": "Petición inválida: invalid_json, invalid_request, idempotency_key_required (workspaces@deb0096:src/workspace-admin.ts:198-219, 243-252)",
             "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
-              },
+              }
+            }
+          },
+          "409": {
+            "description": "workspace_limit (con limit), runs_on_unsupported, placement_unsupported, idempotency_key_reused",
+            "content": {
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Campo inválido: invalid_name, invalid_placement, invalid_runs_on, runs_on_empty (workspaces@deb0096:src/workspace-admin.ts:209-216)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -259,7 +289,8 @@
           "default": {
             "$ref": "#/components/responses/Error"
           }
-        }
+        },
+        "description": "Solo owner o admin de la organización de la sesión (scope workspaces.manage). JSON mal formado o un campo fuera de lugar es 400; un valor inválido en name, placement o runs_on es 422. Decidir por code (workspaces@deb0096:src/workspace-admin.ts:76-77,198-219,412-431)."
       }
     },
     "/v1/workspaces/select": {
@@ -1167,6 +1198,3213 @@
           }
         }
       }
+    },
+    "/v1/identity/organizations/{org}/members": {
+      "get": {
+        "operationId": "listOrganizationMembers",
+        "summary": "Miembros de la organización (administración)",
+        "tags": [
+          "identity"
+        ],
+        "description": "Solo owner o admin vigente de la organización de la sesión (scope identity.organizations.manage; identity@0e41244:src/service.ts:78-117, src/organization-admin.ts:73-124). Las mutaciones exigen Idempotency-Key (≤ 128) y Content-Type application/json; WorkOS es la autoridad y el resultado se refleja en workspaces antes de responder. Códigos: 400 idempotency_key_required, invalid_json, invalid_organization_request, invalid_cursor; 403 organization_forbidden, organization_admin_required, organization_owner_required, authorization_forbidden; 404 route_not_found, member_not_found; 409 last_organization_owner, last_organization_admin, self_admin_change_requires_other_admin, personal_organization_single_member, invitation_role_conflict, invitation_not_pending, organization_operation_pending, idempotency_key_reused, workos_organization_request_failed; 415 json_required; 503 organization_materialization_pending, organization_authority_unavailable u otros reintentables.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationPath"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^om_[A-Za-z0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Miembros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationMemberList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_cursor",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/organizations/{org}/invitations": {
+      "post": {
+        "operationId": "inviteOrganizationMember",
+        "summary": "Invita a una persona a la organización",
+        "tags": [
+          "identity"
+        ],
+        "description": "Solo owner o admin vigente de la organización de la sesión (scope identity.organizations.manage; identity@0e41244:src/service.ts:78-117, src/organization-admin.ts:73-124). Las mutaciones exigen Idempotency-Key (≤ 128) y Content-Type application/json; WorkOS es la autoridad y el resultado se refleja en workspaces antes de responder. Códigos: 400 idempotency_key_required, invalid_json, invalid_organization_request, invalid_cursor; 403 organization_forbidden, organization_admin_required, organization_owner_required, authorization_forbidden; 404 route_not_found, member_not_found; 409 last_organization_owner, last_organization_admin, self_admin_change_requires_other_admin, personal_organization_single_member, invitation_role_conflict, invitation_not_pending, organization_operation_pending, idempotency_key_reused, workos_organization_request_failed; 415 json_required; 503 organization_materialization_pending, organization_authority_unavailable u otros reintentables. Una organización personal no admite invitaciones (409 personal_organization_single_member); sin asiento libre, el error de facturación.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationPath"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Petición inválida (idempotency_key_required, invalid_json, invalid_organization_request)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Regla de la organización o de idempotencia",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "json_required: falta Content-Type application/json",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Invitación creada o la pendiente equivalente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrganizationInvitation"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/organizations/{org}/members/{user_id}/role": {
+      "post": {
+        "operationId": "setOrganizationMemberRole",
+        "summary": "Cambia el rol de un miembro",
+        "tags": [
+          "identity"
+        ],
+        "description": "Solo owner o admin vigente de la organización de la sesión (scope identity.organizations.manage; identity@0e41244:src/service.ts:78-117, src/organization-admin.ts:73-124). Las mutaciones exigen Idempotency-Key (≤ 128) y Content-Type application/json; WorkOS es la autoridad y el resultado se refleja en workspaces antes de responder. Códigos: 400 idempotency_key_required, invalid_json, invalid_organization_request, invalid_cursor; 403 organization_forbidden, organization_admin_required, organization_owner_required, authorization_forbidden; 404 route_not_found, member_not_found; 409 last_organization_owner, last_organization_admin, self_admin_change_requires_other_admin, personal_organization_single_member, invitation_role_conflict, invitation_not_pending, organization_operation_pending, idempotency_key_reused, workos_organization_request_failed; 415 json_required; 503 organization_materialization_pending, organization_authority_unavailable u otros reintentables.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationPath"
+          },
+          {
+            "$ref": "#/components/parameters/MemberUserId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberRoleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Petición inválida (idempotency_key_required, invalid_json, invalid_organization_request)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Regla de la organización o de idempotencia",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "json_required: falta Content-Type application/json",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Cambio aplicado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberChange"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "member_not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/organizations/{org}/members/{user_id}/remove": {
+      "post": {
+        "operationId": "removeOrganizationMember",
+        "summary": "Quita a un miembro de la organización",
+        "tags": [
+          "identity"
+        ],
+        "description": "Solo owner o admin vigente de la organización de la sesión (scope identity.organizations.manage; identity@0e41244:src/service.ts:78-117, src/organization-admin.ts:73-124). Las mutaciones exigen Idempotency-Key (≤ 128) y Content-Type application/json; WorkOS es la autoridad y el resultado se refleja en workspaces antes de responder. Códigos: 400 idempotency_key_required, invalid_json, invalid_organization_request, invalid_cursor; 403 organization_forbidden, organization_admin_required, organization_owner_required, authorization_forbidden; 404 route_not_found, member_not_found; 409 last_organization_owner, last_organization_admin, self_admin_change_requires_other_admin, personal_organization_single_member, invitation_role_conflict, invitation_not_pending, organization_operation_pending, idempotency_key_reused, workos_organization_request_failed; 415 json_required; 503 organization_materialization_pending, organization_authority_unavailable u otros reintentables. Idempotente: un miembro que ya no está responde removed.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationPath"
+          },
+          {
+            "$ref": "#/components/parameters/MemberUserId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyStrictRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Petición inválida (idempotency_key_required, invalid_json, invalid_organization_request)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Regla de la organización o de idempotencia",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "json_required: falta Content-Type application/json",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Miembro quitado (state removed, role null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberChange"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/organizations/{org}/invitations/{invitation_id}/revoke": {
+      "post": {
+        "operationId": "revokeOrganizationInvitation",
+        "summary": "Revoca una invitación pendiente",
+        "tags": [
+          "identity"
+        ],
+        "description": "Solo owner o admin vigente de la organización de la sesión (scope identity.organizations.manage; identity@0e41244:src/service.ts:78-117, src/organization-admin.ts:73-124). Las mutaciones exigen Idempotency-Key (≤ 128) y Content-Type application/json; WorkOS es la autoridad y el resultado se refleja en workspaces antes de responder. Códigos: 400 idempotency_key_required, invalid_json, invalid_organization_request, invalid_cursor; 403 organization_forbidden, organization_admin_required, organization_owner_required, authorization_forbidden; 404 route_not_found, member_not_found; 409 last_organization_owner, last_organization_admin, self_admin_change_requires_other_admin, personal_organization_single_member, invitation_role_conflict, invitation_not_pending, organization_operation_pending, idempotency_key_reused, workos_organization_request_failed; 415 json_required; 503 organization_materialization_pending, organization_authority_unavailable u otros reintentables.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OrganizationPath"
+          },
+          {
+            "$ref": "#/components/parameters/InvitationId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyStrictRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Petición inválida (idempotency_key_required, invalid_json, invalid_organization_request)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Regla de la organización o de idempotencia",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "json_required: falta Content-Type application/json",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Invitación revocada (idempotente)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationRevoked"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/login": {
+      "get": {
+        "operationId": "webLogin",
+        "summary": "Inicia el login web (AuthKit)",
+        "tags": [
+          "identity"
+        ],
+        "description": "Solo por el borde: exige la cabecera x-danil-login-client que pone el borde; sin ella, 403 login_admission_required. return_to debe estar en la lista configurada (por omisión, la primera). organization_id salta el selector de AuthKit y, si AuthKit lo rechaza, se reintenta sin él (identity@0e41244:src/web-session.ts:104-196; src/worker.ts:117).",
+        "security": [],
+        "parameters": [
+          {
+            "name": "return_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          {
+            "name": "organization_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^org_[A-Za-z0-9]+$"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirección a AuthKit",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "__Host-danil_login (Secure; HttpOnly; SameSite=Lax; Max-Age=600)."
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_return_url, invalid_organization",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "login_admission_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/callback": {
+      "get": {
+        "operationId": "loginCallback",
+        "summary": "Retorno de AuthKit",
+        "tags": [
+          "identity"
+        ],
+        "description": "Común a la web, Desk y Harness según el flujo guardado en state (identity@0e41244:src/web-session.ts:198-380).",
+        "security": [],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Web: identity entrega al borde { session, return_to } (identity@0e41244:src/web-session.ts:370) y el borde fija __Host-danil_session y redirige a return_to."
+          },
+          "200": {
+            "description": "Desk (mode=add o confirmación) o Harness: página HTML de identity con su CSP",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid_login_flow, login_rejected",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Rechazo del callback (el borde oculta el código interno)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/desk/authorize": {
+      "get": {
+        "operationId": "deskAuthorize",
+        "summary": "Inicia el login de Desk (PKCE, RFC 8252)",
+        "tags": [
+          "identity"
+        ],
+        "description": "Solo por el borde: exige la cabecera x-danil-login-client que pone el borde; sin ella, 403 login_admission_required. Cada parámetro una sola vez (identity@0e41244:src/desk.ts:611-712).",
+        "security": [],
+        "parameters": [
+          {
+            "name": "client_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "danil-desktop"
+              ]
+            }
+          },
+          {
+            "name": "redirect_uri",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^http://127\\.0\\.0\\.1:[1-9][0-9]{0,4}/callback$"
+            },
+            "description": "Loopback IPv4 con puerto explícito."
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._~-]{43,512}$"
+            }
+          },
+          {
+            "name": "code_challenge",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{43}$"
+            }
+          },
+          {
+            "name": "code_challenge_method",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "S256"
+              ]
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "add"
+              ]
+            },
+            "description": "Agregar otra cuenta u organización."
+          },
+          {
+            "name": "have",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Ids org_… separados por coma que Desk ya tiene (≤ 50)."
+          },
+          {
+            "name": "install_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Llave de la instalación; reemplaza la familia anterior del mismo cliente."
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirección a AuthKit",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "__Host-danil_login (Secure; HttpOnly; SameSite=Lax; Max-Age=600)."
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request, invalid_redirect_uri",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "login_admission_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/desk/confirm": {
+      "post": {
+        "operationId": "deskConfirm",
+        "summary": "Confirma el login de Desk desde la página de identity",
+        "tags": [
+          "identity"
+        ],
+        "description": "Solo desde la página servida por el borde: exige Origin igual al origen público y la cookie __Host-danil_login (identity@0e41244:src/desk.ts:714-802).",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeskConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Código emitido o paso de SSO/MFA",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeskConfirmResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "selection_empty",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "login_flow_invalid",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "too_many_contexts",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/desk/token": {
+      "post": {
+        "operationId": "deskToken",
+        "summary": "Canjea el código de Desk por tokens",
+        "tags": [
+          "identity"
+        ],
+        "description": "El código se consume antes de comprobarlo: un intento fallido lo quema (identity@0e41244:src/desk.ts:804-922).",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeskTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens de Desk",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeskTokens"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request, invalid_grant",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "too_many_contexts",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/desk/refresh": {
+      "post": {
+        "operationId": "deskRefresh",
+        "summary": "Rota el refresh de Desk",
+        "tags": [
+          "identity"
+        ],
+        "description": "Un refresh ya usado revoca toda la familia. Cada refresh extiende la sesión 30 días (identity@0e41244:src/desk.ts:924-998).",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeskRefreshRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens rotados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeskTokens"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request, invalid_grant",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/desk/qa-exchange": {
+      "post": {
+        "operationId": "deskQaExchange",
+        "summary": "Canje de QA (solo beta)",
+        "tags": [
+          "identity"
+        ],
+        "description": "Cerrado por omisión: sin el flag o fuera de beta responde 404 (identity@0e41244:src/desk.ts:568-596; src/qa-exchange.ts).",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QaExchangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens de Desk de la cuenta de QA",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeskTokens"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "qa_exchange_forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "route_not_found: canje desactivado (producción o sin flag)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/assets/desk-confirm.js": {
+      "get": {
+        "operationId": "getDeskConfirmScript",
+        "summary": "Script de la página de confirmación",
+        "tags": [
+          "identity"
+        ],
+        "description": "Lo carga la página de confirmación de Desk (identity@0e41244:src/desk-page.ts:4; src/desk.ts:601-609).",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Recurso estático (no-store, nosniff)",
+            "content": {
+              "text/javascript": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/assets/auth-page.css": {
+      "get": {
+        "operationId": "getAuthStylesheet",
+        "summary": "Hoja de estilos de las páginas de identity",
+        "tags": [
+          "identity"
+        ],
+        "description": "Lo carga la página de confirmación de Desk (identity@0e41244:src/desk-page.ts:5; src/desk.ts:601-609).",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Recurso estático (no-store, nosniff)",
+            "content": {
+              "text/css": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/machine/token": {
+      "post": {
+        "operationId": "exchangeMachineToken",
+        "summary": "Canjea la credencial de arranque de la VM por un token machine_person",
+        "tags": [
+          "identity"
+        ],
+        "description": "Sin sesión de persona: solo el Bearer de arranque; el cuerpo se ignora y sub y org salen de la credencial firmada (identity@0e41244:src/machine.ts:25,172-231; src/worker.ts:160). El borde decide a qué rutas llega el portador machine_person.",
+        "security": [
+          {
+            "machineBoot": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Token de máquina (sin refresh)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MachineToken"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "invalid_bootstrap_credential (también si la credencial ya vence)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "organization_access_denied: la persona no es miembro activo de la organización",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "method_not_allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited: más de 5 tokens vivos por persona, organización y máquina (Retry-After 60)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Sin MACHINE_BOOT_JWKS configurado u otra dependencia",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/identity/service-jwks": {
+      "get": {
+        "operationId": "getIdentityServiceJwks",
+        "summary": "Llaves públicas de servicio de identity",
+        "tags": [
+          "identity"
+        ],
+        "description": "Verifica los JWS de servicio de identity (iss identity, sub svc:identity, typ danil-service+jwt). Pública, sin base de datos; también admite HEAD (identity@0e41244:src/service-token.ts:17,90-101; src/worker.ts:148).",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "JWKS (cache-control public, max-age=300)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicJwks"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "method_not_allowed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "service_keys_not_configured: el anillo no está configurado; reintentar más tarde (regla 10)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}": {
+      "patch": {
+        "operationId": "updateWorkspace",
+        "summary": "Edita nombre o dónde corre un workspace",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Solo owner o admin de la organización de la sesión (scope workspaces.manage; workspaces@deb0096:src/service.ts:291-313). Errores comunes: 403 organization_selection_required, admin_required (harness_admin_required desde Harness); 400 invalid_json, invalid_request, idempotency_key_required; 422 invalid_name, invalid_placement, invalid_runs_on, runs_on_empty. Sin cambios devuelve el workspace tal cual (workspaces@deb0096:src/workspace-admin.ts:76-85,432-457).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyOptional"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkspaceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_json, invalid_request, if_version_required, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "version_conflict (con version vigente), workspace_archived, runs_on_unsupported, placement_unsupported, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid_name, invalid_placement, invalid_runs_on, runs_on_empty, invalid_visibility, visibility_unsupported",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/archive": {
+      "post": {
+        "operationId": "archiveWorkspace",
+        "summary": "Archiva un workspace (idempotente)",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Solo owner o admin de la organización de la sesión (scope workspaces.manage; workspaces@deb0096:src/service.ts:291-313). Errores comunes: 403 organization_selection_required, admin_required (harness_admin_required desde Harness); 400 invalid_json, invalid_request, idempotency_key_required; 422 invalid_name, invalid_placement, invalid_runs_on, runs_on_empty. Cuerpo vacío o {}. No hay DELETE (workspaces@deb0096:src/workspace-admin.ts:458-477).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyOptional"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyStrictRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_json, invalid_request, if_version_required, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "409 workspace_last_active: el último activo no se archiva.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/restore": {
+      "post": {
+        "operationId": "restoreWorkspace",
+        "summary": "Restaura un workspace archivado (idempotente)",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Solo owner o admin de la organización de la sesión (scope workspaces.manage; workspaces@deb0096:src/service.ts:291-313). Errores comunes: 403 organization_selection_required, admin_required (harness_admin_required desde Harness); 400 invalid_json, invalid_request, idempotency_key_required; 422 invalid_name, invalid_placement, invalid_runs_on, runs_on_empty. Cuerpo vacío o {}. No hay DELETE (workspaces@deb0096:src/workspace-admin.ts:478-499).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyOptional"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyStrictRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Workspace",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_json, invalid_request, if_version_required, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "409 workspace_moved, workspace_not_archived, workspace_limit.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/preferences": {
+      "get": {
+        "operationId": "getWorkspacePreferences",
+        "summary": "Preferencias de workspaces de la persona",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Fila de la persona en la organización del JWT; sin organización, 404 no_organization o no_workspace_access (workspaces@deb0096:src/service.ts:275-289; src/preferences.ts).",
+        "responses": {
+          "200": {
+            "description": "Preferencias (version 0 y added vacío si no hay fila)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspacePreferences"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "put": {
+        "operationId": "seedWorkspacePreferences",
+        "summary": "Siembra única de las preferencias",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Fila de la persona en la organización del JWT; sin organización, 404 no_organization o no_workspace_access (workspaces@deb0096:src/service.ts:275-289; src/preferences.ts).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyOptional"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeedWorkspacePreferences"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Sembrada (o repetición con la misma clave y cuerpo)"
+          },
+          "400": {
+            "description": "invalid_request, invalid_idempotency_key",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "description": "already_initialized (con version), idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid_if_version, invalid_workspace_id, empty_seed, too_many",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/preferences/added/{engine_workspace_id}": {
+      "put": {
+        "operationId": "addWorkspacePreference",
+        "summary": "Agrega un workspace del motor a la lista (idempotente)",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Fila de la persona en la organización del JWT; sin organización, 404 no_organization o no_workspace_access (workspaces@deb0096:src/service.ts:275-289; src/preferences.ts). La Idempotency-Key se ignora.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EngineWorkspaceId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Hecho"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "description": "invalid_workspace_id, too_many (tope 500)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeWorkspacePreference",
+        "summary": "Quita un workspace del motor de la lista (idempotente)",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Fila de la persona en la organización del JWT; sin organización, 404 no_organization o no_workspace_access (workspaces@deb0096:src/service.ts:275-289; src/preferences.ts). La Idempotency-Key se ignora.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EngineWorkspaceId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Hecho"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "422": {
+            "description": "invalid_workspace_id, too_many (tope 500)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/transfers/incoming": {
+      "get": {
+        "operationId": "listIncomingTransfers",
+        "summary": "Traslados entrantes a la organización",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Traslado de un workspace entre organizaciones; solo owners y admins (workspaces@deb0096:src/workspace-transfer.ts:29-40). Una solicitud vence a los 15 minutos.",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Traslados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomingTransferList"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_cursor",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/transfers": {
+      "post": {
+        "operationId": "requestWorkspaceTransfer",
+        "summary": "Solicita trasladar un workspace a otra organización",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Traslado de un workspace entre organizaciones; solo owners y admins (workspaces@deb0096:src/workspace-transfer.ts:29-40). Una solicitud vence a los 15 minutos. 403 transfer_admin_required_in_destination si quien pide no administra el destino.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransferRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Traslado pendiente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceTransfer"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Repetición o traslado pendiente equivalente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceTransfer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_json, invalid_request, if_version_required, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "workspace_not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "workspace_archived, engine_workspace_unassigned, version_conflict, transfer_pending, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid_target: la organización destino es la misma",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/transfers/{transfer_id}/{action}": {
+      "post": {
+        "operationId": "settleWorkspaceTransfer",
+        "summary": "Acepta, rechaza o cancela un traslado",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Traslado de un workspace entre organizaciones; solo owners y admins (workspaces@deb0096:src/workspace-transfer.ts:29-40). Una solicitud vence a los 15 minutos.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TransferId"
+          },
+          {
+            "$ref": "#/components/parameters/TransferAction"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKeyOptional"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyStrictRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Traslado resuelto; al aceptar trae el workspace nuevo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceTransfer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_json, invalid_request, if_version_required, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "transfer_not_found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "transfer_expired, transfer_<estado>, transfer_requester_revoked, workspace_archived, workspace_last_active, version_conflict, workspace_limit, id_taken",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/adopt/challenge": {
+      "post": {
+        "operationId": "createAdoptionChallenge",
+        "summary": "Reto de posesión para adoptar un workspace del motor",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Solo Desk (azp danil-desktop): cualquier otro portador, 403 carrier_not_allowed. Solo owners y admins de una organización personal; sin WORKSPACE_ADOPTION=proof responde 503 adoption_disabled (workspaces@deb0096:src/workspace-adopt.ts:42-47,127; src/service.ts:291-294).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdoptChallengeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Challenge"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid_engine_workspace_id",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "adoption_disabled",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/adopt": {
+      "post": {
+        "operationId": "adoptWorkspace",
+        "summary": "Adopta un workspace creado en el motor local",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Solo Desk (azp danil-desktop): cualquier otro portador, 403 carrier_not_allowed. Solo owners y admins de una organización personal; sin WORKSPACE_ADOPTION=proof responde 503 adoption_disabled (workspaces@deb0096:src/workspace-adopt.ts:42-47,127; src/service.ts:291-294). La respuesta añade possession.jkt (workspaces@deb0096:src/workspace-adopt.ts:243).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdoptWorkspaceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Adoptado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Ya adoptado con la misma llave (o restaurado)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "adoption_proof_required, invalid_json, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "id_taken, adoption_limit (con limit), adoption_requires_personal, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid_engine_workspace_id, invalid_name",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "adoption_disabled",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/free-router": {
+      "get": {
+        "operationId": "getFreeRouter",
+        "summary": "Oferta, política y consentimiento del Free Router",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Free Router del workspace (workspaces@deb0096:src/free-router.ts:21,176-198). Sin acceso al workspace, 403 no_access. Las mutaciones exigen Idempotency-Key (≤ 128 bytes).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "invalid_request, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "revision_conflict, not_offered, engine_workspace_mismatch, engine_workspace_unassigned, assignment_conflict, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "free_router_unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Estado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeRouterState"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/free-router/offer": {
+      "put": {
+        "operationId": "setFreeRouterOffer",
+        "summary": "Activa o desactiva la oferta (owner o admin)",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Free Router del workspace (workspaces@deb0096:src/free-router.ts:21,176-198). Sin acceso al workspace, 403 no_access. Las mutaciones exigen Idempotency-Key (≤ 128 bytes).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeRouterOfferRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "invalid_request, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "revision_conflict, not_offered, engine_workspace_mismatch, engine_workspace_unassigned, assignment_conflict, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "free_router_unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Oferta",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeRouterOffer"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/free-router/consent": {
+      "put": {
+        "operationId": "acceptFreeRouterConsent",
+        "summary": "Acepta la política vigente",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Free Router del workspace (workspaces@deb0096:src/free-router.ts:21,176-198). Sin acceso al workspace, 403 no_access. Las mutaciones exigen Idempotency-Key (≤ 128 bytes).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeRouterConsentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "invalid_request, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "revision_conflict, not_offered, engine_workspace_mismatch, engine_workspace_unassigned, assignment_conflict, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "free_router_unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Consentimiento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeRouterConsent"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "withdrawFreeRouterConsent",
+        "summary": "Retira el consentimiento",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Free Router del workspace (workspaces@deb0096:src/free-router.ts:21,176-198). Sin acceso al workspace, 403 no_access. Las mutaciones exigen Idempotency-Key (≤ 128 bytes).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "invalid_request, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "revision_conflict, not_offered, engine_workspace_mismatch, engine_workspace_unassigned, assignment_conflict, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "free_router_unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Consentimiento",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeRouterConsent"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/free-router/grant": {
+      "post": {
+        "operationId": "issueFreeRouterGrant",
+        "summary": "Emite un pase del Free Router",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Free Router del workspace (workspaces@deb0096:src/free-router.ts:21,176-198). Sin acceso al workspace, 403 no_access. Las mutaciones exigen Idempotency-Key (≤ 128 bytes). 403 consent_required, consent_revoked, binding_required.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeRouterGrantRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "invalid_request, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "revision_conflict, not_offered, engine_workspace_mismatch, engine_workspace_unassigned, assignment_conflict, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "free_router_unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Pase",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeRouterGrant"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/free-router/engine-workspaces/{engine_workspace_id}/challenge": {
+      "post": {
+        "operationId": "createFreeRouterChallenge",
+        "summary": "Reto para vincular el motor",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Free Router del workspace (workspaces@deb0096:src/free-router.ts:21,176-198). Sin acceso al workspace, 403 no_access. Las mutaciones exigen Idempotency-Key (≤ 128 bytes).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/EngineWorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmptyStrictRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "invalid_request, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "revision_conflict, not_offered, engine_workspace_mismatch, engine_workspace_unassigned, assignment_conflict, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "free_router_unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Reto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Challenge"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/free-router/engine-workspaces/{engine_workspace_id}": {
+      "put": {
+        "operationId": "bindFreeRouterEngine",
+        "summary": "Vincula el motor con la prueba del reto",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Free Router del workspace (workspaces@deb0096:src/free-router.ts:21,176-198). Sin acceso al workspace, 403 no_access. Las mutaciones exigen Idempotency-Key (≤ 128 bytes). 403 binding_proof_invalid.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/EngineWorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FreeRouterBindRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "invalid_request, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "revision_conflict, not_offered, engine_workspace_mismatch, engine_workspace_unassigned, assignment_conflict, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "free_router_unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Vínculo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeRouterBinding"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "releaseFreeRouterEngine",
+        "summary": "Libera el motor del workspace (owner o admin)",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Free Router del workspace (workspaces@deb0096:src/free-router.ts:21,176-198). Sin acceso al workspace, 403 no_access. Las mutaciones exigen Idempotency-Key (≤ 128 bytes).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/EngineWorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "invalid_request, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "revision_conflict, not_offered, engine_workspace_mismatch, engine_workspace_unassigned, assignment_conflict, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "free_router_unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Hecho"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/{id}/free-router/engine-workspaces/{engine_workspace_id}/bindings/{binding_id}": {
+      "delete": {
+        "operationId": "unbindFreeRouterEngine",
+        "summary": "Quita un vínculo propio",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Free Router del workspace (workspaces@deb0096:src/free-router.ts:21,176-198). Sin acceso al workspace, 403 no_access. Las mutaciones exigen Idempotency-Key (≤ 128 bytes).",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AccountId"
+          },
+          {
+            "$ref": "#/components/parameters/EngineWorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/BindingId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "invalid_request, idempotency_key_required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "revision_conflict, not_offered, engine_workspace_mismatch, engine_workspace_unassigned, assignment_conflict, idempotency_key_reused",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "rate_limited (Retry-After)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "free_router_unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Hecho"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/v1/workspaces/.well-known/free-router-jwks.json": {
+      "get": {
+        "operationId": "getFreeRouterJwks",
+        "summary": "JWKS público de los pases del Free Router",
+        "tags": [
+          "workspaces"
+        ],
+        "description": "Única ruta pública de workspaces: ruta exacta, sin query, GET o HEAD (workspaces@deb0096:src/free-router.ts:19,61-81; src/service.ts:247-253).",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "JWKS (cache-control public, max-age=30)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicJwks"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "free_router_unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1181,6 +4419,12 @@
         "type": "http",
         "scheme": "bearer",
         "description": "Portador de sesión (Desk)."
+      },
+      "machineBoot": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Credencial de arranque de la VM que emite machine-provisioning (typ danil-boot+jwt, iss machine-provisioning, aud identity, vida ≤ 1 h)."
       }
     },
     "parameters": {
@@ -1231,6 +4475,95 @@
         "required": true,
         "schema": {
           "type": "string"
+        }
+      },
+      "OrganizationPath": {
+        "name": "org",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^org_[A-Za-z0-9]+$"
+        },
+        "description": "Organización de la sesión; otra da 403 organization_forbidden."
+      },
+      "MemberUserId": {
+        "name": "user_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^user_[A-Za-z0-9]+$"
+        }
+      },
+      "InvitationId": {
+        "name": "invitation_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^invitation_[A-Za-z0-9]+$"
+        }
+      },
+      "IdempotencyKeyOptional": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "description": "Opcional: si llega, se honra con recibo (misma clave y otro cuerpo, 409 idempotency_key_reused)."
+      },
+      "AccountId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,18}$"
+        },
+        "description": "Id del workspace (fila de tenancy.accounts), p. ej. \"12\"."
+      },
+      "TransferId": {
+        "name": "transfer_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "TransferAction": {
+        "name": "action",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "accept",
+            "decline",
+            "cancel"
+          ]
+        },
+        "description": "accept y decline los decide un admin del destino; cancel, uno del origen."
+      },
+      "EngineWorkspaceId": {
+        "name": "engine_workspace_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,128}$"
+        }
+      },
+      "BindingId": {
+        "name": "binding_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
         }
       }
     },
@@ -1389,15 +4722,11 @@
             "type": "string"
           },
           "workspace": {
-            "description": "Workspace activo si lo hay; forma no verificada.",
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/Workspace"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Id del workspace de la sesión (claim `workspace` del acceso), o null si no hay contexto. Es un identificador, no el objeto Workspace (identity: me_profile, migración 025)."
           },
           "organizations": {
             "type": "array",
@@ -1424,11 +4753,13 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/OrganizationRef"
-            }
+            },
+            "description": "Organizaciones activas de la persona con plan y role, ordenadas por nombre e id (identity@0e41244:src/organizations.ts:26-35)."
           },
           "organizations": {
             "type": "array",
-            "description": "Alias posible; la forma exacta no está documentada.",
+            "deprecated": true,
+            "description": "Identity no lo devuelve (identity@0e41244:src/organizations.ts:61 responde solo items, next_cursor y active_organization_id); usar items. Se conserva solo por compatibilidad (regla 10).",
             "items": {
               "$ref": "#/components/schemas/OrganizationRef"
             }
@@ -1437,10 +4768,19 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Organización de la sesión (claim org), o null si la sesión no tiene organización."
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cursor opaco de la página siguiente; null si no hay más. Hoy identity devuelve siempre null (lista completa)."
           }
         },
-        "additionalProperties": true
+        "additionalProperties": true,
+        "description": "Respuesta de GET /v1/identity/organizations: { items, next_cursor, active_organization_id } (identity@0e41244:src/organizations.ts:61)."
       },
       "SelectOrganizationRequest": {
         "type": "object",
@@ -1461,7 +4801,20 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "deprecated": true,
+            "description": "Identity no lo devuelve; usar organization.id. Se conserva solo por compatibilidad (regla 10)."
+          },
+          "organization": {
+            "$ref": "#/components/schemas/OrganizationRef",
+            "description": "Organización elegida, con plan y role."
+          },
+          "workspace": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Workspace de la sesión tras elegir; hoy identity devuelve null y el workspace se elige con POST /v1/workspaces/select."
           }
         },
         "additionalProperties": true
@@ -1480,12 +4833,98 @@
           },
           "role": {
             "type": "string"
+          },
+          "engine_workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Id del workspace en el motor. Se omite si aún no está asignado o si la fila es de una organización distinta de la de la sesión."
+          },
+          "runs_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "personal",
+                "cloud"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Dónde puede correr, efectivo (sin nube permitida, solo personal)."
+          },
+          "runs_on_saved": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "personal",
+                "cloud"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Lo guardado, solo cuando difiere del efectivo porque la organización ya no permite nube."
+          },
+          "placement": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "member_computer u organization_machine; un valor desconocido se lee como organization_machine."
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": true,
+            "description": "Derivado de runs_on; se conserva para los clientes que aún lo leen."
+          },
+          "state": {
+            "type": "string",
+            "description": "active o archived (enumeración abierta)."
+          },
+          "archived": {
+            "type": "boolean",
+            "description": "Solo true, cuando state es archived."
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "source_version; se manda como if_version al editar o trasladar."
+          },
+          "visibility": {
+            "type": "string",
+            "description": "Siempre organization; se conserva por compatibilidad."
+          },
+          "moved_from": {
+            "type": "object",
+            "properties": {
+              "org": {
+                "type": "string"
+              },
+              "account_id": {
+                "type": "string"
+              }
+            },
+            "description": "Origen de un workspace trasladado.",
+            "additionalProperties": true
+          },
+          "possession": {
+            "type": "object",
+            "properties": {
+              "jkt": {
+                "type": "string"
+              }
+            },
+            "description": "Solo en la respuesta de adopción: huella de la llave del motor.",
+            "additionalProperties": true
           }
         },
         "required": [
           "id"
         ],
-        "additionalProperties": true
+        "additionalProperties": true,
+        "description": "DTO de workspaces (workspaces@deb0096:src/workspace-admin.ts:164-178; src/service.ts:189-201)."
       },
       "WorkspaceList": {
         "type": "object",
@@ -1501,6 +4940,24 @@
             "items": {
               "$ref": "#/components/schemas/Workspace"
             }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cursor opaco de la página siguiente (páginas de 50; se envía como ?cursor=); null si no hay más."
+          },
+          "empty_reason": {
+            "type": "string",
+            "description": "Solo cuando items está vacío. Enumeración abierta; hoy: no_organization (la sesión no tiene organización) o no_workspace_access (sin membresía en ningún workspace). Un valor desconocido se trata como vacío sin causa conocida."
+          },
+          "active_workspace_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Workspace activo de la sesión, o null si no hay."
           }
         },
         "additionalProperties": true
@@ -1509,16 +4966,49 @@
         "type": "object",
         "properties": {
           "name": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Se recorta; sin caracteres de control."
           },
           "org": {
-            "type": "string"
+            "type": "string",
+            "deprecated": true,
+            "description": "Workspaces lo ignora: la organización es la de la sesión."
+          },
+          "placement": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "member_computer u organization_machine; un valor desconocido se lee como organization_machine."
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": true,
+            "description": "Heredado; si llega con runs_on, deben coincidir."
+          },
+          "runs_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "personal",
+                "cloud"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Por omisión, personal y cloud si la organización permite nube."
           }
         },
         "required": [
           "name"
         ],
-        "additionalProperties": true
+        "additionalProperties": true,
+        "description": "workspaces@deb0096:src/workspace-admin.ts:140."
       },
       "SelectWorkspaceRequest": {
         "type": "object",
@@ -2006,6 +5496,1038 @@
             "type": "string"
           }
         }
+      },
+      "OrganizationMember": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^om_[A-Za-z0-9]+$",
+            "description": "Membresía en WorkOS; es el cursor de la lista."
+          },
+          "user_id": {
+            "type": "string",
+            "pattern": "^user_[A-Za-z0-9]+$"
+          },
+          "organization_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "Hoy solo active."
+          },
+          "role": {
+            "type": "object",
+            "properties": {
+              "slug": {
+                "type": "string",
+                "description": "owner, admin, member, guest… (abierto)."
+              }
+            },
+            "required": [
+              "slug"
+            ],
+            "additionalProperties": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "user_id"
+        ],
+        "description": "Miembro tal como lo lee identity de WorkOS (identity@0e41244:src/organization-workos.ts:7-14).",
+        "additionalProperties": true
+      },
+      "SeatNotice": {
+        "type": "object",
+        "properties": {
+          "membership_id": {
+            "type": "string"
+          },
+          "notice": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Incidencia de asiento de facturación (últimas 20) (identity@0e41244:src/organization-admin.ts:131-143).",
+        "additionalProperties": true
+      },
+      "OrganizationMemberList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrganizationMember"
+            },
+            "description": "Páginas de 50, ordenadas por id."
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "id om_… del último de la página; se envía como ?cursor=. null si no hay más."
+          },
+          "notices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeatNotice"
+            }
+          }
+        },
+        "description": "identity@0e41244:src/organization-admin.ts:145-149.",
+        "additionalProperties": true
+      },
+      "InviteMemberRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 320
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "member",
+              "guest"
+            ],
+            "description": "Una invitación nunca da owner."
+          }
+        },
+        "required": [
+          "email",
+          "role"
+        ],
+        "description": "Cuerpo estricto: un campo desconocido da 400 invalid_organization_request (identity@0e41244:src/organization-admin.ts:163).",
+        "additionalProperties": false
+      },
+      "OrganizationInvitation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^invitation_[A-Za-z0-9]+$"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "organization_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "description": "pending, accepted, revoked o expired."
+          },
+          "role_slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "description": "identity@0e41244:src/organization-workos.ts:15-21; una invitación pendiente al mismo correo y rol se devuelve tal cual.",
+        "additionalProperties": true
+      },
+      "MemberRoleRequest": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "owner",
+              "admin",
+              "member",
+              "guest"
+            ],
+            "description": "owner solo lo asigna un owner."
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "description": "Cuerpo estricto (identity@0e41244:src/organization-admin.ts:164).",
+        "additionalProperties": false
+      },
+      "EmptyStrictRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Objeto vacío {}; cualquier campo da 400."
+      },
+      "MemberChange": {
+        "type": "object",
+        "properties": {
+          "sub": {
+            "type": "string",
+            "description": "user_id del miembro."
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Rol nuevo; null al quitar."
+          },
+          "state": {
+            "type": "string",
+            "description": "active o removed."
+          }
+        },
+        "description": "identity@0e41244:src/organization-admin.ts:240.",
+        "additionalProperties": true
+      },
+      "InvitationRevoked": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "description": "revoked."
+          }
+        },
+        "description": "identity@0e41244:src/organization-admin.ts:219.",
+        "additionalProperties": true
+      },
+      "DeskContext": {
+        "type": "object",
+        "properties": {
+          "context_id": {
+            "type": "string"
+          },
+          "org": {
+            "type": "string"
+          },
+          "org_name": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string"
+          },
+          "free": {
+            "type": "boolean",
+            "description": "Por compatibilidad; acompaña a personal."
+          },
+          "personal": {
+            "type": "boolean"
+          },
+          "workspaces": {
+            "description": "\"all\", \"later\" o lista de engine_workspace_id.",
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "all",
+                  "later"
+                ]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          }
+        },
+        "required": [
+          "context_id",
+          "org"
+        ],
+        "description": "Contexto creado al agregar organizaciones (mode=add) (identity@0e41244:src/desk-add.ts:235-243).",
+        "additionalProperties": true
+      },
+      "DeskSelection": {
+        "type": "array",
+        "maxItems": 50,
+        "description": "Organizaciones elegidas en la página de agregar (identity@0e41244:src/desk-add.ts:40-42).",
+        "items": {
+          "type": "object",
+          "properties": {
+            "org": {
+              "type": "string",
+              "pattern": "^org_[A-Za-z0-9]+$"
+            },
+            "workspaces": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "all",
+                    "later"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 500,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "org",
+            "workspaces"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "DeskTokens": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "Opaco; Bearer del borde."
+          },
+          "token_type": {
+            "type": "string",
+            "description": "Bearer."
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "Segundos; hoy 300."
+          },
+          "refresh_token": {
+            "type": "string",
+            "description": "Opaco, de un solo uso: reutilizarlo revoca la familia."
+          },
+          "sid": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string",
+            "description": "Id público de la familia para el llavero de Desk; no es credencial."
+          },
+          "contexts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DeskContext"
+            },
+            "description": "Solo en el canje de mode=add."
+          },
+          "available_contexts": {
+            "type": "integer",
+            "description": "Solo en refresh: organizaciones activas sin contexto en esta familia."
+          }
+        },
+        "required": [
+          "access_token",
+          "refresh_token"
+        ],
+        "description": "identity@0e41244:src/desk.ts:165-173.",
+        "additionalProperties": true
+      },
+      "DeskConfirmRequest": {
+        "type": "object",
+        "properties": {
+          "confirm_token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/DeskSelection"
+          }
+        },
+        "required": [
+          "confirm_token"
+        ],
+        "additionalProperties": true
+      },
+      "DeskConfirmResponse": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "redirect_uri loopback con code y state."
+          },
+          "step": {
+            "type": "string",
+            "description": "org_auth cuando una organización elegida exige SSO o MFA."
+          },
+          "org": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "description": "Login anidado de esa organización."
+          }
+        },
+        "description": "{ location } (identity@0e41244:src/desk.ts:793-801) o { step: \"org_auth\", org, url } (identity@0e41244:src/desk.ts:776-780).",
+        "additionalProperties": true
+      },
+      "DeskTokenRequest": {
+        "type": "object",
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "enum": [
+              "authorization_code"
+            ]
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "code_verifier": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._~-]{43,128}$"
+          },
+          "redirect_uri": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "client_id": {
+            "type": "string",
+            "enum": [
+              "danil-desktop"
+            ]
+          }
+        },
+        "required": [
+          "grant_type",
+          "code",
+          "code_verifier",
+          "redirect_uri",
+          "client_id"
+        ],
+        "additionalProperties": true
+      },
+      "DeskRefreshRequest": {
+        "type": "object",
+        "properties": {
+          "grant_type": {
+            "type": "string",
+            "enum": [
+              "refresh_token"
+            ]
+          },
+          "refresh_token": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "client_id": {
+            "type": "string",
+            "enum": [
+              "danil-desktop"
+            ]
+          }
+        },
+        "required": [
+          "grant_type",
+          "refresh_token",
+          "client_id"
+        ],
+        "additionalProperties": true
+      },
+      "QaExchangeRequest": {
+        "type": "object",
+        "properties": {
+          "refresh_token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "refresh_token"
+        ],
+        "additionalProperties": true
+      },
+      "MachineToken": {
+        "type": "object",
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "description": "Opaco; identity solo guarda su SHA-256."
+          },
+          "token_type": {
+            "type": "string",
+            "description": "Bearer."
+          },
+          "carrier": {
+            "type": "string",
+            "description": "machine_person."
+          },
+          "expires_in": {
+            "type": "integer",
+            "description": "Segundos; ≤ 600 y nunca más que la credencial de arranque."
+          },
+          "expires_at": {
+            "type": "integer",
+            "description": "Epoch en segundos."
+          },
+          "sub": {
+            "type": "string",
+            "description": "Persona de la credencial."
+          },
+          "org": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token"
+        ],
+        "description": "identity@0e41244:src/machine.ts:222-230.",
+        "additionalProperties": true
+      },
+      "PublicJwks": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kty": {
+                  "type": "string",
+                  "enum": [
+                    "EC"
+                  ]
+                },
+                "crv": {
+                  "type": "string",
+                  "enum": [
+                    "P-256"
+                  ]
+                },
+                "x": {
+                  "type": "string"
+                },
+                "y": {
+                  "type": "string"
+                },
+                "kid": {
+                  "type": "string"
+                },
+                "alg": {
+                  "type": "string",
+                  "enum": [
+                    "ES256"
+                  ]
+                },
+                "use": {
+                  "type": "string",
+                  "enum": [
+                    "sig"
+                  ]
+                }
+              },
+              "required": [
+                "kty",
+                "crv",
+                "x",
+                "y",
+                "kid"
+              ],
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ],
+        "description": "JWKS público (sin parte privada); 1 o 2 llaves durante una rotación por kid.",
+        "additionalProperties": true
+      },
+      "UpdateWorkspaceRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "placement": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "member_computer u organization_machine; un valor desconocido se lee como organization_machine."
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "additionalProperties": true
+          },
+          "runs_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "personal",
+                "cloud"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "owner"
+            ],
+            "deprecated": true,
+            "description": "organization no cambia nada; owner da 422 visibility_unsupported."
+          },
+          "if_version": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Versión leída; otra da 409 version_conflict con la vigente."
+          }
+        },
+        "required": [
+          "if_version"
+        ],
+        "description": "workspaces@deb0096:src/workspace-admin.ts:141-148.",
+        "additionalProperties": true
+      },
+      "WorkspacePreferences": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "added": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Se omite si no hay fila (version 0)."
+          }
+        },
+        "required": [
+          "version",
+          "added"
+        ],
+        "description": "Preferencias de UI de la persona en su organización (workspaces@deb0096:src/preferences.ts:94-100).",
+        "additionalProperties": true
+      },
+      "SeedWorkspacePreferences": {
+        "type": "object",
+        "properties": {
+          "added": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,128}$"
+            }
+          },
+          "if_version": {
+            "type": "integer",
+            "enum": [
+              0
+            ]
+          }
+        },
+        "required": [
+          "added",
+          "if_version"
+        ],
+        "description": "Siembra única; los repetidos se quitan conservando el orden.",
+        "additionalProperties": false
+      },
+      "WorkspaceTransfer": {
+        "type": "object",
+        "properties": {
+          "transfer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "account_id": {
+            "type": "string"
+          },
+          "from_org": {
+            "type": "string"
+          },
+          "to_org": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "description": "pending, accepted, declined, cancelled o expired (abierto)."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "new_account_id": {
+            "type": "string"
+          },
+          "workspace": {
+            "$ref": "#/components/schemas/Workspace"
+          }
+        },
+        "required": [
+          "transfer_id"
+        ],
+        "description": "workspaces@deb0096:src/workspace-transfer.ts:62-72; workspace solo al aceptar (src/workspace-transfer.ts:354).",
+        "additionalProperties": true
+      },
+      "IncomingTransfer": {
+        "type": "object",
+        "properties": {
+          "transfer_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "account_id": {
+            "type": "string"
+          },
+          "workspace_name": {
+            "type": "string"
+          },
+          "from_org": {
+            "type": "string"
+          },
+          "from_org_name": {
+            "type": "string"
+          },
+          "to_org": {
+            "type": "string"
+          },
+          "to_org_name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "transfer_id"
+        ],
+        "description": "workspaces@deb0096:src/workspace-transfer.ts:97-101.",
+        "additionalProperties": true
+      },
+      "IncomingTransferList": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncomingTransfer"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "transfer_id del último; ?cursor=. Páginas de 50."
+          }
+        },
+        "description": "workspaces@deb0096:src/workspace-transfer.ts:104-108.",
+        "additionalProperties": true
+      },
+      "TransferRequest": {
+        "type": "object",
+        "properties": {
+          "to_org": {
+            "type": "string",
+            "pattern": "^org_[A-Za-z0-9]+$"
+          },
+          "if_version": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "to_org",
+          "if_version"
+        ],
+        "description": "workspaces@deb0096:src/workspace-transfer.ts:42-45.",
+        "additionalProperties": true
+      },
+      "Challenge": {
+        "type": "object",
+        "properties": {
+          "nonce": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "nonce"
+        ],
+        "description": "Reto de un solo uso (60 s).",
+        "additionalProperties": true
+      },
+      "AdoptChallengeRequest": {
+        "type": "object",
+        "properties": {
+          "engine_workspace_id": {
+            "type": "string",
+            "pattern": "^[0-9a-hjkmnp-tv-z]{8}$"
+          }
+        },
+        "required": [
+          "engine_workspace_id"
+        ],
+        "additionalProperties": true
+      },
+      "PossessionProof": {
+        "type": "object",
+        "properties": {
+          "nonce": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "jwk": {
+            "description": "Llave pública del motor."
+          },
+          "sig": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,128}$"
+          }
+        },
+        "required": [
+          "nonce",
+          "jwk",
+          "sig"
+        ],
+        "additionalProperties": true
+      },
+      "AdoptWorkspaceRequest": {
+        "type": "object",
+        "properties": {
+          "engine_workspace_id": {
+            "type": "string",
+            "pattern": "^[0-9a-hjkmnp-tv-z]{8}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "proof": {
+            "$ref": "#/components/schemas/PossessionProof"
+          }
+        },
+        "required": [
+          "engine_workspace_id",
+          "name",
+          "proof"
+        ],
+        "description": "workspaces@deb0096:src/workspace-adopt.ts:61-71; runs_on no se admite.",
+        "additionalProperties": true
+      },
+      "FreeRouterState": {
+        "type": "object",
+        "properties": {
+          "offered": {
+            "type": "boolean",
+            "description": "Sin fila de oferta, true."
+          },
+          "policy": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "integer"
+              },
+              "policy_id": {
+                "type": "string"
+              },
+              "providers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "consent": {
+            "type": "object",
+            "properties": {
+              "accepted": {
+                "type": "boolean"
+              },
+              "revision": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": true
+          },
+          "legacy_hint": {
+            "type": "boolean"
+          }
+        },
+        "description": "workspaces@deb0096:src/free-router.ts:573-584.",
+        "additionalProperties": true
+      },
+      "FreeRouterOfferRequest": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "enabled",
+          "revision"
+        ],
+        "additionalProperties": true
+      },
+      "FreeRouterOffer": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": true
+      },
+      "FreeRouterConsentRequest": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "policy_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "providers": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        },
+        "required": [
+          "revision",
+          "version",
+          "policy_id",
+          "providers"
+        ],
+        "additionalProperties": true
+      },
+      "FreeRouterConsent": {
+        "type": "object",
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": true
+      },
+      "FreeRouterBindRequest": {
+        "type": "object",
+        "properties": {
+          "nonce": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "jwk": {
+            "description": "Llave pública del motor (estricta)."
+          },
+          "sig": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce",
+          "jwk",
+          "sig"
+        ],
+        "additionalProperties": true
+      },
+      "FreeRouterBinding": {
+        "type": "object",
+        "properties": {
+          "assignment_id": {
+            "type": "string"
+          },
+          "binding_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": true
+      },
+      "FreeRouterGrantRequest": {
+        "type": "object",
+        "properties": {
+          "binding_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nonce": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,128}$"
+          }
+        },
+        "required": [
+          "binding_id",
+          "nonce"
+        ],
+        "additionalProperties": true
+      },
+      "FreeRouterGrant": {
+        "type": "object",
+        "properties": {
+          "grant": {
+            "type": "string",
+            "description": "Pase firmado (ES256), verificable con el JWKS del Free Router; ≤ 120 s."
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "grant"
+        ],
+        "additionalProperties": true
       }
     }
   }

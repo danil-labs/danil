@@ -1,6 +1,7 @@
 import { sendIdentityMe } from "../../../platform-client/src/identity.ts";
 import { accountId as asAccountId, type PendingUnions } from "./account-transfers.ts";
 import { WORKSPACES_ADOPT_CHALLENGE_PATH, WORKSPACES_ADOPT_PATH, workspacesPagePath } from "../../../platform-client/src/workspaces.ts";
+import type { Workspace, WorkspaceList } from "../../../platform-client/src/workspaces.ts";
 
 /** Un workspace local que se puede adoptar en la organización personal (`adoption_candidates`). */
 type AdoptionCandidate = { id: string; name: string; created_at?: number; adoptable?: boolean; reason?: string };
@@ -68,9 +69,9 @@ async function platformByEngine(send: Send, context: string): Promise<Map<string
   do {
     const reply = await send(context, "GET", workspacesPagePath(cursor)).catch(() => null);
     if (!reply || reply.status !== 200) return null;
-    const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
+    const body = reply.body as WorkspaceList;
     for (const raw of body.items ?? []) {
-      const row = raw as { id?: unknown; engine_workspace_id?: unknown };
+      const row = raw;
       const account = asAccountId(row.id);
       if (account && typeof row.engine_workspace_id === "string" && row.engine_workspace_id) found.set(row.engine_workspace_id, account);
     }
@@ -173,7 +174,7 @@ export async function adoptLocals(
     }
     const stop = stopCause(reply);
     if (stop) return { adopted, already, refused, failed, unavailable: true, cause: stop, attempted };
-    const body = reply.body as { id?: unknown; code?: unknown; engine_workspace_id?: unknown; org?: unknown; possession?: { jkt?: unknown } } | undefined;
+    const body = reply.body as Workspace | undefined;
     if (reply.status === 409) {
       const reason = typeof body?.code === "string" ? body.code : "conflict";
       if (reason === "id_taken") {
