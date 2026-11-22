@@ -167,6 +167,7 @@ import { PendingHandoff, handoffStatus } from "../components/thread/PendingHando
 import type { HandoffPresentation } from "../../../../ui/src/lib/handoff.ts";
 import { RegistroDeTrabajo } from "../components/activity/TurnActivity";
 import { Pressable } from "../../../../ui/src/Pressable";
+import { OpenSenderTask } from "../components/OpenSenderTask";
 
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
 const SelectorDeModelo = sharedLazy(() => import("../components/ModelPicker"));
@@ -3673,18 +3674,7 @@ function FilaDeLaBandeja(props: {
         <span class="break-words">
           {prosaDeLaFila(props.msg.meta ?? "", tarea()?.title ?? null, props.msg.woke_by?.length ?? 0)}
           <Show when={props.onOpenTask ? tarea() : null}>
-            {(sender) => (
-              <>
-                {" — "}
-                <Pressable
-                  class="cursor-pointer underline underline-offset-2"
-                  aria-label={t("chat.recipients.open_task", { title: sender().title })}
-                  onClick={() => props.onOpenTask?.(sender().folder, sender().task, sender().machine)}
-                >
-                  {t("chat.task_completed.open")}
-                </Pressable>
-              </>
-            )}
+            {(sender) => <OpenSenderTask sender={sender} onOpenTask={props.onOpenTask} />}
           </Show>
         </span>
         <Show when={informe()}>
@@ -3751,18 +3741,7 @@ function HitoDelHilo(props: {
             )}
           </Show>
           <Show when={props.onOpenTask ? props.msg.fromTask : null}>
-            {(sender) => (
-              <>
-                {" — "}
-                <Pressable
-                  class="cursor-pointer underline underline-offset-2"
-                  aria-label={t("chat.recipients.open_task", { title: sender().title })}
-                  onClick={() => props.onOpenTask?.(sender().folder, sender().task, sender().machine)}
-                >
-                  {t("chat.task_completed.open")}
-                </Pressable>
-              </>
-            )}
+            {(sender) => <OpenSenderTask sender={sender} onOpenTask={props.onOpenTask} />}
           </Show>
         </span>
         <Show
