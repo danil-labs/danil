@@ -8,7 +8,8 @@
  * El canal de datos no pasa por aquí: va directo al relay con el ticket, solo a un origen exacto (`DEFAULT_RELAY_ORIGINS`).
  */
 import { type CapabilityList, type Computer, type Fetch, announces, capabilityList, mayCall } from "@terminus/computers";
-import { type MachinesAnswer, machineToComputer, machinesClient, wokeOf as platformWokeOf } from "../../../../platform-client/src/machines.ts";
+import { machineToComputer, machinesClient, wokeOf as platformWokeOf } from "../../../../platform-client/src/machines.ts";
+import type { MachinesAnswer } from "../../../../platform-client/src/machines-config.ts";
 
 import { cancelEdgeWrites as platformCancelEdgeWrites, edgeUntil, type EdgeMethod, type EdgeReply as NativeReply, type Patience } from "../../../../platform-client/src/client.ts";
 import { capabilitiesUrl } from "../../../../platform-client/src/machines.ts";

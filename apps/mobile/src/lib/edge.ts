@@ -18,8 +18,8 @@ import {
   edgeIdentity,
   edgeTransport,
 } from "@terminus/computers";
+import type { Admission as MachineAdmission } from "../../../../packages/platform-client/src/machines-config.ts";
 import {
-  type Admission as MachineAdmission,
   DEFAULT_RELAY_ORIGINS,
   machineToComputer,
   machinesClient,

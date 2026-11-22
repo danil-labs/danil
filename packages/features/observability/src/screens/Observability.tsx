@@ -4,13 +4,17 @@ import {
   getAgentsViewStatus,
 } from "../queries.ts";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onMount, Show, type JSX } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
-import Sitio from "../../../sites/src/screens/Site";
 import { prosaDe } from "../../../../ui/src/Failure";
 
-export default function Observability(props: { onManage: () => void }) {
+export interface ObservabilityProps {
+  onManage: () => void;
+  renderSite: (url: string) => JSX.Element;
+}
+
+export default function Observability(props: ObservabilityProps) {
   const [url, setUrl] = createSignal<string | null>(null);
   const [unavailable, setUnavailable] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -63,7 +67,7 @@ export default function Observability(props: { onManage: () => void }) {
         </Show>
       </main>
     }>
-      {(connected) => <Sitio url={connected()} visible />}
+      {(connected) => props.renderSite(connected())}
     </Show>
   );
 }
