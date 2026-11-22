@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cardPull, type TaskGit } from "../src/lib/tasks.ts";
+import { cardPull, type TaskGit } from "../../src/lib/tasks/index.ts";
 
 const git = (pull: Partial<NonNullable<TaskGit["pull"]>> = {}, rest: Partial<TaskGit> = {}): TaskGit => ({
   head: "abc",
@@ -47,7 +47,7 @@ test("git viejo: el número sigue, pero en gris y sin rojo", () => {
 });
 
 test("finalizar requiere la revisión integrada exacta y un estado vigente", async () => {
-  const { canFinishTask } = await import("../src/lib/tasks.ts");
+  const { canFinishTask } = await import("../../src/lib/tasks/index.ts");
   const merged = git({ state: "merged" }, { kind: "branch" });
   assert.equal(canFinishTask({}, merged, false), true);
   for (const status of [git({}, { kind: "branch" }), { ...merged, head: "nuevo" }, { ...merged, stale: true }, { ...merged, pull_known: false }, undefined]) {
@@ -60,7 +60,7 @@ test("finalizar requiere la revisión integrada exacta y un estado vigente", asy
 });
 
 test("una subtarea hereda el Git de su dueña conservando la carpeta compartida", async () => {
-  const { canFinishTask, resolveTaskGit } = await import("../src/lib/tasks.ts");
+  const { canFinishTask, resolveTaskGit } = await import("../../src/lib/tasks/index.ts");
   const root = { id: "root" };
   const child = { id: "child", parent: "root", subagent: "native" };
   const merged = git({ state: "merged" }, { kind: "branch" });

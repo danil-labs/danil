@@ -11,7 +11,7 @@ Exporta desde `src/index.ts`:
 
 ## Qué consume
 - `@danil/engine-client`, `@danil/platform-client`, `@danil/ui`.
-- `@terminus/computers`, `@danil/ui` (`src/lib/tasks.ts`), `@terminus/protocol`, `apps/desktop`.
+- `@terminus/computers`, `@danil/ui` (`src/lib/tasks/index.ts`), `@terminus/protocol`, `apps/desktop`.
 
 ## Qué contratos toca
 - Rutas `/v1` del borde: `/v1/credentials/*` y `/v1/identity/*` vía `platform-client`.

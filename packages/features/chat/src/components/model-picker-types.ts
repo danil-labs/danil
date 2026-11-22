@@ -1,4 +1,4 @@
-import { danilServiceOf } from "../../../../ui/src/lib/tasks.ts";
+import { danilServiceOf } from "../../../../ui/src/lib/tasks/index.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { agruparModelos, type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";

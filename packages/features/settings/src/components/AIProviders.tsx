@@ -2,7 +2,7 @@ import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { PiezasDeAjustes } from "../model/features-port";
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
-import { FREE_ROUTER_OPENCODE } from "../../../../ui/src/lib/tasks.ts";
+import { FREE_ROUTER_OPENCODE } from "../../../../ui/src/lib/tasks/index.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote } from "../../../../ui/src/Failure";

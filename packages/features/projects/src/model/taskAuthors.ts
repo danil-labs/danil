@@ -43,5 +43,5 @@ export function authorKeys(rows: AuthorRow[], groupByHandler = false): string[] 
   );
 }
 
-// Si la tarea es subtarea de otra y no va en el riel: la misma regla en el teléfono (`packages/ui/src/lib/tasks.ts`).
-export { isSubtask } from "../../../../ui/src/lib/tasks.ts";
+// Si la tarea es subtarea de otra y no va en el riel: la misma regla en el teléfono (`packages/ui/src/lib/tasks/index.ts`).
+export { isSubtask } from "../../../../ui/src/lib/tasks/index.ts";

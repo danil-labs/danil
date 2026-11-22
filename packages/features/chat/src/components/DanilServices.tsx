@@ -1,5 +1,5 @@
 import Check from "lucide-solid/icons/check";
-import type { RouterOfferState } from "../../../../ui/src/lib/tasks.ts";
+import type { RouterOfferState } from "../../../../ui/src/lib/tasks/index.ts";
 import { createResource, Show, type JSX } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";

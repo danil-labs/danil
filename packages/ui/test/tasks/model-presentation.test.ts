@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { modelPresentation, routerDiscovery, routerAvailable, routerOfferState } from "../src/lib/tasks/model-presentation.ts";
-import { modelName } from "../src/lib/tasks/preview.ts";
+import { modelPresentation, routerDiscovery, routerAvailable, routerOfferState } from "../../src/lib/tasks/model-presentation.ts";
+import { modelName } from "../../src/lib/tasks/preview.ts";
 
 test("Beam has its creator tag and concise label without changing its exact id", () => {
   for (const id of ["danil-free/reflection/beam-free", "reflection/beam-free"]) {

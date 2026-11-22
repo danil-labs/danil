@@ -28,7 +28,7 @@ export type Superficie = {
 };
 
 // Las reglas de qué modelo es de qué superficie y cuál se enseña las comparte
-// el teléfono (`packages/ui/src/lib/tasks.ts`); aquí quedan con su nombre de la ventana.
+// el teléfono (`packages/ui/src/lib/tasks/index.ts`); aquí quedan con su nombre de la ventana.
 export { surfaceHas as esDe, menuSurfaces as paraElMenu, surfaceOf as superficieDe } from "../../../../packages/ui/src/lib/tasks/surfaces.ts";
 
 /**

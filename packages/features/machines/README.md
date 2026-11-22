@@ -12,7 +12,7 @@ Exporta desde `src/index.ts`:
 
 ## Qué consume
 - `@danil/platform-client`, `@danil/engine-client`, `@danil/ui`.
-- `@terminus/computers`, `@terminus/fleet`, `@terminus/carry`, `@danil/ui` (`src/lib/tasks.ts`).
+- `@terminus/computers`, `@terminus/fleet`, `@terminus/carry`, `@danil/ui` (`src/lib/tasks/index.ts`).
 - `apps/desktop`.
 
 ## Qué contratos toca

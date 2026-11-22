@@ -18,5 +18,5 @@ export * from "./transcript-render.ts";
  */
 export { mcpCallFromName };
 
-/** El modelo que se muestra al abrir una tarea; la misma regla en el teléfono (`packages/ui/src/lib/tasks.ts`). */
+/** El modelo que se muestra al abrir una tarea; la misma regla en el teléfono (`packages/ui/src/lib/tasks/index.ts`). */
 export { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";

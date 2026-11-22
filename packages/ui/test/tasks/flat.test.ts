@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { delegatedAttention, delegatedFamilies, delegatedOf, flattenTasks, launcherOf, withFamilyActivity } from "../src/lib/tasks.ts";
+import { delegatedAttention, delegatedFamilies, delegatedOf, flattenTasks, launcherOf, withFamilyActivity } from "../../src/lib/tasks/index.ts";
 
 const row = (id: string, created_at: number, extra: object = {}) => ({ id, created_at, ...extra });
 

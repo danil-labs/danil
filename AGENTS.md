@@ -31,7 +31,7 @@ which is not here.
 | `apps/desktop/` | The window: Tauri 2 (Rust) with a SolidJS front. The installers ship it. | [apps/desktop/AGENTS.md](apps/desktop/AGENTS.md) |
 | `apps/mobile/` | The iOS and Android app (Expo) and its development bridge. | [apps/mobile/AGENTS.md](apps/mobile/AGENTS.md) |
 | `packages/design` | Shim for `apps/mobile` only: re-exports the task states, marks, words, colors and type and radius scale that now live in `packages/ui/src` (3.6a). | — |
-| `packages/tasks` | Shim for `apps/mobile` only: re-exports the task list, filter and grouping, two-line card and agents dock that now live in `packages/ui/src/lib/tasks.ts` (3.6b). | — |
+| `packages/tasks` | Shim for `apps/mobile` only: re-exports the task list, filter and grouping, two-line card and agents dock that now live in `packages/ui/src/lib/tasks/index.ts` (3.6b). | — |
 | `packages/chat` | How every client reads an agent message: links, the visual directive, next steps, tool steps and the HTML sandbox. | — |
 | `packages/attention` | The Inbox, channels and customization of the phone, over the same-origin BFF. | — |
 | `packages/computers` | Danil Machines from any client: control-plane API, relay session (WebSocket injected) and wake rules. The `/v1/machines` client is not here: it lives in `packages/platform-client/src/machines.ts`. | — |

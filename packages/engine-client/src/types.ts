@@ -195,7 +195,7 @@ export type SessionRow = {
   handoff_parent?: string | null;
   /** Por qué no cuelga de quien le cedió; un motor viejo no lo manda. */
   handoff_issue?: "missing_source" | "contradictory" | "cycle" | null;
-  /** Hija de una delegación entre máquinas; un motor viejo no lo manda (`packages/ui/src/lib/tasks.ts` `remote.ts`). */
+  /** Hija de una delegación entre máquinas; un motor viejo no lo manda (`packages/ui/src/lib/tasks/index.ts` `remote.ts`). */
   remote_parent?: { machine: string; workspace?: string | null; task: string; request_id?: string | null } | null;
   stage?: "in_progress" | "review" | "done" | null;
 };

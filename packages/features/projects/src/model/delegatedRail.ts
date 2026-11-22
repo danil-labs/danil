@@ -1,5 +1,5 @@
 import { taskPriority } from "../../../../ui/src/index";
-import { delegatedAttention } from "../../../../ui/src/lib/tasks.ts";
+import { delegatedAttention } from "../../../../ui/src/lib/tasks/index.ts";
 import type { SessionRow } from "../screens/Sessions";
 
 export { delegatedAttention };

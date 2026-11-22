@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { canonicalAgentId, FREE_ROUTER_OPENCODE, isFreeRouterAgent, isFreeRouterModel, isRetiredAgent, OPENCODE } from "../src/lib/tasks.ts";
+import { canonicalAgentId, FREE_ROUTER_OPENCODE, isFreeRouterAgent, isFreeRouterModel, isRetiredAgent, OPENCODE } from "../../src/lib/tasks/index.ts";
 
 test("opencode-zen pasa a opencode, o al Free Router si su modelo es gratuito", () => {
   assert.equal(canonicalAgentId("opencode-zen"), OPENCODE);

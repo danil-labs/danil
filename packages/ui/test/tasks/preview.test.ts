@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { modelName, previewLabel, taskPreview, taskTitle } from "../src/lib/tasks.ts";
+import { modelName, previewLabel, taskPreview, taskTitle } from "../../src/lib/tasks/index.ts";
 
 const row = { id: "t1", title: "Revisar el checkout", esperando: false, folder: "p1", agent: "Ada", provider: "claude", model: "claude-opus-5-5", last_message: "  Listo, abrí el PR.  " };
 
