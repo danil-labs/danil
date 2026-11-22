@@ -22,12 +22,7 @@ import Square from "lucide-solid/icons/square";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
-import {
-  RETARDO_TOOLTIP,
-  TooltipContent,
-  TooltipRoot,
-  TooltipTrigger,
-} from "../../../ui/src/Tooltip";
+import { TooltipAction } from "../../../ui/src/TooltipAction";
 import { prosaDe } from "../../../ui/src/Failure";
 import { Pressable } from "../../../ui/src/Pressable";
 
@@ -235,32 +230,9 @@ export default function PuertosAbiertos(props: {
     children: JSX.Element;
   }) {
     return (
-      <TooltipRoot openDelay={RETARDO_TOOLTIP} placement="bottom">
-        <TooltipTrigger
-          as={(p: object) => (
-            <Pressable
-              {...p}
-              type="button"
-              class="flex size-5 shrink-0 items-center justify-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary disabled:opacity-60"
-              disabled={props2.disabled}
-              aria-label={props2.etiqueta}
-              // Reenvía el clic del disparador antes de hacer lo suyo: Kobalte
-              // no compone manejadores como hacía Radix con `asChild`, así que
-              // un `onClick` encima del `{...p}` borra el que cierra el globo.
-              // Lo comprueba `tests/unit/triggers.test.mjs`.
-              onClick={(e: MouseEvent) => {
-                (p as { onClick?: (e: MouseEvent) => void }).onClick?.(e);
-                props2.onClick();
-              }}
-            >
-              {props2.children}
-            </Pressable>
-          )}
-        />
-        <TooltipContent class="whitespace-nowrap">
-          {props2.etiqueta}
-        </TooltipContent>
-      </TooltipRoot>
+      <TooltipAction class="flex size-5 shrink-0 items-center justify-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary disabled:opacity-60" etiqueta={props2.etiqueta} onClick={props2.onClick} disabled={props2.disabled}>
+        {props2.children}
+      </TooltipAction>
     );
   }
 
