@@ -8,7 +8,7 @@ import { Match, Show, Switch } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import { type TaskActivity, markedState, taskPriority } from "@terminus/design";
+import { type TaskActivity, markedState, taskPriority } from "../../../../ui/src/index";
 
 export function taskLabel(state: ReturnType<typeof taskPriority>, folded = false) {
     switch (state) {

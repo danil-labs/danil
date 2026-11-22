@@ -27,7 +27,6 @@
     "@terminus/carry": "workspace:*",
     "@terminus/chat": "workspace:*",
     "@terminus/computers": "workspace:*",
-    "@terminus/design": "workspace:*",
     "@terminus/fleet": "workspace:*",
     "@terminus/protocol": "workspace:*",
     "@terminus/tasks": "workspace:*",

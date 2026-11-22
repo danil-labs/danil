@@ -1,4 +1,4 @@
-import { taskPriority } from "@terminus/design";
+import { taskPriority } from "../../../../ui/src/index";
 import { delegatedAttention } from "@terminus/tasks";
 import type { SessionRow } from "../screens/Sessions";
 

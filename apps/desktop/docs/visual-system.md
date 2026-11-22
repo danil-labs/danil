@@ -39,7 +39,7 @@ títulos. Las fuentes están empaquetadas y sus licencias están en `CREDITS.md`
 
 Los colores, radios, sombras y la escala de texto salen de tokens; los tamaños
 se escriben `text-2xs`, `text-caption`, `text-label`, `text-ui`, `text-body` y
-`text-lead`, definidos en `packages/design/src/scale.ts` y repetidos en
+`text-lead`, definidos en `packages/ui/src/scale.ts` y repetidos en
 `global.css`. La separación usa la escala de Tailwind. Anchos de panel, `z-index`
 y duraciones todavía no tienen tokens propios.
 Los controles asumen el preflight de Tailwind. `cva` define variantes; `cn` combina

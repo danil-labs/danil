@@ -3,7 +3,7 @@
  * web: una tarjeta por correo y tipo de suscripción confirmado, con las
  * máquinas donde tiene sesión. Sin tipo conocido no se unen credenciales.
  */
-import { word } from "../../design/src/index.ts";
+import { word } from "../../ui/src/index.ts";
 
 type Lang = "es" | "en";
 

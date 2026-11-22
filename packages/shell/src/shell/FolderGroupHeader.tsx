@@ -8,7 +8,7 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import type { Project } from "../../../../apps/desktop/src/lib/model";
 import { PROJECT_NAME_MAX_LENGTH } from "../../../../apps/desktop/src/lib/projectNames";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
-import { rolledOutcome } from "@terminus/design";
+import { rolledOutcome } from "../../../ui/src/index";
 import { Button } from "../../../ui/src/Button";
 import { Input } from "../../../ui/src/Input";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";

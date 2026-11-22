@@ -3,7 +3,7 @@
  * El nuevo Danil se abre cuenta por cuenta: no hay prueba ni cobro aquí, solo la solicitud por correo.
  */
 import "../../../../../apps/desktop/src/locales/danilPhrases";
-import { ACCESS_CONTACT, accessMailto } from "@terminus/design";
+import { ACCESS_CONTACT, accessMailto } from "../../../../ui/src/index";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";

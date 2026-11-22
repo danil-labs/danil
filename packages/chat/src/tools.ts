@@ -5,10 +5,10 @@
  * Claude antepone `mcp__<servidor>__`, y algunos CLIs usan `<servidor>·<tool>`.
  * El servidor es la clave con la que la persona lo declaró (`github`,
  * `figma-escritorio`), y de ahí sale la marca y el nombre que se lee en la
- * fila. El mapa de servidores a servicios vive en `@terminus/design`
+ * fila. El mapa de servidores a servicios vive en `packages/ui`
  * (`toolMarkId`), porque es el mismo en todos los clientes.
  */
-import { commandMarkId, TOOL_LABELS, toolLabel, toolMarkId, type ToolMarkId } from "../../design/src/index.ts";
+import { commandMarkId, TOOL_LABELS, toolLabel, toolMarkId, type ToolMarkId } from "../../ui/src/index.ts";
 import { commandMarkProgram } from "./command.ts";
 
 /** El servidor y su herramienta, ya separados. */

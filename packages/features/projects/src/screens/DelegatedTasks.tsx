@@ -11,7 +11,7 @@ import { DelegatedSkeleton } from "../components/DelegatedSkeleton";
 import { DelegatedReference } from "../components/DelegatedReference";
 import { delegatedRailRows } from "../model/delegatedRail";
 import { type TaskTreeRow, taskDescendants } from "@terminus/tasks";
-import { taskPriority } from "@terminus/design";
+import { taskPriority } from "../../../../ui/src/index";
 import { delegatedAttention } from "../model/delegatedRail";
 
 export { delegatedAttention } from "../model/delegatedRail";

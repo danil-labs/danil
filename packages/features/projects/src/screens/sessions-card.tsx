@@ -14,7 +14,7 @@ import { displayName } from "../queries/profiles";
 import EtapaDeTarea from "./TaskStage";
 import EstadoDeTarea from "./TaskStatus";
 import { sharesTaskGit } from "../queries/taskGit";
-import type { TaskActivity } from "@terminus/design";
+import type { TaskActivity } from "../../../../ui/src/index";
 import { taskCard } from "@terminus/tasks";
 import { shortTaskTime, type SessionRow, type SessionsProps } from "./sessions-model";
 import type { SessionsState } from "./sessions-state";

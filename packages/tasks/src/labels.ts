@@ -1,9 +1,9 @@
 /**
- * Las frases de la vista con las palabras compartidas de `@terminus/design`.
+ * Las frases de la vista con las palabras compartidas de `packages/ui`.
  * El escritorio arma las mismas con su `t()` y sus catálogos; el guard
  * `shared-design` comprueba que las palabras coinciden.
  */
-import { word } from "../../design/src/index.ts";
+import { word } from "../../ui/src/index.ts";
 import type { DockAgent } from "./dock.ts";
 import type { SidebarGroup, SidebarGrouping, SidebarSection, SidebarSort, SidebarStatusKey, SidebarView } from "./view.ts";
 

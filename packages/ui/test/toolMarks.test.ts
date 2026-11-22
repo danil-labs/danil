@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { TOOL_LABELS, commandMarkId, commandName, toolLabel, toolMarkId, toolMonogram } from "../src/toolMarks.ts";
+import { TOOL_LABELS, commandMarkId, commandName, toolLabel, toolMarkId, toolMonogram } from "../src/toolMarkNames.ts";
 import { TOOL_MARKS } from "../src/toolMarksData.ts";
 
 test("cada marca tiene nombre, caja y al menos un trazo con relleno o color del texto", () => {

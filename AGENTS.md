@@ -30,7 +30,7 @@ which is not here.
 |---|---|---|
 | `apps/desktop/` | The window: Tauri 2 (Rust) with a SolidJS front. The installers ship it. | [apps/desktop/AGENTS.md](apps/desktop/AGENTS.md) |
 | `apps/mobile/` | The iOS and Android app (Expo) and its development bridge. | [apps/mobile/AGENTS.md](apps/mobile/AGENTS.md) |
-| `packages/design` | Task states, marks, status and list words, folder colors, theme colors, and the type and radius scale both apps use. | — |
+| `packages/design` | Shim for `apps/mobile` only: re-exports the task states, marks, words, colors and type and radius scale that now live in `packages/ui/src` (3.6a). | — |
 | `packages/tasks` | The task list both apps derive: flat list, filter and grouping, two-line card, agents dock. | — |
 | `packages/chat` | How every client reads an agent message: links, the visual directive, next steps, tool steps and the HTML sandbox. | — |
 | `packages/attention` | The Inbox, channels and customization of the phone, over the same-origin BFF. | — |
@@ -202,7 +202,7 @@ the pnpm workspace: it installs with npm from its own folder.
 
 - Code both apps need goes in `packages/`, not in a copy inside one app.
 - The source of the look is `packages/ui/src/styles/global.css` (it moved
-  there from `apps/desktop/src/styles/` in the front move) and its catalogs. `packages/design` repeats what other clients need, and the
+  there from `apps/desktop/src/styles/` in the front move) and its catalogs. `packages/ui/src/index.ts` (tokens, marks and words) repeats what other clients need, and the
   `shared-design` guard fails when the two drift.
 - Packages are TypeScript sources without a build step; imports inside them
   carry the `.ts` extension so Node can load them directly.
