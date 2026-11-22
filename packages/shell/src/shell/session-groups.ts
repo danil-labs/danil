@@ -1,4 +1,4 @@
-import { workspaceCatalog } from "../../../platform-client/src/workspaces.ts";
+import { sessionWorkspaceCatalog, workspaceCatalog } from "../../../platform-client/src/workspaces.ts";
 import type { WorkspaceAddLink } from "../../../../apps/desktop/src/lib/workspace-add-link.ts";
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
@@ -6,7 +6,6 @@ import { bridgePersonSession } from "../../../session/src/person-session.ts";
 import { capabilities } from "../../../host/src/platform.ts";
 import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
 import { listen } from "../../../../apps/desktop/src/lib/serviceEvents.ts";
-import { danilAvailable, danilAvailableContext, readDanilContext } from "../../../features/machines/src/index.ts";
 import { createAccountRequests } from "./account-requests.ts";
 import { engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, retryEngineAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";
@@ -17,12 +16,12 @@ import { handAdoptionReport, handedReport } from "./session-gate.ts";
 import type { EmptyReason } from "./session-empty.ts";
 import { coalesceSessionReturn as createSessionReturn } from "./session-return.ts";
 import { sessionSeedInputs, sessionSyncKey } from "./session-seeding.ts";
-import { sessionWorkspaceSource } from "./session-workspace-source.ts";
 import { createAddedSync } from "./workspace-added-sync.ts";
 import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-added-transport.ts";
 import { sendIdentityMe } from "../../../platform-client/src/identity.ts";
 
-export type SessionRailGroup = ContextGroup & { available: readonly { id: string; name: string; logo?: string | null }[] | null; added: ReadonlySet<string> | null; person: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
+type WorkspaceRow = { id: string; name: string; logo?: string | null };
+export type SessionRailGroup = ContextGroup & { available: readonly WorkspaceRow[] | null; added: ReadonlySet<string> | null; person: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
 let instance: ReturnType<typeof wire> | undefined;
 export const [sessionRailState, setSessionRailState] = createRoot(() => createSignal<ReturnType<typeof wire>>());
 export const hasSessionGroups = () => !!instance?.groups();
@@ -47,16 +46,44 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     seenRemoved = count;
   });
   const catalog = capabilities().webRailCatalog;
-  const availableFor = (org: string, context: string) => {
+  const deskLists = new Map<string, readonly WorkspaceRow[]>();
+  const reading = new Map<string, Promise<void>>();
+  const availableFor = (context: string) => {
     revision();
-    // La web: el riel sale del catálogo de cada contexto, nunca de lo que sirve una máquina.
-    if (catalog) return catalog.workspaces(context);
-    return sessionWorkspaceSource(groups()?.find((g) => g.context_id === context)?.plan ?? null, () => danilAvailableContext(org, context), () => accounts.available(org));
+    return catalog ? catalog.workspaces(context) : deskLists.get(context) ?? null;
   };
+  function refreshContext(context: string) {
+    if (catalog) return catalog.refresh();
+    const group = active(context);
+    if (!group) return Promise.resolve();
+    const pending = reading.get(context);
+    if (pending) return pending;
+    const read = sessionWorkspaceCatalog(sessions.send, context).then((items) => {
+      if (!items || active(context)?.org !== group.org) return;
+      // El directorio puede incluir otras membresías de la persona.
+      deskLists.set(context, items.flatMap((item) => {
+        const row = item as { org?: unknown; engine_workspace_id?: unknown; name?: unknown } | null;
+        const id = row?.engine_workspace_id;
+        return row?.org === group.org && typeof id === "string" && id
+          ? [{ id, name: typeof row.name === "string" ? row.name : id }]
+          : [];
+      }));
+      changed();
+    }).finally(() => reading.delete(context));
+    reading.set(context, read);
+    return read;
+  }
+  const refreshCatalog = () => catalog?.refresh() ?? Promise.all((groups() ?? []).map((g) => refreshContext(g.context_id))).then(() => undefined);
   const opener = createPersonalOpener({ send: sessions.send, reread: async () => { await sessions.refresh(); return sessions.groups(); }, defaultContext: sessions.defaultContext, groups: sessions.groups });
   const refreshAccounts = () => accounts.refresh(groups() ?? [], sessions.send, (context) => records.get(context)?.person ?? null, opener);
   const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));
-  createEffect(on(accountKey, () => void refreshAccounts()));
+  createEffect(on(accountKey, () => {
+    if (!catalog) {
+      for (const context of deskLists.keys()) if (!active(context)) deskLists.delete(context);
+      void refreshCatalog();
+    }
+    void refreshAccounts();
+  }));
   // Una persona nueva recibe su organización personal después del login. Se reintenta sin otro
   // inicio de sesión hasta que identity liga el contexto y el reclamo se hace, o se agota el plazo.
   const adoption = {
@@ -99,9 +126,9 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       transport: edgeAddedTransport((method, path, body) => sessions.send(g.context_id, method, path, body)),
       store,
       scope: () => record.person && active(g.context_id) && !sessions.emptyReason(g.context_id) ? { person: record.person, organization: g.org } : null,
-      available: () => sessions.emptyReason(g.context_id) ? [] : active(g.context_id) ? availableFor(g.org, g.context_id) : null,
-      shown: () => sessionSeedInputs(active(g.context_id), availableFor(g.org, g.context_id), new Set([...leerPref<string[]>("workspaces.order", []), ...(capabilities().railWorkspaces?.() ?? []).map((w) => w.id), ...shown()]), hidden()).shown,
-      hidden: () => sessionSeedInputs(active(g.context_id), availableFor(g.org, g.context_id), new Set(), hidden()).hidden,
+      available: () => sessions.emptyReason(g.context_id) ? [] : active(g.context_id) ? availableFor(g.context_id) : null,
+      shown: () => sessionSeedInputs(active(g.context_id), availableFor(g.context_id), new Set([...leerPref<string[]>("workspaces.order", []), ...(capabilities().railWorkspaces?.() ?? []).map((w) => w.id), ...shown()]), hidden()).shown,
+      hidden: () => sessionSeedInputs(active(g.context_id), availableFor(g.context_id), new Set(), hidden()).hidden,
       onSeeded, onChange: changed,
     });
     records.set(g.context_id, record);
@@ -121,13 +148,12 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     return groups()?.map((g): SessionRailGroup => {
     const empty_reason = sessions.emptyReason(g.context_id);
     // Una sesión vencida conserva sus cuadros: el grupo se queda con su aviso «Vuelve a entrar».
-    const available = empty_reason && empty_reason !== "session_expired" ? [] : availableFor(g.org, g.context_id);
-    // Los ids sin atribuir solo evitan que reaparezcan como locales; no aportan filas al grupo.
-    for (const w of danilAvailable(g.org) ?? []) known.add(w.id);
+    const available = empty_reason && empty_reason !== "session_expired" ? [] : availableFor(g.context_id);
     for (const w of available ?? []) known.add(w.id);
     const added = records.get(g.context_id)?.sync.added() ?? null;
     if (added) lastAdded.set(g.context_id, added);
-    return { ...g, available, free: accounts.free(g.context_id), empty_reason, added: added ?? (empty_reason === "session_expired" ? lastAdded.get(g.context_id) ?? null : null), person: records.get(g.context_id)?.person ?? null };
+    const free = accounts.free(g.context_id);
+    return { ...g, available, free: free && !accounts.known().includes(free.id) ? free : undefined, empty_reason, added: added ?? (empty_reason === "session_expired" ? lastAdded.get(g.context_id) ?? null : null), person: records.get(g.context_id)?.person ?? null };
     }) ?? null;
   });
   createEffect(() => {
@@ -160,12 +186,9 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
         if (report?.adopted.length) handAdoptionReport(report);
       }).catch(() => {});
     });
-    const refreshed = createSessionReturn(async () => {
-      await refreshAccounts();
-      for (const g of groups() ?? []) await readDanilContext(g.org, g.context_id);
-    });
+    const refreshed = createSessionReturn(refreshAccounts);
     window.addEventListener("harness:machines", refreshed);
-    const returned = createSessionReturn(async () => { await sessions.refresh(); refreshed(); });
+    const returned = createSessionReturn(async () => { await sessions.refresh(); refreshed(); await refreshCatalog(); });
     window.addEventListener("focus", returned);
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible") returned();
@@ -193,7 +216,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       if (!group) throw { detail: "no_session" };
       const id = await accounts.create(group, refreshAccounts);
       if (!active(context)) throw { detail: "no_session" };
-      records.get(context)?.sync.add(id);
+      await addAdmitted(context, id);
       return id;
     },
     addAdmitted,
@@ -205,7 +228,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       const group = matches[0];
       const context = group.context_id;
       const rows = await workspaceCatalog(sessions.send, context);
-      const row = rows.find((item) => item !== null && typeof item === "object" && "id" in item && String(item.id) === target.accountId) as { id: string; name?: string; engine_workspace_id?: unknown; placement?: { kind?: unknown } } | undefined;
+      const row = rows.find((item) => item !== null && typeof item === "object" && "org" in item && item.org === group.org && "id" in item && String(item.id) === target.accountId) as { id: string; name?: string; engine_workspace_id?: unknown; placement?: { kind?: unknown } } | undefined;
       const id = row?.engine_workspace_id;
       if (typeof id !== "string" || !id || (target.workspace && target.workspace !== id)) return null;
       if (row.placement?.kind === "member_computer" && !accounts.known().includes(id)) {
@@ -213,7 +236,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
         await refreshAccounts();
       }
       await addAdmitted(context, id);
-      await readDanilContext(group.org, context, true);
+      await refreshContext(context);
       return { id, context };
     },
     remove: async (context: string, id: string) => {
@@ -223,7 +246,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       await record.sync.sync();
     },
     revoke: capabilities().revokeWorkspaceAccess,
-    refreshContext: (context: string) => { const group = active(context); return group ? readDanilContext(group.org, context, true) : Promise.resolve(); },
-    refresh: () => { void refreshAccounts(); for (const g of groups() ?? []) void readDanilContext(g.org, g.context_id); },
+    refreshContext,
+    refresh: () => { void refreshAccounts(); void refreshCatalog(); },
   };
 }

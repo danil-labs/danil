@@ -14,7 +14,7 @@ import { Pressable } from "../../../ui/src/Pressable";
 
 type Rail = ReturnType<typeof sessionRail>;
 const NOTE = "m-0 px-2 py-1.5 text-caption text-neutral-500";
-export function SessionAddStep(props: { sessions: Rail; context?: string | null; query: string; onQuery: (s: string) => void; onClose: () => void; onOpen: (id: string, context?: string) => void }) {
+export function SessionAddStep(props: { sessions: Rail; context?: string | null; query: string; onQuery: (s: string) => void; onClose: () => void; onOpen: (id: string, context?: string) => void; onConnect: () => void }) {
   const [error, setError] = createSignal<string | null>(null);
   const [busy, setBusy] = createSignal(false);
   async function add(context: string, workspace: string, materialize = false) {
@@ -41,13 +41,12 @@ export function SessionAddStep(props: { sessions: Rail; context?: string | null;
       <KeyedList each={groups()} by={(g) => g.context_id}>{(g) => <div data-session-context={g().context_id}>
         <p class={cn("m-0", TITULO_DE_GRUPO)}>{g().email} · {g().org_name ?? g().org}</p>
         <Show when={g().empty_reason}>{(reason) => <p role="status" class={NOTE}>{t(emptyReasonKey(reason()))}</p>}</Show>
-        <Show when={freeSessionRow(g()) && !g().added?.has(g().free?.id ?? "") && !g().available?.some((w) => w.id === g().free?.id) ? freeSessionRow(g()) : null}>{(workspace) =>
-          <Pressable role="menuitem" class={RAIL_MENU_ITEM} disabled={busy()} data-add-danil={workspace().id} onClick={() => void add(g().context_id, workspace().id, true)}>{workspace().name}</Pressable>
-        }</Show>
-        <Show when={g().available} fallback={<WorkspaceSourceStatus organization={g().org_name ?? g().org} available={g().available} onRetry={() => props.sessions.refreshContext(g().context_id)} />}>
-          <For each={(g().available ?? []).filter((w) => !g().added?.has(w.id) && matchesName(w.name, props.query))}>{(w) => <Pressable role="menuitem" class={cn(RAIL_MENU_ITEM, "flex min-w-0 items-center gap-2")} aria-label={t("shell.workspaces.add_named", { name: w.name })} data-add-danil={w.id} disabled={busy()} onClick={() => void add(g().context_id, w.id)}><span class="min-w-0 flex-1 truncate">{w.name}</span><span class="shrink-0 text-caption text-neutral-500">{t("shell.workspaces.add_row")}</span></Pressable>}</For>
+        <Show when={!g().empty_reason && !g().available}>
+          <WorkspaceSourceStatus available={g().available} onRetry={() => props.sessions.refreshContext(g().context_id)} />
         </Show>
+        <For each={(g().available ?? []).filter((w) => !g().empty_reason && !g().added?.has(w.id) && matchesName(w.name, props.query))}>{(w) => <Pressable role="menuitem" class={cn(RAIL_MENU_ITEM, "flex min-w-0 items-center gap-2")} aria-label={t("shell.workspaces.add_named", { name: w.name })} data-add-danil={w.id} disabled={busy()} onClick={() => void add(g().context_id, w.id, freeSessionRow(g())?.id === w.id)}><span class="min-w-0 flex-1 truncate">{w.name}</span><span class="shrink-0 text-caption text-neutral-500">{t("shell.workspaces.add_row")}</span></Pressable>}</For>
       </div>}</KeyedList>
     </div>
+    <Pressable role="menuitem" class={RAIL_MENU_ITEM} disabled={busy()} onClick={props.onConnect}>{t("shell.workspaces.connect_account")}</Pressable>
   </div>;
 }
