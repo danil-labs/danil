@@ -1,16 +1,15 @@
 import { invoke } from "../../../../engine-client/src/client";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { errorCode } from "../../../../../apps/desktop/src/lib/errorCode.ts";
-import { machineOf } from "../../../machines/src/queries/store";
 import { readVisualHtml, type VisualPart, type VisualWhole, VISUAL_FILE, VISUAL_TREE } from "@terminus/chat/visual";
 
-type Scope = { workspace: string; project: string; session: string };
+type Scope = { workspace: string; project: string; session: string; machine: { headers: Record<string, string> } | undefined };
 
 export async function readChatVisual(scope: Scope, file: string): Promise<string> {
   if (!scope.workspace || !scope.session || file.length > 128 || !VISUAL_FILE.test(file)) {
     throw { what: t("chat.visual.invalid"), detail: "invalid_visual_file" };
   }
-  const options = { headers: { ...machineOf(scope.session)?.headers, "x-terminus-workspace": scope.workspace } };
+  const options = { headers: { ...scope.machine?.headers, "x-terminus-workspace": scope.workspace } };
   try {
     return await readVisualHtml({
       part: (offset, size, revision) => invoke<VisualPart>("chat_visual_part", {
@@ -36,5 +35,5 @@ export async function openChatVisual(scope: Scope, file: string): Promise<void> 
   }
   await invoke("tree_open_external", {
     project: scope.project, session: scope.session, tree: VISUAL_TREE, path: file,
-  }, { headers: { ...machineOf(scope.session)?.headers, "x-terminus-workspace": scope.workspace } });
+  }, { headers: { ...scope.machine?.headers, "x-terminus-workspace": scope.workspace } });
 }

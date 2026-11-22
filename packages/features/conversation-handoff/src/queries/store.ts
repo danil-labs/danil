@@ -2,8 +2,8 @@ import { batch, createSignal } from "solid-js";
 
 export type ConversationScope = { workspace: string | null; generation: number; project: string; session: string; route?: { headers: Record<string, string> } };
 export type HandoffView = { stopping: boolean; pending: { queueItemId: string; phase: "waiting-close" | "submitting" | "awaiting-start" } | null; error: unknown | null; released: boolean };
-export type HandoffPresentation = ({ queueItemId: string } & ({ phase: "waiting-close"; pendingMessage: { text: string; attachments?: readonly string[] } }
-  | { phase: "submitting" | "awaiting-start" })) | null;
+import type { HandoffPresentation } from "../../../../ui/src/lib/handoff.ts";
+export type { HandoffPresentation };
 export type HandoffFact = { scope: ConversationScope } & ({ kind: "terminal" | "started" | "accepted" } | { kind: "dispatching"; itemIds: readonly string[] } | { kind: "rejected"; error: unknown } | { kind: "queue-removed"; queueItemId: string });
 type Dependencies = {
   current: () => { workspace: string | null; generation: number };

@@ -2,7 +2,7 @@ import type { HistoryChunk, HistoryRef } from "@terminus/protocol";
 import { currentRef, readDetailText } from "@terminus/chat/historyDetail";
 import { createResource, createSignal, For, Show, onCleanup, type JSX } from "solid-js";
 import { retainRowWhile } from "../model/threadRow";
-import { readTurns, readDetailChunk } from "../queries";
+import { readTurns, readDetailChunk, type MachineOf } from "../queries";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Markdown } from "../../../../ui/src/Markdown";
 import type { Session } from "../model/transcript";
@@ -11,10 +11,10 @@ const REREADS = 5;
 const REREAD_MS = 150;
 
 /** El texto del mensaje es la respuesta misma: se trae al montar la fila y `render` lo pinta como cualquier otra. */
-function HistoryText(props: { reference: HistoryRef; turnId?: string; onUnavailable: () => void; render?: (text: string) => JSX.Element }) {
+function HistoryText(props: { reference: HistoryRef; turnId?: string; onUnavailable: () => void; render?: (text: string) => JSX.Element; route: MachineOf }) {
   const [text] = createResource(() => props.reference, (ref) => readDetailText<Session["turns"][number]>({
-    part: (current, offset) => readDetailChunk(ref, { ...current, kind: "detail", offset }),
-    turns: readTurns(ref),
+    part: (current, offset) => readDetailChunk(ref, { ...current, kind: "detail", offset }, props.route),
+    turns: readTurns(ref, props.route),
   }, ref, props.turnId).then((value) => {
     if (value === null) props.onUnavailable();
     return value;
@@ -26,7 +26,7 @@ function HistoryText(props: { reference: HistoryRef; turnId?: string; onUnavaila
 }
 
 /** Una sola página de contenido crudo en memoria, incluso con resultados de muchos MB. */
-export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; renderText?: (text: string) => JSX.Element }) {
+export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; renderText?: (text: string) => JSX.Element; route: MachineOf }) {
   const [selected, setSelected] = createSignal<HistoryRef | null>(null);
   const [chunk, setChunk] = createSignal<HistoryChunk | null>(null);
   retainRowWhile(() => selected() !== null);
@@ -42,7 +42,7 @@ export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; ren
       await new Promise((done) => setTimeout(done, REREAD_MS * attempts));
       if (current !== generation) return true;
       const fresh = await currentRef<Session["turns"][number]>(
-        readTurns(ref),
+        readTurns(ref, props.route),
         ref, props.turnId,
       ).catch(() => undefined);
       if (current !== generation) return true;
@@ -58,7 +58,7 @@ export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; ren
     const current = ++generation;
     setSelected(ref); setChunk(null); setFailed(false); setLoading(true);
     try {
-      const page = await readDetailChunk(ref, { ...ref, kind: "detail", offset });
+      const page = await readDetailChunk(ref, { ...ref, kind: "detail", offset }, props.route);
       if (current !== generation) return;
       if (page.version !== 1 || page.offset !== offset || page.revision !== ref.revision || page.text.length > 131072 || (!page.done && page.next <= offset)) throw new Error("invalid history chunk");
       setChunk(page);
@@ -72,7 +72,7 @@ export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; ren
   const textRef = () => textFailed() ? undefined : props.refs.find((ref) => ref.pointer === "/text");
   const listed = () => props.refs.filter((ref) => ref !== textRef());
   return <>
-  <Show when={textRef()}>{(ref) => <HistoryText reference={ref()} turnId={props.turnId} render={props.renderText} onUnavailable={() => setTextFailed(true)} />}</Show>
+  <Show when={textRef()}>{(ref) => <HistoryText reference={ref()} turnId={props.turnId} render={props.renderText} route={props.route} onUnavailable={() => setTextFailed(true)} />}</Show>
   <Show when={listed().length > 0}>
   <div class="my-2 text-xs text-neutral-500">
     <For each={listed()}>{ref => <button type="button" class="mr-2 underline" onClick={() => void read(ref, 0)}>

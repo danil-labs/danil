@@ -3,7 +3,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { formatearDuracion, type Paso } from "../../../../../apps/desktop/src/lib/steps";
 import { activityElapsed } from "../../../../../apps/desktop/src/lib/turnActivity";
 import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
-import { MachineIcon } from "../../../machines/src/components/MachineIcon";
+import { MachineIcon } from "../../../../ui/src/MachineIcon";
 import { ActivityDots } from "./ActivityDots";
 
 export type MachineWaitStatus = { phase: "waking" | "connecting"; name: string; wakes: boolean };

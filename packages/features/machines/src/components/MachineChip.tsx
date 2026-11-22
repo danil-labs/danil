@@ -1,6 +1,6 @@
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import { MachineIcon } from "./MachineIcon";
+import { MachineIcon } from "../../../../ui/src/MachineIcon";
 import { machineName, machineWakes } from "../queries/store";
 
 /** La máquina que corre una tarea; atenuada si está apagada. */

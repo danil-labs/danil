@@ -16,7 +16,7 @@ import { nombreDeModelo, providerMark } from "../../../../../apps/desktop/src/li
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { machineName, machineSystem, machines } from "../../../machines/src/queries/store";
 import { AstroAvatar } from "../screens/AstroAvatar";
-import { workLabel } from "../model/branchLabel";
+import { workLabel } from "../../../../ui/src/lib/workLabel.ts";
 import { displayName } from "../queries/profiles";
 import { type SessionRow, threadTitle } from "../screens/Sessions";
 import EtapaDeTarea from "../screens/TaskStage";
