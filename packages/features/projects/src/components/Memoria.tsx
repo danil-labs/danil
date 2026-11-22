@@ -1,7 +1,7 @@
 import { For, Show, createEffect, createSignal } from "solid-js";
 import { conflictCopyOf, deleteMemoryFile, memoryEntryText, writeMemoryFile } from "@terminus/computers";
 import History from "lucide-solid/icons/history";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { writeMemoryEntry, listMemoryEntries, deleteMemoryEntry } from "../queries";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import Pencil from "lucide-solid/icons/pencil";
 import Plus from "lucide-solid/icons/plus";
@@ -14,7 +14,7 @@ import { Input } from "../../../../ui/src/Input";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
 import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
-import type { Agent, MemoriaEntrada, MemoriaIndice, MemoriaListado, MemoriaScope } from "../../../../../apps/desktop/src/lib/model";
+import type { Agent, MemoriaEntrada, MemoriaIndice, MemoriaScope } from "../../../../../apps/desktop/src/lib/model";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import { capabilities } from "../../../../host/src/platform";
 import HistorialDeEntrada from "./MemoryHistory";
@@ -107,7 +107,7 @@ function FormularioDeEntrada(props: {
         }
         if (answer.value.conflict_copy) props.onAviso?.(t("projects.memory.conflict_saved", { copy: answer.value.conflict_copy }));
       } else {
-        await invoke("write_memory_entry", {
+        await writeMemoryEntry({
           project: props.proyecto,
           scope: props.scope,
           file: nombre,
@@ -243,7 +243,7 @@ export default function Memoria(props: { project: string; workspace?: string | n
       return;
     }
     try {
-      const listado = await invoke<MemoriaListado>("list_memory_entries", {
+      const listado = await listMemoryEntries({
         project: props.project,
         scope: scope(),
       });
@@ -291,7 +291,7 @@ export default function Memoria(props: { project: string; workspace?: string | n
         else if (answer.kind === "busy") setFallo({ what: t("projects.memory.busy"), detail: "busy" });
         else if (answer.kind !== "ok" && answer.kind !== "missing") setFallo({ what: t("projects.memory.error_delete"), detail: answer.kind });
       } else {
-        await invoke("delete_memory_entry", { project: props.project, scope: scope(), file });
+        await deleteMemoryEntry({ project: props.project, scope: scope(), file });
       }
       await refrescar();
     } catch (e) {

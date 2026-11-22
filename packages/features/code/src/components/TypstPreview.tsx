@@ -12,7 +12,7 @@ import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import { For, Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { treeTypstExport, openTreeExternal } from "../queries";
 import { machineOf } from "../../../machines/src/queries/store";
 import { seguirHueco, type Hueco } from "../../../../../apps/desktop/src/lib/sites";
 import { Button } from "../../../../ui/src/Button";
@@ -195,7 +195,7 @@ export default function VistaPreviaTypst(props: {
     setFallo(null);
     try {
       setExportado(
-        await invoke<ExportacionTypst>("tree_typst_export", {
+        await treeTypstExport({
           project: props.project,
           session: props.session,
           tree: props.arbol,
@@ -213,7 +213,7 @@ export default function VistaPreviaTypst(props: {
   /** Un PDF exportado puede pesar más de lo que cruza el canal del servicio: se abre en el visor del sistema. */
   function abrirFuera(pdf: string) {
     setFallo(null);
-    void invoke("tree_open_external", {
+    void openTreeExternal({
       project: props.project,
       session: props.session,
       tree: props.arbol,

@@ -13,7 +13,15 @@ import { rememberRoster } from "../../../../../apps/desktop/src/lib/handlerRoste
 import { createCopied } from "../../../../host/src/clipboard";
 import { machineAction } from "../../../../host/src/machine-action";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import {
+  listSourceBranches,
+  setSourceBranch,
+  getProjectSetupCommand,
+  listAgents,
+  setAgentHidden,
+  setProjectSetupCommand,
+  openExternal,
+} from "../queries";
 import {
   type Agent,
   carpetaDeTrabajo,
@@ -69,7 +77,7 @@ function SelectorDeRama(props: { project: string; source: Source }) {
     setFallo(null);
     try {
       setRamas(
-        await invoke<string[]>("list_source_branches", {
+        await listSourceBranches({
           source: props.source.id,
         }),
       );
@@ -83,7 +91,7 @@ function SelectorDeRama(props: { project: string; source: Source }) {
     setActualizando(true);
     setFallo(null);
     try {
-      await invoke("set_source_branch", {
+      await setSourceBranch({
         project: props.project,
         source: props.source.id,
         branch,
@@ -256,7 +264,7 @@ export default function VistaDeProyecto(props: {
   // pantalla, y arrastrar el del anterior lo guardaría en el que se abre.
   createEffect(() => {
     const id = props.proyecto.id;
-    void invoke<string | null>("project_setup_command", { project: id })
+    void getProjectSetupCommand(id)
       .then((c) => setPreparacion(c ?? ""))
       .catch(() => setPreparacion(""));
   });
@@ -267,7 +275,7 @@ export default function VistaDeProyecto(props: {
   // Uno del repositorio lo edita quien quiera, y aparece al volver aquí.
   function releerEncargados() {
     const id = props.proyecto.id;
-    void invoke<HandlerList>("list_agents", { project: id })
+    void listAgents(id)
       .then((listado) => {
         rememberRoster(id, listado.agents);
         setEncargados(listado);
@@ -289,7 +297,7 @@ export default function VistaDeProyecto(props: {
 
   async function mostrar(name: string) {
     try {
-      await invoke("set_agent_hidden", { project: props.proyecto.id, name, hidden: false });
+      await setAgentHidden({ project: props.proyecto.id, name, hidden: false });
       notifyProfiles();
       window.dispatchEvent(new CustomEvent("harness:encargados"));
     } catch {
@@ -302,7 +310,7 @@ export default function VistaDeProyecto(props: {
     const command = preparacion().trim();
     setFalloDePreparacion(null);
     try {
-      await invoke("set_project_setup_command", {
+      await setProjectSetupCommand({
         project: props.proyecto.id,
         command: command || null,
       });
@@ -566,7 +574,7 @@ export default function VistaDeProyecto(props: {
                             variant="ghost"
                             size="icon"
                             class="size-7 text-neutral-500"
-                            onClick={() => void invoke("open_external", { target: dir() }).catch(() => {})}
+                            onClick={() => void openExternal(dir()).catch(() => {})}
                             aria-label={t("shell.folder.open")}
                             title={t("shell.folder.open")}
                           >

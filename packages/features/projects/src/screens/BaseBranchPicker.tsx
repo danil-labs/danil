@@ -1,5 +1,5 @@
 import { For, Show, createEffect, createSignal, on, onCleanup } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { getProjectBaseBranches, setProjectBaseBranch } from "../queries";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
@@ -50,7 +50,7 @@ export default function BaseBranchPicker(props: {
   });
   async function loadDetails(project: string, request: number) {
     try {
-      const result = await invoke<Branches>("project_base_branches", {
+      const result = await getProjectBaseBranches<Branches>({
         project,
         refresh: false,
         details: true,
@@ -75,7 +75,7 @@ export default function BaseBranchPicker(props: {
     setBusy(true);
     setError(null);
     try {
-      const result = await invoke<Branches>("project_base_branches", {
+      const result = await getProjectBaseBranches<Branches>({
         project,
         refresh,
         details: false,
@@ -120,7 +120,7 @@ export default function BaseBranchPicker(props: {
     setError(null);
     try {
       if (props.preference)
-        await invoke("set_project_base_branch", {
+        await setProjectBaseBranch({
           project,
           reference: branch.reference,
         }, options());

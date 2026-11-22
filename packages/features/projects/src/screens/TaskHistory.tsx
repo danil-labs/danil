@@ -1,5 +1,4 @@
-import { machineOf } from "../../../machines/src/queries/store";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { getTaskHistory, recreateTaskWork, type TaskWork } from "../queries";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { Show, createMemo, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -7,21 +6,7 @@ import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import BaseBranchPicker from "./BaseBranchPicker";
 
-export type TaskWork = {
-  history: {
-    archived: boolean;
-    events: { kind: string; when: number; commit: string | null }[];
-    recovery: { commit: string; when: number } | null;
-  };
-  branch: string | null;
-  alias: string | null;
-  path: string;
-  available: boolean;
-  owned: boolean;
-  restorable: boolean;
-  recreatable: boolean;
-  incomplete: boolean;
-};
+export type { TaskWork };
 
 export function createTaskWork(
   scope: () => { project: string; id: string } | undefined,
@@ -31,9 +16,7 @@ export function createTaskWork(
     equals: (a, b) => a?.project === b?.project && a?.id === b?.id,
   });
   const result = createResource(target, (value) =>
-    invoke<TaskWork>("task_history", value, machineOf(value.id))
-      // Sin historial no es el estado de una tarea: una falla que llegó como valor.
-      .then((work) => (work && typeof work === "object" && "history" in work ? work : undefined))
+    getTaskHistory(value)
       .catch((e) => {
         onFailure?.(asFailure(e));
         return undefined;
@@ -63,7 +46,7 @@ export function ResumeTask(props: { project: string; id: string; onChanged: () =
     setBusy(true);
     setFailure(null);
     try {
-      await invoke("recreate_task_work", { project: props.project, id: props.id }, machineOf(props.id));
+      await recreateTaskWork(props.project, props.id);
       props.onChanged();
     } catch (e) {
       setFailure(asFailure(e));

@@ -4,7 +4,7 @@ import GitBranch from "lucide-solid/icons/git-branch";
 import Plus from "lucide-solid/icons/plus";
 import Search from "lucide-solid/icons/search";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { invoke } from "../../../../engine-client/src/client";
+import { listProjectRepositories, getGitHostAreas, getGitHostProjects } from "../queries";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
 import { mergeRepositories, repositoryCloneUrl, repositoryIdentity, type ProjectRepository } from "../../../../../apps/desktop/src/lib/projectRepositories";
@@ -16,8 +16,6 @@ import { Select } from "../../../../ui/src/Select";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 
 type Provider = GitHost & { connected: { identity: { user: string } } | null };
-type Area = { key: string; name: string };
-type RemoteRepository = { name: string; slug: string; clone_url: string };
 type AvailableRepository = ProjectRepository & { area: string };
 
 export default function RepositoryPicker(props: {
@@ -45,7 +43,7 @@ export default function RepositoryPicker(props: {
   const fail = (error: unknown) => { if (active) setFailures(previous => [...previous, asFailure(error)]); };
   onMount(() => {
     const scope = props.workspace;
-    const local = invoke<ProjectRepository[]>("list_project_repositories", { workspace: scope })
+    const local = listProjectRepositories(scope)
       .then(repos => { if (active) setHistory(repos); }).catch(fail);
     const remote = (async () => {
       const connections = await listGitHosts<Provider>(scope);
@@ -53,11 +51,11 @@ export default function RepositoryPicker(props: {
       setProviders(connections);
       await Promise.all(connections.filter(p => p.connected).map(async p => {
         try {
-          const areas = await invoke<Area[]>("git_host_areas", { id: p.id, scope });
+          const areas = await getGitHostAreas(p.id, scope);
           for (const a of areas) {
             if (!active) return;
             try {
-              const repos = await invoke<RemoteRepository[]>("git_host_projects", { id: p.id, area: a.key, scope, includeSkills: true });
+              const repos = await getGitHostProjects({ id: p.id, area: a.key, scope, includeSkills: true });
               if (active) setAvailable(previous => [...previous, ...repos.filter(r => r.clone_url).map(r => ({
                 name: repositoryIdentity(r.clone_url).split("/").slice(1).join("/") || `${a.name}/${r.slug || r.name}`, url: repositoryCloneUrl(r.clone_url), git_host: p.id, area: a.key, last_used: 0,
               }))]);

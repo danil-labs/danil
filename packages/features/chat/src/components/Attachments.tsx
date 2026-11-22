@@ -1,5 +1,5 @@
 import { createResource, createSignal, Show, For, Suspense, lazy } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { openExternal } from "../queries";
 import X from "lucide-solid/icons/x";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import FileText from "lucide-solid/icons/file-text";
@@ -86,7 +86,7 @@ export function Adjunto(props: {
     }
     if (/^(\/|[a-z]:[\\/]|\\\\)/i.test(props.rel)) {
       try {
-        await invoke("open_external", { target: props.rel });
+        await openExternal(props.rel);
       } catch {
         setFallo(true);
         setAbierta(true);

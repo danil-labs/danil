@@ -1,4 +1,16 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import {
+  knStatus,
+  previewTreeFiles,
+  previewTreeFolder,
+  treeCreateFile,
+  treeCreateFolder,
+  treeDelete,
+  treeFiles,
+  treeFolder,
+  treeGitStatus,
+  treeRename,
+  treeSummary,
+} from "../queries";
 import { machineOf } from "../../../machines/src/queries/store";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronRight from "lucide-solid/icons/chevron-right";
@@ -154,9 +166,9 @@ export default function ArbolDeArchivos(props: {
   // mientras tanto. El estado local y el resumen salen detrás de cada lista buena.
   function leerArchivos() {
     if (props.preview) {
-      return invoke<Archivos>("preview_tree_files", { project: props.project, baseRef: props.preview.baseRef });
+      return previewTreeFiles<Archivos>({ project: props.project, baseRef: props.preview.baseRef });
     }
-    return invoke<Archivos>("tree_files", { project: props.project, session: props.session, tree: props.arbol }, machineOf(props.session));
+    return treeFiles<Archivos>({ project: props.project, session: props.session, tree: props.arbol }, machineOf(props.session));
   }
 
   async function aplicarArchivos(f: Archivos) {
@@ -183,11 +195,11 @@ export default function ArbolDeArchivos(props: {
     setLeyendoEstado(true);
     try {
       const leidos = props.kind === "kn"
-        ? localesDeKn(await invoke<CambioKn[]>("kn_status", {
+        ? localesDeKn(await knStatus<CambioKn[]>({
           project: props.project,
           session: props.session,
         }, machineOf(props.session)))
-        : localesDeGit(await invoke<EstadoGit[]>("tree_git_status", {
+        : localesDeGit(await treeGitStatus<EstadoGit[]>({
           project: props.project,
           session: props.session,
           tree: props.arbol,
@@ -196,7 +208,7 @@ export default function ArbolDeArchivos(props: {
       fijarLocales(leidos);
       setFalloEstado(null);
       if (props.kind !== "kn") {
-        const c = await invoke<Resumen>("tree_summary", {
+        const c = await treeSummary<Resumen>({
           project: props.project,
           session: props.session,
           tree: props.arbol,
@@ -251,8 +263,8 @@ export default function ArbolDeArchivos(props: {
 
   const pedirPagina = (ruta: string, desde: number): Promise<Pagina> =>
     props.preview
-      ? invoke("preview_tree_folder", { project: props.project, path: ruta, offset: desde })
-      : invoke("tree_folder", { ...ids(), path: ruta, offset: desde }, machineOf(props.session));
+      ? previewTreeFolder<Pagina>({ project: props.project, path: ruta, offset: desde })
+      : treeFolder<Pagina>({ ...ids(), path: ruta, offset: desde }, machineOf(props.session));
 
   function fijarPlegada(ruta: string, cambio: (antes: Plegada) => Plegada | null) {
     setPlegadas((prev) => {
@@ -421,8 +433,8 @@ export default function ArbolDeArchivos(props: {
       sinTarea
         ? sinTarea(n.tipo, path)
         : n.tipo === "archivo"
-          ? invoke("tree_create_file", { ...ids(), path }, machineOf(props.session))
-          : invoke("tree_create_folder", { ...ids(), path }, machineOf(props.session)),
+          ? treeCreateFile({ ...ids(), path }, machineOf(props.session))
+          : treeCreateFolder({ ...ids(), path }, machineOf(props.session)),
     );
     if (!hecho) return false;
     setNuevo(null);
@@ -443,7 +455,7 @@ export default function ArbolDeArchivos(props: {
   async function renombrar(desde: string, nombre: string): Promise<boolean> {
     if (nombreInvalido(nombre)) return false;
     const hasta = unir(padreDe(desde), nombre);
-    const hecho = await operar(() => invoke("tree_rename", { ...ids(), from: desde, to: hasta }, machineOf(props.session)));
+    const hecho = await operar(() => treeRename({ ...ids(), from: desde, to: hasta }, machineOf(props.session)));
     if (!hecho) return false;
     setRenombrando(null);
     const s = seleccion();
@@ -454,7 +466,7 @@ export default function ArbolDeArchivos(props: {
 
   async function borrar(nodo: Nodo) {
     setMenu(null);
-    const hecho = await operar(() => invoke("tree_delete", { ...ids(), path: nodo.ruta }, machineOf(props.session)));
+    const hecho = await operar(() => treeDelete({ ...ids(), path: nodo.ruta }, machineOf(props.session)));
     if (!hecho) return;
     const s = seleccion();
     if (s && debajoDe(s.ruta, nodo.ruta)) setSeleccion(null);

@@ -1,5 +1,5 @@
 import { Match, Show, Switch, createEffect, createSignal, on, onCleanup } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { knCloudState, knCloudStart } from "../queries";
 import { machineOf } from "../../../machines/src/queries/store";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { Button } from "../../../../ui/src/Button";
@@ -44,7 +44,7 @@ export default function KnCloud(props: { project: string; session: string }) {
       if (workspace && e.payload.workspace && e.payload.workspace !== workspace) return;
       llega(e.payload);
     });
-    void invoke<Descarga>("kn_cloud_state", { project }, machineOf(props.session))
+    void knCloudState<Descarga>({ project }, machineOf(props.session))
       .then((d) => {
         if (!d || project !== props.project) return;
         workspace = d.workspace;
@@ -59,7 +59,7 @@ export default function KnCloud(props: { project: string; session: string }) {
     setPidiendo(true);
     setFallo(null);
     try {
-      await invoke("kn_cloud_start", { project: props.project, retry }, machineOf(props.session));
+      await knCloudStart({ project: props.project, retry }, machineOf(props.session));
     } catch (e) {
       setFallo(asFailure(e));
     } finally {
