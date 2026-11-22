@@ -84,23 +84,23 @@ export function BitbucketMark(props: { size?: number }) {
   return <MarcaServicio id="bitbucket" size={props.size} />;
 }
 
-export function GitLabMark(props: { size?: number }) {
+function GitLabMark(props: { size?: number }) {
   return <MarcaServicio id="gitlab" size={props.size} />;
 }
 
-export function FigmaMark(props: { size?: number }) {
+function FigmaMark(props: { size?: number }) {
   return <MarcaServicio id="figma" size={props.size} />;
 }
 
-export function ExcalidrawMark(props: { size?: number }) {
+function ExcalidrawMark(props: { size?: number }) {
   return <MarcaServicio id="excalidraw" size={props.size} />;
 }
 
-export function AtlassianMark(props: { size?: number }) {
+function AtlassianMark(props: { size?: number }) {
   return <MarcaServicio id="atlassian" size={props.size} />;
 }
 
-export function NotionMark(props: { size?: number }) {
+function NotionMark(props: { size?: number }) {
   return <MarcaServicio id="notion" size={props.size} />;
 }
 

@@ -5,11 +5,11 @@
  */
 import { cancelEdgeWrites, edgeUntil, type EdgeMethod, type Patience } from "./client.ts";
 
-export type Workspace = { id: string; org?: string; name: string; role?: string; engine_workspace_id?: string };
+type Workspace = { id: string; org?: string; name: string; role?: string; engine_workspace_id?: string };
 export type WorkspaceList = { items: Workspace[]; next_cursor: string | null; empty_reason?: string; active_workspace_id?: string | null };
 
 export const WORKSPACES_PATH = "/v1/workspaces";
-export const WORKSPACES_SELECT_PATH = "/v1/workspaces/select";
+const WORKSPACES_SELECT_PATH = "/v1/workspaces/select";
 export const WORKSPACES_ADOPT_PATH = "/v1/workspaces/adopt";
 export const WORKSPACES_ADOPT_CHALLENGE_PATH = "/v1/workspaces/adopt/challenge";
 export const WORKSPACES_PROMO_REDEEM_PATH = "/v1/workspaces/promo/redeem";

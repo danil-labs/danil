@@ -1,0 +1,43 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    "apps/desktop": {
+      "entry": [
+        "src/web/bootstrap.ts",
+        "scripts/**/*.{mjs,ts}",
+        "tests/**/*.{ts,tsx,mjs}"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "scripts/**/*.{mjs,ts}",
+        "tests/**/*.{ts,tsx,mjs}"
+      ]
+    },
+    "packages/*": {
+      "entry": [
+        "test/**/*.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "test/**/*.ts"
+      ]
+    },
+    "packages/ui": {
+      "entry": [
+        "test/**/*.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "test/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "tailwindcss"
+      ]
+    },
+    "packages/features/*": {
+      "project": [
+        "src/**/*.{ts,tsx}"
+      ]
+    }
+  }
+}

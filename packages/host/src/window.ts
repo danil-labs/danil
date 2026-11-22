@@ -66,7 +66,7 @@ export function createFullscreen(): Accessor<boolean> {
   return fullscreen;
 }
 
-export const COMPACT_VIEWPORT_QUERY =
+const COMPACT_VIEWPORT_QUERY =
   "(max-width: 900px), (orientation: portrait) and (max-width: 1100px)";
 
 // Devolver el valor en vez del getter impediría que Solid rastreara los cambios.
