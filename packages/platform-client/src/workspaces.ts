@@ -5,8 +5,14 @@
  */
 import { cancelEdgeWrites, edgeUntil, type EdgeMethod, type Patience } from "./client.ts";
 
-type Workspace = { id: string; org?: string; name: string; role?: string; engine_workspace_id?: string };
-export type WorkspaceList = { items: Workspace[]; next_cursor: string | null; empty_reason?: string; active_workspace_id?: string | null };
+import type { SelectWorkspaceResponse, WorkspaceList } from "./generated/types.ts";
+
+/**
+ * Las respuestas del dominio salen del OpenAPI vendorizado (`contract/openapi.json`, R2 y R7). `next_cursor`,
+ * `empty_reason` y `active_workspace_id` de la lista y `engine_workspace_id` de la fila no están en el contrato
+ * (hallazgo para danil-contracts): llegan como campos aditivos y quien los lee los comprueba.
+ */
+export type { SelectWorkspaceResponse, Workspace, WorkspaceList } from "./generated/types.ts";
 
 export const WORKSPACES_PATH = "/v1/workspaces";
 const WORKSPACES_SELECT_PATH = "/v1/workspaces/select";
@@ -21,7 +27,7 @@ export const isWorkspaceCreationPath = (path: string) => path === WORKSPACES_PAT
 export const workspacesPagePath = (cursor?: string | null) => `/v1/workspaces${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`;
 
 /** El `send` de quien lee con su propio contexto (sesión de grupo). */
-export type CatalogSend = (context: string, method: string, path: string) => Promise<{ status: number; body?: unknown }>;
+type CatalogSend = (context: string, method: string, path: string) => Promise<{ status: number; body?: unknown }>;
 
 /** Las filas del catálogo de una organización, página a página. Un error corta y devuelve lo leído. */
 export async function workspaceCatalog(send: CatalogSend, context: string): Promise<unknown[]> {
@@ -31,7 +37,7 @@ export async function workspaceCatalog(send: CatalogSend, context: string): Prom
   do {
     const reply = await send(context, "GET", workspacesPagePath(cursor)).catch(() => null);
     if (!reply || reply.status !== 200) break;
-    const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
+    const body = reply.body as WorkspaceList;
     items.push(...(body.items ?? []));
     cursor = typeof body.next_cursor === "string" ? body.next_cursor : null;
     if (cursor && seen.has(cursor)) break;
@@ -53,7 +59,7 @@ const bodyOf = <T>(method: EdgeMethod, path: string, body: unknown, p?: Patience
 export const workspaces = (p?: Patience) => bodyOf<WorkspaceList>("GET", WORKSPACES_PATH, undefined, p);
 export const selectWorkspace = (workspaceId: string, p?: Patience) => {
   cancelEdgeWrites();
-  return bodyOf<{ workspace: Workspace }>("POST", WORKSPACES_SELECT_PATH, { workspace: workspaceId }, p);
+  return bodyOf<SelectWorkspaceResponse>("POST", WORKSPACES_SELECT_PATH, { workspace: workspaceId }, p);
 };
 
 /** `GET /v1/workspaces` con la respuesta entera y el transporte que pase el sitio. */
