@@ -104,8 +104,9 @@ const demoHost: Host = {
 };
 
 export function MachinesProvider({ children, active = true }: { children: ReactNode; active?: boolean }) {
+  const account = useAccount();
   if (ALPHA_DEMO) return <Context.Provider value={{ ready: true, contextReady: true, fleet: "ok", hosts: [demoHost], hostOf: id => id === demoHost.id ? demoHost : undefined, registry: null, preferred: () => demoHost, rememberMachine: () => {}, pairing: null, pair: async () => { throw demoDenied(); }, reloadComputers: async () => {}, retryLicense: () => {}, attention: {}, activity: [], reasonOf: () => undefined, titleOf: () => undefined, rememberTitles: () => {}, setOpenTask: () => {}, subscribe: () => () => {}, tick: 0 }}>{children}</Context.Provider>;
-  return <LiveMachinesProvider active={active}>{children}</LiveMachinesProvider>;
+  return <LiveMachinesProvider key={account.session?.user.id ?? "signed-out"} active={active}>{children}</LiveMachinesProvider>;
 }
 
 function LiveMachinesProvider({ children, active }: { children: ReactNode; active: boolean }) {
