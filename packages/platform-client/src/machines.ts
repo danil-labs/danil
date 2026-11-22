@@ -11,10 +11,10 @@
  * Sin APIs del DOM: `fetch`, el reloj y la espera se inyectan.
  */
 import { type Computer, apiUrl, errorCodeOf, globalFetch } from "../../computers/src/api.ts";
-import { requestId } from "../../computers/src/relay.ts";
 import type { MachineState } from "../../computers/src/machine.ts";
 import type { Machine, MachineList, MachineTicket, Operation } from "./generated/types.ts";
 import type { Admission, MachinesAnswer, MachinesConfig, MachinesResponse } from "./machines-config.ts";
+import { newIdempotencyKey, withIdempotencyKey } from "./idempotency.ts";
 
 /** El catálogo de capacidades del borde: Desk compilado lo lee para no recompilarse cuando cambia el servidor. */
 export const CAPABILITIES_PATH = "/v1/capabilities";
@@ -131,7 +131,7 @@ export function machinesClient(config: MachinesConfig) {
     let response: MachinesResponse;
     try {
       signal?.throwIfAborted();
-      const write = method === "GET" ? undefined : { method, headers: { "content-type": "application/json", "Idempotency-Key": key ?? requestId() }, body: payload ?? "{}" };
+      const write = method === "GET" ? undefined : { method, headers: withIdempotencyKey({ "content-type": "application/json" }, key), body: payload ?? "{}" };
       if (config.transport) {
         const route = path.replace(/^\//, "");
         response = method === "GET" ? await config.transport.call(route, signal ? { signal } : undefined) : await config.transport.mutation(route, write);
@@ -238,7 +238,7 @@ export function machinesClient(config: MachinesConfig) {
      * VM apagada contesta `409 machine_stopped` y no se enciende. El ticket de esta respuesta se descarta.
      */
     async wake(id: string): Promise<MachinesAnswer<true>> {
-      const key = requestId();
+      const key = newIdempotencyKey();
       const deadline = now() + (config.operationTimeoutMs ?? OPERATION_TIMEOUT_MS);
       for (;;) {
         const answer = await call(false, "POST", `${idPath(id)}/tickets`, () => true as const, { ok: [200, 201], body: '{"wake":true}', key });
