@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DEFAULT_RELAY_ORIGINS } from "@terminus/computers";
+import { DEFAULT_RELAY_ORIGINS } from "../../../../packages/platform-client/src/machines.ts";
 import { webConnectSources, webRelayOrigins } from "../../src/web/session-config.ts";
 
 test("sin RELAY_ORIGIN la web usa la misma lista exacta que Desk", () => {

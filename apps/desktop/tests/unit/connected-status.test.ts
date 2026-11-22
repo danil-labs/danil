@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { machineToComputer } from "@terminus/computers";
+import { machineToComputer } from "../../../../packages/platform-client/src/machines.ts";
 import { CONNECTED_MACHINES_FEATURE, createConnectedStatus } from "../../src/features/machines/connected-status.ts";
 import { infoOf } from "../../src/features/machines/machine-info.ts";
 import { mergeContextMachines } from "../../src/features/machines/session-cloud.ts";

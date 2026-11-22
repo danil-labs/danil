@@ -1,4 +1,4 @@
-import { scopedCreditsRead } from "../../src/web/scoped-credits.ts";
+import { scopedCreditsRead } from "../../src/platform/treasury.ts";
 import { activeGroupCredits } from "../../src/web/active-group-credits.ts";
 import assert from "node:assert/strict";
 import test from "node:test";

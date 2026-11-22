@@ -1,31 +1,24 @@
-import { MachineIcon } from "./MachineIcon";
-
-export interface MachineChipProps {
-  machine: string;
-  name?: string;
-  wakes?: boolean;
-  on: boolean;
-  class?: string;
-}
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { MachineIcon } from "../../../../ui/src/MachineIcon";
+import { machineName, machineWakes } from "../queries/store";
 
 /** La máquina que corre una tarea; atenuada si está apagada. */
-export function MachineChip(props: MachineChipProps) {
-  const name = () => props.name ?? props.machine;
+export function MachineChip(props: { machine: string; on: boolean; class?: string }) {
   const label = () =>
     props.on
-      ? `Corre en ${name()}`
-      : `Corre en ${name()}, apagada: se enciende cuando actúes sobre esta tarea.`;
-
+      ? t("shell.machines.task_on", { name: machineName(props.machine) })
+      : t("shell.machines.task_off", { name: machineName(props.machine) });
   return (
     <span
       data-machine={props.machine}
       data-machine-on={props.on ? "true" : "false"}
-      class={`flex shrink-0 items-center gap-0.5 ${!props.on ? "opacity-60" : ""} ${props.class ?? ""}`.trim()}
+      class={cn("flex shrink-0 items-center gap-0.5", !props.on && "opacity-60", props.class)}
       title={label()}
       aria-label={label()}
     >
-      <MachineIcon wakes={props.wakes} size={13} />
-      <span class="truncate">{name()}</span>
+      <MachineIcon wakes={machineWakes(props.machine)} size={13} />
+      <span class="truncate">{machineName(props.machine)}</span>
     </span>
   );
 }

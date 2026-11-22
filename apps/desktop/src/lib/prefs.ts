@@ -1,5 +1,5 @@
 import { type Accessor, createSignal } from "solid-js";
-import { capabilities } from "./platform.ts";
+import { capabilities } from "../../../../packages/host/src/platform.ts";
 import { NS, PER_PERSON, REREAD } from "./preferenceKeys.ts";
 
 /**

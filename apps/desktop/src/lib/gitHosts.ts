@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { invoke } from "./invoke.ts";
+import { invoke } from "../../../../packages/engine-client/src/client.ts";
 import { prosa, type Frase } from "./prose.ts";
 import { t } from "./i18n.ts";
 

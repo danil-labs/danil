@@ -1,9 +1,9 @@
 import { createUniqueId, Show } from "solid-js";
-import { SettingsRow } from "../features/settings/index";
+import { SettingsRow } from "../../../../packages/features/settings/src/index";
 import { t } from "../lib/i18n";
-import { Input } from "../ui/Input";
-import { PromotionCodeFormatError } from "./billing-v2-api";
-import { PlatformSessionError } from "./platform-session";
+import { Input } from "../../../../packages/ui/src/Input";
+import { PromotionCodeFormatError } from "../../../../packages/platform-client/src/treasury";
+import { PlatformSessionError } from "../../../../packages/session/src/platform-session";
 
 export function promotionCodeInvalid(error: unknown) {
   return error instanceof PromotionCodeFormatError || error instanceof PlatformSessionError && error.status === 422 && error.code === "promotion_code_invalid";

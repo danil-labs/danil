@@ -1,4 +1,4 @@
-import { type MachinesTransport, machinesClient } from "@terminus/computers";
+import { type MachinesTransport, machinesClient } from "../../../../packages/platform-client/src/machines.ts";
 
 /** Cookie y CSRF siguen en el transporte; ningún cuerpo contextual cruza sin eco. */
 export function contextMachines(endpoint: string, transport: MachinesTransport, relayOrigins: readonly string[], context: string) {

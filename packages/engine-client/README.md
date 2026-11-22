@@ -1,15 +1,24 @@
 # @danil/engine-client
 
-Cliente tipado del contrato RPC1 del motor (`src/generated`, generado) y sus transportes.
+## Qué hace
+Cliente tipado de comandos RPC1 del motor `danil-engine`.
+Soporta transporte local mediante IPC de Tauri (inyectado vía `host`) y transporte remoto vía WebSocket al relay.
 
-- `transports/local.ts`: Desk; usa `host.invoke`/`host.listen` inyectados (el IPC de Tauri vive en `packages/host`).
-- `transports/relay.ts`: WebSocket al relay con ticket de un solo uso (`requestTicket` inyectado), correlación por id, cursor de eventos al reconectar, backoff exponencial con jitter y estado `waking` mientras la máquina despierta. Sin lista blanca de comandos.
-- `connect.ts`: `connectMachine({sessionKey, machine, host?, platform})` elige transporte (único lugar que distingue local de relay), cachea por `(sessionKey, machine_id)` y expone `status()` como señal.
+## Qué expone
+Exporta desde `src/client.ts`:
+- Función principal de ejecución RPC1: `invoke`.
+- Enrutamiento y conectividad: `setMachineRoute`, `untilConnected`.
+- Políticas de reintento: `canRepeat`, `neverRan`, `retrying`, `WAITS`.
+- Instantáneas de contexto (temporal): `captureWorkspaceContext`, `displayWorkspaceSnapshot`, `requestedWorkspaceSnapshot`.
 
-Protocolo de trama del relay (JSON): petición `{id, method, params}`, respuesta `{id, result}` o `{id, error:{code,message}}`, evento `{event, payload, cursor}`; al reconectar el cliente envía `{resume:{cursor}}`.
+## Qué consume
+- `apps/desktop/src/lib/workspace-context.ts` (en proceso de desacoplamiento).
+- `@danil/host` para transporte IPC local.
 
-## Contrato
+## Qué contratos toca
+- Rutas `/v1` del borde: ninguna (es exclusivo del motor RPC1).
+- Comandos RPC1 del motor: despacha todos los comandos definidos en el manifiesto vendorizado (`packages/engine-client/contract/commands.json`).
 
-- `contract/commands.json` + `contract/extensions/*.json`: el manifiesto del motor copiado de `danil-engine` `crates/engine-manifest` (commit en `contract/SOURCE`). Ya no se lee el `commands.json` viejo de `apps/desktop`.
-- `node packages/engine-client/scripts/generate.mjs` regenera `src/generated/` (608 comandos, 43 eventos). `CONTRACT_HASH` = sha256 de `commands.json` seguido de cada extensión en orden; R7 lo comprueba.
-- Para actualizar: copia de nuevo el manifiesto del motor, regenera y fusiona en el mismo PR.
+## Qué falta según la fase 2 del plan
+- Fase 2.3: garantizar que sea consumido exclusivamente por los archivos `queries.ts` de cada feature (regla R12).
+- Fase 4.2: tipos generados automáticamente a partir del manifiesto de comandos del motor (reglas R2 y R7).

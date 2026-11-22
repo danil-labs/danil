@@ -40,7 +40,8 @@ export type RelayConfig = {
 );
 
 /** Lo que detiene la sesión sin reintentar sola: la persona no tiene Terminus de pago (computers#22). */
-export type Blocked = "license_required";
+/** `license_required`: sin licencia. `machine_stopped`: la VM está apagada (409 del ticket); solo una acción de la persona la enciende y llama a `retry()`. */
+export type Blocked = "license_required" | "machine_stopped";
 
 /** Lo que el relay sabe del motor por su último `hello` (`{"type":"engine"}`). */
 export type EngineInfo = { contract: string | null; host_version: string | null };
@@ -350,7 +351,13 @@ export class RelaySession {
         if (protocol !== MACHINE_SESSION_PROTOCOL) throw new Error("unsupported_machine_protocol");
       } else if (this.config.getToken) token = await this.config.getToken();
       else throw new Error("relay_admission_required");
-    } catch {
+    } catch (error) {
+      // VM apagada: no se reintenta en bucle. Queda detenida hasta que una acción la encienda y llame a `retry()`.
+      if ((error as { code?: unknown } | null)?.code === "machine_stopped") {
+        this.machine = "stopped";
+        for (const listener of this.stateListeners) listener(this.machine);
+        return this.setBlocked("machine_stopped");
+      }
       return this.reconnectLater();
     }
     if (this.closed) return;

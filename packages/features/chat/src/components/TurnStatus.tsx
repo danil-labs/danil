@@ -1,128 +1,99 @@
-import { Show, createMemo, createSignal, onCleanup } from "solid-js";
-import { formatearDuracion } from "./ShellCard.tsx";
+import { Show, createMemo } from "solid-js";
+import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { formatearDuracion, type Paso } from "../../../../../apps/desktop/src/lib/steps";
+import { activityElapsed } from "../../../../../apps/desktop/src/lib/turnActivity";
+import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
+import { MachineIcon } from "../../../../ui/src/MachineIcon";
+import { ActivityDots } from "./ActivityDots";
 
 export type MachineWaitStatus = { phase: "waking" | "connecting"; name: string; wakes: boolean };
 
-export function ActivityDots() {
-  return (
-    <span class="inline-flex items-center gap-1" aria-hidden="true">
-      <span class="inline-block size-1.5 rounded-full bg-primary animate-pulse" />
-      <span class="inline-block size-1.5 rounded-full bg-primary animate-pulse [animation-delay:200ms]" />
-      <span class="inline-block size-1.5 rounded-full bg-primary animate-pulse [animation-delay:400ms]" />
-    </span>
-  );
-}
-
-function MachineIcon(props: { wakes?: boolean; size?: number }) {
-  return (
-    <svg
-      width={props.size ?? 14}
-      height={props.size ?? 14}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      class="shrink-0 text-neutral-500"
-      aria-hidden="true"
-    >
-      <rect width="20" height="8" x="2" y="2" rx="2" />
-      <rect width="20" height="8" x="2" y="14" rx="2" />
-      <line x1="6" x2="6.01" y1="6" y2="6" />
-      <line x1="6" x2="6.01" y1="18" y2="18" />
-    </svg>
-  );
-}
-
 const MUESTRA_EL_RELOJ_DESDE_MS = 3000;
 
-export interface TurnStatusProps {
-  paso?: unknown;
+// La actividad normal usa puntos; los bloqueos conservan su estado explícito.
+// Esperar una respuesta o reintentar sí sustituye el rótulo de trabajo.
+export default function EstadoDelTurno(props: {
+  /** El paso que está corriendo, si hay uno. */
+  paso: Paso | null;
+  /** The turn header already supplies normal activity dots and its label. */
   inline?: boolean;
-  esperando?: boolean;
-  reintento?: { intento: number; total: number; clase?: string } | null;
-  enFondo?: boolean;
-  desde?: number | null;
+  /** El turno preguntó algo y no puede seguir sin respuesta. */
+  esperando: boolean;
+  /**
+   * El CLI está reintentando contra su proveedor. `null` mientras no lo anuncie
+   * —y en los agentes que no lo anuncian, que son todos menos Claude—.
+   */
+  reintento: { intento: number; total: number; clase: string } | null;
+  /** El agente contestó y está libre; lo que sigue corriendo es una hija. */
+  enFondo: boolean;
+  /**
+   * Cuándo arrancó el turno, en epoch ms. `null` cuando no se sabe —un turno
+   * que esta ventana no vio arrancar—; sin fecha no se muestra su edad.
+   */
+  desde: number | null;
+  /** El envío espera a que la máquina encienda o abra su canal. */
   machineWait?: MachineWaitStatus | null;
-}
+}) {
+  const ahora = createNow();
 
-export function TurnStatus(props: TurnStatusProps) {
-  const [ahora, setAhora] = createSignal(Date.now());
-
-  if (props.desde != null) {
-    const reloj = setInterval(() => setAhora(Date.now()), 1000);
-    onCleanup(() => clearInterval(reloj));
-  }
-
-  const blocked = () =>
-    Boolean(props.machineWait || props.esperando || props.reintento || props.enFondo);
-
+  const blocked = () => Boolean(props.machineWait || props.esperando || props.reintento || props.enFondo);
   const dice = createMemo(() => {
     if (props.machineWait) {
       const { phase, name } = props.machineWait;
-      const verbo =
-        phase === "connecting"
-          ? `Conectando con ${name}...`
-          : `Iniciando ${name}...`;
+      const verbo = phase === "connecting" ? t("chat.turn.connecting", { name }) : t("chat.turn.waking", { name });
       return { verbo, sujeto: null };
     }
-    if (props.esperando) return { verbo: "Esperando respuesta...", sujeto: null };
-    if (props.enFondo) return { verbo: "Esperando proceso en segundo plano...", sujeto: null };
+    if (props.esperando)
+      return { verbo: t("chat.turn.waiting_answer"), sujeto: null };
+    if (props.enFondo)
+      return { verbo: t("chat.turn.waiting_background"), sujeto: null };
+    // **Un reintento no es un verbo de broma.** Mientras el proveedor no
+    // contesta, el rótulo deja de jugar y dice qué pasa y por dónde va: es
+    // exactamente cuando la espera empieza a parecer un cuelgue.
     const r = props.reintento;
-    if (r) return { verbo: `Reintentando (${r.intento}/${r.total})...`, sujeto: null };
-    return { verbo: "Trabajando...", sujeto: null };
+    if (r)
+      return {
+        verbo: t("chat.turn.retrying", { attempt: r.intento, total: r.total }),
+        sujeto: null,
+      };
+    return { verbo: t("chat.turn.working_aria"), sujeto: null };
   });
 
+  // Los primeros segundos no llevan reloj: un «0s» que aparece con el turno es
+  // ruido, y la duda aparece después. Con el agente parado no lleva reloj
+  // ninguno: el número contesta «¿esto sigue vivo?» de quien trabaja, y sobre
+  // una hija cuenta el turno entero del padre. Cuántas hijas trabajan lo dice
+  // su sección del sidebar.
   const cuanto = () => {
-    if (props.enFondo || props.desde == null) return null;
-    const ms = Math.max(0, ahora() - props.desde);
-    return ms >= MUESTRA_EL_RELOJ_DESDE_MS ? formatearDuracion(ms) : null;
+    if (props.enFondo) return null;
+    const ms = activityElapsed(props.desde, ahora());
+    return ms !== null && ms >= MUESTRA_EL_RELOJ_DESDE_MS ? formatearDuracion(ms) : null;
   };
 
   return (
     <span
-      class={
-        props.inline
-          ? "inline-flex items-center gap-2 text-neutral-500 not-italic"
-          : "m-0 flex items-center gap-2 text-neutral-500 not-italic"
-      }
+      class={props.inline ? "inline-flex items-center gap-2 text-neutral-500 not-italic" : "m-0 flex items-center gap-2 text-neutral-500 not-italic"}
       role={props.inline && !blocked() ? undefined : "status"}
       aria-live={props.inline && !blocked() ? undefined : "polite"}
       aria-label={
-        props.inline && !blocked()
-          ? undefined
-          : props.machineWait
+        props.inline && !blocked() ? undefined : props.machineWait
+
           ? dice().verbo
           : props.esperando
-          ? "Esperando respuesta..."
+          ? t("chat.turn.waiting_answer")
           : props.reintento || props.enFondo
-          ? dice().verbo
-          : "Trabajando..."
+            ? dice().verbo
+            : t("chat.turn.working_aria")
       }
     >
       <Show when={!props.inline || props.machineWait || props.esperando || props.reintento || props.enFondo}>
-        <Show
-          when={props.machineWait || props.esperando || props.reintento || props.enFondo}
-          fallback={
-            <>
-              <ActivityDots />
-              <span class="text-neutral-700 not-italic">Pensando...</span>
-            </>
-          }
-        >
-          <Show when={props.machineWait}>
-            {(machine) => <MachineIcon wakes={machine().wakes} size={14} />}
-          </Show>
-          <span>{dice().verbo}</span>
-        </Show>
+      <Show when={props.machineWait || props.esperando || props.reintento || props.enFondo} fallback={<><ActivityDots /><span class="text-neutral-700 not-italic">{t("chat.reasoning.thinking")}</span></>}>
+        <Show when={props.machineWait}>{(machine) => <MachineIcon wakes={machine().wakes} size={14} />}</Show>
+
+        <span>{dice().verbo}</span>
       </Show>
-      <Show when={cuanto()}>
-        {(duration) => <span aria-hidden="true" class="text-xs tabular-nums">{duration()}</span>}
       </Show>
+      <Show when={cuanto()}>{(duration) => <span aria-hidden="true" class="text-xs tabular-nums">{duration()}</span>}</Show>
     </span>
   );
 }
-
-export { TurnStatus as EstadoDelTurno };
-export default TurnStatus;

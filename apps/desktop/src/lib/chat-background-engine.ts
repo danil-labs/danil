@@ -10,11 +10,11 @@
  * (`capabilities().accountAssets`); el motor la baja al reconciliar.
  */
 import { type ChatBackgroundChange, chatBackgroundView } from "@terminus/protocol";
-import { blobToDataUrl } from "../features/settings/account-profile.ts";
+import { blobToDataUrl } from "../../../../packages/features/settings/src/model/account-profile.ts";
 import { VELO_DE_FONDO, VELO_DE_PANELES, VELO_DE_PESTANAS, fondoDe, type FondoDeChat } from "./chat-background.ts";
 import * as store from "./chat-background-store.ts";
-import { invoke } from "./invoke.ts";
-import { capabilities } from "./platform.ts";
+import { invoke } from "../../../../packages/engine-client/src/client.ts";
+import { capabilities } from "../../../../packages/host/src/platform.ts";
 import { shrinkImage } from "./shrink-image.ts";
 import { errorCode, unknownCommand } from "./errorCode.ts";
 

@@ -34,6 +34,13 @@
 /* Detección explícita de las clases en uso: sin `@import "tailwindcss"` no hay
    escaneo automático que heredar. */
 @source "../**/*.{ts,tsx}";
+@source "../../../platform-client/src/**/*.{ts,tsx}";
+@source "../../../engine-client/src/**/*.{ts,tsx}";
+@source "../../../session/src/**/*.{ts,tsx}";
+@source "../../../host/src/**/*.{ts,tsx}";
+@source "../../../shell/src/**/*.{ts,tsx}";
+@source "../../../features/*/src/**/*.{ts,tsx}";
+@source "../../../../apps/desktop/src/**/*.{ts,tsx}";
 
 /* -------------------------------------------------------------- tipografía */
 

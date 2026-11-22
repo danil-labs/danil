@@ -1,9 +1,10 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { createSignal, onCleanup, Show, splitProps, type JSX } from "solid-js";
 import { Portal } from "solid-js/web";
-import { cn } from "./lib/utils";
+import { cn } from "../../../apps/desktop/src/lib/utils";
 import { Button } from "./Button";
 import { Close } from "./icons";
+import { t } from "../../../apps/desktop/src/lib/i18n";
 
 const [toastHost, setToastHost] = createSignal<HTMLDivElement>();
 
@@ -46,8 +47,6 @@ const toastVariants = cva(
 type ToastPropias = VariantProps<typeof toastVariants> & {
   /** Sin esto no se pinta la cruz: el aviso lo cierra su propio botón. */
   onDismiss?: () => void;
-  /** Texto accesible para el botón de cerrar. Por defecto "Cerrar". */
-  dismissLabel?: string;
 };
 
 export type ToastProps = JSX.HTMLAttributes<HTMLDivElement> & ToastPropias;
@@ -57,7 +56,6 @@ export function Toast(props: ToastProps) {
     "class",
     "tone",
     "onDismiss",
-    "dismissLabel",
     "children",
   ]);
   return (
@@ -72,7 +70,7 @@ export function Toast(props: ToastProps) {
           variant="ghost"
           size="iconCompact"
           class="-mr-1.5 -mt-0.5 shrink-0 text-neutral-500"
-          aria-label={propios.dismissLabel ?? "Cerrar"}
+          aria-label={t("common.toast.dismiss")}
           onClick={() => propios.onDismiss?.()}
         >
           <Close size={14} />

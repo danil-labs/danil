@@ -1,18 +1,18 @@
 import { isFreeRouterAgent, isRetiredAgent } from "../../../../packages/tasks/src/agents.ts";
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
-import { nombreDeAgente } from "../features/onboarding/onboarding-store";
-import { Pantalla } from "../features/onboarding/Screen";
-import { accountKeyUrl } from "../features/settings/account-auth";
-import type { AccountList, AgentOpt, LoginEvent } from "../features/settings/accounts-store";
-import { LoginCodeForm } from "../features/settings/LoginCodeForm";
+import { nombreDeAgente } from "../../../../packages/features/onboarding/src/queries/onboarding-store";
+import { Pantalla } from "../../../../packages/features/onboarding/src/components/Screen";
+import { accountKeyUrl } from "../../../../packages/features/settings/src/model/account-auth";
+import type { AccountList, AgentOpt, LoginEvent } from "../../../../packages/features/settings/src/queries/accounts-store";
+import { LoginCodeForm } from "../../../../packages/features/settings/src/screens/LoginCodeForm";
 import { t } from "../lib/i18n";
-import { invoke } from "../lib/invoke.ts";
+import { invoke } from "../../../../packages/engine-client/src/client.ts";
 import { listen } from "../lib/serviceEvents";
-import { Badge } from "../ui/Badge";
-import { Button } from "../ui/Button";
-import { asFailure, FailureNote } from "../ui/Failure";
-import { Input } from "../ui/Input";
-import { MarcaAgente } from "../ui/icons";
+import { Badge } from "../../../../packages/ui/src/Badge";
+import { Button } from "../../../../packages/ui/src/Button";
+import { asFailure, FailureNote } from "../../../../packages/ui/src/Failure";
+import { Input } from "../../../../packages/ui/src/Input";
+import { MarcaAgente } from "../../../../packages/ui/src/icons";
 
 /** Free Router rows and providers with an app of their own are never offered on a managed computer. */
 export const offered = (a: AgentOpt) => a.available && !a.sin_cuenta && !a.external_install_url && !isFreeRouterAgent(a.id) && !isRetiredAgent(a.id);

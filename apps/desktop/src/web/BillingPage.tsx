@@ -1,18 +1,20 @@
-import { isOrganizationSelectionRequired, machinesClient } from "@terminus/computers";
+import { isOrganizationSelectionRequired } from "@terminus/computers";
+import { machinesClient } from "../../../../packages/platform-client/src/machines.ts";
 import { createEffect, createResource, createSignal, onCleanup, Show } from "solid-js";
 import { render } from "solid-js/web";
 import { aplicarLengua, t } from "../lib/i18n";
 import { seguirElTema } from "../lib/theme";
-import { Button } from "../ui/Button";
+import { Button } from "../../../../packages/ui/src/Button";
 import { SessionLoading } from "./auth/SessionLoading";
 import { signInError, WorkosAuthPage } from "./auth/workos";
 import BillingPlan from "./BillingPlan";
 import { billingHref, rememberBillingLogin } from "./billing-route";
-import { billingV2 } from "./billing-v2-api";
-import { organizationSession } from "./organization-session";
+import { billingV2 } from "../../../../packages/platform-client/src/treasury";
+import { organizationSession } from "../../../../packages/session/src/organization-session";
 import { isOrganizationAuthRequired } from "./organization-context";
-import { PlatformSessionError, platformSession, platformTransport } from "./platform-session";
-import type { WebSessionDeployment } from "./session-config";
+import { PlatformSessionError, platformSession, platformTransport } from "../../../../packages/session/src/platform-session";
+import { platformFetch } from "../../../../packages/platform-client/src/client.ts";
+import type { WebSessionDeployment } from "../../../../packages/session/src/session-config";
 import CheckoutReturn from "./CheckoutReturn";
 import { BILLING_RETURN_KEY, checkoutReturn } from "./billing-v2-return";
 import { organizationMachine } from "./window-billing";
@@ -40,7 +42,7 @@ function BillingPage(props: { options: WebSessionDeployment }) {
   const returning = !!checkoutReturn(location.href).id || !!sessionStorage.getItem(BILLING_RETURN_KEY);
   const fromDesk = query.get("return") === "desk";
   const lifetime = new AbortController();
-  const request: typeof fetch = (input, init) => fetch(input, {
+  const request: typeof fetch = (input, init) => platformFetch(input, {
     ...init,
     signal: init?.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal,
   });

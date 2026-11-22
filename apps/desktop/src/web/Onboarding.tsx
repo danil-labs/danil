@@ -1,13 +1,13 @@
 import Check from "lucide-solid/icons/check";
 import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
-import { crearWorkspace } from "../features/onboarding/onboarding-store";
-import { Pantalla } from "../features/onboarding/Screen";
+import { crearWorkspace } from "../../../../packages/features/onboarding/src/queries/onboarding-store";
+import { Pantalla } from "../../../../packages/features/onboarding/src/components/Screen";
 import { t } from "../lib/i18n";
-import { invoke } from "../lib/invoke.ts";
-import { capabilities } from "../lib/platform";
+import { invoke } from "../../../../packages/engine-client/src/client.ts";
+import { capabilities } from "../../../../packages/host/src/platform";
 import { cn } from "../lib/utils";
-import { HEADER_HEIGHT } from "../lib/window";
-import { Input } from "../ui/Input";
+import { HEADER_HEIGHT } from "../../../../packages/host/src/window";
+import { Input } from "../../../../packages/ui/src/Input";
 import { OnboardingAccounts } from "./OnboardingAccounts";
 import "./phrases";
 

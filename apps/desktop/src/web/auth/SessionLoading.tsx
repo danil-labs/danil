@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import { t } from "../../lib/i18n";
-import { Button } from "../../ui/Button";
+import { Button } from "../../../../../packages/ui/src/Button";
 
 /** While the session is checked: no sign-in, only that it is connecting; a retried check offers to sign out. */
 export function SessionLoading(props: { onSignOut?: () => void }) {

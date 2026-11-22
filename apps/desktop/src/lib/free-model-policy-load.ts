@@ -1,4 +1,4 @@
-import { invoke } from "./invoke.ts";
+import { invoke } from "../../../../packages/engine-client/src/client.ts";
 import { freeModelScope, recognizedFreeModelPolicy, type FreeModelPolicy, type FreeModelStartup } from "./free-model-policy.ts";
 
 /** La política se lee en un destino fijo; nunca se acepta el resultado fusionado. */

@@ -1,12 +1,14 @@
-import { type Machine, type machinesClient, machineToComputer, RelaySession } from "@terminus/computers";
+import { RelaySession } from "@terminus/computers";
+import { type Machine, machineToComputer } from "../../../../packages/platform-client/src/machines.ts";
+import type { MachinesQuery } from "../../../../packages/features/machines/src/queries/machines-query.ts";
 import { Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
 import { createSignal, lazy, Suspense } from "solid-js";
-import { createContextRelayPool, machinesListed, mergeByMachineId } from "../features/machines";
-import { sessionRailState } from "../features/shell";
-import { createRouter, type SliceChange } from "../features/machines/router";
-import type { AccountProfileSource } from "../features/settings/account-profile";
+import { createContextRelayPool, machinesListed, mergeByMachineId } from "../../../../packages/features/machines/src";
+import { sessionRailState } from "../../../../packages/shell/src/shell";
+import { createRouter, type SliceChange } from "../../../../packages/features/machines/src/queries/router";
+import type { AccountProfileSource } from "../../../../packages/features/settings/src/model/account-profile";
 import { t } from "../lib/i18n";
-import { type Capabilities, setCapabilities, type WebAccountsSource } from "../lib/platform";
+import { type Capabilities, setCapabilities, type WebAccountsSource } from "../../../../packages/host/src/platform";
 import { leerPref } from "../lib/prefs";
 import { deliver } from "../lib/serviceEvents";
 import { installIpc } from "./ipc";
@@ -14,13 +16,14 @@ import type { MachineStatus } from "./SyncNote";
 import { createWebTransport } from "./transport";
 import { browser, takeSettingsParam } from "./window-browser";
 import { webMachineCall } from "./workspace-runtime";
+import { MACHINE_ACTION } from "../../../../packages/host/src/machine-action";
 import { windowContext } from "./window-context";
 import { openWorkspaceUrl } from "./open-workspace-url";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => ReturnType<typeof machinesClient>; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
-const Picker = lazy(() => import("../features/machines/MachinePicker").then(m => ({ default: m.MachinePicker })));
-const AccountMachines = lazy(() => import("../features/machines/AccountMachines"));
+type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => MachinesQuery; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
+const Picker = lazy(() => import("../../../../packages/features/machines/src/screens/MachinePicker").then(m => ({ default: m.MachinePicker })));
+const AccountMachines = lazy(() => import("../../../../packages/features/machines/src/screens/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
 function slicesChanged(changes: SliceChange[]) {
   if (changes.includes("workspaces")) window.dispatchEvent(new CustomEvent("harness:workspace-name"));
@@ -49,6 +52,8 @@ export function mountWindow(base: Base, mounted: Mounted) {
             if (!base.permits("machines.session")) throw unavailable();
             const reply = await scope.client(info.context).admission(info.id);
             if (reply.kind === "unauthorized") void refresh();
+            // Sin `wake`, una VM apagada contesta 409: la sesión se detiene sin reintentar hasta una acción de la persona.
+            if (reply.kind === "error" && reply.status === 409 && reply.code === "machine_stopped") throw { code: "machine_stopped" };
             if (reply.kind !== "ok") throw unavailable();
             return reply.value;
           },
@@ -75,7 +80,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       powers.set(key, power);
       if (changed) void refresh();
       bump(n => n + 1);
-      void import("../features/machines/store").then(({ machineNamesChanged, refetchMachines }) => {
+      void import("../../../../packages/features/machines/src/queries/store").then(({ machineNamesChanged, refetchMachines }) => {
         if (stopped) return;
         machineNamesChanged();
         void refetchMachines();
@@ -181,11 +186,25 @@ export function mountWindow(base: Base, mounted: Mounted) {
   let disposeApp: (() => void) | undefined;
   let disposeNotice: (() => void) | undefined;
   let noticeLayer: HTMLElement | undefined;
-  void import("./phrases").then(() => import("../app/main")).then(app => {
+  void import("./phrases").then(() => import("../../../../packages/shell/src/app/main")).then(app => {
     disposeApp = app.disposeWindow;
     if (stopped) disposeApp();
   }).catch(base.onUnavailable);
   window.addEventListener("pagehide", () => fleet.close(), { once: true });
+  // Abrir una pantalla que necesita la VM es una acción: se enciende una vez (`wake: true`) y se vuelve a leer.
+  const waking = new Map<string, Promise<void>>();
+  const onMachineAction = () => {
+    const context = scope.current()?.context;
+    for (const m of fleet.machines(context)) {
+      const key = memberKey(m.id, m.context);
+      if (!m.wakes || fleet.power(m.id, m.context) === "on" || waking.has(key)) continue;
+      waking.set(key, fleet.wake(m.id, m.context)
+        .then(() => { for (const name of ["harness:machines", "harness:service-resync"]) window.dispatchEvent(new CustomEvent(name)); })
+        .catch(() => {})
+        .finally(() => { waking.delete(key); bump(n => n + 1); }));
+    }
+  };
+  window.addEventListener(MACHINE_ACTION, onMachineAction);
   void Promise.all([import("solid-js/web"), import("./SyncNote"), import("./UpdateNotice"), import("./ReauthNote"), import("./phrases")]).then(([{ render }, { MachineStates, MachinesUnavailableNote }, { UpdateNotice }, { ReauthNote, WorkspaceNote }]) => {
     if (stopped) return;
     const layer = document.createElement("div");
@@ -198,6 +217,6 @@ export function mountWindow(base: Base, mounted: Mounted) {
       </>
     ), layer);
   });
-  return { refresh, close: () => { stopped = true; stopListing(); url.close(); active.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
+  return { refresh, close: () => { stopped = true; window.removeEventListener(MACHINE_ACTION, onMachineAction); stopListing(); url.close(); active.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
 }
 

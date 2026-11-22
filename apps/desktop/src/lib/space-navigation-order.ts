@@ -1,6 +1,6 @@
 import { createEffect, createSignal, onCleanup, type Accessor } from "solid-js";
 import { arrangeSpaces, type SpaceOrderSource } from "@terminus/computers/space-order";
-import { capabilities } from "./platform";
+import { capabilities } from "../../../../packages/host/src/platform";
 import { createNavigationOrder } from "./navigation-order";
 
 type Shared = { workspace: string; source: SpaceOrderSource; ids: string[] | null };

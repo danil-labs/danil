@@ -9,7 +9,6 @@ import {
   canAct,
   defaultComputer,
   groupWorkspaces,
-  machineCompatibility,
   machineContracts,
   isManaged,
   systemOf,
@@ -18,8 +17,6 @@ import {
   listWorkspacesWithDeleted,
   powerOf,
   purgeWorkspace,
-  removeComputer,
-  renameComputer,
   restoreWorkspace,
   sessionProbe,
   sessionUrl,
@@ -235,18 +232,11 @@ test("los workspaces se juntan por id igual, nunca por nombre ni remoto", () => 
   );
 });
 
-test("el contrato: igual es ok, distinto es desactualizado, sin dato no se sabe", () => {
-  assert.equal(machineCompatibility("ABC", "abc"), "ok");
-  assert.equal(machineCompatibility("abc", "def"), "outdated");
-  assert.equal(machineCompatibility(null, "abc"), "unknown");
+test("los contratos de la familia auditada", () => {
   const base = "d4541d178c64a065c1a4a0c693817eb84ad17052fd605815295fa1696955ef8f";
   const extended = "3972c281dba1b61f9ad06fc82fbf059af3dbc55770b0a1bcb59ce786ec0a56f1";
   const credentials = "f33064bff6afb3708517c13a90f327af5333cbd82b15a589a2373c80d79e6d51";
-  assert.equal(machineCompatibility(extended, base), "ok");
-  assert.equal(machineCompatibility(base, credentials), "ok");
   const activity = "93b1c32f25c4fb5fd722079a5593f8316125d91e8ecf12e64c3d7e1f7aebae98";
-  assert.equal(machineCompatibility(activity, base), "ok");
-  assert.equal(machineCompatibility(base, activity), "ok");
   assert.deepEqual(machineContracts(base), [base, extended, credentials, activity]);
   assert.deepEqual(machineContracts("unknown"), ["unknown"]);
   assert.deepEqual(machineContracts(null), []);
@@ -335,7 +325,10 @@ test("lápidas: la lista con borrados, restaurar, purgar y el 409 con su código
   const restored = await restoreWorkspace("https://c.example", "t", "w9", reply(200, { id: "w9", name: "Viejo", projects: [], computers: [] }));
   assert.equal(restored.kind === "ok" && restored.value?.id, "w9");
   assert.equal((await purgeWorkspace("https://c.example", "t", "w9", reply(204, null))).kind, "ok");
-  assert.deepEqual(asked.slice(1), [["https://c.example/v1/workspaces/w9/restore", "POST"], ["https://c.example/v1/workspaces/w9/purge", "POST"]]);
+  assert.deepEqual(asked.slice(1), [
+    ["https://c.example/v1/workspaces/w9/restore", "POST"],
+    ["https://c.example/v1/workspaces/w9/purge", "POST"]
+  ]);
   assert.deepEqual(await purgeWorkspace("https://c.example", "t", "w", reply(409, { error: "workspace_not_deleted" })), { kind: "error", status: 409, code: "workspace_not_deleted" });
 });
 
@@ -388,31 +381,6 @@ test("la sonda de la sesión dice license_required con el 403 del relay", async 
   const reply = (status: number) => async () => ({ status, ok: false, json: async () => ({ error: status === 403 ? "license_required" : "websocket_required" }) });
   assert.equal(await sessionProbe("https://c.example", "t", "cmp_a", reply(403)), "license_required");
   assert.equal(await sessionProbe("https://c.example", "t", "cmp_a", reply(426)), null);
-});
-
-test("renombrar una computadora: PATCH con el nombre, y el error con su código", async () => {
-  const asked: Array<{ url: string; method?: string; body?: string; type?: string }> = [];
-  const reply = (status: number, body: unknown) => async (url: string, init?: { method?: string; headers?: Record<string, string>; body?: string }) => {
-    asked.push({ url, method: init?.method, body: init?.body, type: init?.headers?.["content-type"] });
-    return { status, ok: status < 300, json: async () => body };
-  };
-  const ok = await renameComputer("https://c.example", "t", "cmp_a", "Mac del estudio", reply(200, { computer_id: "cmp_a", name: "Mac del estudio" }));
-  assert.deepEqual(ok, { kind: "ok", value: { computer_id: "cmp_a", name: "Mac del estudio" } });
-  assert.deepEqual(asked[0], { url: "https://c.example/v1/computers/cmp_a", method: "PATCH", body: JSON.stringify({ name: "Mac del estudio" }), type: "application/json" });
-  assert.deepEqual(await renameComputer("https://c.example", "t", "cmp_a", "", reply(400, { error: { code: "invalid_name" } })), { kind: "error", status: 400, code: "invalid_name" });
-  assert.deepEqual(await renameComputer("https://c.example", "t", "cmp_b", "X", reply(404, { error: { code: "not_found" } })), { kind: "missing" });
-});
-
-test("quitar una computadora es DELETE sin cuerpo y distingue la VM administrada", async () => {
-  const asked: { url: string; method?: string; body?: string }[] = [];
-  const reply = (status: number, body: unknown) => async (url: string, init?: { method?: string; body?: string }) => {
-    asked.push({ url, method: init?.method, body: init?.body });
-    return { status, ok: status < 300, json: async () => body };
-  };
-  assert.deepEqual(await removeComputer("https://c.example", "t", "cmp_a", reply(200, { computer_id: "cmp_a", deleted: true })), { kind: "ok", value: { computer_id: "cmp_a" } });
-  assert.deepEqual(asked[0], { url: "https://c.example/v1/computers/cmp_a", method: "DELETE", body: undefined });
-  assert.deepEqual(await removeComputer("https://c.example", "t", "cmp_b", reply(409, { error: { code: "not_self_computer" } })), { kind: "error", status: 409, code: "not_self_computer" });
-  assert.deepEqual(await removeComputer("https://c.example", "t", "cmp_c", reply(404, { error: { code: "not_found" } })), { kind: "missing" });
 });
 
 test("un bloque MCP con valores escritos no sale al socket; uno con marcadores sale revisado", async () => {

@@ -2,7 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
@@ -18,5 +22,14 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "../../packages/ui/src",
+    "../../packages/platform-client/src",
+    "../../packages/engine-client/src",
+    "../../packages/session/src",
+    "../../packages/host/src",
+    "../../packages/shell/src",
+    "../../packages/features/*/src"
+  ]
 }
