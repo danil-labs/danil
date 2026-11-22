@@ -39,7 +39,6 @@ Chat es la pantalla de la tarea: la conversación con el agente y el compositor 
 | src/components/Timeline.tsx | SUPERFICIE_DE_EJECUCION, default | propio | se queda | Línea de tiempo de herramientas del turno. Solo TurnActivity.tsx. No llama a la red. |
 | src/components/TurnStatus.tsx | MachineWaitStatus, default | propio | se queda | Estado del turno (pensando, esperando máquina). Solo Chat.tsx. MachineIcon de machines (línea 6) entra como slot. |
 | src/components/VirtualThread.tsx | THREAD_GAP, VirtualThreadApi, VirtualThread | propio | se queda | Lista virtual del hilo. Solo Chat.tsx (@tanstack/solid-virtual). No es un virtualizador genérico de ui. |
-| src/components/WithMentions.tsx | WithMentions | ui | packages/ui/src/WithMentions.tsx | Lo importan projects/Sessions.tsx:29, projects/Tabs.tsx:25 y MessageText.tsx. Pinta menciones. taskMentions y onOpenTask ya son props; el id de máquina (host) tiene que llegar por prop (R4). |
 | src/components/YourMessages.tsx | InputMessage, default | propio | se queda | Mensajes de la persona en el hilo. Solo Chat.tsx. AstroAvatar de projects (línea 8) entra como slot. |
 | src/components/activity/ActivityIndicator.tsx | ActivityIndicator, ActivityCaption | propio | se queda | Movimiento y verbos del turno (thinking, pondering). Lo usan ActivityDots y TurnActivity. Importa i18n de chat. No es Spinner de ui. |
 | src/components/activity/TurnActivity.tsx | RegistroDeTrabajo | propio | se queda | Actividad del turno: razonamiento, línea de tiempo y apps MCP. Solo Chat.tsx. No llama a la red. |

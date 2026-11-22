@@ -18,7 +18,7 @@ import type { MaquinasDeAjustes } from "../model/machines-port";
 import { SalidaDelAgente } from "./AgentOutput";
 import { CloseBehavior } from "./CloseBehavior";
 import { DefaultPermissions } from "../screens/DefaultPermissions";
-import { Governed } from "./Governed";
+import { Governed } from "../../../../ui/src/Governed";
 import { Lengua } from "./Language";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import MaterialPicker from "./MaterialPicker";

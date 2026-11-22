@@ -8,7 +8,7 @@ import { Input } from "../../../../ui/src/Input";
 import { Toggle } from "../../../../ui/src/Toggle";
 import { Badge } from "../../../../ui/src/Badge";
 import { SettingsBlock, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
-import { Governed } from "./Governed";
+import { Governed } from "../../../../ui/src/Governed";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
 
 /**
