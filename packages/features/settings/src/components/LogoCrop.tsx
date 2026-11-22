@@ -2,6 +2,7 @@ import { createEffect, createSignal, onCleanup } from "solid-js";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { Input } from "../../../../ui/src/Input";
 import {
   LOGO_MAX,
   MARCO,
@@ -160,12 +161,13 @@ export function LogoCrop(props: {
         </div>
         <label class="mt-3 flex items-center gap-2 text-xs text-neutral-500">
           <span class="shrink-0">{t("settings.workspaces.logo.zoom")}</span>
-          <input
+          <Input
             type="range"
             min="1"
             max="4"
             step="0.01"
-            class="w-full accent-primary"
+            variant="range"
+            class="w-full"
             value={zoom()}
             disabled={props.saving || ancho() === 0}
             onInput={(e) => acercar(Number(e.currentTarget.value))}

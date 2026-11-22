@@ -1,14 +1,13 @@
-import RefreshCw from "lucide-solid/icons/refresh-cw";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { For, Match, Show, Switch } from "solid-js";
 import { df } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { Source } from "../../../../../apps/desktop/src/lib/model";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { MarcaFuente, repoDe } from "../../../../ui/src/sources";
 import { SettingsBlock } from "../../../../ui/src/SettingsLayout";
+import { RefreshSpinner } from "../../../../ui/src/Spinner";
 
 // Ajustes generales; el contexto principal y los secundarios pertenecen al workspace activo.
 
@@ -85,7 +84,7 @@ export function SourceRow(props: {
             }
             title={t("settings.general.source.fetch_title")}
           >
-            <RefreshCw size={14} class={cn(props.updating && "animate-spin")} />
+            <RefreshSpinner size={14} spinning={props.updating} />
           </Button>
         </Show>
         <Button

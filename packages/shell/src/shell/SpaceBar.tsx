@@ -321,7 +321,8 @@ export function NewSpaceForm(props: {
                 <For each={recientes()}>
                   {(p) => (
                     <label class="flex min-w-0 items-center gap-2 text-ui">
-                      <input
+                      <Input
+                        variant="plain"
                         type="checkbox"
                         class="size-4 shrink-0 accent-primary"
                         checked={elegidas().includes(p.id)}

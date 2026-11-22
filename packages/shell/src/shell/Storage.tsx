@@ -3,7 +3,6 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { haceCuanto } from "../../../../apps/desktop/src/lib/limits";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import Server from "lucide-solid/icons/server";
-import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
 import { MachineCard, MemoryTab, type TaskLookup } from "./MachineCard";
 import { UPDATE_FEATURE, USAGE_FEATURE, hasUsage } from "./machineUsage";
@@ -14,6 +13,7 @@ import { type StorageProps, createStorageState } from "./storage-state";
 import { createStorageTasks } from "./storage-tasks";
 import { createStorageRows } from "./StorageRows";
 import { createDiskView } from "./StorageDiskView";
+import { RefreshSpinner } from "../../../ui/src/Spinner";
 
 export default function Almacenamiento(props: StorageProps) {
   const s = createStorageState(props);
@@ -100,7 +100,7 @@ export default function Almacenamiento(props: StorageProps) {
               disabled={midiendo() || clearing() || listing()}
               onClick={() => void openInventory()}
             >
-              <RefreshCw size={12} class={midiendo() ? "animate-spin" : undefined} aria-hidden />
+              <RefreshSpinner size={12} spinning={midiendo()} aria-hidden />
             </Accion>
           </span>
         </div>

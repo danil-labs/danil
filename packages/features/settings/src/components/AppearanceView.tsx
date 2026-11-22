@@ -16,6 +16,7 @@ import { createApariencia } from "./AppearanceState";
 import { temas, darkStyles, lightStyles, motor, fondos, VISIBILITY_ID, TABS_VEIL_ID, PANELS_VEIL_ID } from "./AppearanceOptions";
 import { StylePicker } from "./AppearanceStylePicker";
 import type { SesionesDeAjustes } from "../model/sessions-port";
+import { Input } from "../../../../ui/src/Input";
 
 /**
  * Tema, fondo de los chats y la cara propia de cada agente.
@@ -164,13 +165,14 @@ export default function Appearance(props: { proyecto: string; maquinas: Maquinas
             </label>
           }
         >
-          <input
+          <Input
             id={VISIBILITY_ID}
             type="range"
             min="0"
             max="100"
             step="5"
-            class="w-40 accent-primary"
+            variant="range"
+            class="w-40"
             value={visibilidad()}
             onInput={(e) => {
               setVelo(elegirVeloDeFondo(1 - Number(e.currentTarget.value) / 100));
@@ -186,13 +188,14 @@ export default function Appearance(props: { proyecto: string; maquinas: Maquinas
           }
           description={t("settings.appearance.tabs_veil.description")}
         >
-          <input
+          <Input
             id={TABS_VEIL_ID}
             type="range"
             min={VELO_DE_PESTANAS_MIN * 100}
             max={VELO_DE_PESTANAS_MAX * 100}
             step="5"
-            class="w-40 accent-primary"
+            variant="range"
+            class="w-40"
             value={Math.round(veloPestanas() * 100)}
             onInput={(e) => {
               setVeloPestanas(elegirVeloDePestanas(Number(e.currentTarget.value) / 100));
@@ -208,13 +211,14 @@ export default function Appearance(props: { proyecto: string; maquinas: Maquinas
           }
           description={t("settings.appearance.panels_veil.description")}
         >
-          <input
+          <Input
             id={PANELS_VEIL_ID}
             type="range"
             min={VELO_DE_PANELES_MIN * 100}
             max={VELO_DE_PANELES_MAX * 100}
             step="5"
-            class="w-40 accent-primary"
+            variant="range"
+            class="w-40"
             value={Math.round(veloPaneles() * 100)}
             onInput={(e) => {
               setVeloPaneles(elegirVeloDePaneles(Number(e.currentTarget.value) / 100));

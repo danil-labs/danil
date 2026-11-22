@@ -6,6 +6,7 @@ import { Textarea } from "../../../../ui/src/Textarea";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { MemoriaProveedor, Startup } from "../queries/workspaces-store";
+import { Input } from "../../../../ui/src/Input";
 
 /**
  * El hueco de proveedor de memoria por workspace: local, o un servidor MCP
@@ -97,7 +98,8 @@ export default function ProveedorDeMemoria() {
               onInput={(e) => setBlock(e.currentTarget.value)}
             />
             <label class="flex items-center gap-2 text-xs">
-              <input
+              <Input
+                variant="plain"
                 type="checkbox"
                 checked={readWrite()}
                 onChange={(e) => setReadWrite(e.currentTarget.checked)}

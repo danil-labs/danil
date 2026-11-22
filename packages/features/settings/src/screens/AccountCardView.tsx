@@ -1,13 +1,12 @@
 import { For, Show, createSignal, type JSX } from "solid-js";
 import AlertTriangle from "lucide-solid/icons/triangle-alert";
-import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { type Account, type AccountStatus } from "../queries/accounts-store";
 import { ProgressBar } from "../../../../ui/src/ProgressBar";
 import { type Query, type Read, cuandoVuelve, haceCuanto, left, legible, revocada, tono } from "../../../../../apps/desktop/src/lib/limits";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { Spinner } from "../../../../ui/src/Spinner";
+import { Spinner, RefreshSpinner } from "../../../../ui/src/Spinner";
 import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
 import { accountPresentation, inferAuthenticated, StatusTag } from "./AccountCardStatus";
 
@@ -364,9 +363,9 @@ export default function AccountCard(props: {
                 title={t("settings.account_card.refresh_account")}
                 onClick={() => void refreshAccount()}
               >
-                <RefreshCw
+                <RefreshSpinner
                   size={13}
-                  class={cn(busy() && "animate-spin")}
+                  spinning={busy()}
                 />
               </button>
             </Show>

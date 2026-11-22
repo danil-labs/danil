@@ -14,6 +14,7 @@ import { Button } from "../../../../ui/src/Button";
 import { aDireccion, corta, hayCapaEncima, seguirHueco, zonasEncima } from "../../../../../apps/desktop/src/lib/sites";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { prosaDe } from "../../../../ui/src/Failure";
+import { Input } from "../../../../ui/src/Input";
 
 /**
  * Un sitio dentro de la ventana. **Lo que este componente pinta es el hueco**;
@@ -334,7 +335,8 @@ export default function Sitio(props: {
             </span>
           }
         >
-          <input
+          <Input
+            variant="plain"
             ref={barra}
             type="text"
             spellcheck={false}
