@@ -3,6 +3,7 @@ import { For, type JSX, Match, Show, Switch } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { MarcaProveedor } from "../../../../ui/src/icons";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { GoogleDriveMark, ZoteroMark } from "../../../../ui/src/toolMarks";
 
 /** «Lo ves en la dirección: bitbucket.org/espacio/…», con el espacio en negrita como el diseño. */
@@ -44,8 +45,7 @@ export function VerMas(props: {
   };
   return (
     <Show when={props.resto.length > 0 || props.abierto}>
-      <button
-        type="button"
+      <Pressable
         class="group inline-flex h-10 cursor-pointer items-start self-start border-0 bg-transparent px-0.5 pt-1.5 text-xs font-medium text-neutral-500 outline-none hover:text-neutral-950 focus-visible:rounded-sm focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
         aria-expanded={props.abierto}
         aria-label={props.abierto ? undefined : t("onboarding.tools.more_label", { names: props.resto.map((r) => r.nombre).join(", ") })}
@@ -77,7 +77,7 @@ export function VerMas(props: {
             )}
           />
         </span>
-      </button>
+      </Pressable>
     </Show>
   );
 }

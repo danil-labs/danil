@@ -4,7 +4,6 @@ export * from "./model/activityPresentation.ts";
 export * from "./model/browserFiles.ts";
 export * from "./model/commandInput.ts";
 export * from "./model/danil-credits.ts";
-export * from "./model/delegatedRail.ts";
 export * from "./model/deltaFrames.ts";
 export * from "./model/diff.ts";
 export * from "./model/drawio.ts";

@@ -1369,3 +1369,18 @@ test("continuation follows each machine and stops when that machine is removed",
   fleet.setMachines([VM]);
   assert.equal(fleet.canContinue("cmp_mac"), false);
 });
+
+/** front-req-1: el 409 `machine_stopped` del ticket avisa con el contexto de la máquina; sin él, la ventana lo cuenta como otra máquina y vuelve a pedir la lista. */
+test("a blocked session reports its change with the member's context", () => {
+  const links = new Map<string, ReturnType<typeof fakeLink>>();
+  const changes: [string, string | undefined][] = [];
+  const fleet = new Fleet({
+    connect: (info) => { const link = fakeLink({ state: "stopped" }); links.set(info.context!, link); return link; },
+    onChange: (machine, context) => void changes.push([machine, context]),
+  });
+  fleet.setMachines([{ id: "cmp_vm", name: "VM", wakes: true, kind: "personal", context: "a" }]);
+  changes.length = 0;
+  links.get("a")!.block("machine_stopped");
+  assert.deepEqual(changes, [["cmp_vm", "a"]]);
+  assert.equal(fleet.power("cmp_vm", changes[0][1]), "off");
+});

@@ -15,6 +15,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { asFailure, FailureNote, prosaDe } from "../../../../ui/src/Failure";
 import { Toast, ToastPortal } from "../../../../ui/src/Toast";
 import type { Conexiones } from "../queries/connect-store";
@@ -83,6 +84,7 @@ export default function Setup(props: SetupProps) {
   function prepararConexiones() {
     preparadas ??= (async () => {
       if (!workspace()) setWorkspace(await entrarAlWorkspaceFree());
+      if (!workspace()) return;
       if (!conexiones()) {
         const [{ crearConexiones }] = await Promise.all([import("../queries/connect-store"), import("../components/ConnectAI")]);
         runWithOwner(dueño, () => setConexiones(crearConexiones()));
@@ -102,7 +104,8 @@ export default function Setup(props: SetupProps) {
     setFallo(null);
     try {
       await prepararConexiones();
-      setPaso("ia");
+      if (workspace()) setPaso("ia");
+      else setSeguir(true);
     } catch (e) {
       // Sin sesión no hay workspace: la única reacción es volver a la pantalla de inicio de sesión.
       if ((e as { detail?: unknown } | null)?.detail === "no_session") setCuentaRespondida(false);
@@ -174,8 +177,7 @@ export default function Setup(props: SetupProps) {
               <div class="mt-2.5 flex gap-1.5">
                 <For each={consejos()}>
                   {(_, i) => (
-                    <button
-                      type="button"
+                    <Pressable
                       class={cn(
                         "size-[9px] cursor-pointer rounded-full outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                         i() === consejo() ? "bg-primary" : "bg-border-strong",

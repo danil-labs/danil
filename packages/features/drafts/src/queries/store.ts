@@ -1,26 +1,12 @@
 import { createMemo, createSignal, untrack } from "solid-js";
 import type { Project, Source } from "../../../../../apps/desktop/src/lib/model";
 import type { Trigger } from "../../../../../apps/desktop/src/lib/mentions";
-import { editDraft, insertMention, insertRecipient, type Recipient } from "../../../../../apps/desktop/src/lib/recipients.ts";
+import { editDraft, insertMention, insertRecipient } from "../../../../../apps/desktop/src/lib/recipients.ts";
 import type { MentionTarget, TaskMention, TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions";
 import { adjuntosDevueltos, adjuntosSinMandar, fuentesHeredadas, sameSources, unirFuentes } from "../../../../../apps/desktop/src/lib/taskDraft.ts";
 
-export type HandoverPending = { from: string; to: string };
+import type { Draft, DraftConfiguration, HandoverPending, HistoryEntry } from "../../../../ui/src/lib/draft.ts"; export type { Draft, DraftConfiguration, HandoverPending, HistoryEntry };
 
-type HistoryEntry = { text: string; task_mentions?: TaskMention[]; recipients?: Recipient[] };
-export type DraftConfiguration = { agent: string; surface: string; model: string; effort: string; mode?: string };
-export type Draft = {
-  input: string;
-  task_mentions?: TaskMention[];
-  recipients?: Recipient[];
-  mentionHistory?: HistoryEntry[];
-  mentionFuture?: HistoryEntry[];
-  sourceIds: string[];
-  excludedSourceIds: string[];
-  archivos: string[];
-  configuration?: DraftConfiguration;
-  provider?: HandoverPending;
-};
 type Dependencies = {
   key: () => string;
   workspace: () => string | null;

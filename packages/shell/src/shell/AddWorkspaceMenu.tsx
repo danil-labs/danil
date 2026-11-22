@@ -44,10 +44,13 @@ export default function AddWorkspaceMenu(props: {
   const [fromHarness, setFromHarness] = createSignal(picker?.takeHarnessWorkspace());
   if (picker?.resume() || fromHarness()) { setStep("danil"); setOpen(true); }
   createEffect(() => openRequestedSessionMenu(props.sessions, { context: setContext, step: setStep, open: setOpen }));
-  function add() {
-    if (picker) { setStep("danil"); return; }
+  function connect() {
     close();
     void props.sessions.sessions.addAccount().catch(() => {});
+  }
+  function add() {
+    if (picker || props.sessions.groups()?.length) setStep("danil");
+    else connect();
   }
   if (capabilities().nativeWindow) {
     let mounted = true;
@@ -55,8 +58,8 @@ export default function AddWorkspaceMenu(props: {
       if (!mounted) return;
       void props.sessions.addFromHarness(link).then((target) => {
         if (target) props.onOpen(target.id, target.context);
-        else add();
-      }).catch(() => add());
+        else connect();
+      }).catch(() => connect());
     }).catch(() => undefined);
     onCleanup(() => { mounted = false; void stop.then((unsubscribe) => unsubscribe?.()); });
   }
@@ -91,7 +94,7 @@ export default function AddWorkspaceMenu(props: {
       <PopoverContent role="menu" class="w-64 p-1" onKeyDown={menuArrows}>
         <Show when={step() === "menu"} fallback={picker
           ? <WebWorkspacePicker picker={picker} fromHarness={fromHarness()} onHarnessAttempt={() => setFromHarness(null)} close={close} add={addPicked} />
-          : <SessionAddStep sessions={props.sessions} context={context()} query={query()} onQuery={setQuery} onClose={close} onOpen={props.onOpen} />}>
+          : <SessionAddStep sessions={props.sessions} context={context()} query={query()} onQuery={setQuery} onClose={close} onOpen={props.onOpen} onConnect={connect} />}>
           <Pressable role="menuitem" class={entry} data-add-danil-step="" onClick={add}>
             <LogIn size={15} aria-hidden="true" />
             <span>{t("shell.workspaces.add_danil")}<small class="block text-caption text-neutral-500">{t("shell.workspaces.add_subtitle")}</small></span>
