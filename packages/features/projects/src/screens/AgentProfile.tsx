@@ -22,6 +22,7 @@ import { BodyPicker } from "../components/BodyPicker";
 import { DEFAULT_PROFILE, notifyProfiles } from "../queries/profiles";
 import { TelegramSection } from "../components/TelegramSection";
 import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
+import { Pressable } from "../../../../ui/src/Pressable";
 const HandlerPolicy = retryableLazy(() => import("../../../settings/src/screens/HandlerPolicy"));
 
 /** Las extensiones que el webview pinta como `data:` URI (`preview::data_url`). */
@@ -282,14 +283,14 @@ export default function AgentProfile(props: {
   return (
     <div class="flex min-h-0 flex-1 flex-col bg-surface">
       <header class="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-        <button
+        <Pressable
           class="grid size-7 place-items-center rounded-sm border-0 bg-transparent text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           aria-label={t("projects.agents.profile_back")}
           title={`${t("projects.agents.profile_back")} (Esc)`}
           onClick={() => props.onClose()}
         >
           <ArrowLeft size={16} />
-        </button>
+        </Pressable>
         <span class="text-ui font-semibold">{t("projects.agents.profile_title")}</span>
       </header>
 

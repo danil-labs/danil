@@ -45,6 +45,7 @@ import {
   zoomDe,
 } from "../queries/typst";
 import { Spinner } from "../../../../ui/src/Spinner";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
  * La vista en vivo de un documento Typst de la tarea: la página de Tinymist en
@@ -330,26 +331,24 @@ export default function VistaPreviaTypst(props: {
                   {(pdf) => (
                     <>
                       <span class="text-neutral-500">{t("code.typst.exported")}</span>
-                      <button
-                        type="button"
+                      <Pressable
                         class="font-mono text-primary underline-offset-2 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-primary"
                         title={t("code.typst.exported.open")}
                         onClick={() => void abrirFuera(pdf())}
                       >
                         {pdf()}
-                      </button>
+                      </Pressable>
                     </>
                   )}
                 </Show>
-                <button
-                  type="button"
+                <Pressable
                   class="ml-auto text-neutral-500 outline-none hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-primary"
                   aria-label={t("code.typst.export.dismiss")}
                   title={t("code.typst.export.dismiss")}
                   onClick={() => setExportado(null)}
                 >
                   ×
-                </button>
+                </Pressable>
               </div>
               {/* La exportación compila aparte de la vista: sus errores pueden no estar en la lista de abajo. */}
               <Show when={!x().pdf && x().diagnostics.length > 0}>
@@ -384,8 +383,7 @@ export default function VistaPreviaTypst(props: {
         <Show when={errores().length + avisos().length > 0}>
           <div class="shrink-0 border-t border-border bg-surface-raised text-caption">
             <div class="flex items-center gap-2 py-1 pr-1.5 pl-3">
-              <button
-                type="button"
+              <Pressable
                 class="flex min-w-0 flex-1 items-center gap-1.5 py-0.5 text-left outline-none focus-visible:outline-2 focus-visible:outline-primary"
                 aria-expanded={desplegada()}
                 onClick={() => setDesplegada(!desplegada())}
@@ -408,7 +406,7 @@ export default function VistaPreviaTypst(props: {
                 ) : (
                   <ChevronUp size={13} class="ml-auto shrink-0 text-neutral-500" aria-hidden="true" />
                 )}
-              </button>
+              </Pressable>
               <Show when={errores().length > 0}>
                 <Button variant="secondary" size="compact" class="shrink-0" disabled={enviado()} onClick={arreglar}>
                   {enviado()
@@ -434,8 +432,7 @@ export default function VistaPreviaTypst(props: {
 function FilaDiagnostico(props: { d: DiagnosticoTypst; onIrA: (d: DiagnosticoTypst) => void }) {
   return (
     <li>
-      <button
-        type="button"
+      <Pressable
         class="flex w-full items-start gap-2 px-3 py-1 text-left hover:bg-surface-muted disabled:cursor-default"
         disabled={props.d.line === null}
         onClick={() => props.onIrA(props.d)}
@@ -449,7 +446,7 @@ function FilaDiagnostico(props: { d: DiagnosticoTypst; onIrA: (d: DiagnosticoTyp
           <span class="shrink-0 font-mono text-neutral-500">{lugarDe(props.d)}</span>
         </Show>
         <span class="min-w-0 break-words text-neutral-950">{props.d.message}</span>
-      </button>
+      </Pressable>
     </li>
   );
 }

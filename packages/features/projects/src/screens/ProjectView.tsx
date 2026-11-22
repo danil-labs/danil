@@ -57,6 +57,7 @@ import type { Etapa } from "./TaskStage";
 // Solo al crear un encargado: fuera de la carga inicial.
 import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
 import { SectionLabel } from "../../../../ui/src/SectionLabel";
+import { Pressable } from "../../../../ui/src/Pressable";
 const NewAgent = retryableLazy(() => import("./NewAgent"));
 
 // Fuera de la carga inicial: la memoria solo se pinta en Configuración y trae el cliente de la cuenta.
@@ -151,8 +152,7 @@ function SelectorDeRama(props: { project: string; source: Source }) {
                   <For each={items()}>
                     {(item) => (
                       <li>
-                        <button
-                          type="button"
+                        <Pressable
                           class="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left font-mono text-caption hover:bg-surface-muted hover:text-neutral-950 disabled:cursor-default disabled:opacity-60"
                           disabled={item === props.source.branch || actualizando()}
                           onClick={() => void cambiar(item)}
@@ -163,7 +163,7 @@ function SelectorDeRama(props: { project: string; source: Source }) {
                               {t("projects.view.source_branch_current")}
                             </span>
                           </Show>
-                        </button>
+                        </Pressable>
                       </li>
                     )}
                   </For>
@@ -479,8 +479,7 @@ export default function VistaDeProyecto(props: {
                     const lectores = () => t("projects.view.agents_read_by", { agents: uno.providers.join(", ") });
                     return (
                       <li>
-                        <button
-                          type="button"
+                        <Pressable
                           class="grid min-h-10 w-full grid-cols-[auto_minmax(0,7.5rem)_minmax(0,1fr)_auto_auto] items-center gap-x-2.5 bg-transparent px-3 py-1 text-left outline-none hover:bg-surface-muted focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
                           title={`${uno.description}\n${lectores()}`}
                           onClick={() => props.onHablarCon(uno.name)}
@@ -504,7 +503,7 @@ export default function VistaDeProyecto(props: {
                             <Show when={lectoresDistintos().has(uno.name)}>{lectores()}</Show>
                           </span>
                           <ChevronRight size={14} class="text-neutral-500" aria-hidden="true" />
-                        </button>
+                        </Pressable>
                       </li>
                     );
                   }}
@@ -697,7 +696,7 @@ export default function VistaDeProyecto(props: {
                       <div class="mb-1 grid max-h-56 gap-0.5 overflow-y-auto">
                         <For each={disponibles()}>
                           {(s) => (
-                            <button
+                            <Pressable
                               class={`${ITEM_DE_MENU} grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2`}
                               onClick={() => {
                                 setAnadiendo(false);
@@ -713,7 +712,7 @@ export default function VistaDeProyecto(props: {
                                   ? t("projects.view.source_git")
                                   : t("projects.view.source_folder")}
                               </span>
-                            </button>
+                            </Pressable>
                           )}
                         </For>
                       </div>
@@ -794,7 +793,7 @@ export default function VistaDeProyecto(props: {
                           project={props.proyecto.id}
                           source={s}
                         />
-                        <button
+                        <Pressable
                           class="grid size-7 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-error-strong focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                           aria-label={t("projects.view.remove_source_named", {
                             name: s.name,
@@ -803,7 +802,7 @@ export default function VistaDeProyecto(props: {
                           onClick={() => void props.onQuitar(s.id)}
                         >
                           <X size={14} />
-                        </button>
+                        </Pressable>
                       </span>
                     </li>
                   )}

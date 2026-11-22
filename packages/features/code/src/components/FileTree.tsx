@@ -69,6 +69,7 @@ import {
   type Resumen,
   rutasDeCarpetas,
 } from "../model/tree";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 const SANGRIA = 12;
 const CHEVRON = 13;
@@ -584,14 +585,13 @@ export default function ArbolDeArchivos(props: {
             </Show>
             <Show when={!e().cargando && e().next !== null ? e().next : null}>
               {(desde) => (
-                <button
-                  type="button"
+                <Pressable
                   class="w-full py-1 pr-3 text-left text-caption text-primary outline-none hover:underline focus-visible:outline-2 focus-visible:outline-primary"
                   style={{ "padding-left": sangria() }}
                   onClick={() => void cargarPlegada(p.ruta, desde())}
                 >
                   {t("code.tree.folded.more", { count: e().total - desde() })}
-                </button>
+                </Pressable>
               )}
             </Show>
           </>
@@ -632,7 +632,7 @@ export default function ArbolDeArchivos(props: {
                   <Folder size={13} class="shrink-0 text-info-strong" aria-hidden="true" />,
                 )}
               >
-                <button
+                <Pressable
                   class={cn(clasesDeFila(), c().plegada || c().ignorada ? "opacity-60" : undefined)}
                   style={{ "padding-left": sangria() }}
                   title={
@@ -678,7 +678,7 @@ export default function ArbolDeArchivos(props: {
                       aria-label={t("code.tree.local.descendants")}
                     />
                   </Show>
-                </button>
+                </Pressable>
               </Show>
               <Show when={abierta(c().ruta)}>
                 <Show when={nuevo()?.padre === c().ruta}>
@@ -720,7 +720,7 @@ export default function ArbolDeArchivos(props: {
                 )}
               >
                 <div class="group/fila relative">
-                <button
+                <Pressable
                   data-ruta={a().ruta}
                   class={cn(clasesDeFila(), conOjo(a().ruta) && "pr-7")}
                   style={{ "padding-left": sangria() }}
@@ -767,10 +767,9 @@ export default function ArbolDeArchivos(props: {
                       </span>
                     )}
                   </Show>
-                </button>
+                </Pressable>
                 <Show when={conOjo(a().ruta)}>
-                  <button
-                    type="button"
+                  <Pressable
                     class={cn(
                       "absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm outline-none hover:bg-neutral-200 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary",
                       principalTypst() === a().ruta ? "text-primary" : "text-neutral-500 hover:text-neutral-950",
@@ -793,7 +792,7 @@ export default function ArbolDeArchivos(props: {
                     ) : (
                       <EyeClosed size={12} aria-hidden="true" />
                     )}
-                  </button>
+                  </Pressable>
                 </Show>
                 </div>
               </Show>
@@ -970,20 +969,20 @@ export default function ArbolDeArchivos(props: {
                 fallback={
                   <>
                     <Show when={m().nodo?.tipo !== "archivo"}>
-                      <button
+                      <Pressable
                         role="menuitem"
                         class={ITEM_DE_MENU}
                         onClick={() => empezarNuevo("archivo", m().nodo?.ruta ?? "")}
                       >
                         {t("code.tree.new_file")}
-                      </button>
-                      <button
+                      </Pressable>
+                      <Pressable
                         role="menuitem"
                         class={ITEM_DE_MENU}
                         onClick={() => empezarNuevo("carpeta", m().nodo?.ruta ?? "")}
                       >
                         {t("code.tree.new_folder")}
-                      </button>
+                      </Pressable>
                     </Show>
                     <Show when={m().nodo}>
                       {(nodo) => (
@@ -993,7 +992,7 @@ export default function ArbolDeArchivos(props: {
                           </Show>
                           <Show when={nodo().tipo === "archivo" && editorTypstAqui()?.ruta !== nodo().ruta && editorTypstAqui()}>
                             {(editor) => (
-                              <button
+                              <Pressable
                                 role="menuitem"
                                 class={ITEM_DE_MENU}
                                 onClick={() => {
@@ -1007,23 +1006,23 @@ export default function ArbolDeArchivos(props: {
                                 }}
                               >
                                 {t("code.tree.insert_path")}
-                              </button>
+                              </Pressable>
                             )}
                           </Show>
-                          <button
+                          <Pressable
                             role="menuitem"
                             class={ITEM_DE_MENU}
                             onClick={() => empezarARenombrar(nodo().ruta)}
                           >
                             {t("code.tree.rename")}
-                          </button>
-                          <button
+                          </Pressable>
+                          <Pressable
                             role="menuitem"
                             class={`${ITEM_DE_MENU} text-error-strong`}
                             onClick={() => setMenu({ ...m(), borrando: true })}
                           >
                             {t("code.tree.delete.ask")}
-                          </button>
+                          </Pressable>
                         </>
                       )}
                     </Show>
