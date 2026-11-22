@@ -10,6 +10,10 @@
     "apps/desktop/scripts/terminal-indent.test.ts": ["unresolved"],
     "apps/desktop/scripts/web-mobile.mjs": ["unresolved"],
 
+    // scripts/verify-parity se instala aparte con npm (su package.json trae playwright, pixelmatch
+    // y pngjs) y corre la build web con vite de apps/desktop; parity.sh deja ahí run.f2.mjs.
+    "scripts/verify-parity/**": ["unlisted", "binaries"],
+
     // Generado de los OpenAPI vendorizados por packages/platform-client/scripts/generate.mjs:
     // no se edita a mano, y trae todos los esquemas del contrato aunque el front lea solo unos.
     "packages/platform-client/src/generated/**": ["exports", "types"],
