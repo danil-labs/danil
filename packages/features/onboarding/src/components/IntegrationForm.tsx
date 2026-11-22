@@ -5,6 +5,7 @@ import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { explicar } from "../queries/connect-store";
 import { connectGitHost, openExternal } from "../queries";
 import { type Integracion, SIN_BORRADOR } from "../model/tool-cards";
@@ -111,14 +112,13 @@ export function createFormulario(estado: EstadoDeIntegraciones, conexiones: Cone
                   fallback={
                     <span class="text-xs text-neutral-500">
                       {bitbucket ? t("onboarding.tools.bitbucket.token_hint") : prosa(prov().token_help)}{" "}
-                      <button
-                        type="button"
+                      <Pressable
                         class="inline-flex cursor-pointer items-center gap-0.5 border-0 bg-transparent p-0 text-primary hover:underline"
                         onClick={() => void openExternal(prov().token_url).catch(() => {})}
                       >
                         {t("onboarding.tools.credential.create_token")}
                         <ExternalLink size={11} aria-hidden="true" />
-                      </button>
+                      </Pressable>
                     </span>
                   }
                 >

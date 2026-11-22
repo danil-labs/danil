@@ -21,25 +21,25 @@ import { type Session } from "../model/transcript.ts";
 import { type PermissionRequest } from "../screens/Chat";
 import { type ComandoQueNace, type TerminalLanzada } from "./sleepSession.ts";
 import { batch, createEffect, createMemo, createResource, createSignal, on, onCleanup, type Accessor } from "solid-js";
-import type { ConversationScope, MachineWait, SessionRow, createConversationHandoff, createEngineQueue, createTaskQueues, createThreadsStore, createWorkspaceStore, machines, watchProfiles } from "./types.js";
+import type { ConversationScope, CreateConversationHandoff, CreateEngineQueue, CreateTaskQueues, MachineWait, MachinesPort, SessionRow, WatchProfilesPort, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import type { createResync } from "./resync.ts";
 import type { createShellCommand } from "./shell-command.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type ThreadStreamDeps = { apagadas: Accessor<Readonly<Record<string, string>>>; claveAbierta: () => string; createConversationHandoff: typeof createConversationHandoff;
-  createEngineQueue: typeof createEngineQueue; createTaskQueues: typeof createTaskQueues; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
+export type ThreadStreamDeps = { apagadas: Accessor<Readonly<Record<string, string>>>; claveAbierta: () => string; createConversationHandoff: CreateConversationHandoff;
+  createEngineQueue: CreateEngineQueue; createTaskQueues: CreateTaskQueues; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
   enviarFiltro: ReturnType<typeof createResync>["enviarFiltro"]; filaDe: (id: string) => SessionRow | undefined; input: () => string;
   leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number;
   loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machineName: (id: string, local?: boolean) => string;
   machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>;
-  machineWakes: (id: string) => boolean; machines: typeof machines; mandarElegido: ReturnType<typeof createShellCommand>["mandarElegido"];
+  machineWakes: (id: string) => boolean; machines: MachinesPort; mandarElegido: ReturnType<typeof createShellCommand>["mandarElegido"];
   opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; pestanas: ReturnType<typeof createTabs>;
   project: Accessor<string>; projectList: Accessor<Project[]>; reconcileActiveTurns: ReturnType<typeof createResync>["reconcileActiveTurns"]; sesiones: Accessor<Record<string, SessionRow[]>>;
   sessionId: Accessor<string | null>; setInput: (value: string, inputType?: string, change?: TextEdit) => void; tareaDelRiel: (id: string) => SenderTask | null;
-  threads: ReturnType<typeof createThreadsStore>; watchHandlerStatuses: (project: string) => () => HandlerStatusRow[]; watchProfiles: typeof watchProfiles; workspaceActivo: Accessor<string | null>;
-  workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  threads: ReturnType<typeof createThreadsStore>; watchHandlerStatuses: (project: string) => () => HandlerStatusRow[]; watchProfiles: WatchProfilesPort; workspaceActivo: Accessor<string | null>;
+  workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 1131–1449, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createThreadStream(deps: ThreadStreamDeps) {

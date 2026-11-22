@@ -1,15 +1,18 @@
-import { type createPanelDeChatState as T_createPanelDeChatState } from "../queries/panel-state.ts";
-import { carpetaDeTrabajo, type HandlerDefinition } from "../../../../../apps/desktop/src/lib/model";
-import { type CatalogosDeModelos } from "../../../../../apps/desktop/src/lib/models.ts";
-import { type Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
-import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../../apps/desktop/src/lib/taskFiles.ts";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import { capabilities } from "../../../../host/src/platform";
-import { LOCATION_BAR } from "../../../../host/src/window";
-import type { default as TaskLocationScreen } from "./TaskLocation";
-import { LazyPart } from "../../../../ui/src/LazyPart";
-import { workLabel } from "../../../../ui/src/lib/workLabel.ts";
-import { type AgentProfileScreen, type SessionRow, type createDeskStrip, type createDeskStrip as T_createDeskStrip, type createWorkspaceSession, type machines } from "../queries/types.ts";
+import { type createPanelDeChatState as T_createPanelDeChatState } from "./panel-de-chat-state.ts";
+import { carpetaDeTrabajo, type HandlerDefinition } from "../../../../apps/desktop/src/lib/model";
+import { type CatalogosDeModelos } from "../../../../apps/desktop/src/lib/models.ts";
+import { type Superficie } from "../../../../apps/desktop/src/lib/surfaces.ts";
+import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
+import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { capabilities } from "../../../host/src/platform";
+import { LOCATION_BAR } from "../../../host/src/window";
+import type { default as TaskLocationScreen } from "../../../features/chat/src/screens/TaskLocation";
+import { LazyPart } from "../../../ui/src/LazyPart";
+import { workLabel } from "../../../ui/src/lib/workLabel.ts";
+import { type createDeskStrip, type createDeskStrip as T_createDeskStrip, type createWorkspaceSession } from "../../../features/projects/src";
+import { type default as AgentProfileScreen } from "../../../features/projects/src/screens/AgentProfile";
+import { type machines } from "../../../features/machines/src/queries/store";
+import { type SessionRow } from "../../../ui/src/lib/session-row.ts";
 import { Show, Suspense, batch, type Accessor, type Component, type ComponentProps, type JSX, type lazy } from "solid-js";
 
 

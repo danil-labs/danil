@@ -14,7 +14,7 @@ import { displayWorkspaceSnapshot, invoke, requestedWorkspaceSnapshot } from "..
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { batch, type Accessor, type Setter } from "solid-js";
-import type { Hilo, SessionRow, Startup, createComposerStore, createContextSource, createDraftsStore, createProjectsStore, createThreadsStore, createWorkspaceStore, machines } from "./types.js";
+import type { ComposerPort, ContextSourcePort, DraftsPort, Hilo, MachinesPort, ProjectsPort, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createPanels } from "../../../../../apps/desktop/src/lib/panels.ts";
 import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import type { sessionRefresh } from "../../../../session/src/sessionRefresh.ts";
@@ -24,16 +24,16 @@ import type { Preview } from "../../../../ui/src/lib/preview.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type AttachmentsDeps = { abrirSesion: ReturnType<typeof createContextSource>["abrirSesion"]; adjuntosEn: Map<string, string>;
-  asentarEscritorio: (ws: string, lista: Space[] | null) => string | null; asleep: (error: unknown) => boolean; composer: ReturnType<typeof createComposerStore>;
-  confirmContext: (token: Parameters<ReturnType<typeof createWorkspaceStore>["confirmContext"]>[0], root: string | null, listed: Source[]) => void;
+export type AttachmentsDeps = { abrirSesion: ContextSourcePort["abrirSesion"]; adjuntosEn: Map<string, string>;
+  asentarEscritorio: (ws: string, lista: Space[] | null) => string | null; asleep: (error: unknown) => boolean; composer: ComposerPort;
+  confirmContext: (token: Parameters<WorkspaceContextPort["confirmContext"]>[0], root: string | null, listed: Source[]) => void;
   deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; documentosEn: (options: { headers: Record<string, string>; } | undefined) => boolean;
-  draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: ReturnType<typeof createDraftsStore>; enCache: Accessor<boolean>;
+  draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: DraftsPort; enCache: Accessor<boolean>;
   enMaquina: (machine: string | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; finishedTurns: ReturnType<typeof createThreadStream>["finishedTurns"];
   grupos: Accessor<string[]>; guardarCache: { save(snapshot: ShellSnapshot): void; flush: () => void; cancel(): void; }; handoff: ReturnType<typeof createThreadStream>["handoff"];
-  hilos: Accessor<Record<string, Hilo>>; lifecycleRevision: number; loadThread: ReturnType<typeof createContextSource>["loadThread"];
-  loadWindowThreads: ReturnType<typeof createContextSource>["loadWindowThreads"]; machineName: (id: string, local?: boolean) => string; machines: typeof machines;
-  paneles: ReturnType<typeof createPanels>; pegadasEn: Map<string, string>; pestanas: ReturnType<typeof createTabs>; projectCatalog: ReturnType<typeof createProjectsStore>;
+  hilos: Accessor<Record<string, Hilo>>; lifecycleRevision: number; loadThread: ContextSourcePort["loadThread"];
+  loadWindowThreads: ContextSourcePort["loadWindowThreads"]; machineName: (id: string, local?: boolean) => string; machines: MachinesPort;
+  paneles: ReturnType<typeof createPanels>; pegadasEn: Map<string, string>; pestanas: ReturnType<typeof createTabs>; projectCatalog: ProjectsPort;
   reconcileActiveTurns: ReturnType<typeof createResync>["reconcileActiveTurns"]; refetchMachines: () => Promise<void | never[]>; refreshSessions: (proyectos: string[]) => Promise<void>;
   sessionId: Accessor<string | null>; sessionLists: ReturnType<typeof sessionRefresh>; setAlta: Setter<boolean>; setAviso: Setter<{ texto: string; boton?: string; ir?: () => void; } | null>;
   setBloqueo: Setter<Frase | null>; setCuentasTocadas: Setter<number>; setDesdeDeTurno: ReturnType<typeof createThreadStream>["setDesdeDeTurno"]; setDraftBases: Setter<Record<string, string>>;
@@ -41,9 +41,9 @@ export type AttachmentsDeps = { abrirSesion: ReturnType<typeof createContextSour
   setMaterialError: Setter<string | null>; setProject: Setter<string>; setProjectReadError: Setter<string | null>; setProyectoAbierto: Setter<string | null>;
   setSesiones: Setter<Record<string, SessionRow[]>>; setSessionId: Setter<string | null>; setSettlingTurns: ReturnType<typeof createThreadStream>["setSettlingTurns"]; setSources: Setter<Source[]>;
   setSpaces: Setter<Space[]>; setStartupReadError: Setter<string | null>; setTaskSourcesError: Setter<string | null>; setVentana: ReturnType<typeof createThreadStream>["setVentana"];
-  setVivas: ReturnType<typeof createThreadStream>["setVivas"]; shellCache: ShellSnapshot | null; soltarCola: ReturnType<typeof createContextSource>["soltarCola"];
+  setVivas: ReturnType<typeof createThreadStream>["setVivas"]; shellCache: ShellSnapshot | null; soltarCola: ContextSourcePort["soltarCola"];
   taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; threads: ReturnType<typeof createThreadsStore>; workspaceActivo: Accessor<string | null>;
-  workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 1724–2004, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createAttachments(deps: AttachmentsDeps) {
@@ -182,14 +182,17 @@ export function createAttachments(deps: AttachmentsDeps) {
   // conversación y deja la anterior abandonada, sin error y sin aviso. Para
   // eso está `recargarMaterial`.
 
+  let altaMostrada = false;
   async function aplicar(a: Startup) {
     if (!requestedWorkspaceSnapshot(a)) return;
     guardarCache.flush();
     const activo = a.workspaces.find((w: { id: string }) => w.id === a.active);
-  // Sin workspace se abre el alta. Si ya estaba abierta no se toca: el paso 1
-  // acaba de crear uno, y volver a mirar aquí la cerraría a mitad.
-  // En la web el workspace lo crea la plataforma al darse de alta: la ventana espera sin pedirlo.
-    if (a.active === null && capabilities().localSetup) setAlta(true);
+    // El alta se ofrece una vez. Con una sesión válida puede terminar sin
+    // seleccionar un workspace, y el siguiente repaso deja abierto el riel.
+    if (a.active === null && capabilities().localSetup && !altaMostrada) {
+      altaMostrada = true;
+      setAlta(true);
+    }
     const transition = workspaceContext.beginTransition(a);
   // La lengua es del workspace, y cambia al cambiar de cliente: eso es lo que
   // se pidió, no un efecto secundario. `null` hereda la de la máquina.

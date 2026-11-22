@@ -10,7 +10,10 @@ async function activar(w: { id: string; name: string }) {
   return { ...w, nombre: w.name };
 }
 export const crearWorkspace = async (name: string) => activar({ ...(await invoke<{ id: string }>("add_workspace", { name })), name });
-export const entrarAlWorkspaceFree = async () => activar(await sealFirstFreeWorkspace(invoke));
+export async function entrarAlWorkspaceFree() {
+  const workspace = await sealFirstFreeWorkspace(invoke);
+  return workspace ? activar(workspace) : null;
+}
 export const renombrarWorkspace = (id: string, name: string) =>
   invoke("rename_workspace", { id, name });
 

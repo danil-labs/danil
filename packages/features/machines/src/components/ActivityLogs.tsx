@@ -4,6 +4,7 @@ import { listActivity, readActivity, readActivityLog } from "../queries/engine-a
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { Select } from "../../../../ui/src/Select";
 import { machineName, machines, refetchMachines } from "../queries/store";
 import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
@@ -76,17 +77,17 @@ export default function ActivityLogs(props: { workspace: string | null; machine?
       <Show when={error()}><p role="alert" class="text-sm text-error-strong">{t("activity.unavailable")}</p></Show>
       <Show when={detail()} fallback={<>
         <Show when={online() && !rows().length && !error()}><p class="py-5 text-sm text-neutral-500">{busy() ? t("activity.loading") : t("activity.empty")}</p></Show>
-        <ul class="m-0 list-none p-0"><For each={rows()}>{row => <li class="border-b border-border"><button type="button" class="flex w-full items-start justify-between gap-4 px-1 py-3 text-left hover:bg-neutral-100 focus-visible:outline-primary" onClick={() => void load(row.id)} disabled={!online() || busy()}>
+        <ul class="m-0 list-none p-0"><For each={rows()}>{row => <li class="border-b border-border"><Pressable class="flex w-full items-start justify-between gap-4 px-1 py-3 text-left hover:bg-neutral-100 focus-visible:outline-primary" onClick={() => void load(row.id)} disabled={!online() || busy()}>
           <span class="min-w-0"><span class="block break-words text-sm font-medium">{row.title}</span><span class="text-xs text-neutral-500">{date(row.updated_at)}</span></span><span class="shrink-0 text-xs text-neutral-500">{state(row.state)}</span>
-        </button></li>}</For></ul>
+        </Pressable></li>}</For></ul>
       </>}>{record => <div class="grid min-w-0 gap-3 py-2">
         <Button variant="ghost" size="compact" class="justify-self-start" onClick={() => { generation++; setBusy(false); setDetail(null); setStep(""); setLog(null); }}>{t("activity.back")}</Button>
         <h3 class="m-0 break-words text-sm font-semibold">{record().title}</h3><p class="m-0 text-xs text-neutral-500">{state(record().state)} · {date(record().updated_at)}</p>
         <p class="m-0 text-xs text-neutral-500">{t("activity.technical")}</p>
         <For each={record().steps}>{part => <div class="min-w-0 border-t border-border py-3">
-          <button type="button" class="flex w-full justify-between gap-3 text-left text-sm font-medium focus-visible:outline-primary" aria-expanded={step() === part.id} onClick={() => step() === part.id ? setStep("") : void read(record().id, part.id, [0])}>
+          <Pressable class="flex w-full justify-between gap-3 text-left text-sm font-medium focus-visible:outline-primary" aria-expanded={step() === part.id} onClick={() => step() === part.id ? setStep("") : void read(record().id, part.id, [0])}>
             <span>{date(part.started_at)}</span><span>{state(part.state)}</span>
-          </button>
+          </Pressable>
           <Show when={step() === part.id}><div class="mt-3 grid min-w-0 gap-2">
             <pre class="m-0 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-sm bg-neutral-100 p-3 font-mono text-xs">{part.command}</pre>
             <p class="m-0 break-all text-xs text-neutral-500">{part.cwd}</p>

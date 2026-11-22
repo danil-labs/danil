@@ -9,7 +9,7 @@ import { mensajeDeFallo } from "../model/failures";
 import { esDeLaTerminal, interrumpible, type RazonDeRetencion } from "../../../../ui/src/lib/queue.ts";
 import { type ComandoQueNace, type Corrida, type TerminalLanzada } from "./sleepSession.ts";
 import { batch, createEffect, createMemo, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
-import type { DefaultPermissionModeChange, SessionRow, createComposerStore, createProjectsStore, createThreadsStore, createWorkspaceStore, machines } from "./types.js";
+import type { ComposerPort, DefaultPermissionModeChange, MachinesPort, ProjectsPort, SessionRow, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import type { createPanelDeChat } from "../screens/PanelDeChat.tsx";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
@@ -24,7 +24,7 @@ import type { createThreadStream } from "./thread-stream.ts";
 /** Lo que el bloque usaba del cuerpo de App. */
 export type ShellCommandDeps = { DEFAULT_PERMISSION_MODE_EVENT: "harness:default-permission-mode"; adoptarNacida: ReturnType<typeof createHandover>["adoptarNacida"]; agent: Accessor<string>;
   agents: Accessor<Agent[]>; busy: ReturnType<typeof createThreadStream>["busy"]; carpetasDeTerminal: ReturnType<typeof createThreadStream>["carpetasDeTerminal"]; claveAbierta: () => string;
-  cola: ReturnType<typeof createThreadStream>["cola"]; comandosDeLaCola: ReturnType<typeof createThreadStream>["comandosDeLaCola"]; composer: ReturnType<typeof createComposerStore>;
+  cola: ReturnType<typeof createThreadStream>["cola"]; comandosDeLaCola: ReturnType<typeof createThreadStream>["comandosDeLaCola"]; composer: ComposerPort;
   configDeLaSesion: ReturnType<typeof createHandover>["configDeLaSesion"]; conversationScope: ReturnType<typeof createThreadStream>["conversationScope"];
   deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; detenerYEnviar: ReturnType<typeof createSendNow>["detenerYEnviar"];
   draftBases: Accessor<Record<string, string>>; draftMachine: () => string | null; draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; effort: Accessor<string>;
@@ -32,11 +32,11 @@ export type ShellCommandDeps = { DEFAULT_PERMISSION_MODE_EVENT: "harness:default
   espacioPara: (space: string | null | undefined, machine: string | null | undefined) => string | null; esperando: Accessor<boolean>; grupos: Accessor<string[]>;
   hablandoCon: Accessor<{ project: string; name: string; } | null>; handoff: ReturnType<typeof createThreadStream>["handoff"]; handoffAt: ReturnType<typeof createThreadStream>["handoffAt"];
   injecting: ReturnType<typeof createThreadStream>["injecting"]; lanzados: ReturnType<typeof createThreadStream>["lanzados"]; lifecycleRevision: number;
-  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; machines: typeof machines;
+  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; machines: MachinesPort;
   marcarQuieta: ReturnType<typeof createThreadStream>["marcarQuieta"]; marcarViva: ReturnType<typeof createThreadStream>["marcarViva"]; model: Accessor<string>; modo: Accessor<string>;
   nacenConComando: ReturnType<typeof createThreadStream>["nacenConComando"]; olvidarPestana: ReturnType<typeof createPanelDeChat>["olvidarPestana"];
   pendingStarts: ReturnType<typeof createThreadStream>["pendingStarts"]; pestanas: ReturnType<typeof createTabs>; pintarNaciendo: ReturnType<typeof createHandover>["pintarNaciendo"];
-  ponerTerminal: ReturnType<typeof createResyncCommands>["ponerTerminal"]; project: Accessor<string>; projectCatalog: ReturnType<typeof createProjectsStore>;
+  ponerTerminal: ReturnType<typeof createResyncCommands>["ponerTerminal"]; project: Accessor<string>; projectCatalog: ProjectsPort;
   quitarDeLaCola: ReturnType<typeof createResyncCommands>["quitarDeLaCola"]; reanudarCola: ReturnType<typeof createSendNow>["reanudarCola"];
   refreshFolder: ReturnType<typeof createAttachments>["refreshFolder"]; refreshSessions: (proyectos: string[]) => Promise<void>;
   retenidaPorElMotor: ReturnType<typeof createThreadStream>["retenidaPorElMotor"]; retirarNaciendo: (id: string) => { project: string; row: SessionRow; }[];
@@ -47,7 +47,7 @@ export type ShellCommandDeps = { DEFAULT_PERMISSION_MODE_EVENT: "harness:default
   settlingTurns: ReturnType<typeof createThreadStream>["settlingTurns"]; soltarTerminal: ReturnType<typeof createResyncCommands>["soltarTerminal"];
   stopping: ReturnType<typeof createThreadStream>["stopping"]; taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; terminales: ReturnType<typeof createThreadStream>["terminales"];
   threads: ReturnType<typeof createThreadsStore>; vivas: ReturnType<typeof createThreadStream>["vivas"]; workspaceActivo: Accessor<string | null>;
-  workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2961–3259, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createShellCommand(deps: ShellCommandDeps) {

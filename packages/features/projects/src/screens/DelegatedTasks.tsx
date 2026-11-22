@@ -6,7 +6,7 @@ import { HEADER_HEIGHT } from "../../../../host/src/window";
 import type { SenderTask } from "../../../../../apps/desktop/src/lib/recipients";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, FailureNote } from "../../../../ui/src/Failure";
-import Sessions, { readableSessionTitle, type SessionRow } from "../../../projects/src/screens/Sessions";
+import Sessions, { readableSessionTitle, type SessionRow } from "./Sessions";
 import { DelegatedSkeleton } from "../components/DelegatedSkeleton";
 import { DelegatedReference } from "../components/DelegatedReference";
 import { delegatedRailRows } from "../model/delegatedRail";

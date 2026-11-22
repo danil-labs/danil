@@ -6,14 +6,12 @@ import { type NavegacionDePestanas } from "../../../../../apps/desktop/src/lib/s
 import { capabilities } from "../../../../host/src/platform";
 import { type ActivityEvent } from "@terminus/protocol";
 import { createEffect, createSignal, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
-import type { InicioDeCarpeta } from "./types.js";
+import type { CreateSidebarPort, InicioDeCarpeta, SearchFilter } from "./types.ts";
 import type { createTaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles.ts";
-import type { createSidebar } from "../../../../shell/src/shell/Sidebar.tsx";
-import type { SearchFilter } from "../../../../shell/src/shell/GlobalSearch.tsx";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type ThreadSideDeps = { createSidebar: typeof createSidebar; alta: Accessor<boolean>; archivosDeTarea: ReturnType<typeof createTaskFiles>; closeActiveTab: () => void;
+export type ThreadSideDeps = { createSidebar: CreateSidebarPort; alta: Accessor<boolean>; archivosDeTarea: ReturnType<typeof createTaskFiles>; closeActiveTab: () => void;
   irAPestanaDe: (nav: NavegacionDePestanas) => void; irAVentanaVecina: (salto: 1 | -1) => void; juntarLaActiva: () => void; llaveDeBorrador: (proyecto: string | undefined) => string;
   nuevaSesion: (enProyecto?: string) => void; partirLaActiva: () => void; project: Accessor<string>; projectList: Accessor<Project[]>; reabrirPestana: () => void; sessionId: Accessor<string | null>;
   setBuscando: Setter<SearchFilter | null>; workspaceActivo: Accessor<string | null>; };

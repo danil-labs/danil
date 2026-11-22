@@ -15,7 +15,7 @@ import { comandoDeTerminal } from "../model/terminalIndent";
 import { type Turn } from "../model/transcript";
 import { type Session } from "../model/transcript.ts";
 import { createSignal, type Accessor, type Setter } from "solid-js";
-import type { CarryCheck, CarryModule, Draft, SessionRow, createDraftsStore, createThreadsStore, createWorkspaceStore, machines, runOn } from "./types.js";
+import type { CarryCheck, CarryPort, Draft, DraftsPort, MachinesPort, RunOnPort, SessionRow, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createAttachments } from "./attachments.ts";
 import type { createHandover } from "./handover.ts";
 import type { createSendNow } from "./send-now.ts";
@@ -25,22 +25,22 @@ import type { createThreadStream } from "./thread-stream.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type SendGatesDeps = { importCarry: () => Promise<CarryModule>; abrirConComando: ReturnType<typeof createShellCommand>["abrirConComando"]; agent: Accessor<string>; archivos: () => string[];
+export type SendGatesDeps = { importCarry: () => Promise<CarryPort>; abrirConComando: ReturnType<typeof createShellCommand>["abrirConComando"]; agent: Accessor<string>; archivos: () => string[];
   attachmentsFor: ReturnType<typeof createAttachments>["attachmentsFor"]; borrador: () => Draft; busy: ReturnType<typeof createThreadStream>["busy"]; claveAbierta: () => string;
   cola: ReturnType<typeof createThreadStream>["cola"]; configDeLaSesion: ReturnType<typeof createHandover>["configDeLaSesion"];
-  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: ReturnType<typeof createDraftsStore>;
+  deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: DraftsPort;
   effortDelTurno: ReturnType<typeof createHandover>["effortDelTurno"]; ejecutarComando: ReturnType<typeof createShellCommand>["ejecutarComando"]; encolar: ReturnType<typeof createSendNow>["encolar"];
   encolarYSoltar: ReturnType<typeof createSendNow>["encolarYSoltar"]; engineCanDispatch: ReturnType<typeof createThreadStream>["engineCanDispatch"]; enviar: ReturnType<typeof createSend>["enviar"];
   escritorio: Accessor<string | null>; filaDe: (id: string) => SessionRow | undefined; gateSeq: number; input: () => string;
-  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; machineName: (id: string, local?: boolean) => string; machines: typeof machines;
+  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; machineName: (id: string, local?: boolean) => string; machines: MachinesPort;
   model: Accessor<string>; modo: Accessor<string>; msgs: Accessor<Msg[]>; nuevaSesion: (enProyecto?: string) => void;
   opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; pendientesDe: ReturnType<typeof createSend>["pendientesDe"];
   preguntarAlMargen: ReturnType<typeof createThreadStream>["preguntarAlMargen"]; project: Accessor<string>; projectList: Accessor<Project[]>;
-  queueBusy: ReturnType<typeof createThreadStream>["queueBusy"]; runOn: typeof runOn; sessionId: Accessor<string | null>; setArchivos: (files: string[]) => void;
+  queueBusy: ReturnType<typeof createThreadStream>["queueBusy"]; runOn: RunOnPort; sessionId: Accessor<string | null>; setArchivos: (files: string[]) => void;
   setAviso: Setter<{ texto: string; boton?: string; ir?: () => void; } | null>; setError: Setter<string | null>; setInput: (value: string, inputType?: string, change?: TextEdit) => void;
   setPermissions: ReturnType<typeof createThreadStream>["setPermissions"]; setRunOn: (workspace: string | null, id: string | null) => void; sideCommand: Accessor<string | null>;
   soltarPreguntas: ReturnType<typeof createThreadStream>["soltarPreguntas"]; threads: ReturnType<typeof createThreadsStore>; vivas: ReturnType<typeof createThreadStream>["vivas"];
-  workspaceActivo: Accessor<string | null>; workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 5209–5507, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createSendGates(deps: SendGatesDeps) {
@@ -196,10 +196,10 @@ export function createSendGates(deps: SendGatesDeps) {
     return salio;
   }
 
-  const [carryModule, setCarryModule] = createSignal<CarryModule | null>(null);
+  const [carryModule, setCarryModule] = createSignal<CarryPort | null>(null);
   const [hojaDeLlevar, setHojaDeLlevar] = createSignal<{ key: string; check: CarryCheck; busy?: boolean } | null>(null);
   const maquinaDeLaVentana = () => capabilities().windowMachine?.()?.id ?? machines().find((m) => m.active)?.id ?? "local";
-  async function moduloDeLlevar(): Promise<CarryModule> {
+  async function moduloDeLlevar(): Promise<CarryPort> {
     const mod = carryModule() ?? (await deps.importCarry());
     setCarryModule(() => mod);
     return mod;
@@ -344,7 +344,7 @@ export function createSendGates(deps: SendGatesDeps) {
       permission_mode: modo() || null,
       attachments,
       space: escritorio(),
-    }, undefined, undefined, llevar ? (clave) => (carryModule() as CarryModule).runCarry(clave) : undefined);
+    }, undefined, undefined, llevar ? (clave) => (carryModule() as CarryPort).runCarry(clave) : undefined);
     if (!sent && generation === workspaceContext.generation()) {
       drafts.restoreFailed(draftKey, message, attachments);
     }

@@ -9,3 +9,6 @@ export function workdirIconKind(kind: string, cloud?: string | null): WorkdirIco
 export function esDeCodigo(kind: string): boolean {
   return kind === "git";
 }
+
+/** Por dónde abre el diálogo cuando se pide desde el menú «Nueva carpeta» del riel. */
+export type InicioDeCarpeta = "carpeta" | "vacia" | "clonar";

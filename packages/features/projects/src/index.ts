@@ -7,7 +7,3 @@ export { createCloneFolder, type CloneFolderDeps } from "./queries/clone-folder.
 export { createNewTask, type NewTaskDeps } from "./queries/new-task.ts";
 export { createSessionMutations, type SessionMutationsDeps } from "./queries/session-mutations.ts";
 export { createRailSessions, type RailSessionsDeps } from "./model/rail-sessions.ts";
-export { createTaskWork } from "./screens/TaskHistory";
-export type { HandlerTarget } from "./screens/HandlerPolicy";
-export type { default as AgentProfileScreen } from "./screens/AgentProfile";
-export type { default as AgentPageTasksScreen } from "./screens/AgentPageTasks";

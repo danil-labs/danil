@@ -10,7 +10,7 @@ import { MODO_AUTOMATICO } from "../model/modes";
 import { type Session } from "../model/transcript";
 import { PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
 import { batch, type Accessor, type Setter } from "solid-js";
-import type { Draft, SessionRow, createComposerStore, createDraftsStore, createThreadsStore, machines } from "./types.js";
+import type { ComposerPort, Draft, DraftsPort, MachinesPort, SessionRow, createThreadsStore } from "./types.ts";
 import type { createPanels } from "../../../../../apps/desktop/src/lib/panels.ts";
 import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import type { createPanelDeChat } from "../screens/PanelDeChat.tsx";
@@ -21,9 +21,9 @@ import type { createThreadStream } from "./thread-stream.ts";
 
 /** Lo que el bloque usaba del cuerpo de App. */
 export type HandoverDeps = { agent: Accessor<string>; avisar: (sesion: string) => (e: unknown) => void; borrador: () => Draft; busy: ReturnType<typeof createThreadStream>["busy"];
-  claveAbierta: () => string; composer: ReturnType<typeof createComposerStore>; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
-  draftMachine: () => string | null; drafts: ReturnType<typeof createDraftsStore>; esChatDeAgente: (s: { chat_de_agente?: boolean; }) => boolean; filaDe: (id: string) => SessionRow | undefined;
-  machines: typeof machines; model: Accessor<string>; modo: Accessor<string>; mudarPestana: ReturnType<typeof createPanelDeChat>["mudarPestana"]; notifyProfiles: () => void;
+  claveAbierta: () => string; composer: ComposerPort; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
+  draftMachine: () => string | null; drafts: DraftsPort; esChatDeAgente: (s: { chat_de_agente?: boolean; }) => boolean; filaDe: (id: string) => SessionRow | undefined;
+  machines: MachinesPort; model: Accessor<string>; modo: Accessor<string>; mudarPestana: ReturnType<typeof createPanelDeChat>["mudarPestana"]; notifyProfiles: () => void;
   olvidarPestana: ReturnType<typeof createPanelDeChat>["olvidarPestana"];
   opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; paneles: ReturnType<typeof createPanels>;
   permissions: ReturnType<typeof createThreadStream>["permissions"]; pestanas: ReturnType<typeof createTabs>; project: Accessor<string>;
