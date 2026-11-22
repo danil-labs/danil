@@ -15,7 +15,7 @@ import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-adde
 import { sendIdentityMe } from "../../../platform-client/src/identity.ts";
 
 export type FirstFreeOptions = { delays?: readonly number[]; wait?: (ms: number) => Promise<void> };
-export type FirstFreeRefusal = "no_session" | "engine_unsupported" | "no_free_org" | "several_free_orgs" | "refresh_failed" | "not_available_yet";
+export type FirstFreeRefusal = "no_session" | "engine_unsupported" | "refresh_failed" | "not_available_yet";
 
 /**
  * Las esperas entre lecturas, con retroceso: ~30 s en total. Una cuenta nueva
@@ -29,11 +29,10 @@ const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 const refuse = (detail: FirstFreeRefusal) => ({ detail, message_key: `onboarding.workspace.${detail}` });
 
 /**
- * Sella aquí el workspace de la organización personal Free y devuelve su id.
- * Solo se reintenta lo que puede cambiar: la sesión sin leer todavía y el
- * catálogo sin la fila. Lo demás sale en seguida con su código.
+ * Sella el workspace cuando hay una sola organización Free. Con una sesión
+ * válida y sin destino inequívoco, la ventana puede abrir el riel directamente.
  */
-export async function sealFirstFreeWorkspace(invoke: ContextInvoke, { delays = FIRST_FREE_DELAYS, wait = pause }: FirstFreeOptions = {}): Promise<{ id: string; name: string }> {
+export async function sealFirstFreeWorkspace(invoke: ContextInvoke, { delays = FIRST_FREE_DELAYS, wait = pause }: FirstFreeOptions = {}): Promise<{ id: string; name: string } | null> {
   const noop = () => {};
   // El `state` de la última lectura: sin `sessions`, `connected` es «todavía cargando» y lo demás, «sin sesión».
   let state: string | null = null;
@@ -50,10 +49,8 @@ export async function sealFirstFreeWorkspace(invoke: ContextInvoke, { delays = F
     if (!groups?.length && state !== null && state !== "connected") throw refuse("no_session");
     if (groups === null) { if (last) throw refuse("not_available_yet"); continue; }
     if (!groups.length) throw refuse("no_session");
-    const free = groups.filter((g) => g.plan === "free");
-    if (!free.length) throw refuse("no_free_org");
     const personal = adoptionTarget(groups);
-    if (!personal) throw refuse("several_free_orgs");
+    if (!personal) return null;
     const refresh = () => accounts.refresh(groups, sessions.send);
     await refresh();
     const status = accounts.status();

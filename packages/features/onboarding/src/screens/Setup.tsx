@@ -83,6 +83,7 @@ export default function Setup(props: SetupProps) {
   function prepararConexiones() {
     preparadas ??= (async () => {
       if (!workspace()) setWorkspace(await entrarAlWorkspaceFree());
+      if (!workspace()) return;
       if (!conexiones()) {
         const [{ crearConexiones }] = await Promise.all([import("../queries/connect-store"), import("../components/ConnectAI")]);
         runWithOwner(dueño, () => setConexiones(crearConexiones()));
@@ -102,7 +103,8 @@ export default function Setup(props: SetupProps) {
     setFallo(null);
     try {
       await prepararConexiones();
-      setPaso("ia");
+      if (workspace()) setPaso("ia");
+      else setSeguir(true);
     } catch (e) {
       // Sin sesión no hay workspace: la única reacción es volver a la pantalla de inicio de sesión.
       if ((e as { detail?: unknown } | null)?.detail === "no_session") setCuentaRespondida(false);
