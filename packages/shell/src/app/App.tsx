@@ -22,10 +22,9 @@ import {
 import VisorDeArtefacto from "../../../features/artifacts/src/screens/ArtifactViewer";
 import type { Preview } from "../../../features/artifacts/src/components/Preview";
 import Chat, {
-  type Author,
   type Msg,
 } from "../../../features/chat/src/screens/Chat";
-import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedAttention, delegatedDescendants, delegatedFamilies, DelegatedPanel } from "../../../features/chat/src/screens/DelegatedTasks";
+import { DelegatedLaunch, type DelegatedListProps, DelegatedNone, type DelegatedPanelModel, DelegatedToolbar, delegatedDescendants, DelegatedPanel } from "../../../features/chat/src/screens/DelegatedTasks";
 import { agentSwitchBlocked, MACHINE_UNANNOUNCED } from "../../../features/chat/src/model/handover";
 import SearchPanel from "../../../features/chat/src/components/SearchPanel";
 import McpSignInNotice, { noteMcpSignIn } from "../../../features/settings/src/screens/McpSignInNotice";
@@ -35,17 +34,12 @@ import TranscriptSource from "../../../features/chat/src/screens/TranscriptSourc
 import { modoInicial, modoRecordado, recordarModo } from "../../../features/chat/src/model/modes";
 import {
   type ChatEvent,
-  type ChatExportado,
-  clave,
   mensajesDelHilo,
-  modeloDeSubtarea,
   type PreguntaEvent,
-  type Session,
   type SessionEvent,
 } from "../../../features/chat/src/model/transcript";
 import { createComposerStore } from "../../../features/composer/src";
-import { createProjectsStore, activeTaskCounts, activityByProject, type HiddenProjects, hiddenIn, type PickedAt, picksIn, rememberPick, setHidden, storedPicks, taskCountOf } from "../../../features/projects/src";
-import type { DeleteTarget } from "../../../features/projects/src/screens/DeleteTaskDialog";
+import { createCloneFolder, createDeskStrip, createNewTask, createSpaceOps, createRailSessions, createSessionMutations, createWorkspaceSession } from "../../../features/projects/src";
 import type { HandlerTarget } from "../../../features/settings/src/screens/HandlerPolicy";
 import { createThreadsStore } from "../../../features/threads/src";
 import { createWorkspaceStore } from "../../../features/workspace/src";
@@ -66,9 +60,8 @@ const TaskFilesCard = lazy(() => import("../../../features/code/src/screens/Task
 
 import { esDeCodigo } from "../../../ui/src/lib/workdirKind";
 import Observability from "../../../features/observability/src/screens/Observability";
-import AnadirCarpeta, { type ClonEnCurso } from "../../../features/projects/src/screens/AddWorkdir";
+import AnadirCarpeta, { } from "../../../features/projects/src/screens/AddWorkdir";
 import AgentPageTasks from "../../../features/projects/src/screens/AgentPageTasks";
-import { createTaskFiles } from "../../../../apps/desktop/src/lib/taskFiles";
 
 // Chunk aparte: el perfil completo de un agente solo se carga al abrirlo.
 const AgentProfile = retryableLazy(() => import("../../../features/projects/src/screens/AgentProfile"));
@@ -86,7 +79,7 @@ const MachinesLicense = lazy(() =>
   })),
 );
 import { createFreeRouterConsent, folderIcon, renderAvatar, renderPdf } from "./chatSlots";
-import { lastActivity, launcherOf, taskDescendants, withRemoteLaunchers } from "@terminus/tasks";
+import { launcherOf, taskDescendants } from "@terminus/tasks";
 import { bringHereLabel, canBringHere, carryOrigin, machineName, machineOf, machines, machineWakes, refetchMachines, rememberedRunOn, remoteChildScope, runOn, senderTaskId, setRunOn, setTaskRowMachine } from "../../../features/machines/src/queries/store";
 import { createdTasks } from "../../../features/projects/src/model/agentPageFilters";
 import BaseBranchPicker from "../../../features/projects/src/screens/BaseBranchPicker";
@@ -110,12 +103,10 @@ import RecentAgentChats from "../../../features/projects/src/screens/RecentAgent
 import { type SessionRow, threadTitle } from "../../../features/projects/src/screens/Sessions";
 import TabStrip, { NewTabButton } from "../../../features/projects/src/screens/Tabs";
 import { createTaskWork, ResumeTask } from "../../../features/projects/src/screens/TaskHistory";
-import type { Etapa } from "../../../features/projects/src/screens/TaskStage";
 import { esChatDeAgente } from "../../../features/projects/src/model/taskTree";
 import {
   DEFAULT_PERMISSION_MODE_EVENT,
 } from "../../../features/settings/src/screens/DefaultPermissions";
-import type { ContextoDeProyectos } from "../../../features/settings/src/screens/ManageProjects";
 
 // Configuración solo se abre a pedido: no entra en la carga inicial.
 const Settings = lazy(() => import("./settingsSlots"));
@@ -126,7 +117,6 @@ import { createAttention, topState } from "../shell/attention";
 import TaskNotifier from "../shell/TaskNotifier";
 
 const DeleteSpace = lazy(() => import("../shell/DeleteSpace"));
-import { ATTACHMENT_DOCUMENTS_FEATURE } from "@terminus/protocol";
 import { openChatVisual, readChatVisual } from "../../../features/chat/src/queries/readVisual";
 import { apagarVistasDe, hayVistasDe, soltarVistasHuerfanas } from "../../../features/code/src/queries/typst";
 import { createConversationHandoff } from "../../../features/conversation-handoff/src";
@@ -160,39 +150,25 @@ import { VELO_DE_FONDO } from "../../../../apps/desktop/src/lib/chat-background"
 import { fondoDeChat, imagenDelWorkspace, veloDeFondo } from "../../../../apps/desktop/src/lib/chat-background-store";
 import { connected } from "../../../../apps/desktop/src/lib/engineConnection";
 import { pedirElCampo } from "../../../../apps/desktop/src/lib/focus";
-import { recordarCarpetas } from "../../../../apps/desktop/src/lib/folderKinds";
 import { aplicarLenguaDeWorkspace, t } from "../../../../apps/desktop/src/lib/i18n";
 import { captureWorkspaceContext, invoke } from "../../../engine-client/src/client.ts";
 import type { InternalTaskLink } from "../../../../apps/desktop/src/lib/links";
-import type {
-  AgentProfile as AgentProfileData,
-  ArbolEnTarea,
-  HandlerList,
-  Project,
-  Source,
-} from "../../../../apps/desktop/src/lib/model";
-import { carpetaDeTrabajo } from "../../../../apps/desktop/src/lib/model";
-import { threadPreview } from "../../../../apps/desktop/src/lib/nextSteps";
+import { carpetaDeTrabajo, type HandlerList } from "../../../../apps/desktop/src/lib/model";
 import {
   createPanels,
-  deleteLayout,
   gridCell,
   gridTracks,
   MIN_PANEL_HEIGHT,
   MIN_PANEL_WIDTH,
   type Side as PanelSide,
   panelReadingOrder,
-  readLayout,
   type PanelSite as SitioDePanel,
   sameSite,
-  spacesWithLayout,
 } from "../../../../apps/desktop/src/lib/panels";
 import { capabilities, openMachineScreen } from "../../../host/src/platform";
 import { createPointerDrag } from "../../../../apps/desktop/src/lib/pointer-drag";
-import { createPref, escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs";
-import type { Frase } from "../../../../apps/desktop/src/lib/prose";
 import { type SenderTask } from "../../../../apps/desktop/src/lib/recipients";
-import { conservar, sessionRefresh } from "../../../session/src/sessionRefresh";
+import { conservar } from "../../../session/src/sessionRefresh";
 import { readShellCache, shellCacheWriter } from "../../../../apps/desktop/src/lib/shellCache";
 import {
   destinoDePestana,
@@ -202,36 +178,22 @@ import { comandosConAlMargen } from "../../../../apps/desktop/src/lib/side-quest
 import { sidebarViewKey } from "../../../../apps/desktop/src/lib/sidebarView";
 import { createSpaceNavigationOrder } from "../../../../apps/desktop/src/lib/space-navigation-order";
 import {
-  carpetasDelEscritorio,
-  enEscritorio,
-  escritorioDeFila,
   type Space,
   spaceName,
 } from "../../../../apps/desktop/src/lib/spaces";
 import {
   type ArtifactTab,
-  appendToStoredStrip,
-  artifactTabId,
-  browserTabId,
-  createTabs,
-  deleteStoredStrip,
   type FileTab,
   fileTabId,
   isContentTab,
   isTaskTab,
-  migrateLegacyStrip,
   OBSERVABILITY_TAB_ID,
   type ScreenTab,
   type SiteTab,
   screenTabId,
-  siteTabId,
-  spacesWithStoredStrip,
-  storedStrip,
   type Tab,
-  type TaskTab,
 } from "../../../../apps/desktop/src/lib/tabs";
 import {
-  claveDeBorrador,
   esProvisional,
   proyectoDeNuevaTarea,
 } from "../../../../apps/desktop/src/lib/taskDraft";
@@ -264,196 +226,8 @@ export default function App() {
    * primero, antes de pedir proveedores de IA y source control.
    */
   const [alta, setAlta] = createSignal(false);
-  /* El fondo propio del agente de la conversación con el mando: lo publica su
-     celda y se pinta detrás del área de trabajo, no solo detrás de su chat. */
-  const [fondoDelAgente, setFondoDelAgente] = createSignal<{ url: string; veil?: number } | null>(null);
-  const workspaceContext = createWorkspaceStore();
-  const contextRoot = workspaceContext.root;
-  const contextConfirmed = workspaceContext.confirmed;
-  const workspaceMode = workspaceContext.mode;
-  const workspaceActivo = workspaceContext.active;
-  onCleanup(workspaceContext.dispose);
-  function confirmContext(token: Parameters<typeof workspaceContext.confirmContext>[0], root: string | null, listed: Source[]) {
-    const result = workspaceContext.confirmContext(token, root, listed);
-    if (result === "unavailable") throw { what: t("projects.context.unavailable"), detail: "context_unavailable" };
-    if (result === "accepted") setMaterialError(null);
-  }
-  const attention = createAttention();
-  const [draftBases, setDraftBases] = createSignal<Record<string, string>>({});
-  const [hablandoCon, setHablandoCon] = createSignal<{ project: string; name: string } | null>(null);
-  const projectCatalog = createProjectsStore({ scope: () => ({ workspace: workspaceActivo(), machine: null }), invoke });
-  const projectList = projectCatalog.rows;
-  onCleanup(projectCatalog.dispose);
-  createEffect(() => recordarCarpetas(projectList()));
-  const [sources, setSources] = createSignal<Source[]>([]);
-  // `rows: null`: la máquina está apagada y no contestó; el selector ofrece lo que se sabe de ella.
-  const [draftProjects, setDraftProjects] = createSignal<{ workspace: string; machine: string; rows: Project[] | null } | null>(null);
-  const draftMachine = () => runOn(workspaceActivo()) ?? machines().find(m => m.active)?.id ?? null;
-  const draftOptions = () => {
-    const machine = draftMachine();
-    return machine ? { headers: { "x-terminus-machine": machine } } : undefined;
-  };
-  /**
-   * Con la máquina apagada no se le puede preguntar, y elegir proyecto no la
-   * enciende: la enciende enviar. Mientras, el selector ofrece los proyectos
-   * que ya tienen su carpeta ahí y los que tienen remoto, que el motor clona
-   * al llegar el primer mensaje (`ensure_here`). Sin su carpeta: la de la
-   * fila es de otra máquina.
-   */
-  const projectsWhileOff = (machine: string) =>
-    projectList()
-      .filter(p => p.machines?.includes(machine) || !!p.remote_url)
-      .map(p => ({ ...p, working_directory: null, work_tree: null }));
-  const composerProjects = createMemo(() => {
-    const machine = draftMachine();
-    if (!machine) return projectList();
-    if (machines().find(m => m.id === machine)?.local) return projectList().filter(p => !p.machines || p.machines.includes(machine));
-    const found = draftProjects();
-    if (found?.machine !== machine || found.workspace !== workspaceActivo()) return [];
-    return found.rows ?? projectsWhileOff(machine);
-  });
-  const [materialError, setMaterialError] = createSignal<string | null>(null);
-  const [taskSourcesError, setTaskSourcesError] = createSignal<string | null>(null);
-  const [draftProjectError, setDraftProjectError] = createSignal<string | null>(null);
-  const [projectReadError, setProjectReadError] = createSignal<string | null>(null);
-  const [startupReadError, setStartupReadError] = createSignal<string | null>(null);
-  const [connectionError, setConnectionError] = createSignal<string | null>(null);
-  const [readRevision, setReadRevision] = createSignal(0);
-  const draftMachineOn = () => machines().find(m => m.id === draftMachine())?.on;
-  createEffect(on([workspaceActivo, draftMachine], () => setDraftProjectError(null)));
-  createEffect(on([workspaceActivo, draftMachine, draftMachineOn, projectList, readRevision], ([workspace, machine, encendida]) => {
-    setDraftProjects(previous => previous?.workspace === workspace && previous.machine === machine ? previous : null);
-    if (!workspace || !machine || machines().find(m => m.id === machine)?.local) return;
-    if (encendida === false) {
-      setDraftProjects({ workspace, machine, rows: null });
-      return;
-    }
-    let current = true;
-    onCleanup(() => { current = false; });
-    void projectCatalog.readForMachine(machine).then(rows => {
-      if (current) { setDraftProjectError(null); setDraftProjects({ workspace, machine, rows: rows.map(row => ({
-        ...row, machines: projectList().find(p => p.id === row.id)?.machines ?? [machine],
-      })) }); }
-    }).catch(e => {
-      if (!current) return;
-      // Se apagó entre la lista de máquinas y la pregunta, o la pregunta la está
-      // encendiendo: lo mismo que apagada.
-      if (asleep(e)) setDraftProjects({ workspace, machine, rows: null });
-      else setDraftProjectError(prosaDe(e));
-    });
-  }));
-  createEffect(on(draftMachine, (machine, before) => {
-    if (before !== undefined && machine !== before) setDraftBases({});
-  }));
+  const { fondoDelAgente, setFondoDelAgente, workspaceContext, contextRoot, contextConfirmed, workspaceMode, workspaceActivo, confirmContext, attention, draftBases, setDraftBases, hablandoCon, setHablandoCon, projectCatalog, projectList, sources, setSources, draftMachine, draftOptions, composerProjects, materialError, setMaterialError, taskSourcesError, setTaskSourcesError, draftProjectError, setDraftProjectError, projectReadError, setProjectReadError, startupReadError, setStartupReadError, connectionError, setConnectionError, readRevision, setReadRevision, draftMachineOn, taskSources, setTaskSources, setError, errorVisible, bloqueo, setBloqueo, grupos, project, setProject, sesiones, setSesiones, actividadDeProyectos, elegidosAqui, recordarEleccion, tareasActivas, ocultosAqui, ocultarDelSelector, naciendo, setNaciendo, retoques, setRetoques, retirarNaciendo, sessionId, setSessionId, materialPedido, setMaterialPedido, proyectoAbierto, setProyectoAbierto, pestanas, archivosDeTarea, llaveDeBorrador, anchoDeArchivos, setAnchoDeArchivos, anchoDelArbol, setAnchoDelArbol, } = createWorkspaceSession({ asleep, createAttention, createWorkspaceStore, machineName, machines, runOn });
 
-  const [taskSources, setTaskSources] = createSignal<Source[] | null>(null);
-  const [error, setError] = createSignal<string | null>(null);
-  const errorVisible = () => {
-    const message = error();
-    return machines().some(machine => message === t("web.machines.off_wakes", { name: machineName(machine.id) })) ? null : message;
-  };
-  // Por qué esta ventana no puede abrir estos datos, si es que no puede: una
-  // instalación con una forma que este binario ya no sabe convertir
-  // (`workspaces::base_decidida`). Con esto
-  // puesto no se pinta nada más que `PantallaDeBloqueo`.
-  const [bloqueo, setBloqueo] = createSignal<Frase | null>(null);
-
-  // Los ids, para el historial agrupado y los efectos que lo recargan.
-  const projects = createMemo(() => projectList().map((p) => p.id));
-  // Los grupos del historial: los proyectos y las tareas sin proyecto, que
-  // Rust responde con `""`. Van por el mismo camino que las demás: son
-  // otra carpeta, no otro mecanismo (`workspace/sessions.rs`, `sessions_root`).
-  const grupos = createMemo(() => ["", ...projects()]);
-
-  // Vacío es un estado legítimo y es el de arranque: nadie eligió todavía.
-  // La app no elige por ti — con un proyecto puesto se puede mandar una
-  // pregunta atribuida a un trabajo que nunca se abrió.
-  const [project, setProject] = createSignal("");
-  // El historial es de TODO el workspace, agrupado por proyecto. Rust
-  // responde por proyecto: se pregunta una vez por cada uno. Son lecturas
-  // de un directorio, no de red.
-  const [sesiones, setSesiones] = createSignal<Record<string, SessionRow[]>>({});
-  // Lo que ordena el selector de proyectos: sus tareas vivas y la última vez que se eligió, por workspace.
-  const actividadDeProyectos = createMemo(() => activityByProject(sesiones(), lastActivity));
-  const [proyectosElegidos, setProyectosElegidos] = createPref<Record<string, PickedAt>>("projects.last_picked", {});
-  // Lo guardado puede venir de otra versión o estar roto: se lee con tolerancia.
-  const elegidosAqui = () => picksIn(proyectosElegidos(), workspaceActivo() ?? "");
-  function recordarEleccion(id: string) {
-    const workspace = workspaceActivo();
-    if (!workspace || !id) return;
-    const existentes = new Set([...projectList(), ...composerProjects()].map((p) => p.id));
-    setProyectosElegidos({ ...storedPicks(proyectosElegidos()), [workspace]: rememberPick(elegidosAqui(), id, Date.now(), existentes) });
-  }
-  // Las tareas activas que la ventana ya cargó: el `sessions` del motor cuenta también las archivadas.
-  const tareasActivas = createMemo(() => activeTaskCounts(sesiones()));
-  // Apartados del selector, por workspace. Solo el selector los mira: ni el riel ni las tareas cambian.
-  const [proyectosOcultos, setProyectosOcultos] = createPref<HiddenProjects>("projects.hidden", {});
-  const ocultosAqui = createMemo(() => hiddenIn(proyectosOcultos(), workspaceActivo()));
-  function ocultarDelSelector(id: string, ocultar: boolean) {
-    const workspace = workspaceActivo();
-    if (!workspace || !id) return;
-    const existentes = [...projectList(), ...composerProjects()].map((p) => p.id);
-    setProyectosOcultos(setHidden(proyectosOcultos(), workspace, id, ocultar, existentes));
-  }
-  /**
-   * Las tareas que la pantalla ya pinta y Rust todavía no ha escrito.
-   *
-   * Aparte de `sesiones`, que es el espejo fiel de lo que hay en disco: una
-   * fila inventada ahí dentro sobreviviría al siguiente refresco sin que nadie
-   * la reclamara. `sesionesConEstado` las junta para pintar.
-   */
-  const [naciendo, setNaciendo] = createSignal<{ project: string; row: SessionRow }[]>([]);
-  /**
-   * Lo que la persona acaba de cambiarle a una fila (fijarla, su etapa, su
-   * nombre) y el disco todavía no confirma. Se pinta encima de `sesiones` en el
-   * mismo gesto —ir y volver al motor, a veces por el relay, no puede ser lo que
-   * tarde el riel en reaccionar— y se suelta cuando la relectura de su carpeta
-   * ya lo trae, o se deshace si el motor lo rechaza. `sesiones` sigue siendo el
-   * espejo del disco. Lo pone `retocarFila`.
-   */
-  const [retoques, setRetoques] = createSignal<Record<string, { cambio: Partial<SessionRow>; n: number }>>({});
-  let ultimoRetoque = 0;
-  const retirarNaciendo = (id: string) =>
-    setNaciendo((ns) => ns.filter((n) => n.row.id !== id));
-  // La que ya llegó del disco deja de nacer: su fila de verdad la sustituye.
-  createEffect(() => {
-    const listas = sesiones();
-    setNaciendo((ns) => {
-      const quedan = ns.filter(
-        (n) => !(listas[n.project] ?? []).some((r) => r.id === n.row.id),
-      );
-      return quedan.length === ns.length ? ns : quedan;
-    });
-  });
-  const [sessionId, setSessionId] = createSignal<string | null>(null);
-  // Qué proyecto se está mirando en el panel principal, si alguno: una
-  // vista y no un modo. No cambia lo que la app hace, cambia lo que el
-  // panel enseña. Abrir una tarea o empezar una la cierra: la
-  // conversación es lo que ocupa ese sitio.
-  /** La carpeta que se abrió para ver lo que lee: su página entra una vez por Configuración. */
-  const [materialPedido, setMaterialPedido] = createSignal<string | null>(null);
-  const [proyectoAbierto, setProyectoAbierto] = createSignal<string | null>(
-    null,
-  );
-  // Con la tarea delante, un turno que cierra tampoco queda sin ver.
-  createEffect(() => {
-    const workspace = workspaceActivo();
-    const id = sessionId();
-    if (workspace && id && !proyectoAbierto() && attention.unseen(workspace).has(id)) attention.markSeen(workspace, id);
-  });
-
-  // Las pestañas: lo que se tiene a mano en el espacio principal —tareas,
-  // archivos y artefactos en una tira—, una vista y no la vida de la
-  // sesión: cerrar una no toca a Rust ni al historial (`lib/tabs.ts`). La
-  // activa la guarda el módulo (`activarPestana`) y no `sessionId`: una
-  // tarea, uno de sus archivos y uno de sus artefactos pueden estar
-  // abiertos a la vez y los tres dirían "activo" si se derivara de ahí.
-  const pestanas = createTabs({ transient: true });
-  const archivosDeTarea = createTaskFiles();
-  /** Sin tarea todavía, el panel de la carpeta del proyecto vive bajo su propia llave. */
-  const llaveDeBorrador = (proyecto: string | undefined) => (proyecto ? `borrador:${proyecto}` : "");
-  const [anchoDeArchivos, setAnchoDeArchivos] = createPref("taskFiles.width", 0.55);
-  const [anchoDelArbol, setAnchoDelArbol] = createPref("taskFiles.treeWidth", 330);
   const pestanaActiva = () => (proyectoAbierto() ? null : pestanas.active());
   // Los escritorios del workspace (`lib/spaces.ts`). Sin lista —un servicio
   // que no los conoce— la ventana se pinta como antes de los espacios.
@@ -742,550 +516,19 @@ export default function App() {
       },
     ),
   );
-  /** El panel conserva workspace y conversación; el título pertenece a la tira. */
-  const tareasEnVentanas = createMemo<(Pick<TaskTab, "id" | "session"> & { workspace: string | null })[]>((previous) =>
-    conservar(previous ?? [], pestanas.open().filter(isTaskTab).map(({ id, session }) =>
-      ({ id, session, workspace: workspaceActivo() })), (p) => p.id),
-  );
-  const proyectoDePestana = (id: string) => pestanas.open().find(tab => tab.id === id)?.project ?? "";
-  /** Las tareas con pestaña: la lista viva las trae aunque estén archivadas. */
-  const sesionesConPestana = createMemo(
-    () =>
-      [...new Set(pestanas.open().map((p) => p.session))]
-        .filter((id) => id !== "" && !esProvisional(id))
-        .sort(),
-    [],
-    { equals: (a, b) => a.length === b.length && a.every((id, i) => id === b[i]) },
-  );
-  /** Los agentes de las tareas con pestaña: Configuración abre desplegados sus proveedores. */
-  const agentesEnUso = () => {
-    const abiertas = new Set(sesionesConPestana());
-    const agentes = new Set<string>();
-    for (const filas of Object.values(sesiones())) {
-      for (const fila of filas) if (abiertas.has(fila.id)) agentes.add(fila.provider);
-    }
-    return [...agentes];
-  };
-  // Qué pestañas viajaron en la última lectura de cada grupo: la que se abrió
-  // después aún no tiene fila, y eso no dice que la tarea ya no exista.
-  const pedidas = new Map<string, Set<string>>();
-  const sinPedir = (id: string) => grupos().some((g) => !pedidas.get(g)?.has(id));
-  const enLista = (id: string) =>
-    naciendo().some((n) => n.row.id === id) ||
-    Object.values(sesiones()).some((filas) => filas.some((r) => r.id === id));
-  // Una relectura por pestaña sin fila hasta que una lectura la lleve: si falla, no se repite en bucle.
-  const esperandoFila = new Set<string>();
-  function pedirFilasQueFaltan() {
-    const faltan = sesionesConPestana().filter((id) => !enLista(id) && sinPedir(id) && !esperandoFila.has(id));
-    if (faltan.length === 0) return;
-    for (const id of faltan) esperandoFila.add(id);
-    void refreshSessions(grupos());
-  }
-  createEffect(
-    on(
-      sesionesConPestana,
-      () => {
-        if (grupos().every((grupo) => grupo in sesiones())) pedirFilasQueFaltan();
-      },
-      { defer: true },
-    ),
-  );
-  // Podar antes de cargar todos los grupos cerraría pestañas válidas al arrancar.
-  // Archivar cierra la pestaña que se vio viva.
-  let vivasVistas = new Set<string>();
-  createEffect(
-    on([sesiones, grupos, escritorio, spaces], ([lista, g, desk, todas]) => {
-      if (!g.every((grupo) => grupo in lista)) return;
-      const delanteAntes = pestanaActiva();
-      const fuera = pestanas.sync((id) => {
-        for (const [grupo, filas] of Object.entries(lista)) {
-          const fila = filas.find((r) => r.id === id);
-          if (fila) return fila.archived === true && vivasVistas.has(id) ? null : { project: grupo, titulo: fila.title };
-        }
-        const suya = (sinPedir(id) || naciendo().some((n) => n.row.id === id)) && pestanas.open().find((p) => p.session === id);
-        return suya ? { project: suya.project, titulo: "" } : null;
-      });
-      vivasVistas = new Set(
-        Object.values(lista)
-          .flat()
-          .filter((r) => r.archived !== true)
-          .map((r) => r.id),
-      );
-      pedirFilasQueFaltan();
-      fuera.forEach(soltarHilo);
-      fuera.forEach(drafts.drop);
-      for (const id of fuera) olvidarPestana(id);
-      // Archivar (o borrar) la tarea de delante deja la conversación en
-      // blanco: el panel pondría la pestaña vecina, y quien archiva acabó
-      // con esa tarea, no pidió abrir otra.
-      if (delanteAntes !== null && !pestanas.open().some((p) => p.id === delanteAntes)) {
-        irAlBlanco(carpetaDelEscritorio(project()));
-      }
-      // Una tarea que se movió a otro espacio se lleva su pestaña a esa tira.
-      if (!desk) return;
-      const ajenas: { p: TaskTab; a: string }[] = [];
-      for (const p of pestanas.open()) {
-        if (!isTaskTab(p)) continue;
-        const fila = Object.values(lista).flat().find((r) => r.id === p.session);
-        const a = escritorioDeFila(fila, todas);
-        if (a && a !== desk) ajenas.push({ p, a });
-      }
-      if (ajenas.length > 0) reubicarPestanas(ajenas);
-    }),
-  );
+  const { tareasEnVentanas, proyectoDePestana, sesionesConPestana, agentesEnUso, pedidas, esperandoFila, cambiarEscritorio, carpetaDelEscritorio, asentarEscritorio, reloadSpaces, senalDe, claveDelHilo, claveAbierta, drafts, borrador, input, setInput, navigateMentionHistory, sourceIds, excludedSourceIds, archivos, setArchivos, agregarArchivos, adjuntas, materialPendiente, contexto, composer, agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes, model, effort, modo, modos, skills, cliCommands, sideCommand, threads, hilos, hiloAbierto, msgs, cargandoHilo, origenes, apagadas, machineWaits, traspasos, conAntiguos, conRecientes, estadoAntiguos, colaSuelta, leerTarea, cargarAntiguos, soltarHilo, avisar, loadResult, soltarPestanaGuardada } = createDeskStrip({ abrirSesion: (proyecto, id, activar, propagateError) => abrirSesion(proyecto, id, activar, propagateError), activarPestana: (p) => activarPestana(p), activeSpace, adjuntosEn, attention, composerMachine: () => composerMachine(), connected, createComposerStore, createDraftsStore, createThreadsStore, deLaTarea: (id) => deLaTarea(id), escritorio, filaDe: (id) => filaDe(id), grupos, hablandoCon, irAlBlanco: (enProyecto) => irAlBlanco(enProyecto), get liveThreads() { return liveThreads; }, loadWindowThreads: (skip) => loadWindowThreads(skip), machines, modoInicial, modoRecordado, recordarModo, naciendo, olvidarPestana: (session) => olvidarPestana(session), paneles, pegadasEn, pestanaActiva, pestanas, project, projectList, refreshSessions: (proyectos) => refreshSessions(proyectos), get serviceStream() { return serviceStream; }, sesiones, sessionId, setEscritorio, setProyectoAbierto, setSpaces, spaces, taskSources, topState, vivas: () => vivas(), withLastAnswer, workspaceActivo, workspaceContext, workspaceMode, });
+  const { aviso, setAviso, deletingSpace, setDeletingSpace, createSpace, renameSpace, removeFromActiveSpace, moveToSpace, spaceDeleted } = createSpaceOps({ abrirSesion: (proyecto, id, activar, propagateError) => abrirSesion(proyecto, id, activar, propagateError), activeSpace, cambiarEscritorio, deLaTarea: (id) => deLaTarea(id), escritorio, grupos, machineOf: (id) => machineOf(id), refreshSessions: (proyectos) => refreshSessions(proyectos), reloadSpaces, setBuscando, setError, setSpaces, soltarPestanaGuardada, spaces, workspaceActivo });
 
-  /** Saca pestañas de esta tira hacia la guardada de su escritorio, sin olvidar lo leído. */
-  function reubicarPestanas(ajenas: { p: TaskTab; a: string }[]) {
-    const ws = workspaceActivo();
-    if (!ws) return;
-    for (const { p, a } of ajenas) appendToStoredStrip(ws, a, { id: p.id, project: p.project, titulo: p.titulo });
-    const activaAntes = pestanaActiva();
-    const vecina = pestanas.closeMany(ajenas.map(({ p }) => p.id));
-    paneles.sync(pestanas.open().map((x) => x.id));
-    if (activaAntes === null || pestanas.open().some((x) => x.id === activaAntes)) return;
-    if (vecina) void activarPestana(vecina);
-    else irAlBlanco(carpetaDelEscritorio(project()));
-  }
-
-  /**
-   * Cambia la tira y el riel a otro escritorio. Las pestañas del que se deja
-   * no se cierran: sus lecturas siguen hasta que su pestaña se cierre en su tira.
-   */
-  function cambiarEscritorio(id: string, restaurarActiva = true) {
-    const ws = workspaceActivo();
-    if (!ws || id === escritorio() || !spaces().some((i) => i.id === id)) return;
-    const restored = batch(() => {
-      setEscritorio(id);
-      escribirPref(`space.${ws}`, id);
-      // El reparto del que se deja ya está guardado por cada cambio suyo; aquí
-      // se corta, para no escribir el del que llega bajo la clave del otro.
-      paneles.bindTo(null, null);
-      const r = pestanas.load(ws, id);
-      // En el mismo lote: una pestaña sin ventana se monta escondida, gasta su
-      // lectura sin caja y reabre al final (`montadas`).
-      const vivos = pestanas.open().map((x) => x.id);
-      paneles.restore(readLayout(ws, id), vivos);
-      paneles.sync(vivos);
-      paneles.bindTo(ws, id);
-      if (r) paneles.activate(r);
-      setProyectoAbierto(null);
-      return r;
-    });
-    // Las demás ventanas del reparto que vuelve cargan su tarea, para que la
-    // rejilla vuelva enseñando lo que tenía. La de delante la abre lo de abajo.
-    loadWindowThreads(restored);
-    if (!restaurarActiva) return;
-    const p = restored ? pestanas.open().find((x) => x.id === restored) : undefined;
-    if (p) void abrirSesion(p.project, p.id);
-    else irAlBlanco(carpetaDelEscritorio(project()));
-  }
-
-  /** Una carpeta de este escritorio para la caja vacía: la pedida si es suya, si no la primera visible. */
-  function carpetaDelEscritorio(pedido: string) {
-    const desk = activeSpace();
-    if (!desk) return pedido;
-    const visibles = carpetasDelEscritorio(projectList(), desk, sesiones());
-    if (visibles.some((p) => p.id === pedido)) return pedido;
-    return visibles[0]?.id ?? pedido;
-  }
-
-  /** Lo que la ventana guarda de una pestaña que ya no va a volver. */
-  function soltarPestanaGuardada(id: string) {
-    drafts.drop(id);
-    olvidarPestana(id);
-    if (!vivas().includes(id)) soltarHilo(id);
-  }
-
-  function podarTirasMuertas(ws: string, lista: Space[]) {
-    // También el reparto: un espacio con rejilla guardada y sin tira —nadie
-    // abrió una pestaña— no lo alcanzaría `escritoriosConTira`.
-    const conAlgo = new Set([...spacesWithStoredStrip(ws), ...spacesWithLayout(ws)]);
-    for (const id of conAlgo) {
-      if (lista.some((i) => i.id === id)) continue;
-      for (const p of storedStrip(ws, id)) soltarPestanaGuardada(p.id);
-      deleteStoredStrip(ws, id);
-      deleteLayout(ws, id);
-    }
-  }
-
-  /** Qué escritorio abre este workspace: el último que se usó si sigue vivo, o la primera. */
-  function asentarEscritorio(ws: string, lista: Space[] | null): string | null {
-    if (!lista || lista.length === 0) {
-      batch(() => {
-        setSpaces([]);
-        setEscritorio(null);
-      });
-      return null;
-    }
-    migrateLegacyStrip(ws, lista[0].id);
-    const guardado = leerPref<string | null>(`space.${ws}`, null);
-    const desk = guardado && lista.some((i) => i.id === guardado) ? guardado : lista[0].id;
-    podarTirasMuertas(ws, lista);
-    batch(() => {
-      setSpaces(lista);
-      setEscritorio(desk);
-    });
-    return desk;
-  }
-
-  async function reloadSpaces() {
-    const ws = workspaceActivo();
-    if (!ws) return;
-    try {
-      const lista = await invoke<Space[]>("list_spaces");
-      if (ws !== workspaceActivo() || escritorio() === null) return;
-      setSpaces(lista);
-      if (!lista.some((i) => i.id === escritorio()) && lista[0]) cambiarEscritorio(lista[0].id);
-      podarTirasMuertas(ws, lista);
-    } catch {
-      // La lista de antes sigue sirviendo hasta el siguiente aviso.
-    }
-  }
-
-  /** El aviso de lo que un gesto sobre espacios acaba de hacer, con su «Ir». */
-  const [aviso, setAviso] = createSignal<{ texto: string; boton?: string; ir?: () => void } | null>(null);
-  const [deletingSpace, setDeletingSpace] = createSignal<string | null>(null);
-  const replaceSpace = (i: Space) =>
-    setSpaces((lista) => lista.map((x) => (x.id === i.id ? i : x)));
-
-  async function createSpace(name: string, folders: string[]) {
-    const nueva = await invoke<Space>("create_space", { name, folders });
-    setSpaces((lista) => [...lista.filter((i) => i.id !== nueva.id), nueva]);
-    cambiarEscritorio(nueva.id);
-  }
-
-  async function renameSpace(id: string, name: string) {
-    try {
-      replaceSpace(await invoke<Space>("rename_space", { id, name }, machineOf(id)));
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  async function updateSpaceFolders(id: string, folders: string[]) {
-    replaceSpace(await invoke<Space>("set_space_folders", { id, folders }, machineOf(id)));
-  }
-
-  async function removeFromActiveSpace(folder: string) {
-    const i = activeSpace();
-    if (!i) return;
-    try {
-      await updateSpaceFolders(i.id, i.folders.filter((f) => f !== folder));
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  async function moveToSpace(project: string, id: string, space: string) {
-    try {
-      // A la máquina de la tarea: el router comparte antes con la cuenta el
-      // space de esta ventana y allá se crea con el mismo id.
-      // Con la máquina de la tarea apagada el relay lo aplaza y no hay respuesta del motor: el space es el pedido.
-      const destino = (await invoke<{ id: string; name: string | null } | null>("move_task_to_space", { project, id, space }, deLaTarea(id)))
-        ?? spaces().find((i) => i.id === space) ?? null;
-      await refreshSessions(grupos());
-      setAviso({
-        texto: t("spaces.move.toast", { name: spaceName(destino) }),
-        boton: t("spaces.toast.go"),
-        ir: () => void abrirSesion(project, id),
-      });
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  /** Borrada: sale de la barra, su tira se olvida y el aviso abre sus archivadas en el buscador. */
-  function spaceDeleted(i: Space, archivadas: number) {
-    const ws = workspaceActivo();
-    setDeletingSpace(null);
-    if (!ws) return;
-    const quedan = spaces().filter((x) => x.id !== i.id);
-    if (escritorio() === i.id && quedan[0]) cambiarEscritorio(quedan[0].id);
-    setSpaces(quedan);
-    for (const p of storedStrip(ws, i.id)) soltarPestanaGuardada(p.id);
-    deleteStoredStrip(ws, i.id);
-    window.dispatchEvent(new CustomEvent("harness:tasks-changed"));
-    void reloadSpaces();
-    setAviso({
-      texto: t("spaces.delete.toast", { name: spaceName(i), count: archivadas }),
-      boton: t("spaces.delete.see_archived"),
-      ir: () => setBuscando("archived"),
-    });
-  }
-
-  /** Lo más urgente de las tareas de un escritorio; con `sinResolver`, también las que se pintan en todos. */
-  const senalDe = (desk: string, sinResolver = false) =>
-    topState(
-      attention.of(workspaceActivo()).filter((a) => {
-        const r = filaDe(a.session);
-        return !!r && (r.space === desk || (sinResolver && !r.space));
-      }),
-    );
-
-  const claveDelHilo = () => sessionId() ?? "";
-  const claveAbierta = () => claveDeBorrador(sessionId(), project(), hablandoCon()?.project === project() ? hablandoCon()?.name : null);
-  const drafts = createDraftsStore({
-    key: claveAbierta, workspace: workspaceActivo, generation: workspaceContext.generation,
-    project, projects: projectList, sources: taskSources,
-    prepareAttachments: async (paths, project) => {
-      const machine = paths.length ? pegadasEn.get(paths[0]) : undefined;
-      const routed = machine && paths.every(path => pegadasEn.get(path) === machine) ? enMaquina(machine) : undefined;
-      const workspace = workspaceActivo();
-      const options = { headers: { ...routed?.headers, ...(workspace ? { "x-terminus-workspace": workspace } : {}) } };
-      const prepared = await invoke<string[]>("prepare_attachments", { project, paths }, options);
-      if (machine) for (const path of prepared) adjuntosEn.set(path, machine);
-      return prepared;
-    },
-  });
-  onCleanup(drafts.dispose);
-  const borrador = drafts.current;
-  const input = drafts.input;
-  const setInput = drafts.changeText;
-  const navigateMentionHistory = drafts.history;
-  const sourceIds = drafts.sourceIds;
-  const excludedSourceIds = drafts.excludedSourceIds;
-  const archivos = drafts.files;
-  const setArchivos = drafts.replaceFiles;
-  const agregarArchivos = drafts.addFiles;
-  const adjuntas = drafts.attached;
-  const materialPendiente = drafts.pendingMaterial;
-  const contexto = drafts.context;
-
-  const composer = createComposerStore({
-    invoke, withLastAnswer,
-    scope: { workspace: workspaceActivo, machine: () => composerMachine(),
-      machineOn: () => machines().find(machine => machine.id === composerMachine())?.on,
-      connected, session: () => sessionId() },
-    workspaceMode, draftConfiguration: () => borrador().configuration, modoInicial, modoRecordado, recordarModo,
-  });
-  const { agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes,
-    model, effort, modo, modos, skills, cliCommands, sideCommand } = composer;
-  onCleanup(composer.dispose);
-  const threads = createThreadsStore({
-    scope: { workspace: workspaceActivo, generation: workspaceContext.generation, paged: () => serviceStream.paged() },
-    activeSession: sessionId, project, invoke, route: deLaTarea, liveThreads: () => liveThreads,
-  });
-  onCleanup(threads.dispose);
-  const hilos = threads.rows, hiloAbierto = threads.current, msgs = threads.messages, cargandoHilo = threads.loading;
-  const origenes = threads.origins, apagadas = threads.offline, machineWaits = threads.machineWaits, traspasos = threads.handovers;
-  const conAntiguos = threads.olderAvailable, conRecientes = threads.recentAvailable, estadoAntiguos = threads.olderStatus, colaSuelta = threads.recentTail;
-  const leerTarea = threads.read, cargarAntiguos = threads.older, soltarHilo = threads.drop;
-  function avisar(sesion: string) {
-    return (e: unknown) => threads.appendLive(sesion, [{ role: "system", text: prosaDe(e), meta: "aviso" }]);
-  }
-  function loadResult(id: string, session: Session, clear: boolean, generation: number) {
-    if (!threads.acceptSession(id, session, clear, generation)) return;
-    drafts.invalidateProvider(id, session.provider);
-    if (id === sessionId() && (session.subagent || session.parent)) composer.useProfile({ model: modeloDeSubtarea(session), effort: session.effort });
-  }
   let lifecycleRevision = 0;
   const { advanceTurn, alMargen, almacenDePreguntas, arrancando, busy, carpetasDeTerminal, cerrarAlMargen, cola, colaDe, comandosDeLaCola, conversationScope, desdeDeTurno, detenidos, editando, enFondo, engineCanDispatch, esDeLaAbierta, esDelWorkspaceAbierto, esperaMaquinaEn, finishedTurns, folder, handoff, handoffAt, injecting, lanzados, liveThreadKey, liveThreads, marcarQuieta, marcarViva, mentionSources, nacenConComando, pasarAlHilo, pendingStarts, permissionError, permissions, placeCandidates, preguntarAlMargen, queueBusy, recipientCandidates, refreshTaskCandidates, reintento, releerCola, respondiendoPermiso, resumeQueue, retenidaPorElMotor, rosterDelProyecto, setArrancando, setCarpetasDeTerminal, setDesdeDeTurno, setEnFondo, setFolder, setInjecting, setMentionSources, setPermissionError, setPermissions, setPreguntasAMedias, setReintento, setRespondiendoPermiso, setSettlingTurns, setSinSteer, setTerminales, setVentana, setVivas, settlingTurns, sinSteer, soltarPreguntas, stopping, taskCandidates, taskQueues, terminales, turnClosed, turnRevisions, turnStarted, ventana, vivas } = createThreadStream({ apagadas, claveAbierta, createConversationHandoff, createEngineQueue, createTaskQueues, deLaTarea, filaDe, input, leerTarea, loadResult, machineName, machineOf, machineWaits, machineWakes, machines, opcionesDeLaTarea, pestanas, project, projectList, sesiones, sessionId, setInput, tareaDelRiel, threads, watchHandlerStatuses, watchProfiles, workspaceActivo, workspaceContext, get enviarFiltro() { return enviarFiltro; }, get lifecycleRevision() { return lifecycleRevision; }, set lifecycleRevision(v) { lifecycleRevision = v; }, get mandarElegido() { return mandarElegido; }, get reconcileActiveTurns() { return reconcileActiveTurns; } });
 
-  const { activityMachine, activityNotice, anadiendoCarpeta, carpetaDelProyecto, inicioDeCarpeta, setActivityMachine, setActivityNotice, setAnadiendoCarpeta, setInicioDeCarpeta, setSettings, settings, sidebar } = createThreadSide({ createSidebar, alta, archivosDeTarea, closeActiveTab, irAPestanaDe, irAVentanaVecina, juntarLaActiva, llaveDeBorrador, nuevaSesion, partirLaActiva, project, projectList, reabrirPestana, sessionId, setBuscando, workspaceActivo });
-  /** El clon en vuelo, que el riel enseña mientras no hay proyecto que listar. */
-  const [clonEnCurso, setClonEnCurso] = createSignal<ClonEnCurso | null>(null);
-  // Cerrar la configuración es el único momento en que las cuentas pudieron
-  // cambiar sin que el resto de la app se entere.
-  const [cuentasTocadas, setCuentasTocadas] = createSignal(0);
+  const { activityMachine, activityNotice, anadiendoCarpeta, carpetaDelProyecto, inicioDeCarpeta, setActivityMachine, setActivityNotice, setAnadiendoCarpeta, setInicioDeCarpeta, setSettings, settings, sidebar } = createThreadSide({ createSidebar, alta, archivosDeTarea, closeActiveTab: () => closeActiveTab(), irAPestanaDe, irAVentanaVecina, juntarLaActiva, llaveDeBorrador, nuevaSesion: (enProyecto) => nuevaSesion(enProyecto), partirLaActiva, project, projectList, reabrirPestana, sessionId, setBuscando, workspaceActivo });
+  const { clonEnCurso, setClonEnCurso, cuentasTocadas, setCuentasTocadas, firmas, modelosEnVivo, esperando, preguntadas, sesionesConEstado, sessionLists, refreshSessions, carpetasDeTarea, refreshSessionsOnEvent, releerTrasHueco, previewDeAdjunto, miniaturaDeAdjunto, documentosEn, opcionesDeAdjunto, } = createCloneFolder({ attention, avisarDeLosArboles, claveDelHilo, colaSuelta, deLaTarea: (id) => deLaTarea(id), draftOptions, esperandoFila, grupos, hiloAbierto, hilos, leerTarea, loadResult, machines, msgs, naciendo, pedidas, pestanas, project, remoteChildScope, retoques, sesiones, sesionesConPestana, sessionId, setSesiones, unconfirmedOpen, vivas: () => vivas(), workspaceActivo, workspaceContext, });
 
-  // Los oyentes se montan una vez y leen las señales al recibir cada evento:
-  // guardar fuera el valor de `sessionId()` o `agents()` los dejaría
-  // trabajando con el estado del montaje. `firmas` es una variable y no una
-  // señal: nada pinta sus valores, solo los consultan las funciones de respuesta.
-
-  // Con qué se firma lo que llega de cada tarea, por sesión: con una sola
-  // firma, arrancar un segundo turno pisa la del primero, y al volver a la
-  // primera su texto sale con el autor del otro agente. La clave `""` es la
-  // del turno sin sesión en disco; se muda a su id en cuanto Rust lo
-  // devuelve.
-  const firmas: Record<string, Author | null> = {};
-  // Con qué modelo se lanzó el turno en vivo, con las mismas claves que
-  // `firmas`: la fila del mensaje lo enseña hasta que el cierre guarde el observado.
-  const modelosEnVivo: Record<string, string | null> = {};
-
-  // Hay una pregunta del agente que nadie contestó. Se deriva de la
-  // transcripción, no se guarda: una marca de "pendiente" aparte sería un
-  // segundo estado capaz de contradecir a los turnos, dejando seguir el
-  // trabajo sin el dato que el agente pidió. Mismo criterio que
-  // `sin_contestar` en `workspace/sessions.rs`.
-  const preguntasPendientes = (messages: Msg[]) => {
-    const contestadas = new Set(
-      messages
-        .flatMap((m) => m.respuestas ?? [])
-        .map((r) => clave(r.turn, r.question)),
-    );
-    return messages.some(
-      (m) =>
-        !!m.turno &&
-        (m.preguntas ?? []).some((p) => !contestadas.has(clave(m.turno!, p.id))),
-    );
-  };
-  // Con la ventana lejos del final, lo que espera es lo de la última cola leída, no lo que se ve.
-  const esperando = createMemo(() => {
-    const cola = colaSuelta()[claveDelHilo()];
-    return preguntasPendientes(cola ? [...cola, ...(hiloAbierto()?.vivo ?? [])] : msgs());
-  });
-  /**
-   * Qué tareas tienen una pregunta sin contestar, para la tira. De la abierta
-   * manda lo derivado de su conversación —es más fresco que el historial, que
-   * se relee al cerrar el turno—; de las demás, lo que dice su fila.
-   */
-  const preguntadas = createMemo(() => {
-    const abierta = sessionId();
-    const otras = Object.values(sesiones())
-      .flat()
-      .filter((r) => r.esperando && r.id !== abierta)
-      .map((r) => r.id);
-    const ids = new Set(otras);
-    for (const [id, hilo] of Object.entries(hilos())) {
-      if (preguntasPendientes([...hilo.base, ...hilo.vivo])) ids.add(id);
-    }
-    if (abierta && esperando()) ids.add(abierta);
-    return [...ids].sort();
-  }, undefined, { equals: (a, b) => a.length === b.length && a.every((id, i) => id === b[i]) });
-
-  function sesionesConEstado() {
-    const pending = new Set(preguntadas());
-    const unseen = attention.unseen(workspaceActivo());
-    const listas = sesiones();
-    const nuevas = naciendo();
-    const proyectos = new Set([...Object.keys(listas), ...nuevas.map((n) => n.project)]);
-    // Una hija remota cuelga de su coordinador como una delegada más (`remote_parent`).
-    const remotas = remoteChildScope();
-    return Object.fromEntries([...proyectos].map((project) => {
-      const rows = withRemoteLaunchers(listas[project] ?? [], remotas);
-      // Delante: `list_live_sessions` ordena por cuándo nacieron, y estas acaban de
-      // nacer. La misma fila dos veces mientras el refresco llega se evita
-      // mirando lo que ya trajo el disco.
-      const enDisco = new Set(rows.map((row) => row.id));
-      const propias = nuevas
-        .filter((n) => n.project === project && !enDisco.has(n.row.id))
-        .map((n) => n.row);
-      const cambios = retoques();
-      return [project, [...propias, ...rows.map(leida => {
-        const retoque = cambios[leida.id];
-        const row = retoque ? { ...leida, ...retoque.cambio } : leida;
-        const preview = threadPreview(hilos()[row.id]?.vivo ?? []) ?? row.last_message;
-        const sinVer = unseen.has(row.id);
-        return row.esperando === pending.has(row.id) && preview === row.last_message && !!row.sin_ver === sinVer ? row : {
-          ...row, esperando: pending.has(row.id), last_message: preview, sin_ver: sinVer,
-        };
-      })]];
-    }));
-  }
-
-  const sessionLists = sessionRefresh<SessionRow>({
-    read: async (project) => {
-      const open = sesionesConPestana();
-      const rows = await invoke<SessionRow[]>("list_live_sessions", { project, open });
-      // La pestaña que su máquina no confirmó no cuenta como pedida: no se cierra ni se pide en bucle.
-      const sinConfirmar = new Set(unconfirmedOpen(rows));
-      const confirmadas = open.filter((id) => !sinConfirmar.has(id));
-      pedidas.set(project, new Set(confirmadas));
-      for (const id of confirmadas) esperandoFila.delete(id);
-      return rows;
-    },
-    apply: (update) => setSesiones(update),
-    projects: () => grupos(),
-    key: (row) => row.id,
-    // Una mutación del CLI avisa dos veces seguidas, y varios agentes a la vez, una ráfaga.
-    gather: 200,
-  });
-  onCleanup(() => sessionLists.reset());
-  function refreshSessions(proyectos: string[]) {
-    return sessionLists.refresh(proyectos);
-  }
-  /**
-   * Qué carpetas relee un aviso sobre `session`: la suya y la de su padre, que
-   * pinta el estado de sus hijas. Una tarea que el riel todavía no conoce (la
-   * creó otra ventana u otra máquina) puede estar en cualquiera: todas.
-   */
-  function carpetasDeTarea(session: string, project?: string | null): string[] {
-    const listas = sesiones();
-    const buscar = (id: string) => Object.keys(listas).find((p) => listas[p].some((r) => r.id === id));
-    const suya = project ?? buscar(session);
-    if (suya === undefined) return grupos();
-    const fila = listas[suya]?.find((r) => r.id === session);
-    const delPadre = fila?.parent ? buscar(fila.parent) : undefined;
-    return [...new Set([suya, ...(delPadre === undefined ? [] : [delPadre])])];
-  }
-  /** La relectura que pide un evento del servicio; la de un gesto de la persona va sin espera. */
-  function refreshSessionsOnEvent(proyectos: string[]) {
-    return sessionLists.gathered(proyectos);
-  }
-  // Un hueco del stream o un motor nuevo se lleva los eventos `session` de en medio: se
-  // relee lo que habrían refrescado. Las tareas vivas las reconcilia `reconcileActiveTurns`.
-  function releerTrasHueco() {
-    const generation = workspaceContext.generation();
-    void refreshSessionsOnEvent(grupos());
-    for (const pestana of pestanas.open()) avisarDeLosArboles(pestana.id);
-    const abierta = sessionId();
-    if (!abierta || vivas().includes(abierta)) return;
-    avisarDeLosArboles(abierta);
-    void leerTarea(project(), abierta)
-      .then((s) => loadResult(abierta, s, true, generation))
-      .catch(() => {});
-  }
-
-  // La miniatura de un adjunto del mensaje, o `null` si no hay que enseñar
-  // una: null no es un fallo, y no se distingue del error. Un PDF, un `.docx`
-  // o una imagen que no cabe se pintan igual —con su tarjeta—, y quien llama
-  // no decide con la diferencia. Lo que sí sería un fallo es tumbar la
-  // transcripción por un archivo que ya no está. Resuelve contra la tarea
-  // abierta: de esa son los mensajes que `Chat` está pintando.
-  async function previewDeAdjunto(rel: string): Promise<Preview | null> {
-    try {
-  // Un adjunto se guarda por su ruta del sistema. Los turnos anteriores a
-  // v0.1.23 guardaron una relativa `entradas/…`, y esas van por
-  // `attachment_preview`, que resuelve la ruta él para no ser un lector de
-  // archivos abierto a la ventana.
-      const esDeLaTarea = rel.startsWith("entradas/");
-      const id = sessionId();
-      if (esDeLaTarea && !id) return null;
-      return esDeLaTarea
-        ? await invoke<Preview>("attachment_preview", {
-            project: project(),
-            id,
-            rel,
-          }, deLaTarea(id))
-        : await previewOn(rel, id);
-    } catch {
-      return null;
-    }
-  }
-
-  async function miniaturaDeAdjunto(rel: string): Promise<string | null> {
-    return (await previewDeAdjunto(rel))?.data_url ?? null;
-  }
-
-  // Lo que se mandó a una tarea de otra máquina vive allá; lo que todavía no
-  // salió (el globo mientras se manda) sigue en la de la ventana.
-  async function previewOn(path: string, id: string | null): Promise<Preview> {
-    const there = deLaTarea(id);
-    if (!there) return invoke<Preview>("preview_file", { path, rel: path });
-    try {
-      return await invoke<Preview>("preview_file", { path, rel: path }, there);
-    } catch {
-      return invoke<Preview>("preview_file", { path, rel: path });
-    }
-  }
-
-  /** Si la máquina de esas opciones anuncia la extensión de documentos. */
-  function documentosEn(options: { headers: Record<string, string> } | undefined): boolean {
-    const machine = options?.headers["x-terminus-machine"];
-    const fila = machines().find((m) => (machine ? m.id === machine : m.local));
-    return fila?.features?.includes(ATTACHMENT_DOCUMENTS_FEATURE) === true;
-  }
-
-  /** Las opciones de la conversación abierta o del borrador, como en `pegarImagen`. */
-  function opcionesDeAdjunto() {
-    const abierta = sessionId();
-    return abierta ? deLaTarea(abierta) : draftOptions();
-  }
 
   const { aplicar, attachmentsFor, pegarImagen, recargarMaterial, refreshFolder, retryStartupRead } = createAttachments({ adjuntosEn, asentarEscritorio, asleep, composer, confirmContext, deLaTarea, documentosEn, draftOptions, drafts, enCache, enMaquina, finishedTurns, grupos, guardarCache, handoff, hilos, machineName, machines, paneles, pegadasEn, pestanas, projectCatalog, refetchMachines, refreshSessions, sessionId, sessionLists, setAlta, setAviso, setBloqueo, setCuentasTocadas, setDesdeDeTurno, setDraftBases, setEnCache, setError, setEscritorio, setFolder, setMaterialError, setProject, setProjectReadError, setProyectoAbierto, setSesiones, setSessionId, setSettlingTurns, setSources, setSpaces, setStartupReadError, setTaskSourcesError, setVentana, setVivas, shellCache, taskQueues, threads, workspaceActivo, workspaceContext, get abrirSesion() { return abrirSesion; }, get lifecycleRevision() { return lifecycleRevision; }, set lifecycleRevision(v) { lifecycleRevision = v; }, get loadThread() { return loadThread; }, get loadWindowThreads() { return loadWindowThreads; }, get reconcileActiveTurns() { return reconcileActiveTurns; }, get soltarCola() { return soltarCola; } });
 
-  const { applyPushed, settleTurn } = createAttachmentsMount({ advanceTurn, agent, aplicar, asleep, bloqueo, closeActiveTab, composer, conversationScope, createBatchDelivery, enCache, finishedTurns, grupos, handoff, hilos, leerTarea, listaBasta, loadResult, marcarQuieta, pestanas, project, projectCatalog, recargarMaterial, reconciliar, refreshSessions, sessionId, setBloqueo, setEnCache, setEnFondo, setPermissions, setSesiones, setSettings, setSettlingTurns, setStartupReadError, soltarHilo, tareaDelRiel, taskQueues, threads, turnRevisions, vivas, workspaceContext, get mandarElegido() { return mandarElegido; }, get releerProyectos() { return releerProyectos; }, get releerUna() { return releerUna; }, get soltarTerminal() { return soltarTerminal; } });
+  const { applyPushed, settleTurn } = createAttachmentsMount({ advanceTurn, agent, aplicar, asleep, bloqueo, closeActiveTab: () => closeActiveTab(), composer, conversationScope, createBatchDelivery, enCache, finishedTurns, grupos, handoff, hilos, leerTarea, listaBasta, loadResult, marcarQuieta, pestanas, project, projectCatalog, recargarMaterial, reconciliar, refreshSessions, sessionId, setBloqueo, setEnCache, setEnFondo, setPermissions, setSesiones, setSettings, setSettlingTurns, setStartupReadError, soltarHilo, tareaDelRiel, taskQueues, threads, turnRevisions, vivas, workspaceContext, get mandarElegido() { return mandarElegido; }, get releerProyectos() { return releerProyectos; }, get releerUna() { return releerUna; }, get soltarTerminal() { return soltarTerminal; } });
   let serviceListenersReady: Promise<unknown> = Promise.resolve();
   const { enviarFiltro, reconcileActiveTurns, reconcileSoon, releerUna, serviceStream } = createResync({ applyPushed, asleep, conversationScope, createServiceStream, esDeLaAbierta, handoff, leerTarea, liveThreads, loadResult, machines, marcarViva, pendingStarts, pestanas, project, recargarMaterial, releerTrasHueco, sesionesConPestana, sessionId, setConnectionError, setDesdeDeTurno, setEnFondo, setError, setPermissions, settleTurn, settlingTurns, soltarVistasHuerfanas, tareaDelRiel, terminales, threads, vivas, workspaceActivo, workspaceContext, get lifecycleRevision() { return lifecycleRevision; }, set lifecycleRevision(v) { lifecycleRevision = v; }, get ponerTerminal() { return ponerTerminal; }, get reponerGates() { return reponerGates; }, get serviceListenersReady() { return serviceListenersReady; }, set serviceListenersReady(v) { serviceListenersReady = v; } });
 
@@ -1752,157 +995,9 @@ export default function App() {
   const { alComando, ponerTerminal, porContestar, quitarDeLaCola, responderPermiso, setPorContestar, soltarTerminal } = createResyncCommands({ advanceTurn, cola, comandosDeLaCola, detenidos, engineCanDispatch, finishedTurns, lanzados, marcarViva, opcionesDeLaTarea, pendingStarts, retenidaPorElMotor, sessionId, setCarpetasDeTerminal, setPermissionError, setPermissions, setRespondiendoPermiso, setSettlingTurns, setTerminales, settleTurn, superficies, taskQueues, terminales, threads, workspaceActivo, get adoptarComando() { return adoptarComando; }, get contestarALaTerminal() { return contestarALaTerminal; }, get pendientesDe() { return pendientesDe; }, get reanudarCola() { return reanudarCola; }, get reponerGates() { return reponerGates; } });
   const { abrirConComando, adoptarComando, composerMachine, contestarALaTerminal, detener, ejecutarComando, enviarDeLaCola, mandarCola, mandarElegido, razonDeLaCola, teclearAlComando } = createShellCommand({ DEFAULT_PERMISSION_MODE_EVENT, agent, agents, busy, carpetasDeTerminal, claveAbierta, cola, comandosDeLaCola, composer, conversationScope, deLaTarea, draftBases, draftMachine, draftOptions, effort, enCache, engineCanDispatch, escritorio, espacioPara, esperando, grupos, hablandoCon, handoff, handoffAt, injecting, lanzados, machineOf, machines, marcarQuieta, marcarViva, model, modo, nacenConComando, pendingStarts, pestanas, ponerTerminal, project, projectCatalog, quitarDeLaCola, refreshFolder, refreshSessions, retenidaPorElMotor, retirarNaciendo, sesiones, sessionId, setArrancando, setHablandoCon, setInjecting, setPermissionError, setPorContestar, setSessionId, setTerminales, settleTurn, settlingTurns, soltarTerminal, stopping, taskQueues, terminales, threads, vivas, workspaceActivo, workspaceContext, get adoptarNacida() { return adoptarNacida; }, get configDeLaSesion() { return configDeLaSesion; }, get detenerYEnviar() { return detenerYEnviar; }, get enviar() { return enviar; }, get lifecycleRevision() { return lifecycleRevision; }, set lifecycleRevision(v) { lifecycleRevision = v; }, get olvidarPestana() { return olvidarPestana; }, get pintarNaciendo() { return pintarNaciendo; }, get reanudarCola() { return reanudarCola; } });
 
+  const { abrirBorradorDeAgente, requestedProfile, setRequestedProfile, proyectosEnAjustes, cerrarAjustes, openAgentProfile, enLaMaquinaDelGrupo, nuevaSesion, irAlBlanco, closeActiveTab, cerrarPestana, cerrarPestanas, cierreSinGuardar, setCierreSinGuardar, } = createNewTask({ abrirProyecto: (id) => abrirProyecto(id), alta, arrancando, borrarProyecto: (id) => borrarProyecto(id), carpetaDelEscritorio, cerrarBorrador, cerrarPestanasYa, composer, drafts, enBorrador, hablandoCon, hablarConEncargado: (enProyecto, name) => hablarConEncargado(enProyecto, name), multipleSpaces, ocultarDelSelector, ocultosAqui, paneles, pedirElCampo, pestanaActiva, pestanas, project, proyectosDelRiel: () => proyectosDelRiel(), proyectoDeNuevaTarea, removeFromActiveSpace: (folder) => removeFromActiveSpace(folder), renombrarProyecto: (id, name) => renombrarProyecto(id, name), restoreDraftConfiguration: () => restoreDraftConfiguration(), setAnadiendoCarpeta, setAntesDelBorrador, setCuentasTocadas, setFolder, setHablandoCon, setMaterialPedido, setProject, setProyectoAbierto, setRunOn, setSessionId, setSettings, settings, soltarCola: () => soltarCola(), soltarHilo, tareasActivas, workspaceActivo, });
+
   const { elegirCarpetaDelWorkspace, releerProyectos, renombrarProyecto, abrirProyecto, adjuntarAlProyecto, quitarDelProyecto, carpetaEditable, borrarProyecto, elegirProyecto, soltarCola, abrirSesion, loadThread, loadWindowThreads, hablarConEncargado } = createContextSource({ abrirBorradorDeAgente, adjuntas, aplicar, cambiarEscritorio, cola, composer, deLaTarea, drafts, engineCanDispatch, escritorio, excludedSourceIds, filaDe, hilos, leerTarea, loadResult, nuevaSesion, open, paneles, pestanas, project, projectCatalog, proyectoAbierto, refreshFolder, refreshSessions, releerCola, reloadSpaces, sessionId, setError, setFolder, setHablandoCon, setMentionSources, setProject, setProjectReadError, setProyectoAbierto, setSessionId, setVentana, sourceIds, spaces, taskQueues, threads, workspaceActivo, workspaceContext, get restoreDraftConfiguration() { return restoreDraftConfiguration; }, get restoreSessionConfiguration() { return restoreSessionConfiguration; } });
-  /** Una tarea nueva con la carpeta y el agente ya elegidos. */
-  function abrirBorradorDeAgente(enProyecto: string, name: string) {
-    setHablandoCon({ project: enProyecto, name });
-    irAlBlanco(enProyecto);
-    // El borrador tampoco arranca a ciegas: si ya declaró con qué
-    // prefiere trabajar, la caja en blanco lo trae puesto en vez del
-    // último agente que se usó en cualquier otra conversación.
-    void invoke<Record<string, AgentProfileData>>("list_agent_profiles", { project: enProyecto })
-      .then((perfiles) => {
-        const sigue = hablandoCon();
-        if (sigue?.project !== enProyecto || sigue.name !== name) return;
-        const perfil = perfiles[name];
-        if (!perfil) return;
-        composer.useProfile(perfil);
-      })
-      .catch(() => {});
-  }
-
-  /**
-   * Qué perfil se pide abrir desde el riel. Lo consume la celda que acaba
-   * teniendo delante a ese agente: su conversación se abre antes, y sin esta
-   * espera el perfil se pediría a una celda que todavía enseña otra cosa.
-   */
-  const [requestedProfile, setRequestedProfile] = createSignal<{
-    project: string;
-    name: string;
-  } | null>(null);
-
-  /** Ajustes → Proyectos usa las carpetas y las acciones del riel. Un solo objeto: la hoja no se remonta. */
-  const proyectosEnAjustes: ContextoDeProyectos = {
-    get projects() {
-      return proyectosDelRiel();
-    },
-    onAdd: () => setAnadiendoCarpeta(true),
-    onRename: (id, name) => void renombrarProyecto(id, name),
-    onDelete: (id) => void borrarProyecto(id),
-    get onRemoveFromSpace() {
-      return multipleSpaces() ? removeFromActiveSpace : undefined;
-    },
-    activeTasks: (id) => taskCountOf({ id, sessions: 0 }, tareasActivas()),
-    hiddenInPicker: (id) => ocultosAqui().has(id),
-    onSetHiddenInPicker: (id, hide) => ocultarDelSelector(id, hide),
-    onOpenMaterial: (id) => {
-      cerrarAjustes();
-      setMaterialPedido(id);
-      abrirProyecto(id);
-    },
-  };
-
-  function cerrarAjustes() {
-    setSettings(null);
-    setCuentasTocadas((n) => n + 1);
-    // Conectar una cuenta, pegar una clave o activar los gratuitos
-    // ocurre ahí dentro, y es justo lo que decide qué ofrece el menú del
-    // chat. Sin esto habría que reabrir la app para verlo.
-    void composer.refreshSurfaces(false);
-  }
-
-  function openAgentProfile(enProyecto: string, name: string) {
-    setRequestedProfile({ project: enProyecto, name });
-    hablarConEncargado(enProyecto, name);
-  }
-
-  /**
-   * Una carpeta con tareas en varias máquinas se parte en un grupo por máquina
-   * en el riel: lo que se empieza desde un grupo corre en la suya (`""` es esta).
-   */
-  function enLaMaquinaDelGrupo(machine: string | undefined) {
-    if (machine !== undefined) setRunOn(workspaceActivo(), machine || null);
-  }
-
-  function nuevaSesion(enProyecto?: string) {
-    // Empezar una tarea es cuando más barato sale enterarse de que el
-    // material se movió: si esta tarea va a leer un repositorio, ¿está al
-    // día? Se comprueba, no se trae —traer mueve el árbol que otras
-    // tareas leen, y esa decisión es de quien mira el aviso.
-    window.dispatchEvent(new CustomEvent("harness:tarea-nueva"));
-    // Una tarea nueva a secas no es de nadie: si la anterior se abrió desde
-    // la fila de un agente, ese nombre no puede arrastrarse hasta esta.
-    setHablandoCon(null);
-    irAlBlanco(proyectoDeNuevaTarea(enProyecto, carpetaDelEscritorio(project())));
-  }
-
-  /**
-   * La conversación en blanco: lo que el panel enseña sin tarea abierta.
-   * `nuevaSesion` es esto más el aviso de que se va a empezar algo. No es
-   * una pestaña de `lib/tabs.ts`: la tira solo la pinta como «Nueva tarea»
-   * (`enBorrador`). Su borrador —separado por proyecto— espera hasta el
-   * primer turno.
-   */
-  function irAlBlanco(enProyecto = project()) {
-    const delante = paneles.activeTabAt(paneles.activeSite());
-    batch(() => {
-      if (delante !== null) setAntesDelBorrador(delante);
-      setProject(enProyecto);
-      setProyectoAbierto(null);
-      pestanas.activate(null);
-    // Y la ventana también se queda sin pestaña delante: `pestanas` y
-    // `paneles` llevan la cuenta por separado. Sin esto, la ventana
-    // seguía enseñando la conversación anterior bajo la pantalla en blanco.
-      paneles.showDraft();
-      setSessionId(null);
-      restoreDraftConfiguration();
-      composer.startNewDraft();
-      setFolder(null);
-    // Lo que la tarea que se deja ya lee es suyo; el borrador de la
-    // conversación en blanco es el suyo y no se toca.
-      drafts.replaceAttached([]);
-      soltarCola();
-      // El hilo sin id es el del primer turno. Si Rust lo negó, se quedaba
-      // pintado en toda tarea nueva, de este proyecto o de otro.
-      if (!arrancando()) soltarHilo("");
-    });
-    pedirElCampo();
-  }
-
-  function closeActiveTab() {
-    if (settings() !== null || alta()) return;
-    const id = pestanaActiva();
-    if (id) cerrarPestana(id);
-    else if (enBorrador(paneles.activeSite())) cerrarBorrador(paneles.activeSite());
-  }
-
-  /**
-   * Cerrar una pestaña no cierra la sesión: la quita de la tira y suelta
-   * su borrador. Su turno, si sigue corriendo, sigue corriendo —Rust no
-   * sabe de pestañas—; si era la activa pasa a la vecina y sin vecinas,
-   * al blanco: el reparto de un navegador.
-   */
-  function cerrarPestana(id: string) {
-    cerrarPestanas([id]);
-  }
-
-  /**
-   * Varias a la vez, desde el menú de la tira: una escritura y una vecina. Si en
-   * lo que se va hay un archivo sin guardar, primero se pregunta.
-   */
-  function cerrarPestanas(ids: string[]) {
-    const sinGuardar = pestanas.dirtyTabsToClose(ids);
-    if (sinGuardar.length > 0) {
-      setCierreSinGuardar({ ids, archivos: sinGuardar.map((a) => a.ruta), sucios: sinGuardar.map((a) => a.id) });
-      return;
-    }
-    cerrarPestanasYa(ids);
-  }
-
-  /** Lo que la tira tenía sin guardar cuando alguien pidió cerrar. */
-  const [cierreSinGuardar, setCierreSinGuardar] = createSignal<
-    { ids: string[]; archivos: string[]; sucios: string[] } | null
-  >(null);
 
   const { resolverCierre, setTraspasoPendiente, traspasoPendiente } = createDraftSend({ activarPestana, cerrarPestanasYa, cierreSinGuardar, claveAbierta, pestanas, sessionId, setCierreSinGuardar });
 
@@ -2254,408 +1349,8 @@ export default function App() {
     if (p) void activarPestana(p);
   }
 
-  const [deleteTarget, setDeleteTarget] = createSignal<DeleteTarget | null>(null);
+  const { deleteTarget, setDeleteTarget, setDeletingEditors, editorDeletionLocked, deleteTask, deletedTaskMembers, dirtyTaskFiles, moverSesion, etaparSesion, fijarSesion, renombrarSesion, adjuntarFuente, quitarFuente, taskMaterialOptions, materialTarget, cambiarRama, abrirRuta, archivoMovido, archivoBorrado, reatarVistaPrevia, abrirEnlace, abrirNavegador, carpetasDelMas, abrirSitio, abrirPorRel, exportarChat, forkDesde, } = createSessionMutations({ abrirBorradorDeAgente, abrirSesion, activarPestana, activeSpace, arbolesDe, archivosDeTarea, capabilities, cerrarPestana, claveAbierta, contiene, contextConfirmed, deLaTarea, draftBases, draftOptions, drafts, esDeCodigo, filaDe, folder, irAlBlanco, machineName, machineOf, machines, get maquinaDeLaVentana() { return maquinaDeLaVentana; }, nuevaSesion, olvidarPestana: (session) => olvidarPestana(session), opcionesDeLaTarea, paneles, pestanas, project, projectCatalog, projectList, proyectoAbierto, readRevision, refreshSessions, senderTaskId, sesiones, sessionId, setError, setProject, setProyectoAbierto, setRetoques, setRunOn, setTaskSources, setTaskSourcesError, soltarHilo, sources, threads, ubicar, workspaceActivo, workspaceContext, });
 
-  const [deletingEditors, setDeletingEditors] = createSignal<{ workspace: string | null; ids: string[] } | null>(null);
-  const editorDeletionLocked = (id: string) => deletingEditors()?.workspace === workspaceActivo() && deletingEditors()?.ids.includes(id) === true;
-
-  function deleteTask(project: string, id: string, members?: number) {
-    // One deletion at a time: its preview and consent belong to the task that started it.
-    if (deleteTarget()) return;
-    const machine = deLaTarea(id)?.headers["x-terminus-machine"] ?? machines().find(item => item.local || item.active)?.id;
-    const target = machines().find(item => item.id === machine);
-    const folderNames = new Map(projectList().map(folder => [folder.id, folder.name]));
-    setDeleteTarget({
-      machineName: machine ? machineName(machine) : t("shell.machines.this_computer"),
-      folderName: folder => folderNames.get(folder) || folder || t("shell.sidebar.view.no_folder"),
-      project, id, workspace: workspaceActivo(), members,
-      supported: target?.features?.includes("task_lifecycle_v1") === true,
-      options: opcionesDeLaTarea(id, workspaceActivo()),
-      panelId: task => machine ? senderTaskId(machine, task) : task,
-    });
-  }
-
-  function deletedTaskMembers(members: { project: string; id: string }[]) {
-    const view = proyectoAbierto();
-    const ids = members.map(member => member.id);
-    const activeRemoved = ids.includes(sessionId() ?? "");
-    const tabIds = pestanas.open().filter(tab => ids.includes(tab.id) || ids.includes(tab.session)).map(tab => tab.id);
-    const neighbor = pestanas.closeMany(tabIds);
-    paneles.sync(pestanas.open().map(tab => tab.id));
-    for (const id of ids) {
-      soltarHilo(id);
-      drafts.drop(id);
-      olvidarPestana(id);
-      archivosDeTarea.forget(id);
-    }
-    if (activeRemoved) {
-      if (!view && neighbor) void activarPestana(neighbor);
-      else { irAlBlanco(); setProyectoAbierto(view); }
-    }
-    void refreshSessions([...new Set(members.map(member => member.project))]);
-  }
-
-  function dirtyTaskFiles(id: string): string[] {
-    const tabIds = pestanas.open().filter(tab => tab.id === id || tab.session === id).map(tab => tab.id);
-    const tabs = pestanas.dirtyTabsToClose(tabIds).map(tab => tab.ruta);
-    const panel = archivosDeTarea.panel(id);
-    return [...new Set([...tabs, ...panel.tabs.filter(tab => panel.dirty.includes(tab.id)).map(tab => tab.path)])];
-  }
-
-  /**
-   * Mueve una tarea a otro proyecto, o la saca de todos. Si es la que
-   * está abierta se cambia también el proyecto en pantalla: el
-   * siguiente turno se guarda donde ahora vive la tarea.
-   */
-  async function moverSesion(de: string, id: string, a: string) {
-    try {
-      await invoke("move_session", { project: de, id, to: a }, deLaTarea(id));
-      if (id === sessionId()) setProject(a);
-      pestanas.moveToProject(id, a);
-      void refreshSessions([de, a]);
-      await projectCatalog.changed();
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  /**
-   * Marca en qué etapa está una tarea, o le quita la marca con `null`.
-   * Se ve al instante (`retocarFila`), pero lo que queda es lo que relee
-   * del disco: con dos ventanas sobre el mismo workspace, la que no marcó
-   * se enteraría tarde o nunca si solo se tocara la memoria.
-   */
-  async function etaparSesion(
-    proyecto: string,
-    id: string,
-    etapa: Etapa | null,
-  ) {
-    try {
-      await retocarFila(proyecto, id, { stage: etapa }, () =>
-        invoke("set_session_stage", { project: proyecto, id, stage: etapa }, deLaTarea(id)));
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  /**
-   * Cambia una fila en pantalla ya y la escribe detrás (`retoques`). Después
-   * relee solo su carpeta: releer todas esperaba a la más lenta, y otra máquina
-   * apagada o lejos retrasaba lo que acababa de cambiar aquí. Si el motor lo
-   * rechaza, la fila vuelve a como estaba y el error sube a quien llamó.
-   */
-  async function retocarFila(proyecto: string, id: string, cambio: Partial<SessionRow>, escribir: () => Promise<unknown>) {
-    const n = ++ultimoRetoque;
-    setRetoques((rs) => ({ ...rs, [id]: { cambio: { ...rs[id]?.cambio, ...cambio }, n } }));
-    // Solo el suyo: un segundo clic sobre la misma fila mientras vuelve el primero manda.
-    const soltar = () => setRetoques((rs) => {
-      if (rs[id]?.n !== n) return rs;
-      const { [id]: _, ...resto } = rs;
-      return resto;
-    });
-    try {
-      await escribir();
-    } catch (e) {
-      soltar();
-      throw e;
-    }
-    await refreshSessions([proyecto]);
-    soltar();
-  }
-
-  async function fijarSesion(proyecto: string, id: string, pinned: boolean) {
-    await retocarFila(proyecto, id, { pinned }, () =>
-      invoke("set_session_pinned", { project: proyecto, id, pinned }, deLaTarea(id)));
-  }
-
-  /**
-   * Le cambia el nombre a una tarea. Relee la lista, igual que
-   * `etaparSesion`, y de paso llega a las pestañas
-   * (`pestanasEnPantalla`): sin releer, la abierta seguiría rotulada con
-   * el nombre viejo hasta el siguiente arranque.
-   */
-  async function renombrarSesion(proyecto: string, id: string, title: string) {
-    try {
-      await retocarFila(proyecto, id, { title: title.trim() }, () =>
-        invoke("rename_session", { project: proyecto, id, title }, deLaTarea(id)));
-      return true;
-    } catch (e) {
-      setError(prosaDe(e));
-      return false;
-    }
-  }
-
-  /**
-   * Una fuente que entra a la tarea. No escribe en disco: lo pendiente viaja
-   * con el turno, y `send_message` lo suma a la tarea. El agente la lee por
-   * `--add-dir`; dónde escribe es la carpeta de trabajo del proyecto.
-   */
-  const adjuntarFuente = async (id: string) => {
-    drafts.addSource(id);
-    // `harness:sources` y no `harness:workspace`: aquel cierra la
-    // conversación abierta; adjuntar material a mitad de una tarea no muda de
-    // cliente.
-    window.dispatchEvent(new CustomEvent("harness:sources"));
-  };
-
-  /**
-   * Quitar una fuente de esta tarea: deja de ofrecerse de aquí en adelante.
-   * No deshace lo que el agente ya leyó: el control
-   * dice «quitar», no «olvidar».
-   */
-  const quitarFuente = async (id: string) => {
-    drafts.removeSource(id);
-    const sid = sessionId();
-    if (!sid) return;
-    try {
-      await invoke("detach_session_source", {
-        project: project(),
-        session: sid,
-        source: id,
-      }, deLaTarea(sid));
-    } catch (e) {
-      threads.appendPersisted(sid, [{
-                  role: "system",
-                  text: t("chat.scope.source.remove_failed", { error: prosaDe(e) }),
-                  meta: "fallo",
-                }]);
-    }
-  };
-
-  function taskMaterialOptions() {
-    if (capabilities().nativeWindow && !capabilities().remoteCreate) return { headers: {} };
-    const sid = sessionId();
-    const row = sid ? filaDe(sid) : null;
-    const named = sid ? machines().find((m) => sid.startsWith(`${m.id}~`))?.id : null;
-    if (sid && !row && !named) return undefined;
-    const chosen = sid ? undefined : draftOptions();
-    const machine = row?.machine ?? named ?? machines().find((m) => m.local || m.active)?.id;
-    return chosen ?? (machine ? { headers: { "x-terminus-machine": machine } } : undefined);
-  }
-
-  const materialTarget = () => `${workspaceActivo()}:${workspaceContext.generation()}:${sessionId()}:${claveAbierta()}:${JSON.stringify(taskMaterialOptions())}`;
-  let taskSourcesRequest = 0;
-  createEffect(on(() => ({
-    target: materialTarget(),
-    retry: readRevision(),
-    workspace: workspaceActivo(),
-    options: taskMaterialOptions(),
-    ready: !sessionId() || !!taskMaterialOptions(),
-    single: (!capabilities().remoteCreate && capabilities().nativeWindow) || machines().length === 1,
-    confirmed: contextConfirmed(),
-    catalog: sources(),
-  }), ({ workspace, options, ready, single, confirmed, catalog }) => {
-    const request = ++taskSourcesRequest;
-    setTaskSources(null);
-    setTaskSourcesError(null);
-    if (!workspace || !ready) return;
-    if (single) {
-      if (confirmed) setTaskSources(catalog);
-      return;
-    }
-    if (!options) return;
-    void invoke<Source[]>("list_sources", {}, options).then((listed) => {
-      if (request === taskSourcesRequest) setTaskSources(listed);
-    }).catch((e) => {
-      if (request === taskSourcesRequest) setTaskSourcesError(prosaDe(e));
-    });
-  }));
-
-  /**
-   * Cambiar la rama de una fuente sustituyéndola: su identidad incluye la
-   * rama (`context::repo_identity`), otra rama es otra fuente. La nueva entra
-   * antes de que salga la anterior: un fallo de `add_repo_url` deja las dos,
-   * y se ve.
-   */
-  const cambiarRama = async (fuente: Source, rama: string) => {
-    if (fuente.kind !== "git" || fuente.branch === rama) return;
-    const target = materialTarget();
-    if (sessionId() && !taskMaterialOptions()) throw { what: t("projects.context.task_unavailable") };
-    const machine = sessionId() ? filaDe(sessionId()!)?.machine : null;
-    const options = machine ? { headers: { "x-terminus-machine": machine } } : taskMaterialOptions();
-    const nueva = await invoke<{ id: string }>("add_repo_url", {
-      cloneUrl: fuente.location,
-      branch: rama,
-    }, options);
-    if (target !== materialTarget()) throw { what: t("projects.context.target_changed") };
-    await adjuntarFuente(nueva.id);
-    if (target !== materialTarget()) throw { what: t("projects.context.target_changed") };
-    await quitarFuente(fuente.id);
-    window.dispatchEvent(new CustomEvent("harness:sources"));
-  };
-
-  /**
-   * Abrir un artefacto es abrir una pestaña del centro, con su propio
-   * visor (`ArtifactViewer.tsx`). Llega por aquí lo que el hilo anunció
-   * y la conversación exportada: lo que la tarea produjo, nunca un adjunto.
-   */
-  function abrirArtefacto(
-    rel: string,
-    path: string,
-    kind: ArtifactTab["kind"] = "output",
-    codigo = false,
-  ) {
-    const id = sessionId();
-    if (!id) return;
-    pestanas.openContent({
-      clase: "artefacto",
-      id: artifactTabId({ session: id, rel }),
-      project: project(),
-      session: id,
-      rel,
-      path,
-      kind,
-      ...(codigo ? { codigo } : {}),
-    });
-  }
-
-  /**
-   * Un archivo por su ruta absoluta. Dentro de un repositorio de la tarea abre
-   * en su árbol, donde se escribe; fuera de todo árbol, en una tarea de código
-   * se lee en la vista de código y en una documental como documento.
-   */
-  async function abrirRuta(path: string, rel = path.replaceAll("\\", "/")) {
-    const id = sessionId();
-    if (!id) return;
-    const arboles = await arbolesDe(project(), id).catch(() => []);
-    // Abrir después del await en otra tarea pondría esta ruta, editable, en el repositorio de aquella.
-    if (sessionId() !== id) return;
-    const dentro = ubicar(arboles, path);
-    if (dentro && esDeCodigo(dentro.arbol.kind)) {
-      return abrirArchivo(dentro.arbol.key, dentro.rel, false);
-    }
-    const f = folder();
-    const enLaTarea = Boolean(dentro) || (f !== null && contiene(f, path));
-    abrirArtefacto(
-      rel,
-      path,
-      enLaTarea ? "output" : "external",
-      !dentro && arboles.some((a) => esDeCodigo(a.kind)),
-    );
-  }
-
-  /**
-   * Un archivo del árbol de código, en su pestaña del centro. Sin tarea aún lo
-   * mismo: la pestaña lee el commit base y el primer turno la reata
-   * (`lib/tabs.ts`). Un archivo no se enseña de dos maneras según cuándo se
-   * abra.
-   */
-  function abrirArchivo(arbol: string, ruta: string, cambiado: boolean) {
-    const tarea = sessionId();
-    if (tarea) { archivosDeTarea.open(tarea, { tree: arbol, path: ruta, changes: cambiado }); return; }
-    const proyecto = project();
-    const id = sessionId() ?? "";
-    if (!proyecto && !id) return;
-    pestanas.openContent({
-      clase: "archivo",
-      id: fileTabId({ project: proyecto, session: id, arbol, ruta }),
-      project: proyecto,
-      session: id,
-      arbol,
-      ruta,
-      cambiado,
-      ...(id ? {} : { base: draftBases()[claveAbierta()] }),
-    });
-  }
-
-  function archivoMovido(session: string, arbol: string, desde: string, hasta: string) {
-    archivosDeTarea.renamed(session, arbol, desde, hasta);
-    paneles.renameTabs(pestanas.renameFiles(session, arbol, desde, hasta));
-  }
-
-  function archivoBorrado(session: string, arbol: string, ruta: string) {
-    archivosDeTarea.removed(session, arbol, ruta);
-    const fuera = pestanas
-      .open()
-      .filter(
-        (p) =>
-          p.clase === "archivo" &&
-          p.session === session &&
-          p.arbol === arbol &&
-          (p.ruta === ruta || p.ruta.startsWith(`${ruta}/`)),
-      );
-    for (const p of fuera) cerrarPestana(p.id);
-  }
-
-  /**
-   * Los archivos que se miraban antes del primer turno pasan a la tarea que ese
-   * turno creó. La clave del árbol no se adivina: se pide, y es una
-   * (`development::list_task_trees`).
-   */
-  async function reatarVistaPrevia(proyecto: string, session: string) {
-    const sueltas = pestanas
-      .open()
-      .some((p) => p.clase === "archivo" && p.session === "" && p.project === proyecto);
-    if (!sueltas) return;
-    try {
-      const arboles = await invoke<ArbolEnTarea[]>("list_task_trees", {
-        project: proyecto,
-        session,
-      }, deLaTarea(session));
-      const arbol = arboles[0]?.key;
-      if (!arbol) return;
-      paneles.renameTabs(pestanas.attachPreviewFiles(proyecto, session, arbol));
-    } catch {
-      // Sin clave de árbol las pestañas se quedan en el commit del que nació la
-      // copia: enseñan el archivo, no un error.
-    }
-  }
-
-  /**
-   * El servidor que levantó una tarea, pestaña más del centro. Se abre
-   * la tarea primero: `pestanas.abrir` mete la de contenido detrás de
-   * las de su tarea, o dejaría un hueco al cerrarla (`lib/tabs.ts`).
-   * El puerto puede ser de una tarea no abierta: pasa por `abrirSesion`.
-   */
-
-  /**
-   * Un enlace, en una pestaña de esta ventana. Dos entradas y un solo
-   * camino: el clic en un enlace del chat (evento `harness:abrir-sitio`)
-   * y el guarda de navegación (`lib.rs` · `sitio-pedido`) —así el
-   * «abrir enlace» del menú nativo acaba en el mismo sitio que un clic.
-   */
-
-  /**
-   * Un sitio cuelga de una tarea (`lib/tabs.ts`): se cuelga de la que
-   * esté delante. Sin ninguna se entrega al navegador del sistema: un
-   * enlace que no hace nada se lee como que la app está rota.
-   */
-  async function abrirEnlace(url: string) {
-    // `activa()` es el id, no la pestaña: se busca en las abiertas.
-    const p = pestanas.open().find((x) => x.id === pestanas.active());
-    // Delante hay un navegador suelto: no hay tarea de la que colgarlo, así
-    // que va a otra pestaña de navegador.
-    if (p?.clase === "sitio" && p.navegador) return abrirNavegador(url);
-    if (p) return void abrirSitio(url, p.project, p.session);
-    await invoke("open_external", { target: url }).catch(() => {});
-  }
-
-  /**
-   * Una pestaña de navegador suelta, la del «+» de la tira. Sin dirección
-   * abre vacía, con la barra lista para teclear (`features/sites/Site.tsx`).
-   */
-  function abrirNavegador(url = "") {
-    setProyectoAbierto(null);
-    pestanas.openContent({
-      clase: "sitio",
-      id: browserTabId(),
-      project: "",
-      session: "",
-      url,
-      navegador: true,
-    });
-  }
-
-  /**
-   * Las carpetas que ofrece el «+» de la tira: las del riel de este espacio.
-   * Se calcula aquí y no con `proyectosDelRiel`, que se declara después de
-   * la cabecera que lo usa.
-   */
-  const carpetasDelMas = () =>
-    carpetasDelEscritorio(projectList(), activeSpace(), sesiones()).map((p) => ({
-      id: p.id,
-      name: p.name,
-    }));
 
   const botonDeNuevaPestana = () => (
     <NewTabButton
@@ -2664,70 +1359,6 @@ export default function App() {
       onBrowser={() => abrirNavegador()}
     />
   );
-
-  async function abrirSitio(url: string, proyecto: string, session: string) {
-    await abrirSesion(proyecto, session);
-    const p: SiteTab = {
-      clase: "sitio",
-      id: siteTabId({ session, url }),
-      project: proyecto,
-      session,
-      url,
-    };
-    pestanas.openContent(p);
-  }
-
-  /**
-   * Abrir lo que el hilo anunció, por su ruta. La absoluta se arma con la
-   * carpeta de hoy y no se guarda en la transcripción: la carpeta de datos
-   * se mueve, y una ruta escrita envejece sin avisar. Sin carpeta se abre
-   * la columna en vez de un error.
-   */
-  function abrirPorRel(rel: string) {
-    const f = folder();
-    if (!f) {
-      return;
-    }
-    // El separador es el de la carpeta: `rel` viaja con barras normales.
-    const sep = f.includes("\\") ? "\\" : "/";
-    void abrirRuta(f + sep + rel.split("/").join(sep), rel);
-  }
-
-  /** El árbol recuenta por `harness:copia`, como al guardar un archivo desde su pestaña. */
-  async function exportarChat(id: string, proyecto: string) {
-    try {
-      const salida = await invoke<ChatExportado>("export_chat", { project: proyecto, id }, deLaTarea(id));
-      abrirArtefacto(salida.rel, salida.path);
-      window.dispatchEvent(new CustomEvent("harness:copia"));
-    } catch (e) {
-      setError(prosaDe(e));
-    }
-  }
-
-  async function forkDesde(turno: string, mode: "full" | "focused", encargado: string | null) {
-    const workspace = workspaceActivo();
-    const id = sessionId();
-    const proyecto = project();
-    if (!id) return;
-    const context = await invoke<{
-      path: string; last_prompt: string; last_reply: string;
-      sources: string[]; excluded_sources: string[];
-    }>("prepare_session_continuation", { project: proyecto, id, turno }, deLaTarea(id))
-      .catch((e) => { throw prosaDe(e); });
-    if (workspace !== workspaceActivo() || id !== sessionId() || proyecto !== project()) return;
-    const prompt = mode === "full"
-      ? t("chat.continuation.full_prompt", { path: context.path })
-      : t("chat.continuation.focused_prompt", {
-          path: context.path, prompt: context.last_prompt, reply: context.last_reply,
-        });
-    const machine = machineOf(id)?.headers["x-terminus-machine"] ?? maquinaDeLaVentana();
-    setRunOn(workspace, machine);
-    // Con agente, el borrador es el suyo, como al pulsar su fila en el riel:
-    // la tarea nace con él y con el proveedor y modelo de su perfil.
-    if (encargado) abrirBorradorDeAgente(proyecto, encargado);
-    else nuevaSesion(proyecto);
-    drafts.continueFrom(prompt, context.path, context.sources, context.excluded_sources);
-  }
 
   const { adoptarNacida, chooseEffort, configDeLaSesion, confirmarTraspaso, effortDelTurno, elegirModelo, elegirModo, pintarNaciendo, restoreDraftConfiguration, restoreSessionConfiguration, saveDraftConfiguration, situacionDeTraspaso } = createHandover({ agent, avisar, borrador, busy, claveAbierta, composer, deLaTarea, draftMachine, drafts, esChatDeAgente, filaDe, machines, model, modo, notifyProfiles, opcionesDeLaTarea, paneles, permissions, pestanas, project, reatarVistaPrevia, responderPermiso, sessionId, setDraftBases, setError, setNaciendo, setTraspasoPendiente, threads, traspasoPendiente, traspasos, vivas, workspaceActivo, get mudarPestana() { return mudarPestana; }, get olvidarPestana() { return olvidarPestana; } });
   let gateSeq = 0;
@@ -4066,26 +2697,8 @@ export default function App() {
     </section>
   );
 
-  // El riel del escritorio activo. Sin escritorio es el de siempre.
-  const proyectosDelRiel = createMemo(() => carpetasDelEscritorio(projectList(), activeSpace(), sesiones()));
-  const delegationFamilies = createMemo(() => delegatedFamilies(withRemoteLaunchers(Object.values(sesiones()).flat(), remoteChildScope())));
-  const sesionesDelRiel = () => {
-    const current = sesionesConEstado();
-    const all = Object.values(current).flat();
-    const approvals = permissions().map(item => item.session);
-    const known = new Map(all.map(row => [row.id, row]));
-    const families = delegationFamilies();
-    const todas = Object.fromEntries(Object.entries(current).map(([folder, rows]) => [folder, rows.map(row => {
-      const children = (families.get(row.id) ?? []).flatMap(id => known.get(id) ?? []);
-      return children.length ? { ...row,
-        delegated_activity: delegatedAttention([row, ...children], vivas(), approvals) } : row;
-    })]));
-    const desk = escritorio();
-    if (!desk) return todas;
-    return Object.fromEntries(Object.entries(todas).map(([k, filas]) => [k, filas.filter((r) => enEscritorio(r, desk))]));
-  };
-  const opcionesDeMover = () =>
-    multipleSpaces() ? spaces().map((i) => ({ id: i.id, name: spaceName(i) })) : [];
+  const { proyectosDelRiel, sesionesDelRiel, opcionesDeMover } = createRailSessions({ activeSpace, escritorio, multipleSpaces, permissions, projectList, remoteChildScope, sesiones, sesionesConEstado, spaces, vivas, });
+
 
   const Principal = () => (
     // UNA superficie continua, no tres tarjetas flotando: las columnas
