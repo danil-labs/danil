@@ -4,9 +4,6 @@
  * - Quien la pide mientras otra está en curso recibe la misma promesa.
  * - Una respuesta que `keep` acepta se reutiliza durante `freshMs` (una carga de la página).
  * - `fresh: true` no reutiliza nada: la pide quien sabe que el estado cambió (tras encender, el sondeo).
- *   Con `settleMs`, una `fresh` que llega menos de `settleMs` después de empezar la lectura en curso, o de
- *   recibir la guardada, recibe esa: es el eco de lo que la misma lectura acaba de mostrar (front-req-1).
- *   Sin `settleMs` (0) se relee siempre, como antes.
  * - `invalidate()` olvida lo guardado y lo que está en curso: una escritura cambia lo que se lee después.
  * - Un fallo nunca se guarda: quien llama reintenta como antes.
  *
@@ -14,7 +11,7 @@
  */
 const SHARED_READ_FRESH_MS = 3_000;
 
-export type SharedReadOptions<T> = { freshMs?: number; settleMs?: number; keep?: (value: T) => boolean; now?: () => number };
+export type SharedReadOptions<T> = { freshMs?: number; keep?: (value: T) => boolean; now?: () => number };
 export type SharedRead<T> = { read(options?: { fresh?: boolean; signal?: AbortSignal }): Promise<T>; invalidate(): void };
 
 /** El aborto de quien llama corta solo su espera; la lectura compartida sigue para los demás. */
@@ -32,10 +29,8 @@ export function sharedRead<T>(read: () => Promise<T>, options: SharedReadOptions
   const freshMs = options.freshMs ?? SHARED_READ_FRESH_MS;
   const now = options.now ?? Date.now;
   const keep = options.keep ?? (() => true);
-  const settleMs = options.settleMs ?? 0;
   let generation = 0;
   let running: Promise<T> | null = null;
-  let startedAt = 0;
   let kept: { at: number; value: T } | null = null;
   function start(): Promise<T> {
     const mine = generation;
@@ -44,15 +39,12 @@ export function sharedRead<T>(read: () => Promise<T>, options: SharedReadOptions
       return value;
     }).finally(() => { if (running === run) running = null; });
     running = run;
-    startedAt = now();
     return run;
   }
   return {
     read({ fresh = false, signal } = {}) {
       if (!fresh && kept && now() - kept.at < freshMs) return until(Promise.resolve(kept.value), signal);
       if (!fresh && running) return until(running, signal);
-      if (fresh && running && now() - startedAt < settleMs) return until(running, signal);
-      if (fresh && kept && now() - kept.at < settleMs) return until(Promise.resolve(kept.value), signal);
       generation++;
       kept = null;
       return until(start(), signal);

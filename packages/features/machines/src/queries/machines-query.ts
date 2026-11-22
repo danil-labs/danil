@@ -3,10 +3,7 @@
  * La piden la ventana web (inventario de la flota), la facturación, Cuenta › Máquinas y las pantallas de
  * Desk; todas reciben la misma lectura en curso o la de hace menos de `SHARED_READ_FRESH_MS`.
  *
- * - `list(signal, { fresh: true })` relee: el inventario de la ventana, que corre cuando el estado cambió. Si
- *   llega menos de `MACHINES_SETTLE_MS` después de la lectura anterior, recibe esa: el cambio es el eco de lo que
- *   esa lectura mostró (front-req-1: la VM apagada contesta 409 al ticket, la flota la marca `off` y la ventana
- *   vuelve a pedir la lista que ya decía `stopped`). Encender invalida, así que tras `start`/`wake` sí se relee.
+ * - `list(signal, { fresh: true })` relee siempre: el inventario de la ventana, que corre cuando el estado cambió.
  * - Encender (`start`, `wake`) invalida la lista antes y después: la siguiente lectura ve el estado nuevo.
  * - `admission` y `get` pasan tal cual: un ticket es de un solo uso y nunca se comparte.
  */
@@ -20,11 +17,8 @@ export type MachinesQuery = Omit<Client, "list"> & {
   invalidate(): void;
 };
 
-/** Lo que tarda el arranque en contestar los tickets de la primera lista (CSRF y POST): su eco no es un cambio. */
-const MACHINES_SETTLE_MS = 2_000;
-
 export function machinesQuery(client: Client): MachinesQuery {
-  const listed = sharedRead(() => client.list(), { keep: (answer) => answer.kind === "ok", settleMs: MACHINES_SETTLE_MS });
+  const listed = sharedRead(() => client.list(), { keep: (answer) => answer.kind === "ok" });
   const powering = <T>(run: () => Promise<T>) => {
     listed.invalidate();
     return run().finally(listed.invalidate);
