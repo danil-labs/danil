@@ -223,7 +223,6 @@ export const EXTENSIONS_1: Record<string, string> = {
   "geojson": "json",
   "gif": "image",
   "gifv": "video",
-  "gitlab-ci.yml": "gitlab",
   "glb": "3d",
   "gltf": "3d",
   "go": "go",

@@ -41,7 +41,6 @@ test("un comando de un CLI conocido trae la marca de su servicio", () => {
   const mark = (cmd: string) => commandSource(cmd)?.mark ?? null;
   assert.deepEqual(commandSource('"$DANIL_CLI" task show qx1q8d3m --json'), { program: "$DANIL_CLI", mark: "danil", label: "Danil" });
   assert.equal(mark("gh pr list"), "github");
-  assert.equal(mark("glab mr list"), "gitlab");
   assert.equal(mark("wrangler deploy"), "cloudflare");
   assert.equal(mark("gcloud run deploy"), "googlecloud");
   assert.equal(mark("gsutil ls"), "googlecloud");

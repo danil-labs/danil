@@ -102,6 +102,6 @@ export type Borrador = { data: Record<string, string>; token: string };
 
 export const SIN_BORRADOR: Borrador = { data: {}, token: "" };
 
-const ORDER = ["github", "gitlab", "bitbucket"];
+const ORDER = ["github", "bitbucket"];
 
 export const rankOf = (id: string) => (ORDER.includes(id) ? ORDER.indexOf(id) : ORDER.length);

@@ -19,7 +19,6 @@ export type Procedencia = {
 const PROVEEDORES: [RegExp, string][] = [
   [/(^|\.)github\.com$/i, "GitHub"],
   [/(^|\.)bitbucket\.org$/i, "Bitbucket"],
-  [/(^|\.)gitlab\.com$/i, "GitLab"],
 ];
 
 /** El home de la persona, en las tres plataformas, para sustituirlo por `~`. */

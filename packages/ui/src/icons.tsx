@@ -84,10 +84,6 @@ export function BitbucketMark(props: { size?: number }) {
   return <MarcaServicio id="bitbucket" size={props.size} />;
 }
 
-function GitLabMark(props: { size?: number }) {
-  return <MarcaServicio id="gitlab" size={props.size} />;
-}
-
 function FigmaMark(props: { size?: number }) {
   return <MarcaServicio id="figma" size={props.size} />;
 }
@@ -200,7 +196,6 @@ export function MarcaAgente(props: { id: string; size?: number }) {
 const MARCAS_PROVEEDOR: Record<string, (props: { size?: number }) => JSX.Element> = {
   github: GitHubMark,
   bitbucket: BitbucketMark,
-  gitlab: GitLabMark,
   figma: FigmaMark,
   atlassian: AtlassianMark,
   excalidraw: ExcalidrawMark,

@@ -74,7 +74,6 @@ test("la baldosa de un servidor sin marca lleva su inicial", () => {
 test("un programa de shell lleva marca solo por coincidencia exacta", () => {
   for (const cli of ["$DANIL_CLI", "${DANIL_CLI}", "$TERMINUS_CLI", "${TERMINUS_CLI}", "danil", "dn"]) assert.equal(commandMarkId(cli), "danil", cli);
   assert.equal(commandMarkId("gh"), "github");
-  assert.equal(commandMarkId("glab"), "gitlab");
   assert.equal(commandMarkId("wrangler"), "cloudflare");
   assert.equal(commandMarkId("gcloud"), "googlecloud");
   assert.equal(commandMarkId("gsutil"), "googlecloud");
