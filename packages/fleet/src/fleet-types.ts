@@ -141,7 +141,7 @@ export const RETRY_READ = new Set(["machine_lost", "machine_timeout", "io"]);
  * que entonces no decía `online`; lo más nuevo manda hasta el próximo `state`.
  * `hint`: lo que dijo otra fuente (la vista del motor) antes del primer `state`.
  */
-export type Member = { info: MachineInfo; link: Link; stops: (() => void)[]; was: MachineState; outdated: boolean; engine: boolean | null; fresh: Set<string> | null; live: boolean; hint: MachineState | null };
+export type Member = { info: MachineInfo; link: Link; stops: (() => void)[]; was: MachineState; outdated: boolean; engine: boolean | null; engineFeatures?: readonly string[]; fresh: Set<string> | null; live: boolean; hint: MachineState | null };
 
 export function sameLinks(a: ReadonlySet<string> | null, b: ReadonlySet<string> | null): boolean {
   if (a === b) return true;

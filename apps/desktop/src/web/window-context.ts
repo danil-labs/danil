@@ -7,7 +7,7 @@ import type { WebSessionCommands, WebSessionStatus } from "./web-session-context
 type Client = MachinesQuery;
 type Answer = Awaited<ReturnType<Client["list"]>>;
 /** Las lecturas que el motor responde por workspace (tareas, proyectos, cuentas, modelos). */
-const OF_THE_WORKSPACE = new Set(["list_live_sessions", "list_projects", "list_portfolios", "list_spaces", "list_accounts", "account_status", "list_models", "list_providers", "list_surfaces", "list_agents"]);
+const OF_THE_WORKSPACE = new Set(["list_live_sessions", "list_projects", "list_portfolios", "list_spaces", "list_accounts", "account_status", "account_limits", "list_models", "list_providers", "list_surfaces", "list_agents"]);
 export type ContextRow = { machine: Machine; group: GroupAccount };
 
 /**

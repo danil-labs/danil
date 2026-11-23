@@ -7,9 +7,6 @@ import { MarcaServicio } from "./marcas";
  * Marcas de las herramientas que se integran y de los plugins. Los trazos viven
  * en `packages/ui` (`TOOL_MARKS`), que el teléfono pinta igual; aquí solo
  * se elige cuál.
- *
- * AgentsView no está ahí: su marca es una baldosa con sus iniciales, no un
- * trazo, y no la presta ningún servidor.
  */
 
 export function GoogleDriveMark(props: { size?: number }) {
@@ -30,16 +27,6 @@ function LibreOfficeMark(props: { size?: number }) {
 
 export function ZoteroMark(props: { size?: number }) {
   return <MarcaServicio id="zotero" size={props.size} />;
-}
-
-function AgentsViewMark(props: { size?: number }) {
-  return (
-    <svg class="block shrink-0" width={props.size ?? 14} height={props.size ?? 14} viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="12" fill="#070b12" />
-      <rect x="1.5" y="1.5" width="61" height="61" rx="10.5" fill="none" stroke="#23324a" stroke-width="3" />
-      <text x="32" y="43" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="28" font-weight="700" fill="#5b9bf5">AV</text>
-    </svg>
-  );
 }
 
 function CuaMark(props: { size?: number }) {
@@ -96,7 +83,6 @@ export function MarcaPlugin(props: { id: string; size?: number }) {
       <Match when={props.id === "drawio"}><DrawioMark size={props.size} /></Match>
       <Match when={props.id === "typst"}><TypstMark size={props.size} /></Match>
       <Match when={props.id === "libreoffice"}><LibreOfficeMark size={props.size} /></Match>
-      <Match when={props.id === "agentsview"}><AgentsViewMark size={props.size} /></Match>
       <Match when={props.id === "computer-use"}><CuaMark size={props.size} /></Match>
     </Switch>
   );

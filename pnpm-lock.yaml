@@ -312,19 +312,6 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
-  packages/features/observability:
-    dependencies:
-      solid-js:
-        specifier: ^1.9.17
-        version: 1.9.17
-    devDependencies:
-      '@types/node':
-        specifier: ^26.4.0
-        version: 26.4.0
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-
   packages/features/onboarding:
     dependencies:
       lucide-solid:

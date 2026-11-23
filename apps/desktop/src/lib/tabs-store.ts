@@ -13,8 +13,6 @@ import {
 import {
   type ContentTab,
   isTaskTab,
-  OBSERVABILITY_TAB_ID,
-  type ObservabilityTab,
   type ScreenTab,
   screenTabId,
   type Tab,
@@ -204,20 +202,6 @@ export function createTabs(options: { transient?: boolean } = {}) {
       });
       save();
     },
-    openObservability(title: string) {
-      const next: ObservabilityTab = {
-        clase: "observabilidad",
-        id: OBSERVABILITY_TAB_ID,
-        project: "",
-        session: "",
-        titulo: title,
-      };
-      setOpenTabs((list) =>
-        list.some((p) => p.id === next.id) ? list : [...list, next],
-      );
-      if (!options.transient) pin(next.id);
-      activateAndPersist(next.id);
-    },
     openScreen(machine: string, title: string) {
       const next: ScreenTab = {
         clase: "pantalla",
@@ -319,7 +303,6 @@ export function createTabs(options: { transient?: boolean } = {}) {
         // Las vistas sin sesión y las tareas provisionales no tienen fila en el historial.
         // Validarlas contra él cerraría sus pestañas durante la sincronización.
         if (
-          p.clase === "observabilidad" ||
           p.clase === "pantalla" ||
           p.session === "" ||
           esProvisional(p.session)

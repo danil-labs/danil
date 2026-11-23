@@ -1,5 +1,6 @@
 import { RelaySession } from "@terminus/computers";
 import { type Machine, machineToComputer } from "../../../../packages/platform-client/src/machines.ts";
+import { readContextSpaces } from "../../../../packages/platform-client/src/workspace-spaces.ts";
 import type { MachinesQuery } from "../../../../packages/features/machines/src/queries/machines-query.ts";
 import { Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
 import { createSignal, lazy, Suspense } from "solid-js";
@@ -94,6 +95,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
   });
   const stopListing = fleet.onListing(() => bump(n => n + 1));
   const active = createRouter({ contextInfo: scope.routing, self: null, fleet, native: null, deliver, onSlices: slicesChanged,
+    readContextSpaces: readContextSpaces(base.sessions.handle),
     pickedFor: workspace => {
       const picked: Record<string, string> = leerPref("machines.run_on", {});
       return workspace ? picked[workspace] ?? null : null;

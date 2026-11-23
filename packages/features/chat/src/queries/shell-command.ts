@@ -29,7 +29,7 @@ export type ShellCommandDeps = { DEFAULT_PERMISSION_MODE_EVENT: "harness:default
   deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; detenerYEnviar: ReturnType<typeof createSendNow>["detenerYEnviar"];
   draftBases: Accessor<Record<string, string>>; draftMachine: () => string | null; draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; effort: Accessor<string>;
   enCache: Accessor<boolean>; engineCanDispatch: ReturnType<typeof createThreadStream>["engineCanDispatch"]; enviar: ReturnType<typeof createSend>["enviar"]; escritorio: Accessor<string | null>;
-  espacioPara: (space: string | null | undefined, machine: string | null | undefined) => string | null; esperando: Accessor<boolean>; grupos: Accessor<string[]>;
+  esperando: Accessor<boolean>; grupos: Accessor<string[]>;
   hablandoCon: Accessor<{ project: string; name: string; } | null>; handoff: ReturnType<typeof createThreadStream>["handoff"]; handoffAt: ReturnType<typeof createThreadStream>["handoffAt"];
   injecting: ReturnType<typeof createThreadStream>["injecting"]; lanzados: ReturnType<typeof createThreadStream>["lanzados"]; lifecycleRevision: number;
   machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; machines: MachinesPort;
@@ -51,7 +51,7 @@ export type ShellCommandDeps = { DEFAULT_PERMISSION_MODE_EVENT: "harness:default
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2961–3259, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createShellCommand(deps: ShellCommandDeps) {
-  const { DEFAULT_PERMISSION_MODE_EVENT, agent, agents, busy, carpetasDeTerminal, claveAbierta, cola, comandosDeLaCola, composer, conversationScope, deLaTarea, draftBases, draftMachine, draftOptions, effort, enCache, engineCanDispatch, escritorio, espacioPara, esperando, grupos, hablandoCon, handoff, handoffAt, injecting, lanzados, machineOf, machines, marcarQuieta, marcarViva, model, modo, nacenConComando, pendingStarts, pestanas, ponerTerminal, project, projectCatalog, quitarDeLaCola, refreshFolder, refreshSessions, retenidaPorElMotor, retirarNaciendo, sesiones, sessionId, setArrancando, setHablandoCon, setInjecting, setPermissionError, setPorContestar, setSessionId, setTerminales, settleTurn, settlingTurns, soltarTerminal, stopping, taskQueues, terminales, threads, vivas, workspaceActivo, workspaceContext } = deps;
+  const { DEFAULT_PERMISSION_MODE_EVENT, agent, agents, busy, carpetasDeTerminal, claveAbierta, cola, comandosDeLaCola, composer, conversationScope, deLaTarea, draftBases, draftMachine, draftOptions, effort, enCache, engineCanDispatch, escritorio, esperando, grupos, hablandoCon, handoff, handoffAt, injecting, lanzados, machineOf, machines, marcarQuieta, marcarViva, model, modo, nacenConComando, pendingStarts, pestanas, ponerTerminal, project, projectCatalog, quitarDeLaCola, refreshFolder, refreshSessions, retenidaPorElMotor, retirarNaciendo, sesiones, sessionId, setArrancando, setHablandoCon, setInjecting, setPermissionError, setPorContestar, setSessionId, setTerminales, settleTurn, settlingTurns, soltarTerminal, stopping, taskQueues, terminales, threads, vivas, workspaceActivo, workspaceContext } = deps;
   const adoptarNacida: ShellCommandDeps["adoptarNacida"] = (...a: Parameters<ShellCommandDeps["adoptarNacida"]>) => deps.adoptarNacida(...a);
   const configDeLaSesion: ShellCommandDeps["configDeLaSesion"] = (...a: Parameters<ShellCommandDeps["configDeLaSesion"]>) => deps.configDeLaSesion(...a);
   const detenerYEnviar: ShellCommandDeps["detenerYEnviar"] = (...a: Parameters<ShellCommandDeps["detenerYEnviar"]>) => deps.detenerYEnviar(...a);
@@ -178,7 +178,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
         model: lanzado.model,
         effort: lanzado.effort,
         permissionMode: lanzado.permission_mode,
-        space: espacioPara(escritorio(), enOtra?.headers["x-terminus-machine"]),
+        space: escritorio(),
         agent: encargado,
         baseRef: draftBases()[claveBorrador] ?? null,
         runId,

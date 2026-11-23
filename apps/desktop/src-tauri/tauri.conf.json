@@ -7,7 +7,8 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5174",
     "beforeDevCommand": "pnpm engine:sidecar && pnpm dev",
-    "beforeBuildCommand": "pnpm build && pnpm engine:sidecar"
+    "beforeBuildCommand": "pnpm build && pnpm engine:sidecar",
+    "beforeBundleCommand": "node scripts/guards/contract.mjs --require-pinned"
   },
   "app": {
     "windows": [

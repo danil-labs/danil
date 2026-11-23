@@ -188,16 +188,20 @@ impl engine_session::Engine for WindowEngine<'_> {
     }
 }
 
-fn owner(app: &tauri::AppHandle) -> engine_session::Owner<WindowEngine<'_>> {
-    engine_session::owner(Some(WindowEngine(app)))
+fn owner_ready(app: &tauri::AppHandle) -> Result<engine_session::Owner<WindowEngine<'_>>, Value> {
+    match engine_session::resolve(super::proxy::engine_attached(app), Some(WindowEngine(app))) {
+        engine_session::Resolved::Engine(engine) => Ok(engine_session::Owner::Engine(engine)),
+        engine_session::Resolved::Desk => Ok(engine_session::Owner::Desk),
+        engine_session::Resolved::Waiting => Err(super::proxy::engine_down()),
+    }
 }
 
 #[tauri::command(async)]
-pub(super) fn danil_session_status(app: tauri::AppHandle) -> Value {
-    if let engine_session::Owner::Engine(engine) = owner(&app) {
-        return engine_session::status(&engine);
+pub(super) fn danil_session_status(app: tauri::AppHandle) -> Result<Value, Value> {
+    match owner_ready(&app)? {
+        engine_session::Owner::Engine(engine) => Ok(engine_session::status(&engine)),
+        engine_session::Owner::Desk => Ok(desk(&app).status()),
     }
-    desk(&app).status()
 }
 
 /// Abre el navegador del sistema en `identity`, espera la vuelta por loopback y
@@ -214,7 +218,7 @@ pub(super) fn danil_sign_in(
         return Err(coded("invalid_request"));
     }
     let add = mode.as_deref() == Some("add");
-    if let engine_session::Owner::Engine(engine) = owner(&app) {
+    if let engine_session::Owner::Engine(engine) = owner_ready(&app)? {
         return engine_sign_in(&app, &engine, add);
     }
     let d = desk(&app);
@@ -290,7 +294,7 @@ pub(super) fn danil_sign_in_complete(
     app: tauri::AppHandle,
     pasted: String,
 ) -> Result<Value, Value> {
-    let engine_session::Owner::Engine(engine) = owner(&app) else {
+    let engine_session::Owner::Engine(engine) = owner_ready(&app)? else {
         return Err(coded("not_available_yet"));
     };
     engine_session::complete_login(&engine, &pasted)?;
@@ -306,7 +310,7 @@ pub(super) fn danil_sign_out(
     family: Option<String>,
     context: Option<String>,
 ) -> Result<Value, Value> {
-    if let engine_session::Owner::Engine(engine) = owner(&app) {
+    if let engine_session::Owner::Engine(engine) = owner_ready(&app)? {
         let value = engine_session::sign_out(&engine, family.as_deref(), context.as_deref())?;
         announce(&app, &value);
         return Ok(value);
@@ -351,7 +355,7 @@ pub(super) fn danil_edge_fetch(
         }
         None => pkce::random(18).ok_or_else(|| coded("unavailable"))?,
     };
-    if let engine_session::Owner::Engine(engine) = owner(&app) {
+    if let engine_session::Owner::Engine(engine) = owner_ready(&app)? {
         return engine_session::fetch(
             &engine,
             &method,

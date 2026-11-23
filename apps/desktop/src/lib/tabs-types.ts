@@ -34,11 +34,6 @@ export type SiteTab = CommonTab & {
   navegador?: true;
 };
 
-export type ObservabilityTab = CommonTab & {
-  clase: "observabilidad";
-  titulo: string;
-};
-
 // Una por máquina: la pantalla es de la computadora, no de una tarea.
 export type ScreenTab = CommonTab & {
   clase: "pantalla";
@@ -51,7 +46,6 @@ export type Tab =
   | FileTab
   | ArtifactTab
   | SiteTab
-  | ObservabilityTab
   | ScreenTab;
 export type ContentTab =
   | FileTab
@@ -79,7 +73,6 @@ export const siteTabId = (a: { session: string; url: string }) =>
 let browserSequence = 0;
 export const browserTabId = () => `navegador\u0000${Date.now()}\u0000${browserSequence++}`;
 
-export const OBSERVABILITY_TAB_ID = "observabilidad";
 
 export const screenTabId = (machine: string) => `pantalla\u0000${machine}`;
 

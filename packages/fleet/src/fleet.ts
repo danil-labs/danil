@@ -159,10 +159,14 @@ export class Fleet {
     return this.registries.get(context ?? "") ?? null;
   }
 
+  private described(member: Member): MachineInfo {
+    return member.engineFeatures === undefined ? member.info : { ...member.info, features: member.engineFeatures };
+  }
+
   /** Las otras máquinas, administradas (las VM y los servidores de organización) primero y luego por nombre. */
   machines(context?: string): MachineInfo[] {
     const managed = (m: MachineInfo) => Number(m.wakes || alwaysOn(m));
-    return [...this.members.values()].map((m) => m.info).filter((m) => context === undefined || sameContext(m.context, context)).sort((a, b) => managed(b) - managed(a) || a.name.localeCompare(b.name));
+    return [...this.members.values()].map((m) => this.described(m)).filter((m) => context === undefined || sameContext(m.context, context)).sort((a, b) => managed(b) - managed(a) || a.name.localeCompare(b.name));
   }
 
   has(machine: string | null | undefined, context?: string): boolean {
@@ -170,7 +174,8 @@ export class Fleet {
   }
 
   info(machine: string, context?: string): MachineInfo | undefined {
-    return this.member(machine, context)?.info;
+    const member = this.member(machine, context);
+    return member && this.described(member);
   }
 
   /** Lo que `machine` contestó en `list_workspaces`; una respuesta sin lista no borra la anterior. */
@@ -751,8 +756,10 @@ export class Fleet {
       // Un `hello` nuevo: si ya habla este contrato, se quita la marca de desactualizada (R14).
       link.onEngine?.((engine) => {
         const verdict = this.config.compatible?.(engine.contract) ?? null;
-        if (verdict === null) return;
-        member.engine = verdict;
+        const featuresChanged = JSON.stringify(member.engineFeatures) !== JSON.stringify(engine.service_features);
+        member.engineFeatures = engine.service_features;
+        if (verdict === null && !featuresChanged) return;
+        if (verdict !== null) member.engine = verdict;
         if (verdict) member.outdated = false;
         this.config.onChange?.(info.id, info.context);
       }) ?? (() => {}),

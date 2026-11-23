@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { test } from "node:test";
-import type { Fetch } from "../src/api.ts";
+import { listComputers, type Fetch } from "../src/api.ts";
 import { powerOf } from "../src/machine.ts";
 import { machinesClient, machineToComputer } from "../src/machines.ts";
 
@@ -328,4 +328,12 @@ test("the machines list aborts a slow edge read at the caller's deadline", async
   deadline.abort();
   assert.equal((await pending).kind, "error");
   assert.equal(canceled, true);
+});
+
+test("the retired machine service and alias never receive inventory requests", async () => {
+  const { fetch, calls } = edge({});
+  for (const endpoint of ["https://machines.danil.ai", "https://computers.danil.ai", "wss://machines.danil.ai./old"]) {
+    assert.deepEqual(await listComputers(endpoint, "tok", fetch), { kind: "error", status: null, code: "service_retired" });
+  }
+  assert.deepEqual(calls, []);
 });

@@ -6,7 +6,7 @@ Agrupa las features modulares del cliente, organizadas cada una con sus pantalla
 
 ## Qué expone
 No tiene punto de entrada propio. Cada subdirectorio expone su API pública en su respectivo `src/index.ts`:
-- `artifacts`, `chat`, `code`, `composer`, `conversation-handoff`, `drafts`, `machines`, `observability`, `onboarding`, `projects`, `screen`, `service-stream`, `settings`, `sites`, `tabs`, `task-queues`, `threads`, `viewers`, `workspace`, `workspaces`.
+- `artifacts`, `chat`, `code`, `composer`, `conversation-handoff`, `drafts`, `machines`, `onboarding`, `projects`, `screen`, `service-stream`, `settings`, `sites`, `tabs`, `task-queues`, `threads`, `viewers`, `workspace`, `workspaces`.
 
 ## Qué consume
 Las features consumen los paquetes base del sistema:

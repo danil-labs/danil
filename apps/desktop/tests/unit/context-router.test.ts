@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Fleet, type Link } from "@terminus/fleet";
 import "../helpers/catalog.ts";
-import { contextAttentionStale, createContextAttention } from "../../src/features/machines/context-attention.ts";
-import { createContextRouter } from "../../src/features/machines/context-router.ts";
-import { createRouter } from "../../src/features/machines/router.ts";
-import { scopedFleet } from "../../src/features/machines/scoped-fleet.ts";
+import { contextAttentionStale, createContextAttention } from "../../../../packages/features/machines/src/queries/context-attention.ts";
+import { createContextRouter } from "../../../../packages/features/machines/src/queries/context-router.ts";
+import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
+import { scopedFleet } from "../../../../packages/features/machines/src/queries/scoped-fleet.ts";
 import { activeWorkspaceContext, captureWorkspaceContext, displayWorkspaceContext, displayWorkspaceSnapshot, rememberWorkspaceSnapshot, requestedWorkspaceSnapshot, setActiveWorkspaceContext, setDisplayWorkspaceContext } from "../../src/lib/workspace-context.ts";
 
-function setup(plans: Record<string, string> = {}) {
+function setup(plans: Record<string, string> = {}, localOrg?: string, engineFeatures?: () => string[]) {
   const calls: { context: string; command: string; args: unknown; workspace: string | null }[] = [];
   const delivered: { name:string; payload:unknown }[] = [];
   const native: { command: string; args: unknown; options: unknown }[] = [];
@@ -16,7 +16,7 @@ function setup(plans: Record<string, string> = {}) {
     return { state: () => "online", start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {},
       async call(_id, command, workspace, _folder, args) {
         calls.push({ context: info.context ?? "", command, workspace, args });
-        return { value: command === "list_workspaces" ? { workspaces: [{ id: "same", name: "Shared" }], active: "same" } : command === "send_message" ? `task-${info.context}` : [], cached: null };
+        return { value: command === "list_workspaces" ? { workspaces: [{ id: "same", name: "Shared" }], active: "same" } : command === "send_message" ? `task-${info.context}` : command === "list_live_sessions" ? [{ id: "cloud-task" }] : [], cached: null };
       },
     } satisfies Link;
   } });
@@ -24,7 +24,16 @@ function setup(plans: Record<string, string> = {}) {
   for (const context of ["a", "b"]) fleet.setListing("vm", [{ id: "same", name: "Shared" }], context);
   const router = createRouter({ self: "local", fleet, contextInfo: context => context === "free" ? { org: "free-org", plan: "free" } : ["a", "b"].includes(context) ? { org: "org", plan: plans[context] ?? "teams" } : null,
     deliver: events => delivered.push(...events),
-    native: async (command, args, options) => { native.push({ command, args, options }); return command === "list_workspaces" ? { workspaces: [{ id: "local", name: "Local" }], active: "local" } : null; },
+    engineFeatures,
+    native: async (command, args, options) => {
+      if (command === "list_workspaces") {
+        native.push({ command, args, options });
+        return { workspaces: [{ id: "local", name: "Local" }, ...(localOrg ? [{ id: "same", name: "Shared", account: { org: localOrg } }] : [])], active: "local" };
+      }
+      native.push({ command, args, options });
+      if (command === "share_space") throw Error("unavailable");
+      return command === "list_live_sessions" ? [{ id: "mac-task" }] : null;
+    },
   });
   return { router, fleet, calls, native, delivered };
 }
@@ -39,6 +48,7 @@ test("same physical machine and workspace route reads and actions through the se
   assert.equal(await router.handle("send_message", { text: "B" }), "vm~task-b");
   assert.deepEqual(calls.filter(call => call.command === "send_message").map(call => [call.context, call.workspace]), [["a", "same"], ["b", "same"]]);
   assert.equal(router.activeContext(), "b");
+  native.splice(0, native.length, ...native.filter(call => call.command !== "list_workspaces"));
   assert.equal(native.length, 0);
   await router.handle("set_active_workspace", { id: "local" }, contextOptions(""));
   assert.deepEqual(native[0], { command: "set_active_workspace", args: { id: "local" }, options: { headers: {} } });
@@ -106,13 +116,13 @@ test("clearing the last active context changes only the window and suppresses im
   await router.handle("set_active_workspace",{id:null},contextOptions(""));
   assert.equal(router.activeWorkspace(),null);
   assert.equal(router.activeContext(),null);
-  assert.equal(native.length,0);
+  assert.deepEqual(native.map(call=>call.command),["list_workspaces"]);
   assert.equal(calls.length,0);
   const list = await router.handle("list_workspaces") as {active:string|null;workspaces:{id:string}[]};
   assert.equal(list.active,null);
   assert.deepEqual(list.workspaces.map(row=>row.id),["local"]);
   await assert.rejects(router.handle("send_message",{text:"stale"}));
-  assert.deepEqual(native.map(call=>call.command),["list_workspaces"]);
+  assert.deepEqual(native.map(call=>call.command),["list_workspaces","list_workspaces"]);
   await router.handle("set_active_workspace",{id:"local"},contextOptions(""));
   assert.equal(router.activeWorkspace(),"local");
   const restored = await router.handle("list_workspaces") as {active:string|null};
@@ -230,4 +240,117 @@ test("closing the router forgets the window's active context so a reinstalled fl
   assert.equal(next.activeContext(), null);
   assert.equal(activeWorkspaceContext(), null);
   next.close();
+});
+
+test("Desk keeps local and cloud tasks in the same organization workspace", async () => {
+  const { router, native, calls } = setup({}, "org");
+  await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+  await router.handle("list_live_sessions", { project: "" });
+  for (let i = 0; i < 30 && !calls.some(call => call.command === "list_live_sessions"); i++) {
+    await new Promise(resolve => setTimeout(resolve, 5));
+  }
+  const rows = await router.handle("list_live_sessions", { project: "" }) as { id: string }[];
+  assert.deepEqual(rows.map(row => row.id).sort(), ["mac-task", "vm~cloud-task"]);
+  assert.equal(native.find(call => call.command === "list_live_sessions")?.command, "list_live_sessions");
+  assert.ok(calls.some(call => call.command === "list_live_sessions" && call.workspace === "same"));
+  router.close();
+});
+
+test("Desk excludes a local workspace with the same id in a different organization", async () => {
+  const { router, native } = setup({}, "different-org");
+  await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+  const rows = await router.handle("list_live_sessions", { project: "" }) as { id: string }[];
+  assert.deepEqual(rows.map(row => row.id), ["vm~cloud-task"]);
+  await assert.rejects(router.handle("send_message", {}, contextOptions("a", "local")));
+  assert.deepEqual(native.map(call => call.command), ["list_workspaces"]);
+  router.close();
+});
+
+test("a task sent to another machine retains its selected space when legacy sharing fails", async () => {
+  const { router, calls } = setup({}, "org");
+  await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+  assert.equal(await router.handle("send_message", { text: "New", space: "selected" }, contextOptions("a", "vm")), "vm~task-a");
+  assert.equal((calls.find(call => call.command === "send_message")?.args as { space: string }).space, "selected");
+  router.close();
+});
+
+test("Desk advertises its own engine capabilities in a scoped organization fleet", async () => {
+  const { router } = setup({}, "org", () => ["task_lifecycle_v1"]);
+  await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+  const rows = await router.handle("machine_list") as { local: boolean; features?: string[] }[];
+  assert.deepEqual(rows.find(row => row.local)?.features, ["task_lifecycle_v1"]);
+  router.close();
+});
+
+test("shared workspace catalog orders spaces, unwraps remote task spaces, and ensures the target space before task creation", async () => {
+  const calls: { command: string; args: unknown; workspace: string | null }[] = [];
+  const nativeCalls: { command: string; args: unknown }[] = [];
+  const catalog = {
+    version: 3,
+    spaces: [
+      { id: "mac_s1", name: "Producto", folders: [] },
+      { id: "cloud_s1", name: "Nube", folders: [] },
+    ],
+    order: ["cloud_s1", "mac_s1"],
+  };
+  const fleet = new Fleet({
+    self: "local",
+    connect() {
+      return {
+        state: () => "online", start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {},
+        async call(_id, command, workspace, _folder, args) {
+          calls.push({ command, workspace, args });
+          if (command === "list_spaces") return { value: [{ id: "cloud_s1", name: null, folders: [], created_at: 1, updated_at: 1, account: false }], cached: null };
+          if (command === "list_live_sessions") return { value: [{ id: "cloud-task", space: "cloud_s1" }], cached: null };
+          if (command === "send_message") return { value: "task-cloud", cached: null };
+          return { value: null, cached: null };
+        },
+      } satisfies Link;
+    },
+  });
+  fleet.setMachines([{
+    id: "vm", name: "Cloud", wakes: true, kind: "organization", organizationId: "org", context: "a",
+    linked: new Set(["same"]), features: ["workspace_space_catalog_v1"],
+  }]);
+  fleet.setListing("vm", [{ id: "same", name: "Shared" }], "a");
+  const router = createRouter({
+    self: "local",
+    fleet,
+    contextInfo: context => context === "a" ? { org: "org", plan: "teams" } : null,
+    readContextSpaces: async (context, organization, workspace) =>
+      context === "a" && organization === "org" && workspace === "same" ? catalog : null,
+    native: async (command, args) => {
+      nativeCalls.push({ command, args });
+      if (command === "list_workspaces") return { workspaces: [{ id: "same", name: "Shared", account: { org: "org" } }], active: "same" };
+      if (command === "list_spaces") return [{ id: "mac_s1", name: "Diseño", folders: ["f1"], created_at: 10, updated_at: 10, account: true }];
+      if (command === "list_live_sessions") return [{ id: "mac-task", space: "mac_s1" }];
+      if (command === "send_message") return "task-mac";
+      return null;
+    },
+  });
+  await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+  const spaces = await router.handle("list_spaces") as { id: string; name: string | null; folders: string[] }[];
+  assert.deepEqual(spaces.map(s => [s.id, s.name]), [["cloud_s1", "Nube"], ["mac_s1", "Producto"]]);
+  assert.deepEqual(spaces.find(s => s.id === "mac_s1")?.folders, ["f1"]);
+
+  // Remote task in cloud_s1 keeps bare space id (not vm~cloud_s1) because catalog marked cloud_s1 shared.
+  await router.handle("list_live_sessions", { project: "" });
+  for (let i = 0; i < 30 && !calls.some(call => call.command === "list_live_sessions"); i++) {
+    await new Promise(resolve => setTimeout(resolve, 5));
+  }
+  const sessions = await router.handle("list_live_sessions", { project: "" }) as { id: string; space?: string }[];
+  assert.equal(sessions.find(row => row.id === "vm~cloud-task")?.space, "cloud_s1");
+
+  // Creating on cloud in mac_s1 ensures mac_s1 on cloud first and sends bare space id.
+  assert.equal(await router.handle("send_message", { text: "Cloud", space: "mac_s1" }, contextOptions("a", "vm")), "vm~task-cloud");
+  const cloudEnsured = calls.find(call => call.command === "ensure_workspace_space");
+  assert.deepEqual(cloudEnsured, { command: "ensure_workspace_space", workspace: "same", args: { id: "mac_s1", name: "Producto" } });
+  assert.equal((calls.find(call => call.command === "send_message")?.args as { space: string }).space, "mac_s1");
+
+  // Creating on local Mac in cloud_s1 ensures cloud_s1 on Mac first and sends bare space id.
+  assert.equal(await router.handle("send_message", { text: "Local", space: "cloud_s1" }, contextOptions("a", "local")), "task-mac");
+  const localEnsured = nativeCalls.find(call => call.command === "ensure_workspace_space");
+  assert.deepEqual(localEnsured, { command: "ensure_workspace_space", args: { id: "cloud_s1", name: "Nube" } });
+  assert.equal((nativeCalls.find(call => call.command === "send_message")?.args as { space: string }).space, "cloud_s1");
+  router.close();
 });

@@ -1,5 +1,6 @@
 import type { AccountWorkspace, SystemId } from "@terminus/computers";
 import type { Fleet } from "@terminus/fleet";
+import type { WorkspaceSpaceCatalog } from "../../../../platform-client/src/workspace-spaces.ts";
 import type { EngineWorkspace } from "../queries/engine-workspaces.ts";
 export type Invoke = (command: string, args?: Record<string, unknown>, options?: { headers?: HeadersInit }) => Promise<unknown>;
 type SliceChange = "sessions" | "projects" | "spaces" | "attention" | "mentions" | "workspaces";
@@ -9,6 +10,9 @@ export type RouterConfig = {
   fleet: Fleet;
   /** El IPC de la ventana: el motor de esta computadora; `null` en la web. */
   native: Invoke | null;
+  /** En un contexto de organización, solo se usa el IPC para workspaces vinculados a esa organización. */
+  localWorkspace?: (workspace: string) => boolean;
+  readWorkspaceSpaces?: (workspace: string) => Promise<WorkspaceSpaceCatalog | null>;
   deliverRemote?: boolean;
   /** El registro de la cuenta (`GET /v1/workspaces`), o `null` si no se pudo leer. */
   registry?: () => Promise<AccountWorkspace[] | null>;

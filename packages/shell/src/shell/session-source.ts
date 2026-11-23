@@ -15,12 +15,18 @@ type Listen = <T>(event: string, on: (e: { payload: T }) => void) => Promise<() 
 
 export const ENGINE_SESSION_FEATURE = "person_session_v1";
 
+async function listenAll(listen: Listen | undefined, events: readonly string[], on: (session: PersonSession) => void) {
+  if (!listen) return () => {};
+  const offs = await Promise.all(events.map((name) => listen<PersonSession>(name, (e) => on(e.payload ?? null))));
+  return () => { for (const off of offs) off(); };
+}
+
 function deskSessionSource(invoke: Invoke, listen?: Listen): SessionSource {
   return {
     origin: "desk",
     read: () => invoke<PersonSession>("danil_session_status").then((s) => s ?? null),
     signIn: async () => { await invoke("danil_sign_in"); },
-    changes: (on) => listen ? listen<PersonSession>("danil-connect", (e) => on(e.payload ?? null)) : Promise.resolve(() => {}),
+    changes: (on) => listenAll(listen, ["danil-connect"], on),
   };
 }
 
@@ -35,5 +41,9 @@ export const registerEngineSessionSource = (source: SessionSource | null) => { e
 export async function personSessionSource(invoke: Invoke, features: () => Promise<readonly string[] | null>, listen?: Listen): Promise<SessionSource> {
   const announced = await features().catch(() => null);
   if (!announced?.includes(ENGINE_SESSION_FEATURE)) return deskSessionSource(invoke, listen);
-  return engineSource ?? { ...deskSessionSource(invoke, listen), origin: "engine" };
+  return engineSource ?? {
+    ...deskSessionSource(invoke, listen),
+    origin: "engine",
+    changes: (on) => listenAll(listen, ["danil-connect", "person-session"], on),
+  };
 }

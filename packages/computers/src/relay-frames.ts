@@ -34,7 +34,7 @@ export type RelayConfig = {
 export type Blocked = "license_required" | "machine_stopped";
 
 /** Lo que el relay sabe del motor por su último `hello` (`{"type":"engine"}`). */
-export type EngineInfo = { contract: string | null; host_version: string | null };
+export type EngineInfo = { contract: string | null; host_version: string | null; service_features?: readonly string[] };
 
 export type RelayFailure = { code?: string; message_key?: string; detail?: unknown; what?: unknown };
 

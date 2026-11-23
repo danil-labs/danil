@@ -211,7 +211,7 @@ export function createPanelDeChat<Usage, Delegated>(deps: PanelDeChatDeps<Usage>
   const [threadSearchTargets, setThreadSearchTargets] = createSignal(new Map<string, ThreadSearchTarget>());
   const [searchSurfaces, setSearchSurfaces] = createSignal(new Map<string, SearchSurface>());
   const [delegatedPanels, setDelegatedPanels] = createSignal(new Map<string, () => Delegated>());
-  const consumo = createUsage({ agents, agent, busy, reload: cuentasTocadas });
+  const consumo = createUsage({ agents, agent, busy, reload: cuentasTocadas, workspace: workspaceActivo });
   // Una sola ventana: sus pestañas van en la franja de la ventana, entre la navegación y los controles.
   const tiraDeLaVentana = () => (
           <div

@@ -49,6 +49,15 @@ export function danilAvailable(organization: string | null): Listed[] | null {
   return organization && fleet ? fleet.available(organization) : null;
 }
 
+/** Fuentes confirmadas de un workspace para invalidar lecturas hechas durante el arranque. */
+export function workspaceMachineSources(workspace: string | null, context: string | null): string {
+  revision();
+  if (!workspace || !fleet) return "";
+  return JSON.stringify(fleet.machines()
+    .filter(row => row.context === (context ?? undefined) && fleet?.lists(row.id, workspace, row.context) === true)
+    .map(row => row.id).sort());
+}
+
 /** Las máquinas `kind=organization` de `organization`; vacío sin flota. */
 export function danilMachines(organization: string | null): string[] {
   revision();

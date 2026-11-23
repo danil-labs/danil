@@ -264,3 +264,84 @@ test('the hosted machine\'s own workspace (ACV NUBE) shows its tasks: they are a
   await until(() => doc.body.textContent.includes('Tarea t1'), 'its tasks are shown');
   assert.deepEqual(sent.filter(s => s.workspace === 'wx1' && s.machine === 'mxhosted' && /list_(agents|accounts|live_sessions)/.test(s.command)), [], 'nothing of another workspace goes to the Nube');
 });
+
+test('the usage control reads the active account again after switching workspaces with identical providers', async t => {
+  edge();
+  const fake = relay({ table: {
+    ...table,
+    list_providers: [{ id: 'codex', label: 'Codex', available: true, driver: true, limits: true }],
+    list_accounts: ({ provider }, { workspace }) => ({
+      provider, env_var: '',
+      accounts: workspace === 'wx1' ? [{ id: 'cloud', label: 'Cloud', created_at: 1 }] : [],
+      active: workspace === 'wx1' ? 'cloud' : null,
+    }),
+    account_status: { connected: true },
+    account_limits: { mode: 'read', windows: [{ label: '5 hours', used_pct: 25, duration_s: 18_000, resets_at: null }], plan: null, fetched_at: Date.now() },
+    list_spaces: [{ id: 'cloud-space', name: 'Cloud', folders: [], created_at: 1, updated_at: 1 }],
+    send_message: 'test-task',
+  } });
+  const app = await open(t, 'web-usage-workspace', fake, '?workspace=wp&org=org_p&account=user_a');
+  const doc = app.w.document;
+  await until(() => fake.calls.some(c => c.command === 'list_accounts' && c.workspace === 'wp'), 'usage reads the initial workspace');
+  if (!tile(doc, 'wx1')) doc.querySelector('[data-org-stack="org_x"]')?.click();
+  await until(() => tile(doc, 'wx1'), 'organization workspace tile');
+  tile(doc, 'wx1').click();
+  await until(() => fake.calls.some(c => c.command === 'account_limits' && c.workspace === 'wx1' && c.args.id === 'cloud'), 'usage reads the cloud account');
+  await until(() => doc.querySelector('button [role="progressbar"][aria-valuenow="75"]'), 'the usage bar shows the remaining quota');
+  const headers = { 'x-danil-context': 'ctx_x', 'x-terminus-workspace': 'wx1', 'x-terminus-machine': 'mx' };
+  const workspaceSpaces = await app.w.__TAURI_INTERNALS__.invoke('list_spaces', {}, { headers });
+  assert.equal(workspaceSpaces[0].id, 'mx~cloud-space');
+  const task = await app.w.__TAURI_INTERNALS__.invoke('send_message', { text: 'Test', space: workspaceSpaces[0].id }, { headers });
+  assert.equal(task, 'mx~test-task');
+  assert.ok(fake.calls.some(c => c.command === 'send_message' && c.workspace === 'wx1' && c.args.space === 'cloud-space'));
+
+});
+
+test('an account discovered on a newly listed machine restores the web usage bar in the same workspace', async t => {
+  const realTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (run, ms, ...rest) => realTimeout(run, ms >= 1000 ? 100 : ms, ...rest);
+  t.after(() => { globalThis.setTimeout = realTimeout; });
+  let peer = false;
+  const machine = (id, organization_id) => ({ machine_id: id, name: id, kind: 'organization', organization_id, state: 'running', connection: 'connected' });
+  edge({ machinesFor: ctx => ctx === 'ctx_p'
+    ? [machine('mp', ORGS.ctx_p), ...(peer ? [machine('mpeer', ORGS.ctx_p)] : [])]
+    : [machine('mx', ORGS.ctx_x)] });
+  const fake = relay({ table: {
+    ...table,
+    list_providers: [{ id: 'codex', label: 'Codex', available: true, driver: true, limits: true }],
+    list_accounts: ({ provider }) => ({
+      provider, env_var: '',
+      accounts: peer ? [{ id: 'cloud', label: 'Cloud', created_at: 1 }] : [],
+      active: peer ? 'cloud' : null,
+    }),
+    account_limits: { mode: 'read', windows: [{ label: '5 hours', used_pct: 25, duration_s: 18_000, resets_at: null }], plan: null, fetched_at: Date.now() },
+  } });
+  const app = await open(t, 'web-usage-peer', fake);
+  const doc = app.w.document;
+  await until(() => tile(doc, 'wp'), 'personal workspace tile');
+  tile(doc, 'wp').click();
+  await until(() => fake.calls.some(c => c.command === 'list_accounts' && c.workspace === 'wp'), 'usage reads the initial inventory');
+  peer = true;
+  await until(() => fake.sockets.some(s => s.url.includes('/mpeer/')), 'new peer joins');
+  await until(() => doc.querySelector('button [role="progressbar"][aria-valuenow="75"]'), 'usage bar after peer joins');
+});
+
+test('web discovers safe deletion on the engine that owns the task', async t => {
+  edge();
+  const fake = relay({ serviceFeatures: ['task_lifecycle_v1'], table: {
+    ...table, task_lifecycle_preview: ({ id }) => ({ members: [{ id }], consent: 'preview-proof' }),
+  } });
+  const app = await open(t, 'web-delete-capability', fake);
+  const doc = app.w.document;
+  await until(() => tile(doc, 'wp'), 'workspace tile');
+  tile(doc, 'wp').click();
+  await until(() => tile(doc, 'wp')?.getAttribute('aria-current') === 'true', 'workspace selected');
+  const ipc = app.w.__TAURI_INTERNALS__;
+  const headers = { 'x-danil-context': 'ctx_p', 'x-terminus-machine': 'mp', 'x-terminus-workspace': 'wp' };
+  const machines = await ipc.invoke('machine_list', {}, { headers });
+  assert.ok(machines.find(row => row.id === 'mp')?.features.includes('task_lifecycle_v1'));
+  const review = await ipc.invoke('task_lifecycle_preview', { project: 'p1', id: 'mp~t1', action: 'delete' }, { headers });
+  assert.equal(review.consent, 'preview-proof');
+  assert.ok(fake.calls.some(call => call.command === 'task_lifecycle_preview' && call.workspace === 'wp' && call.args.id === 't1'));
+  assert.equal(fake.calls.some(call => call.command === 'task_lifecycle_apply'), false);
+});

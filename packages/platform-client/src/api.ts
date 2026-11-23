@@ -52,8 +52,17 @@ export type Fetch = (input: string, init?: { method?: string; headers?: Record<s
   json(): Promise<unknown>;
 }>;
 
-/** El origen del plano de control de producción. */
+/** Origen guardado por las versiones anteriores. */
 export const COMPUTERS_ENDPOINT = "https://machines.danil.ai";
+
+export function isRetiredComputersEndpoint(endpoint: string): boolean {
+  try {
+    const host = new URL(apiUrl(endpoint, "")).hostname.replace(/\.$/, "");
+    return host === "machines.danil.ai" || host === "computers.danil.ai";
+  } catch {
+    return false;
+  }
+}
 
 export function apiUrl(endpoint: string, path: string): string {
   const base = /^[a-z]+:\/\//i.test(endpoint) ? endpoint : `https://${endpoint}`;
@@ -74,6 +83,7 @@ export type BearerSource = { endpoint: string; getToken: () => Promise<string>; 
 /** La llamada con su token y el cuerpo ya leído; `null` si no hubo red o token. Cada cliente decide qué significa cada estado. */
 export async function bearerCall(source: BearerSource, method: string, path: string, body?: unknown, extra: Record<string, string> = {}) {
   try {
+    if (isRetiredComputersEndpoint(source.endpoint)) return null;
     const headers: Record<string, string> = { ...extra, authorization: `Bearer ${await source.getToken()}` };
     if (body !== undefined) headers["content-type"] = "application/json";
     const response = await (source.fetch ?? globalFetch)(apiUrl(source.endpoint, path), { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -86,6 +96,7 @@ export async function bearerCall(source: BearerSource, method: string, path: str
 export const globalFetch: Fetch = (input, init) => (globalThis.fetch as unknown as Fetch)(input, init);
 
 export async function request<T>(url: string, token: string, method: string, read: (body: unknown) => T, f: Fetch, payload?: unknown): Promise<Answer<T>> {
+  if (isRetiredComputersEndpoint(url)) return { kind: "error", status: null, code: "service_retired" };
   let response: Awaited<ReturnType<Fetch>>;
   try {
     const headers: Record<string, string> = { authorization: `Bearer ${token}` };

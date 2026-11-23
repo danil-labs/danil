@@ -179,3 +179,47 @@ test("when the engine owns adoption the window only paints its state and event, 
   assert.deepEqual(app.commands.filter((c) => ["adoption_proof", "adopt_account_workspace"].includes(c)), [], "no proof or seal from the window");
   assert.deepEqual(posts.filter((p) => p.startsWith("/v1/workspaces/adopt") || p === "/v1/identity/organizations/select"), [], "no challenge, adopt or select from the window");
 });
+
+test("while the engine is connecting, a saved multi-account session opens straight to the rail without showing the login", async () => {
+  let engineUp = false;
+  let sawSignIn = false;
+  let machineListCalls = 0;
+  const multiAccount = {
+    state: "connected",
+    email: "alberto@danil.ai",
+    default_context: "ctx-danil",
+    sessions: [
+      { family: "f1", email: "alberto@danil.ai", contexts: [context("ctx-danil", "org_danil", { org_name: "Danil" }), context("ctx-personal", "org_personal", { org_name: "Personal" })] },
+      { family: "f2", email: "otro@cliente.com", contexts: [context("ctx-cliente", "org_cliente", { org_name: "Cliente" })] },
+    ],
+  };
+  const down = () => Promise.reject({ what: { clave: "shell.service.engine_down" }, detail: "engine_down" });
+  const app = await boot("listo", "gate-connecting-restart", {
+    ...RESPONSES,
+    launcher_state: { phase: "connecting" },
+    machine_list: () => {
+      machineListCalls++;
+      return engineUp
+        ? [{ id: "local", local: true, active: true, on: true, hosts: true, features: [...FEATURES, "person_session_v1"] }]
+        : down();
+    },
+    danil_session_status: () => engineUp ? structuredClone(multiAccount) : down(),
+    list_workspaces: { active: "w", workspaces: [{ id: "w", name: "Local" }] },
+    danil_edge_fetch: ({ path }) => path === "/v1/identity/me" ? { status: 200, body: { id: "person-alberto" } } : { status: 200, body: { items: [] } },
+  });
+  const doc = app.w.document;
+  assert.ok(await until(() => doc.querySelector('[data-session-gate="loading"]')), "stays in loading while engine connects");
+  for (let i = 0; i < 6; i++) {
+    if (doc.querySelector('[data-session-gate="sign_in"]')) sawSignIn = true;
+    await sleep(50);
+  }
+  assert.equal(sawSignIn, false, "never falls back to sign_in while engine is connecting");
+  engineUp = true;
+  app.emit("launcher", { phase: "ready", blank_0274: false });
+  assert.ok(await until(() => rail(doc), 120), "opens straight to the rail once the engine is ready");
+  assert.ok(machineListCalls >= 2, `engineFeatures retried machine_list after ready (saw ${machineListCalls})`);
+  assert.equal(doc.querySelector('[data-session-gate="sign_in"]'), null, "never asked to sign in");
+  // Even before App bridges anything or if only person-session fires, SessionGate reacts directly.
+  app.emit("person-session", { state: "disconnected" });
+  assert.ok(await until(() => doc.querySelector('[data-session-gate="sign_in"]')), "reacts to person-session from the engine");
+});
