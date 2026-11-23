@@ -58,12 +58,21 @@ test("la superficie gratuita rechaza modelos anteriores y la variante de pago au
 
 test("Credits es una partición exacta con disponibilidad independiente", () => {
   const credits: Surface = { ...zen, id: "danil-credits", label: "Danil Credits", catalogo: "todo" };
-  const model = { id: "danil-credits/deepseek/deepseek-v4.1-flash", gratis: false };
-  for (const other of [...catalog, { id: "danil-credits/alias" }]) assert.equal(surfaceHas(credits, other), false);
-  assert.equal(surfaceHas(credits, model), true);
-  for (const other of [zen, free, claude, undefined]) assert.equal(surfaceHas(other, model), false);
-  assert.equal(surfaceHas({ ...credits, provider: "other" }, model), false);
-  assert.equal(surfaceHas(credits, { ...model, gratis: true }), false);
+  const model = { id: "danil-credits/danil/equilibrado", gratis: false };
+  const tiers = [
+    model,
+    { id: "danil-credits/danil/ligero", gratis: false },
+    { id: "danil-credits/danil/avanzado", gratis: false },
+  ];
+  for (const other of [...catalog, { id: "danil-credits/alias" }, { id: "danil-credits/deepseek/deepseek-v4.1-flash", gratis: false }]) {
+    assert.equal(surfaceHas(credits, other), false);
+  }
+  for (const tier of tiers) {
+    assert.equal(surfaceHas(credits, tier), true);
+    for (const other of [zen, free, claude, undefined]) assert.equal(surfaceHas(other, tier), false);
+    assert.equal(surfaceHas({ ...credits, provider: "other" }, tier), false);
+    assert.equal(surfaceHas(credits, { ...tier, gratis: true }), false);
+  }
   const mixed = [model, ...catalog];
   assert.equal(surfaceOf([credits, { ...zen, usable: false }, free], "opencode-zen", catalog[0].id, mixed, "danil-credits"), zen.id);
   assert.equal(surfaceOf([{ ...credits, usable: false }, zen, free], "opencode-zen", model.id, mixed, zen.id), "danil-credits");
@@ -82,5 +91,5 @@ test("con el motor nuevo, OpenCode y el Free Router son dos filas de una superfi
   // Un modelo local retirado no tiene superficie.
   assert.equal(surfaceOf([opencode, router], "opencode-local", "llamacpp/qwen", [], undefined), undefined);
   const credits: Surface = { ...opencode, id: "danil-credits", label: "Danil Credits" };
-  assert.equal(surfaceHas(credits, { id: "danil-credits/deepseek/deepseek-v4.1-flash", gratis: false }), true);
+  assert.equal(surfaceHas(credits, { id: "danil-credits/danil/equilibrado", gratis: false }), true);
 });

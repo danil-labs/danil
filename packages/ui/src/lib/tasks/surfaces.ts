@@ -1,4 +1,5 @@
 import { canonicalAgentId, OPENCODE } from "./agents.ts";
+import { isDanilCreditsModel } from "./danil-services.ts";
 
 /**
  * Con qué modelo y por qué superficie sigue una tarea: la misma regla en la
@@ -42,7 +43,7 @@ export type SurfaceModel = { id: string; gratis?: boolean | null };
  */
 export function surfaceHas(s: Surface | undefined, m: SurfaceModel): boolean {
   if (s?.id === "danil-credits") {
-    return canonicalAgentId(s.provider) === OPENCODE && m.id === "danil-credits/deepseek/deepseek-v4.1-flash" && m.gratis !== true;
+    return canonicalAgentId(s.provider) === OPENCODE && isDanilCreditsModel(m.id) && m.gratis !== true;
   }
   if (m.id.startsWith("danil-credits/")) return false;
   if (s && canonicalAgentId(s.provider) === OPENCODE && s.catalogo !== "gratuitos" && m.id.startsWith("opencode/")) return false;

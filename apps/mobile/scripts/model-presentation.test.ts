@@ -32,7 +32,10 @@ test("selected Free belongs to Danil while paid Go keeps OpenCode and retired lo
 test("Danil services are named by service, never by their model", () => {
   const labels = { credits: "Danil Credits", router: "Router IA gratis" };
   assert.equal(modelLabel("danil-free/reflection/beam-free", labels), "Router IA gratis");
-  assert.equal(modelLabel("danil-credits/deepseek/deepseek-v4.1-flash", labels), "Danil Credits");
+  for (const tier of ["danil-credits/danil/equilibrado", "danil-credits/danil/ligero", "danil-credits/danil/avanzado"]) {
+    assert.equal(modelLabel(tier, labels), "Danil Credits");
+    assert.equal(selectedModelMark("opencode", tier), "danil");
+  }
   assert.equal(modelLabel("claude-opus-4-1[1m]", labels), "Claude Opus 4.1");
   assert.equal(modelLabel("opencode-go/kimi", labels, { models: [{ id: "opencode-go/kimi", label: "Kimi" }] }), "Kimi");
 });

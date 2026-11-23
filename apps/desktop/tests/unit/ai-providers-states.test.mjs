@@ -145,7 +145,7 @@ test("Desktop reads the shared Treasury balance for linked workspaces", async ()
 });
 
 test("the task selector leaves Credits unavailable without preparing the retired pilot", async () => {
-  const id = "danil-credits/deepseek/deepseek-v4.1-flash";
+  const id = "danil-credits/danil/equilibrado";
   const provider = "opencode";
   let ready = false;
   const option = (id, label) => ({ id, label, gratis: false, note: null, efforts: [], default_effort: null });
@@ -154,7 +154,7 @@ test("the task selector leaves Credits unavailable without preparing the retired
     ...BASE,
     list_providers: [{ id: provider, label: "OpenCode", available: true, driver: true }],
     list_surfaces: () => [{ id: provider, provider, label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null }, ...(ready ? [{ id: "danil-credits", provider, label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null }] : [])],
-    list_models: () => ({ provider, models: [option("base", "Base"), ...(ready ? [option(id, "DeepSeek V4.1 Flash")] : [])], fallback: false }),
+    list_models: () => ({ provider, models: [option("base", "Base"), ...(ready ? [option(id, "Equilibrado")] : [])], fallback: false }),
     credits_pilot_prepare: ({ workspace }) => { assert.equal(workspace, "w"); ready = true; return { ready: true, account_id: 476, model: id, expires_at: 9999999999 }; },
     list_projects: [{ id: "p1", name: "P1", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] }],
     list_portfolios: [], list_agents: { agents: [], rechazados: [] }, list_agent_status: [],
@@ -180,6 +180,7 @@ test("the task selector leaves Credits unavailable without preparing the retired
     await sleep(650);
     assert.equal(ready, false, "opening Credits never prepares the retired pilot");
     assert.equal(app.commands.includes("credits_pilot_prepare"), false);
+    assert.equal(app.commands.includes("credits_pilot_install"), false);
     const section = doc.querySelector('section[aria-label="Danil Credits"]');
     const select = section?.querySelector("button");
     assert.ok(select?.disabled, "without a new billing source the model stays unavailable");
@@ -263,7 +264,7 @@ test("the free router is turned on and shown in use from the Danil panel without
 
 test("Use on an unlocked task sends the exact Credits and free router ids", async () => {
   const beam = "danil-free/reflection/beam-free";
-  const credits = "danil-credits/deepseek/deepseek-v4.1-flash";
+  const credits = "danil-credits/danil/equilibrado";
   const free = "free-router-opencode";
   const sends = [];
   const policy = { workspace_id: "w", version: 3, providers: ["kilo", "vercel", "reflection"], lines: [{ t: "Datos" }], acceptance_ref: "ref", enabled: true, terms: [], accepted: true };
@@ -282,7 +283,7 @@ test("Use on an unlocked task sends the exact Credits and free router ids", asyn
     ],
     list_models: ({ provider }) => provider === free
       ? { provider, models: [option(beam, "Beam", true)], fallback: false }
-      : { provider, models: [option("base", "Base"), option(credits, "DeepSeek V4.1 Flash")], fallback: false },
+      : { provider, models: [option("base", "Base"), option(credits, "Equilibrado")], fallback: false },
     send_message: (args) => { sends.push(args); return args.session; },
     list_projects: [{ id: "p1", name: "P1", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] }],
     list_portfolios: [], list_agents: { agents: [], rechazados: [] }, list_agent_status: [],
@@ -321,6 +322,66 @@ test("Use on an unlocked task sends the exact Credits and free router ids", asyn
     const routerSend = await use("t2", "Router IA gratis");
     assert.equal(routerSend?.session, "t2");
     assert.equal(routerSend?.model, beam);
+    assert.deepEqual(app.failures, []);
+  } finally {
+    app.w.close();
+  }
+});
+
+test("Danil Credits offers all three canonical tiers and sends the chosen tier id", async () => {
+  const provider = "opencode";
+  const sends = [];
+  const option = (id, label) => ({ id, label, gratis: false, note: null, efforts: [], default_effort: null });
+  const row = { id: "t1", title: "Tier task", last_message: "", provider, model: "base", refs: [], updated_at: 0, turns: 1, parent: null, esperando: false };
+  const app = await boot("listo", "danil-credits-tiers", {
+    ...BASE,
+    list_providers: [{ id: provider, label: "OpenCode", available: true, driver: true }],
+    list_surfaces: () => [
+      { id: provider, provider, label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null },
+      { id: "danil-credits", provider, label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null },
+    ],
+    list_models: () => ({
+      provider,
+      models: [
+        option("base", "Base"),
+        option("danil-credits/danil/equilibrado", "Equilibrado"),
+        option("danil-credits/danil/ligero", "Ligero"),
+        option("danil-credits/danil/avanzado", "Avanzado"),
+      ],
+      fallback: false,
+    }),
+    send_message: (args) => { sends.push(args); return args.session; },
+    list_projects: [{ id: "p1", name: "P1", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] }],
+    list_portfolios: [], list_agents: { agents: [], rechazados: [] }, list_agent_status: [],
+    list_live_sessions: [row], list_mentions: { fuentes: [], archivos: [] },
+    list_active_turns: [], load_queue: [], queue_ready: true, session_usage: null,
+    session_folder: "/tmp", list_task_trees: [], watch_task_tree: "watch", list_session_git: {},
+    task_history: { history: { archived: false, events: [], recovery: null }, branch: null, path: "/lab", available: true, owned: false, restorable: false, recreatable: false, incomplete: false },
+    load_session: { id: "t1", provider, model: "base", sources: [], effort: null, permission_mode: null, turns: [{ role: "user", id: "u0", at: 0, text: "hello" }] },
+  });
+  try {
+    await sleep(1200);
+    const doc = app.w.document;
+    doc.querySelector('[data-sesion="t1"]').click();
+    await sleep(600);
+    doc.querySelector('button[aria-label^="Modelo:"]').click();
+    await sleep(400);
+    doc.querySelector('nav[aria-label="Proveedores de modelos"] button[aria-label="Danil"]').click();
+    await sleep(650);
+    const section = doc.querySelector('section[aria-label="Danil Credits"]');
+    assert.ok(section, "Danil Credits section renders");
+    assert.doesNotMatch(section.textContent, /DeepSeek|Xiaomi|Claude|Pagador/, "tiers expose no upstream model names");
+    const avanzado = [...section.querySelectorAll("button")].find((b) => b.textContent.trim() === "Avanzado");
+    assert.ok(avanzado && !avanzado.disabled, "Avanzado tier button is enabled");
+    avanzado.click();
+    await sleep(300);
+    assert.equal(doc.querySelector('button[aria-label^="Modelo:"]').getAttribute("aria-label"), "Modelo: Danil Credits");
+    const field = doc.querySelector("textarea");
+    field.value = "hola";
+    field.dispatchEvent(new app.w.Event("input", { bubbles: true }));
+    field.closest("form").dispatchEvent(new app.w.Event("submit", { bubbles: true, cancelable: true }));
+    await sleep(300);
+    assert.equal(sends.at(-1)?.model, "danil-credits/danil/avanzado");
     assert.deepEqual(app.failures, []);
   } finally {
     app.w.close();

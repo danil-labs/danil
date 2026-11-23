@@ -138,7 +138,6 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
                     : props.nativeSubagent ? t("chat.model.native") : props.modelLocked ? t("chat.model.locked") : undefined
                 }
                 onChange={props.onModel}
-                onCreditsPrepare={props.onCreditsPrepare}
                 lockedAgent={props.agentLocked ? props.agent : undefined}
                 lockedReason={props.agentLocked ? props.agentLockedReason ?? t("chat.handover.unsupported") : null}
                 efforts={efforts()}

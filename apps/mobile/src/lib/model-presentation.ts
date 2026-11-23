@@ -1,4 +1,4 @@
-import { canonicalAgentId, danilServiceOf, isFreeRouterAgent, isRetiredAgent, modelName, OPENCODE } from "@terminus/tasks";
+import { canonicalAgentId, danilServiceOf, isDanilCreditsModel, isFreeRouterAgent, isRetiredAgent, modelName, OPENCODE } from "@terminus/tasks";
 
 type ModelCatalog = Parameters<typeof modelName>[1];
 
@@ -13,7 +13,7 @@ export function surfacePresentation(surface: SurfaceIdentity, labels: { free: st
 }
 
 export function selectedModelMark(provider: string | null | undefined, model?: string | null, surface?: SurfaceIdentity) {
-  if (model?.startsWith("danil-free/") || (!model && surface?.catalogo === "gratuitos") || isFreeRouterAgent(provider)) return "danil";
+  if (isDanilCreditsModel(model) || model?.startsWith("danil-free/") || (!model && surface?.catalogo === "gratuitos") || isFreeRouterAgent(provider)) return "danil";
   return isRetiredAgent(provider) ? null : canonicalAgentId(provider, model);
 }
 

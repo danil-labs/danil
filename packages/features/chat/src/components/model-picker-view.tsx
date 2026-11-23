@@ -21,7 +21,7 @@ const DanilServices = lazy(() => import("./DanilServices"));
 /** Selector buscable; el proveedor sigue visible incluso al filtrar. */
 export default function SelectorDeModelo(props: SelectorDeModeloProps) {
   let campo: HTMLInputElement | undefined;
-  const { abierto, busqueda, activo, setActivo, seccion, setSeccion, favoritos, cupoGo, filas, consent, estadoRouter, elegido, todosLosGrupos, bloqueado, disponible, creditsModel, routerModel, servicio, grupos, visibles, niveles, nivel, rotuloDeNivel, selectedName, nombre, abrir, buscar, mover, elegir, alternarFavorito } = createSelectorDeModelo(props, { campo: () => campo });
+  const { abierto, busqueda, activo, setActivo, seccion, setSeccion, favoritos, cupoGo, filas, consent, estadoRouter, elegido, todosLosGrupos, bloqueado, disponible, creditsModel, creditsTiers, routerModel, servicio, grupos, visibles, niveles, nivel, rotuloDeNivel, selectedName, nombre, abrir, buscar, mover, elegir, alternarFavorito } = createSelectorDeModelo(props, { campo: () => campo });
 
   return (
     <>
@@ -233,8 +233,7 @@ export default function SelectorDeModelo(props: SelectorDeModeloProps) {
             </For>
           </Show>
           }><DanilServices
-            onPrepare={props.onCreditsPrepare}
-            credits={servicio(creditsModel())}
+            credits={{ ...servicio(creditsModel()), tiers: creditsTiers() }}
             router={{
               ...servicio(routerModel()),
               state: estadoRouter(),
