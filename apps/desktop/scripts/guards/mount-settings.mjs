@@ -63,6 +63,20 @@ const clickArea = (key, text) => [...(areaButton(key) ?? [])]
 const selectedKeys = (scope) => (selections.get(scope) ?? []).map(({ key }) => key);
 providers.w.document.querySelector('button[aria-label="Configuración"]')?.click();
 await sleep(100);
+const navTabs = [...providers.w.document.querySelectorAll('[id^="cfg-tab-"]')].map((el) => el.id);
+assert.ok(navTabs.includes("cfg-tab-security"), "Login y seguridad debe aparecer como entrada propia en Configuración");
+if (navTabs.includes("cfg-tab-account")) {
+  assert.equal(navTabs.indexOf("cfg-tab-security"), navTabs.indexOf("cfg-tab-account") + 1, "Login y seguridad va justo después de Cuenta");
+  providers.w.document.querySelector("#cfg-tab-account")?.click();
+  await sleep(50);
+  assert.equal(providers.w.document.querySelector("#cfg-sub-security"), null, "Seguridad ya no es pestaña dentro de Cuenta");
+}
+const securityTab = providers.w.document.querySelector("#cfg-tab-security");
+assert.equal(securityTab?.textContent?.trim(), "Login y seguridad");
+securityTab?.click();
+await sleep(50);
+assert.ok(providers.w.document.querySelector("[data-settings-security]"), "Login y seguridad monta su panel real");
+assert.equal(providers.w.document.querySelector("#cfg-panel h2")?.textContent?.trim(), "Login y seguridad");
 providers.w.document.querySelector("#cfg-tab-source-control")?.click();
 await sleep(50);
 providers.w.document.querySelector("#cfg-sub-fuentes")?.click();

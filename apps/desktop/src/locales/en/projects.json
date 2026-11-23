@@ -386,8 +386,6 @@
   "projects.tabs.new_browser": "Browser",
   "projects.tabs.draft": "New task",
   "projects.picker.add": "Add a project…",
-  "projects.picker.manage": "Manage projects",
-  "projects.picker.manage_where": "Settings",
   "projects.picker.tasks": {
     "one": "{count} task",
     "other": "{count} tasks"

@@ -22,6 +22,5 @@ export * from "./queries/engine-language";
 export * from "./queries/engine-mcp";
 export * from "./queries/engine-misc";
 export * from "./queries/engine-open";
-export * from "./queries/engine-secrets";
 export * from "./queries/engine-skills";
 export * from "./queries/engine-workspaces";

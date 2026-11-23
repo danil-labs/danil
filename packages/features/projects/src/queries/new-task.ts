@@ -1,22 +1,16 @@
 import { batch, createSignal, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { AgentProfile as AgentProfileData, Project } from "../../../../../apps/desktop/src/lib/model.ts";
-import type { ComposerStore, ContextoDeProyectos, DraftsStore, PanelsStore, TabsStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
-import { taskCountOf } from "../model/recent.ts";
+import type { AgentProfile as AgentProfileData } from "../../../../../apps/desktop/src/lib/model.ts";
+import type { ComposerStore, DraftsStore, PanelsStore, TabsStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { PanelSite } from "../../../../../apps/desktop/src/lib/panels.ts";
 
-export type NewTaskDeps = { abrirProyecto: (id: string) => void; alta: Accessor<boolean>; arrancando: Accessor<boolean>; borrarProyecto: (id: string) => Promise<void>; carpetaDelEscritorio: (pedido: string) => string; cerrarBorrador: (sitio: PanelSite) => void; cerrarPestanasYa: (ids: string[]) => void; composer: ComposerStore; drafts: DraftsStore; enBorrador: (sitio: PanelSite) => boolean; hablandoCon: Accessor<{ project: string; name: string } | null>; hablarConEncargado: (enProyecto: string, name: string) => void; multipleSpaces: () => boolean; ocultarDelSelector: (id: string, ocultar: boolean) => void; ocultosAqui: Accessor<Set<string>>; paneles: PanelsStore; pedirElCampo: () => void; pestanaActiva: () => string | null; pestanas: TabsStore; project: Accessor<string>; proyectosDelRiel: () => Project[]; proyectoDeNuevaTarea: (pedido: string | undefined, activo: string) => string; removeFromActiveSpace: (folder: string) => Promise<void>; renombrarProyecto: (id: string, name: string) => Promise<void>; restoreDraftConfiguration: () => void; setAnadiendoCarpeta: Setter<boolean>; setAntesDelBorrador: Setter<string | null>; setCuentasTocadas: Setter<number>; setFolder: Setter<string | null>; setHablandoCon: Setter<{ project: string; name: string } | null>; setMaterialPedido: Setter<string | null>; setProject: Setter<string>; setProyectoAbierto: Setter<string | null>; setRunOn: (workspace: string | null, id: string | null) => void; setSessionId: Setter<string | null>; setSettings: Setter<string | null>; settings: Accessor<string | null>; soltarCola: () => void; soltarHilo: (session: string) => void; tareasActivas: Accessor<Record<string, number>>; workspaceActivo: Accessor<string | null>; };
+export type NewTaskDeps = { alta: Accessor<boolean>; arrancando: Accessor<boolean>; carpetaDelEscritorio: (pedido: string) => string; cerrarBorrador: (sitio: PanelSite) => void; cerrarPestanasYa: (ids: string[]) => void; composer: ComposerStore; drafts: DraftsStore; enBorrador: (sitio: PanelSite) => boolean; hablandoCon: Accessor<{ project: string; name: string } | null>; hablarConEncargado: (enProyecto: string, name: string) => void; paneles: PanelsStore; pedirElCampo: () => void; pestanaActiva: () => string | null; pestanas: TabsStore; project: Accessor<string>; proyectoDeNuevaTarea: (pedido: string | undefined, activo: string) => string; restoreDraftConfiguration: () => void; setAntesDelBorrador: Setter<string | null>; setCuentasTocadas: Setter<number>; setFolder: Setter<string | null>; setHablandoCon: Setter<{ project: string; name: string } | null>; setProject: Setter<string>; setProyectoAbierto: Setter<string | null>; setRunOn: (workspace: string | null, id: string | null) => void; setSessionId: Setter<string | null>; setSettings: Setter<string | null>; settings: Accessor<string | null>; soltarCola: () => void; soltarHilo: (session: string) => void; workspaceActivo: Accessor<string | null>; };
 
 export function createNewTask(deps: NewTaskDeps) {
-  const proyectosDelRiel = () => deps.proyectosDelRiel();
-  const abrirProyecto = (id: string) => deps.abrirProyecto(id);
-  const borrarProyecto = (id: string) => deps.borrarProyecto(id);
-  const renombrarProyecto = (id: string, name: string) => deps.renombrarProyecto(id, name);
   const hablarConEncargado = (enProyecto: string, name: string) => deps.hablarConEncargado(enProyecto, name);
   const soltarCola = () => deps.soltarCola();
   const cerrarPestanasYa = (ids: string[]) => deps.cerrarPestanasYa(ids);
-  const removeFromActiveSpace = (folder: string) => deps.removeFromActiveSpace(folder);
-  const { alta, arrancando, carpetaDelEscritorio, cerrarBorrador, composer, drafts, enBorrador, hablandoCon, multipleSpaces, ocultarDelSelector, ocultosAqui, paneles, pedirElCampo, pestanaActiva, pestanas, project, proyectoDeNuevaTarea, restoreDraftConfiguration, setAnadiendoCarpeta, setAntesDelBorrador, setCuentasTocadas, setFolder, setHablandoCon, setMaterialPedido, setProject, setProyectoAbierto, setRunOn, setSessionId, setSettings, settings, soltarHilo, tareasActivas, workspaceActivo } = deps;
+  const { alta, arrancando, carpetaDelEscritorio, cerrarBorrador, composer, drafts, enBorrador, hablandoCon, paneles, pedirElCampo, pestanaActiva, pestanas, project, proyectoDeNuevaTarea, restoreDraftConfiguration, setAntesDelBorrador, setCuentasTocadas, setFolder, setHablandoCon, setProject, setProyectoAbierto, setRunOn, setSessionId, setSettings, settings, soltarHilo, workspaceActivo } = deps;
 
   /** Una tarea nueva con la carpeta y el agente ya elegidos. */
   function abrirBorradorDeAgente(enProyecto: string, name: string) {
@@ -45,27 +39,6 @@ export function createNewTask(deps: NewTaskDeps) {
     project: string;
     name: string;
   } | null>(null);
-
-  /** Ajustes → Proyectos usa las carpetas y las acciones del riel. Un solo objeto: la hoja no se remonta. */
-  const proyectosEnAjustes: ContextoDeProyectos = {
-    get projects() {
-      return proyectosDelRiel();
-    },
-    onAdd: () => setAnadiendoCarpeta(true),
-    onRename: (id, name) => void renombrarProyecto(id, name),
-    onDelete: (id) => void borrarProyecto(id),
-    get onRemoveFromSpace() {
-      return multipleSpaces() ? removeFromActiveSpace : undefined;
-    },
-    activeTasks: (id) => taskCountOf({ id, sessions: 0 }, tareasActivas()),
-    hiddenInPicker: (id) => ocultosAqui().has(id),
-    onSetHiddenInPicker: (id, hide) => ocultarDelSelector(id, hide),
-    onOpenMaterial: (id) => {
-      cerrarAjustes();
-      setMaterialPedido(id);
-      abrirProyecto(id);
-    },
-  };
 
   function cerrarAjustes() {
     setSettings(null);
@@ -168,5 +141,5 @@ export function createNewTask(deps: NewTaskDeps) {
   const [cierreSinGuardar, setCierreSinGuardar] = createSignal<
     { ids: string[]; archivos: string[]; sucios: string[] } | null
   >(null);
-  return { abrirBorradorDeAgente, requestedProfile, setRequestedProfile, proyectosEnAjustes, cerrarAjustes, openAgentProfile, enLaMaquinaDelGrupo, nuevaSesion, irAlBlanco, closeActiveTab, cerrarPestana, cerrarPestanas, cierreSinGuardar, setCierreSinGuardar, };
+  return { abrirBorradorDeAgente, requestedProfile, setRequestedProfile, cerrarAjustes, openAgentProfile, enLaMaquinaDelGrupo, nuevaSesion, irAlBlanco, closeActiveTab, cerrarPestana, cerrarPestanas, cierreSinGuardar, setCierreSinGuardar, };
 }

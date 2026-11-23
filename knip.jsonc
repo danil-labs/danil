@@ -44,6 +44,8 @@
     "packages/shell/src/shell/danil-rail.ts": ["exports"],
     "packages/shell/src/shell/SessionWorkspaceRows.tsx": ["types"],
     "apps/desktop/src/lib/{danilConnectionEvents,engineConnection}.ts": ["files"],
+    "packages/features/settings/src/components/AccountCredentials.tsx": ["exports"],
+    "packages/features/settings/src/queries/credentials-store.ts": ["exports"],
     "packages/features/machines/src/queries/store.ts": ["exports"],
     "packages/platform-client/src/api.ts": ["exports"],
     // isManaged es el alias de wakes con nombre del dominio; lo prueba packages/computers/test/computers.test.ts.
