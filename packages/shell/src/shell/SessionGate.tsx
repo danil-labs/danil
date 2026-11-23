@@ -4,7 +4,7 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client";
 import { capabilities } from "../../../host/src/platform";
 import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import { Button } from "../../../ui/src/Button";
 import { Spinner } from "../../../ui/src/Spinner";
 import { CabeceraDelAlta, rememberAccountWelcome } from "../../../features/onboarding/src";

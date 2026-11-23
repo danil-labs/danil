@@ -3,7 +3,7 @@ import { peso } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cancelInstall, installSize, installTool } from "../queries/engine-environment";
 import { capabilities } from "../../../../host/src/platform";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, detalleDe, type Failure, FailureNote, prosaDe } from "../../../../ui/src/Failure";
 import type { Requirement } from "../model/environment-store";

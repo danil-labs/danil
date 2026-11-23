@@ -1,6 +1,6 @@
 import { getRadiantIdentity, listRadiantWorkspaces, radiantCancelLogin, radiantLogin, radiantLogout, radiantSelectOrganization, radiantSelectWorkspace, radiantSetServer, radiantStatus } from "../queries/engine-harness";
 import { openExternal } from "../queries/engine-open";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { destinoAbrible } from "../../../../../apps/desktop/src/lib/links";

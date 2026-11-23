@@ -3,8 +3,8 @@ import { createEffect, createMemo, createSignal, on, onCleanup, untrack } from "
 import { invoke } from "../../../engine-client/src/client.ts";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { conservar } from "../../../session/src/sessionRefresh";
-import { errorCode } from "../../../../apps/desktop/src/lib/errorCode";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { errorCode } from "../../../ui/src/lib/errorCode.ts";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import { prosaDe } from "../../../ui/src/Failure";
 import type { Power, TaskLookup } from "./MachineCard";
 import { USAGE_FEATURE, hasUsage, remember, worst } from "./machineUsage";

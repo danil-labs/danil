@@ -1,5 +1,5 @@
 import { type Credential, type CredentialMachine, sealRecipientsFor } from "@terminus/computers";
-import { unknownCommand } from "../../../../../apps/desktop/src/lib/errorCode.ts";
+import { unknownCommand } from "../../../../ui/src/lib/errorCode.ts";
 import { df } from "../../../../../apps/desktop/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { envSecretsList } from "../queries/engine-secrets";

@@ -2,7 +2,7 @@
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type Frase } from "../../../../../apps/desktop/src/lib/prose.ts";
 import { type SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import { deliver, listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { deliver, listen } from "../../../../host/src/serviceEvents.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { claveDe, prosaDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";

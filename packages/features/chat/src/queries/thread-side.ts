@@ -1,6 +1,6 @@
 import { carpetaDeTrabajo } from "../../../../../apps/desktop/src/lib/model";
 import { type Project } from "../../../../../apps/desktop/src/lib/model.ts";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { accionDeAtajo, navegacionDePestanas, ventanaVecina } from "../../../../../apps/desktop/src/lib/shortcuts";
 import { type NavegacionDePestanas } from "../../../../../apps/desktop/src/lib/shortcuts.ts";
 import { capabilities } from "../../../../host/src/platform";

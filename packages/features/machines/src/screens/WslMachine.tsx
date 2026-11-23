@@ -1,7 +1,7 @@
 // Todo va directo a la ventana, sin el reparto entre máquinas ni sus reintentos:
 // repetir una instalación por un `app_unavailable` la correría dos veces.
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { For, Match, Show, Switch, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { offersGuests } from "../queries/guestChannels";

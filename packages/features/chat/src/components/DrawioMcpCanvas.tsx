@@ -1,4 +1,4 @@
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { copyText } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

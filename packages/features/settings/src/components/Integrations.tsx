@@ -1,4 +1,4 @@
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import FileText from "lucide-solid/icons/file-text";
 import FileType from "lucide-solid/icons/file-type";
 import MousePointerClick from "lucide-solid/icons/mouse-pointer-click";

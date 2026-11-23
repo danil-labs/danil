@@ -1,5 +1,5 @@
 import { isOrganizationSelectionRequired, type OrganizationSelection } from "@terminus/computers";
-import { listenDanilConnectionChange } from "../../../../apps/desktop/src/lib/danilConnectionEvents";
+import { listenDanilConnectionChange } from "../../../host/src/danilConnectionEvents.ts";
 import { onEdgeProblem } from "../../../platform-client/src/client";
 import { invoke } from "../../../engine-client/src/client";
 import { hasSessionGroups } from "./session-groups";

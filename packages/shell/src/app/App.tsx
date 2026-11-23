@@ -77,7 +77,7 @@ import { createPanelDeChatState } from "./panel-de-chat-state.ts";
 import { createPanelDeChatParts } from "./panel-de-chat-parts.tsx";
 import { createPanelDeChatCell } from "./panel-de-chat-cell.tsx";
 import { createEngineQueue, createTaskQueues } from "../../../features/task-queues/src";
-import { connected } from "../../../../apps/desktop/src/lib/engineConnection";
+import { connected } from "../../../session/src/engineConnection.ts";
 import { pedirElCampo } from "../../../../apps/desktop/src/lib/focus";
 import {
   

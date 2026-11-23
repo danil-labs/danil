@@ -1,6 +1,6 @@
 import { createSignal, onCleanup, onMount } from "solid-js";
 import { listSurfaces } from "../queries/engine-workspaces";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { type Superficie } from "../../../../../apps/desktop/src/lib/surfaces";
 import { asFailure } from "../../../../ui/src/Failure";
 import type { SurfacesState } from "../model/ai-providers-view";

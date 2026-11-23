@@ -1,5 +1,5 @@
 import { For, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { leerPref } from "../../../../apps/desktop/src/lib/prefs";
 import { t } from "../../../../apps/desktop/src/lib/i18n";

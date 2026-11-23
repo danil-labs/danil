@@ -13,7 +13,7 @@ import {
 import { checkEnvironment, installTool, restartApp } from "../queries/engine-environment";
 import { listDependencies } from "../queries/engine-misc";
 import { openExternal } from "../queries/engine-open";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import SquareArrowOutUpRight from "lucide-solid/icons/square-arrow-out-up-right";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";

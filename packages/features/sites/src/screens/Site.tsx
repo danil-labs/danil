@@ -9,7 +9,7 @@ import {
   sitePlace,
   siteReload,
 } from "../queries.ts";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { Button } from "../../../../ui/src/Button";
 import { aDireccion, corta, hayCapaEncima, seguirHueco, zonasEncima } from "../../../../../apps/desktop/src/lib/sites";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

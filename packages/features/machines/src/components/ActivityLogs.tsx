@@ -1,7 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js";
 import type { Activity, ActivityLog, ActivityRow } from "../../../../engine-client/src/index.ts";
 import { listActivity, readActivity, readActivityLog } from "../queries/engine-activity";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Pressable } from "../../../../ui/src/Pressable";

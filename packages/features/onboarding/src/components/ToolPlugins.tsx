@@ -1,4 +1,4 @@
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { AvanceDeDescarga, BarraDeCarga } from "./DownloadProgress";
 import Check from "lucide-solid/icons/check";
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";

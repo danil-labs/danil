@@ -1,7 +1,7 @@
 import { Match, Show, Switch, createEffect, createSignal, on, onCleanup } from "solid-js";
 import { knCloudState, knCloudStart } from "../queries";
 import { machineOf } from "../../../../host/src/machine";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

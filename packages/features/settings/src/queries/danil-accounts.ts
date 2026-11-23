@@ -6,8 +6,8 @@
  */
 import { createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
+import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
 import { failureCode } from "./danil-account";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import {

@@ -1,6 +1,6 @@
 import { aplicarLenguaDeWorkspace, t } from "../../../../apps/desktop/src/lib/i18n";
 import { type InternalTaskLink } from "../../../../apps/desktop/src/lib/links";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import { type ContentTab, type FileTab, type Tab } from "../../../../apps/desktop/src/lib/tabs-types.ts";
 import { type UsageRecord, ventanaDe } from "../../../../apps/desktop/src/lib/usage";
 import { type Ventana } from "../../../../apps/desktop/src/lib/usage.ts";

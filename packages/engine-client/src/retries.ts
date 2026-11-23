@@ -1,4 +1,4 @@
-import { errorCode } from "../../../apps/desktop/src/lib/errorCode.ts";
+import { errorCode } from "../../ui/src/lib/errorCode.ts";
 
 /**
  * Los códigos con los que el backend afirma que la orden no llegó a correr.

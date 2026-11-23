@@ -1,5 +1,5 @@
 import { createSignal, onCleanup, onMount } from "solid-js";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { checkMcp, connectKnownMcp, disconnectKnownMcp, listKnownMcp, listMcpProviders, listMcpServers, mcpLogin, mcpLogout } from "../queries/engine-mcp";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
 import { prosa, type Frase } from "../../../../../apps/desktop/src/lib/prose";

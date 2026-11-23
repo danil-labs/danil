@@ -1,5 +1,5 @@
 import { getTaskHistory, recreateTaskWork } from "../queries";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { Show, createMemo, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";

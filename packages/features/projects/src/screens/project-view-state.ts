@@ -1,6 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { createEffect, createMemo, createSignal, createUniqueId, on, onCleanup, type JSX } from "solid-js";
-import { rememberRoster } from "../../../../../apps/desktop/src/lib/handlerRoster";
+import { rememberRoster } from "../../../../ui/src/lib/handlerRoster.ts";
 import { createCopied } from "../../../../host/src/clipboard";
 import { machineAction } from "../../../../host/src/machine-action";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
