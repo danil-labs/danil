@@ -175,9 +175,12 @@ function createRouterCore(config: RouterConfig) {
     return Promise.race([registryRead, new Promise<void>((done) => setTimeout(done, REGISTRY_WAIT))]);
   };
 
-  const hasHere = (workspace: string | null) => local && (!workspace || listed === null || listed.has(workspace));
+  const scopedLocal = config.localWorkspace;
+  const hasHere = (workspace: string | null) => local && (scopedLocal
+    ? !!workspace && scopedLocal(workspace)
+    : !workspace || listed === null || listed.has(workspace));
   /** Los workspaces de la cuenta que esta computadora no tiene viven en sus otras máquinas, y los de una organización en su servidor. En la web, todos. */
-  const elsewhere = (workspace: string | null) => !local || (!hasHere(workspace) && (fleet.inRegistry(workspace) || organizations().has(workspace as string)));
+  const elsewhere = (workspace: string | null) => !local || (!hasHere(workspace) && (scopedLocal || fleet.inRegistry(workspace) || organizations().has(workspace as string)));
   /**
    * Las máquinas de un workspace; sin workspace (en la web), todas. En la web, solo las que lo listan en su
    * `list_workspaces`: un workspace es de la cuenta, y lo consume la máquina con acceso que lo tiene. Ninguna
@@ -185,7 +188,7 @@ function createRouterCore(config: RouterConfig) {
    */
   const membersOf = (workspace: string | null) => {
     if (!workspace) return fleet.machines().map((m) => m.id);
-    return local ? fleet.membersOf(workspace) : fleet.machines().filter((m) => fleet.lists(m.id, workspace) === true).map((m) => m.id);
+    return local && !scopedLocal ? fleet.membersOf(workspace) : fleet.machines().filter((m) => fleet.lists(m.id, workspace) === true).map((m) => m.id);
   };
   /** En la web: sin máquina que lo liste, se dice y no se intenta nada. */
   const noMachine = () => ({ what: t("web.machines.none_for_workspace"), detail: "no_machine" });
@@ -243,7 +246,7 @@ function createRouterCore(config: RouterConfig) {
     return extra.length ? { ...merged, workspaces: [...rows, ...extra] } : merged;
   }
   /** Sin elegir, lo nuevo nace en la máquina de la ventana; en un workspace que no está aquí, en su primera. */
-  const defaultMachine = (workspace: string | null) => (elsewhere(workspace) ? (leadOf(workspace) ?? self) : self);
+  const defaultMachine = (workspace: string | null) => (elsewhere(workspace) ? (leadOf(workspace) ?? (scopedLocal ? null : self)) : self);
 
   /** Las máquinas que ya se encienden y por las que la ventana espera para volver a leer. */
   const rereadOnline = new Set<string>();
@@ -481,13 +484,13 @@ function createRouterCore(config: RouterConfig) {
   /** Una lectura de la barra: lo de aquí ya, más lo último de cada otra máquina del workspace. */
   async function fanRead(command: string, args: Args, workspace: string | null, options: Options): Promise<unknown> {
     const members = command === "list_workspace_attention" ? fleet.machines().map((m) => m.id) : membersOf(workspace);
-    if (!local && workspace && !members.length && command !== "list_workspace_attention") throw noMachine();
+    if (elsewhere(workspace) && (!local || scopedLocal) && workspace && !members.length && command !== "list_workspace_attention") throw noMachine();
     // El canal de avance se queda en la ventana: por el relay vuelve solo la respuesta final.
     const envelopes = members.map((machine) => ({ machine, workspace, command, args: withoutChannel(command, args) }));
     const slices: Slice[] = [];
     const unconfirmed: string[] = [];
     // Lo que las copias del motor de aquí ya tienen no se pregunta a su máquina.
-    const copies = await Promise.all(envelopes.map((envelope) => copySlice(envelope)));
+    const copies = scopedLocal && !hasHere(workspace) ? [] : await Promise.all(envelopes.map(copySlice));
     const asked = envelopes.filter((_, i) => !copies[i]);
     slices.push(...copies.filter((slice): slice is Slice => !!slice));
     if (!elsewhere(workspace)) {
@@ -583,7 +586,7 @@ function createRouterCore(config: RouterConfig) {
    * Lo nuevo en otra máquina nace en el space de la ventana: uno que aún no es
    * de la cuenta se comparte antes (`share_space`) en la máquina que lo guarda
    * (esta computadora, o en la web la de su prefijo), y allá se crea con el mismo
-   * id. Si no se puede compartir (workspace sin cuenta, motor anterior), nace sin space.
+   * id. El destino valida el id y devuelve el error de espacio si no lo tiene.
    */
   async function withSharedSpace(machine: string, workspace: string | null, args: Args): Promise<Args> {
     const space = args.space;
@@ -594,12 +597,12 @@ function createRouterCore(config: RouterConfig) {
     if (own?.machine === machine) return args;
     try {
       if (own) await fleet.call({ machine: own.machine, workspace, command: "share_space", args: { id } });
-      else if (local) await native("share_space", { id });
-      else return { ...args, space: null };
+      else if (local && (!scopedLocal || hasHere(workspace))) await native("share_space", { id });
+      else return { ...args, space: wrap(machine, id) };
       fleet.markShared(id);
       return { ...args, space: id };
     } catch {
-      return { ...args, space: null };
+      return { ...args, space: wrap(machine, id) };
     }
   }
 
@@ -620,6 +623,13 @@ function createRouterCore(config: RouterConfig) {
   async function listing(command: string, args: Args, options: Options): Promise<unknown> {
     await readRegistry();
     if (!local) return webListing(command, args);
+    if (scopedLocal) {
+      const value = await native(command, args, options).catch(() => null) as { workspaces?: { id: string }[] } | null;
+      const workspaces = value?.workspaces?.filter(row => scopedLocal(row.id)) ?? [];
+      return webListing(command, args, workspaces.length
+        ? [{ machine: self as string, status: "ok", has: true, value: { ...value, workspaces, active }, at: Date.now() }]
+        : []);
+    }
     const value = (await native(command, args, options)) as { workspaces?: { id?: unknown }[]; active?: unknown } | null;
     if (Array.isArray(value?.workspaces)) listed = new Set(value.workspaces.map((w) => w?.id).filter((id): id is string => typeof id === "string"));
     if (active === null && typeof value?.active === "string") active = value.active;
@@ -632,10 +642,10 @@ function createRouterCore(config: RouterConfig) {
   /** En la web: ninguna máquina ni el registro dijeron los workspaces la última vez. */
   let unlisted = false;
   /** Los workspaces en la web: los del registro de la cuenta ya, más lo que lista cada máquina. El activo es de esta página. */
-  async function webListing(command: string, args: Args): Promise<unknown> {
+  async function webListing(command: string, args: Args, localSlices: Slice[] = []): Promise<unknown> {
     const envelopes = fleet.machines().map((m) => ({ machine: m.id, workspace: null, command, args }));
     const slices = await gather(envelopes, { settles: !!fleet.getRegistry(), fresh: true });
-    const merged = withOrganizations(fleet.merge(command, slices, null) as { workspaces?: { id?: unknown }[]; active?: unknown } | undefined);
+    const merged = withOrganizations(fleet.merge(command, [...localSlices, ...slices], null) as { workspaces?: { id?: unknown }[]; active?: unknown } | undefined);
     unlisted = !merged;
     if (!merged) throw noAnswer(slices, null);
     const ids = (merged.workspaces ?? []).map((w) => w?.id).filter((id): id is string => typeof id === "string");
@@ -660,14 +670,14 @@ function createRouterCore(config: RouterConfig) {
   const webEvents = createWebEventQueue();
   const webPoll = () => webEvents.poll();
 
-  const selfMaterializes = (_workspace: string | null) => ({ materializes: true });
+  const selfMaterializes = (workspace: string | null) => ({ materializes: !scopedLocal || hasHere(workspace) });
 
   function machineList() {
     const workspace = active;
     const lead = defaultMachine(workspace);
-    const members = new Set(local ? fleet.membersOf(workspace) : membersOf(workspace));
+    const members = new Set(membersOf(workspace));
     // En la web, una máquina que no lista el workspace no lo sirve ni lo hace suyo.
-    const owned = !local && !!workspace;
+    const owned = (!local || !!scopedLocal) && !!workspace;
     const home = config.home?.();
     const selfOs = systemOf(home?.os);
     return [
@@ -730,7 +740,7 @@ function createRouterCore(config: RouterConfig) {
       throw noAnswer(slices, workspace);
     }
     const named = homeOf(args);
-    const lead = (named && fleet.has(named) ? named : null) ?? leadOf(workspace) ?? (local ? leadOf(null) : null);
+    const lead = (named && fleet.has(named) ? named : null) ?? leadOf(workspace) ?? (local && !scopedLocal ? leadOf(null) : null);
     if (!lead) throw noMachine();
     return remote(lead, command, args, callWorkspace(workspace, args));
   }
@@ -738,7 +748,7 @@ function createRouterCore(config: RouterConfig) {
   /** En el escritorio, las cuentas de esta computadora y las de las demás, agrupadas como en la web: cada una con sus máquinas. */
   async function accountsHere(args: Args, workspace: string | null, options: Options): Promise<unknown> {
     const value = await native("list_accounts", args, options);
-    const envelopes = fleet.machines().map((m) => ({ machine: m.id, workspace, command: "list_accounts", args }));
+    const envelopes = membersOf(workspace).map((machine) => ({ machine, workspace, command: "list_accounts", args }));
     const others = await gather(envelopes, { fresh: true }).catch(() => [] as Slice[]);
     const merged = fleet.merge("list_accounts", [{ machine: self as string, status: "ok", has: true, value, at: Date.now() }, ...others.filter((s) => s.has)], workspace);
     return merged === undefined ? value : merged;
@@ -748,10 +758,12 @@ function createRouterCore(config: RouterConfig) {
     if (command === "machine_list") return machineList();
     if (command === "machine_select") {
       const id = args.id;
-      if (typeof id === "string" && (id === self || fleet.has(id))) return { runtime: null };
+      if (typeof id === "string" && (id === self && (!scopedLocal || hasHere(active)) || fleet.has(id))) return { runtime: null };
     }
     const machine = headerOf(options, "x-terminus-machine");
-    const workspace = command === "list_workspaces" ? null : headerOf(options, "x-terminus-workspace") ?? active;
+    const workspace = LISTING.has(command) ? null : headerOf(options, "x-terminus-workspace") ?? active;
+    if (scopedLocal && machine && machine === self && !LISTING.has(command) && !hasHere(workspace)) throw missing(machine);
+    if (scopedLocal && machine === self && LISTING.has(command)) return listing(command, args, options);
     if (command === "list_workspaces") options = withoutHeader(options, "x-terminus-workspace");
     if (command === "handler_action") {
       const input = args.input as Args | undefined;
@@ -823,7 +835,7 @@ function createRouterCore(config: RouterConfig) {
         // En la web, un workspace sin máquinas propias en el registro se atiende en la VM de la cuenta, como las cuentas de IA.
         const lead = leadOf(workspace);
         if (lead) return await remote(lead, command, args, callWorkspace(workspace, args));
-        if (!local) throw { what: t("web.machines.none_for_workspace"), detail: "no_machine" };
+        if (!local || scopedLocal) throw noMachine();
       }
       const value = await native(command, fleet.argsFor(self as string, args), opts);
       rememberSources(command, self as string, workspace, value);
@@ -869,7 +881,7 @@ function createRouterCore(config: RouterConfig) {
     const picked = config.pickedFor?.(ws) ?? null;
     const lead = defaultMachine(ws);
     // Una elegida que no tiene permiso en este workspace no cuenta: «Ejecutar en» no la ofrece aquí.
-    const runs = (id: string) => (id === self ? true : !!fleet.info(id) && (!ws || (local ? fleet.membersOf(ws).includes(id) || permitted(fleet.info(id) as MachineInfo, ws) : membersOf(ws).includes(id))));
+    const runs = (id: string) => (id === self ? !scopedLocal || hasHere(ws) : !!fleet.info(id) && (!ws || (local && !scopedLocal ? fleet.membersOf(ws).includes(id) || permitted(fleet.info(id) as MachineInfo, ws) : membersOf(ws).includes(id))));
     const machine = picked && runs(picked) ? picked : lead;
     return machine ? { machine, lead: machine === lead } : null;
   }

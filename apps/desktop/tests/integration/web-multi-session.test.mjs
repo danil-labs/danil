@@ -264,3 +264,26 @@ test('the hosted machine\'s own workspace (ACV NUBE) shows its tasks: they are a
   await until(() => doc.body.textContent.includes('Tarea t1'), 'its tasks are shown');
   assert.deepEqual(sent.filter(s => s.workspace === 'wx1' && s.machine === 'mxhosted' && /list_(agents|accounts|live_sessions)/.test(s.command)), [], 'nothing of another workspace goes to the Nube');
 });
+
+test('the usage control reads the active account again after switching workspaces with identical providers', async t => {
+  edge();
+  const fake = relay({ table: {
+    ...table,
+    list_providers: [{ id: 'codex', label: 'Codex', available: true, driver: true, limits: true }],
+    list_accounts: ({ provider }, { workspace }) => ({
+      provider, env_var: '',
+      accounts: workspace === 'wx1' ? [{ id: 'cloud', label: 'Cloud', created_at: 1 }] : [],
+      active: workspace === 'wx1' ? 'cloud' : null,
+    }),
+    account_status: { connected: true },
+    account_limits: { mode: 'read', windows: [], at: Date.now() },
+  } });
+  const app = await open(t, 'web-usage-workspace', fake, '?workspace=wp&org=org_p&account=user_a');
+  const doc = app.w.document;
+  await until(() => fake.calls.some(c => c.command === 'list_accounts' && c.workspace === 'wp'), 'usage reads the initial workspace');
+  if (!tile(doc, 'wx1')) doc.querySelector('[data-org-stack="org_x"]')?.click();
+  await until(() => tile(doc, 'wx1'), 'organization workspace tile');
+  tile(doc, 'wx1').click();
+  await until(() => fake.calls.some(c => c.command === 'account_limits' && c.workspace === 'wx1' && c.args.id === 'cloud'), 'usage reads the cloud account');
+  await until(() => doc.querySelector('button[aria-label="Lo que te queda en las cuentas activas"]'), 'usage button appears');
+});

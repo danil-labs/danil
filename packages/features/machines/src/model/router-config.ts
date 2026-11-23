@@ -9,6 +9,8 @@ export type RouterConfig = {
   fleet: Fleet;
   /** El IPC de la ventana: el motor de esta computadora; `null` en la web. */
   native: Invoke | null;
+  /** En un contexto de organización, solo se usa el IPC para workspaces vinculados a esa organización. */
+  localWorkspace?: (workspace: string) => boolean;
   deliverRemote?: boolean;
   /** El registro de la cuenta (`GET /v1/workspaces`), o `null` si no se pudo leer. */
   registry?: () => Promise<AccountWorkspace[] | null>;

@@ -27,6 +27,8 @@ import {
   systemOf,
   wakes,
 } from "@terminus/computers";
+import { isRetiredComputersEndpoint } from "../../../../platform-client/src/api.ts";
+import { settledContextIds } from "../../../../../apps/desktop/src/lib/settled-contexts.ts";
 import { cancelEdgeWrites, setMachineRoute, wokeOf } from "../queries";
 import { Fleet, type MachineInfo, unwrap } from "@terminus/fleet";
 import { createRoot, createSignal } from "solid-js";
@@ -387,7 +389,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     const self = who.self;
     const client = self ? await getToken().catch(() => null) : null;
     if (epoch !== cloudEpoch) return;
-    const answer = client && await listComputers(client.endpoint, client.token);
+    const answer = client && !isRetiredComputersEndpoint(client.endpoint) && await listComputers(client.endpoint, client.token);
     if (epoch !== cloudEpoch) return;
     if (!self || !client || !answer || answer.kind === "unauthorized" || answer.kind === "license") {
       token = null;
@@ -453,7 +455,9 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
   const sync = async (): Promise<void> => {
     const identity = ++identityRead;
     const epoch = cloudEpoch;
-    const who = await whoAmI();
+    const status = await invoke("danil_session_status").catch(() => null) as { state?: string; sessions?: unknown } | null;
+    const scoped = status?.state === "connected" && settledContextIds(status.sessions) !== null;
+    const who = scoped ? { self: null, account: null } : await whoAmI();
     if (identity !== identityRead || epoch !== cloudEpoch) return;
     if (who.account !== account) {
       invalidateCloud();
@@ -465,7 +469,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       again = true;
       return syncing;
     }
-    const pending = check(who)
+    const pending = (scoped ? installLocal(cloudEpoch, false) : check(who))
       .catch(() => {})
       .finally(() => {
         if (syncing !== pending) return;

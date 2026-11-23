@@ -7,7 +7,6 @@ import { machineOf, setTaskRowMachine } from "../../../features/machines/src/que
 import { esChatDeAgente } from "../../../features/projects/src/model/taskTree";
 import { threadTitle } from "../../../features/projects/src/screens/Sessions";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions.tsx";
-import { capabilities } from "../../../host/src/platform";
 import { createCompactViewport } from "../../../host/src/window";
 import { batch, createEffect, createMemo, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js";
 
@@ -155,16 +154,6 @@ export function createPanelsGeometry(deps: PanelsGeometryDeps) {
   // la imagen pegada recién guardada y su copia ya preparada.
   const pegadasEn = new Map<string, string>();
   const adjuntosEn = new Map<string, string>();
-  /**
-   * El space con que nace o sigue algo en `machine`. Uno de esta ventana viaja:
-   * es de la cuenta, con el mismo id en todas (el router lo comparte antes si
-   * hace falta). Uno que solo existe en otra máquina viaja solo a esa.
-   */
-  const espacioPara = (space: string | null | undefined, machine: string | null | undefined) => {
-    if (!space || !machine) return space ?? null;
-    const own = capabilities().taskMachine?.(space) ?? null;
-    return own === null || own === machine ? space : null;
-  };
   // Sin la carpeta no se puede abrir: `abrirSesion` la necesita para la pestaña.
   const tareaDelRiel = (id: string): SenderTask | null => {
     for (const [folder, filas] of Object.entries(sesiones())) {
@@ -233,5 +222,5 @@ export function createPanelsGeometry(deps: PanelsGeometryDeps) {
       },
     ),
   );
-  return { adjuntosEn, altosEnPantalla, anchosEnPantalla, celdaDe, cerrarBorrador, compacta, deLaTarea, enBorrador, enMaquina, espacioPara, estiloDeLaCelda, filaDe, filasEnPantalla, llevaTiraInterior, opcionesDeLaTarea, paginaDeAgente, paneles, pegadasEn, pestanaDelanteEn, pestanasDe, pestanasEnPantalla, reservaDerechaDeTiras, reservaIzquierdaDeTiras, setAntesDelBorrador, sitiosEnBlanco, tapadoPorElProyecto, tareaDelRiel, ventanas, vueltaDelBorrador };
+  return { adjuntosEn, altosEnPantalla, anchosEnPantalla, celdaDe, cerrarBorrador, compacta, deLaTarea, enBorrador, enMaquina, estiloDeLaCelda, filaDe, filasEnPantalla, llevaTiraInterior, opcionesDeLaTarea, paginaDeAgente, paneles, pegadasEn, pestanaDelanteEn, pestanasDe, pestanasEnPantalla, reservaDerechaDeTiras, reservaIzquierdaDeTiras, setAntesDelBorrador, sitiosEnBlanco, tapadoPorElProyecto, tareaDelRiel, ventanas, vueltaDelBorrador };
 }

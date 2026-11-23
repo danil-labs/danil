@@ -1,9 +1,11 @@
-import { createEffect, createSignal, on, onCleanup } from "solid-js";
+import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { legible, type Query, type Read } from "../../../../apps/desktop/src/lib/limits";
 import { detalleDe } from "../../../ui/src/Failure";
-import { machineOf } from "../../../features/machines/src/queries/store";
+import { displayWorkspaceContext } from "../../../../apps/desktop/src/lib/workspace-context";
+import { workspaceMachineSources } from "../../../features/machines/src/queries/danil-source";
+import { machines, machineOf } from "../../../features/machines/src/queries/store";
 import type { Account, AccountList, AccountStatus } from "../../../features/settings/src/queries/accounts-store";
 
 // Consumo de las cuentas activas; las lecturas fallidas conservan el último dato marcado como antiguo.
@@ -36,6 +38,7 @@ export function createUsage(props: {
   busy: () => boolean;
   // Conectar una cuenta desde Configuración debe invalidar la lista visible.
   reload: () => number;
+  workspace: () => string | null;
 }) {
   const [accountsByAgent, setAccountsByAgent] = createSignal<AccountsByAgent[]>([]);
   const [reads, setReads] = createSignal<Record<string, Query>>({});
@@ -45,11 +48,17 @@ export function createUsage(props: {
   const [inProgress, setInProgress] = createSignal<Record<string, boolean>>({});
 
   let running = props.busy();
+  const scope = createMemo(() => JSON.stringify([displayWorkspaceContext(), props.workspace()]));
+  const sources = createMemo(() => workspaceMachineSources(props.workspace(), displayWorkspaceContext()));
+  const online = createMemo(() => JSON.stringify(machines().filter(machine => machine.on && machine.hosts !== false)
+    .map(machine => machine.id).sort()));
+  let accountScope = scope();
 
   const accountLabel = (id: string) =>
     props.agents().find((a) => a.id === id)?.label ?? id;
 
   async function queryAccount(agent: string, id: string, force: boolean) {
+    const requestedScope = scope();
     const k = usageKey(agent, id);
     setInProgress((p) => ({ ...p, [k]: true }));
     try {
@@ -59,6 +68,7 @@ export function createUsage(props: {
         // force es el nombre del parámetro del puente; otro nombre no forzaría la consulta.
         force: force,
       }, machineOf(id));
+      if (scope() !== requestedScope) return;
       setReads((p) => ({ ...p, [k]: r }));
       const lastGood = legible(r);
       if (lastGood) setLastGoodReads((p) => ({ ...p, [k]: lastGood }));
@@ -73,13 +83,15 @@ export function createUsage(props: {
         },
       }));
     } finally {
-      setInProgress((p) => ({ ...p, [k]: false }));
+      if (scope() === requestedScope) setInProgress((p) => ({ ...p, [k]: false }));
     }
   }
 
   // Consultar las cuentas a la vez puede hacer que el proveedor limite todas las solicitudes.
   async function querySequentially(pairs: [string, string][], force: boolean) {
+    const requestedScope = scope();
     for (const [a, id] of pairs) {
+      if (scope() !== requestedScope) return;
       await queryAccount(a, id, force);
     }
   }
@@ -92,8 +104,19 @@ export function createUsage(props: {
       .join(",");
 
   createEffect(
-    on([agentIds, props.reload], ([ids]) => {
-      if (!ids) return;
+    on([agentIds, props.reload, scope, sources, online], ([ids, , nextScope]) => {
+      if (accountScope !== nextScope) {
+        accountScope = nextScope;
+        setAccountsByAgent([]);
+        setReads({});
+        setLastGoodReads({});
+        setStatuses({});
+        setInProgress({});
+      }
+      if (!ids) {
+        setAccountsByAgent([]);
+        return;
+      }
       let alive = true;
       onCleanup(() => {
         alive = false;
@@ -114,7 +137,10 @@ export function createUsage(props: {
             }
           }),
         );
-        if (alive) setAccountsByAgent(rowCount.filter((f): f is AccountsByAgent => f !== null));
+        if (alive) setAccountsByAgent(previous => ids.split(",").flatMap((id, index) => {
+          const row = rowCount[index] ?? previous.find(item => item.agent === id);
+          return row ? [row] : [];
+        }));
       })();
     }),
   );

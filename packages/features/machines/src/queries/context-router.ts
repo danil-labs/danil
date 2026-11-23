@@ -4,6 +4,7 @@ import { createContextAttention } from "./context-attention.ts";
 import type { Invoke, RouterConfig } from "../model/router-config.ts";
 import { scopedFleet } from "./scoped-fleet.ts";
 
+type LocalListing = { workspaces?: { id?: unknown; account?: { org?: unknown } }[] };
 type ContextInfo = { org: string; plan?: string | null };
 export type ContextRouterConfig = RouterConfig & { contextInfo?: (context: string) => ContextInfo | null };
 type Core = {
@@ -19,6 +20,13 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
   const legacy = createRouterCore({ ...config, fleet: scopedFleet(config.fleet, {}) });
   const contexts = new Map<string, Core>();
   const placement = new Map<string, string>();
+  let localWorkspaces = new Map<string, unknown>();
+  const rememberLocal = (value: unknown) => {
+    const { workspaces } = (value ?? {}) as LocalListing;
+    if (Array.isArray(workspaces)) {
+      localWorkspaces = new Map(workspaces.flatMap(row => typeof row?.id === "string" ? [[row.id, row.account?.org]] : []));
+    }
+  };
   const selectedWorkspaces = new Map<string, string>();
   const attention = createContextAttention(config.deliver);
   const sourceMachine = (machine: string, context?: string) => {
@@ -43,7 +51,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
       const free = info.plan === "free";
       router = createRouterCore({ ...config,
         fleet: scopedFleet(config.fleet, { context, org: info.org, localOnly: free }),
-        self: free ? config.self : null, native: free ? config.native : null,
+        localWorkspace: !free && config.native ? workspace => localWorkspaces.get(workspace) === info.org : undefined,
         deliverRemote: config.native !== null,
         deliver: events => config.deliver?.(events.filter(event => event.name === "attention" || activeContext === context).map(event => event.name === "attention" ? { ...event, payload: attention.project(event.payload, context) } : event)),
         registry: undefined, engineWorkspaces: undefined,
@@ -79,6 +87,9 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     const selectedWorkspace = selected && selectedWorkspaces.get(selected);
     if (selectedWorkspace && !headers.has("x-terminus-workspace") && !["set_active_workspace", "list_workspaces", "workspaces_startup"].includes(command)) {
       headers.set("x-terminus-workspace", selectedWorkspace); clean = { ...clean, headers: Object.fromEntries(headers) };
+    }
+    if (selected && typeof args.id === "string" && command === "set_active_workspace" && config.native && config.contextInfo?.(selected)?.plan !== "free") {
+      await config.native("list_workspaces", {}).then(rememberLocal).catch(() => {});
     }
     const value = await router.handle(command, args, clean);
     if (command === "list_workspace_attention") return attention.project(value, selected);

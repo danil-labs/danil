@@ -38,7 +38,7 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
   catalogos: Accessor<CatalogosDeModelos>; claveAbierta: () => string; conversationScope: ReturnType<typeof createThreadStream>["conversationScope"];
   deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; draftBases: Accessor<Record<string, string>>;
   draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: DraftsPort;
-  espacioPara: (space: string | null | undefined, machine: string | null | undefined) => string | null; excludedSourceIds: Accessor<string[]>; filaDe: (id: string) => SessionRow | undefined;
+  excludedSourceIds: Accessor<string[]>; filaDe: (id: string) => SessionRow | undefined;
   finishedTurns: ReturnType<typeof createThreadStream>["finishedTurns"]; firmas: Record<string, Author | null>; grupos: Accessor<string[]>;
   hablandoCon: Accessor<{ project: string; name: string; } | null>; handoff: ReturnType<typeof createThreadStream>["handoff"];
   leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number;
@@ -56,7 +56,7 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 4892–5203, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createSend(deps: SendDeps) {
-  const { adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, espacioPara, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, threads, traspasos, workspaceActivo, workspaceContext } = deps;
+  const { adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, threads, traspasos, workspaceActivo, workspaceContext } = deps;
   const carryModule: SendDeps["carryModule"] = (...a: Parameters<SendDeps["carryModule"]>) => deps.carryModule(...a);
   const olvidarPestana: SendDeps["olvidarPestana"] = (...a: Parameters<SendDeps["olvidarPestana"]>) => deps.olvidarPestana(...a);
   /**
@@ -220,7 +220,7 @@ export function createSend(deps: SendDeps) {
         fromTask: m.from_task ?? null,
         // El escritorio que la persona tenía delante al escribirlo, sellado en el
         // mensaje; lo que llega de otro canal no trae ninguno.
-        space: espacioPara(m.space, opciones?.headers?.["x-terminus-machine"]),
+        space: m.space,
         clientMessageId,
       }, opciones);
       // El consentimiento del traspaso va justo antes del turno: el motor lo
