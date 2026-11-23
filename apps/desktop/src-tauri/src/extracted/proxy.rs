@@ -1057,6 +1057,17 @@ pub(super) fn engine_call(
     invoke(&state, command, args)
 }
 
+/// Si el motor de esta ventana ya quedó conectado (`attach`). Mientras la ventana está
+/// en `Phase::Connecting`, `try_state::<Arc<State>>()` es `None`: no significa «motor viejo».
+pub(super) fn engine_attached(app: &tauri::AppHandle) -> bool {
+    app.try_state::<Arc<State>>().is_some()
+}
+
+/// El error estándar cuando la ventana aún no tiene motor (`engine_down`).
+pub(super) fn engine_down() -> Value {
+    failure(&Error::new("app_unavailable"))
+}
+
 /// Los rasgos que anuncia el motor de esta ventana; `[]` sin motor.
 pub(super) fn engine_features(app: &tauri::AppHandle) -> Value {
     let Some(state) = app.try_state::<Arc<State>>() else {

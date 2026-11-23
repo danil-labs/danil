@@ -25,10 +25,28 @@ pub(crate) enum Owner<E: Engine> {
     Desk,
 }
 
+/// Decisión cuando la ventana puede estar arrancando todavía su motor (`Phase::Connecting`).
+/// Sin motor conectado aún (`attached == false`), no se cae al llavero viejo de Desk: se espera.
+pub(crate) enum Resolved<E: Engine> {
+    Engine(E),
+    Desk,
+    Waiting,
+}
+
 pub(crate) fn owner<E: Engine>(engine: Option<E>) -> Owner<E> {
     match engine {
         Some(e) if announces(&e.features()) => Owner::Engine(e),
         _ => Owner::Desk,
+    }
+}
+
+pub(crate) fn resolve<E: Engine>(attached: bool, engine: Option<E>) -> Resolved<E> {
+    if !attached {
+        return Resolved::Waiting;
+    }
+    match owner(engine) {
+        Owner::Engine(e) => Resolved::Engine(e),
+        Owner::Desk => Resolved::Desk,
     }
 }
 
@@ -188,6 +206,18 @@ mod tests {
         assert!(matches!(owner(Some(&without)), Owner::Desk));
         assert!(matches!(owner(Some(&odd)), Owner::Desk));
         assert!(matches!(owner::<&Fake>(None), Owner::Desk));
+    }
+
+    #[test]
+    fn sin_motor_conectado_espera_en_vez_de_caer_a_desk() {
+        let with = fake(json!([FEATURE]), |_, _| Ok(json!({})));
+        let empty = fake(json!([]), |_, _| Ok(json!({})));
+        let legacy = fake(json!(["connected_machines_v1"]), |_, _| Ok(json!({})));
+        assert!(matches!(resolve(false, Some(&empty)), Resolved::Waiting));
+        assert!(matches!(resolve(false, Some(&with)), Resolved::Waiting));
+        assert!(matches!(resolve::<&Fake>(false, None), Resolved::Waiting));
+        assert!(matches!(resolve(true, Some(&with)), Resolved::Engine(_)));
+        assert!(matches!(resolve(true, Some(&legacy)), Resolved::Desk));
     }
 
     #[test]
