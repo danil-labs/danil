@@ -277,6 +277,8 @@ test('the usage control reads the active account again after switching workspace
     }),
     account_status: { connected: true },
     account_limits: { mode: 'read', windows: [], at: Date.now() },
+    list_spaces: [{ id: 'cloud-space', name: 'Cloud', folders: [], created_at: 1, updated_at: 1 }],
+    send_message: 'test-task',
   } });
   const app = await open(t, 'web-usage-workspace', fake, '?workspace=wp&org=org_p&account=user_a');
   const doc = app.w.document;
@@ -286,4 +288,11 @@ test('the usage control reads the active account again after switching workspace
   tile(doc, 'wx1').click();
   await until(() => fake.calls.some(c => c.command === 'account_limits' && c.workspace === 'wx1' && c.args.id === 'cloud'), 'usage reads the cloud account');
   await until(() => doc.querySelector('button[aria-label="Lo que te queda en las cuentas activas"]'), 'usage button appears');
+  const headers = { 'x-danil-context': 'ctx_x', 'x-terminus-workspace': 'wx1', 'x-terminus-machine': 'mx' };
+  const workspaceSpaces = await app.w.__TAURI_INTERNALS__.invoke('list_spaces', {}, { headers });
+  assert.equal(workspaceSpaces[0].id, 'mx~cloud-space');
+  const task = await app.w.__TAURI_INTERNALS__.invoke('send_message', { text: 'Test', space: workspaceSpaces[0].id }, { headers });
+  assert.equal(task, 'mx~test-task');
+  assert.ok(fake.calls.some(c => c.command === 'send_message' && c.workspace === 'wx1' && c.args.space === 'cloud-space'));
+
 });
