@@ -68,7 +68,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
     const name = remembered ? machineName(remembered, false) : null;
     return name && name !== remembered ? name : t("shell.machines.label");
   };
-  const muestra = () => cloudInitial() || (!capabilities().nativeWindow ? machines().length > 0 : machines().length > 1);
+  const muestra = () => cloudInitial() || opciones().some((m) => !m.local);
   return (
     <Show when={muestra()}>
       <Popover open={abierto()} onOpenChange={(v) => { setAbierto(v); if (v) { void refetchMachines(); } }} placement="top-start" gutter={4}>

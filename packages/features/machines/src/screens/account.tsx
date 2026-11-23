@@ -42,7 +42,7 @@ import { mergeBridgeInventory } from "../model/bridge-inventory";
 import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS } from "../queries/cloud-machines";
 import { createConnectedStatus } from "../queries/connected-status";
 import { createCloudRelayFactory } from "../queries/context-relay";
-import { machinesListed, setDanilFleet } from "../queries/danil-source";
+import { machinesListed, readDanilContext, setDanilFleet } from "../queries/danil-source";
 import { createEngineWorkspaces } from "../queries/engine-workspaces";
 import { guestChannels } from "../queries/guestChannels";
 import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "../queries/guestLink";
@@ -204,6 +204,11 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     refresh();
   };
 
+  function readCloudWorkspaces(context: string) {
+    const info = cloud.contextInfo(context);
+    if (info && info.plan !== "free") void readDanilContext(info.org, context);
+  }
+
   const disconnect = () => {
     uninstall();
     const { spaceOrder: _order, ...rest } = capabilities();
@@ -251,6 +256,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       onEvents: (machine, events, gap, metadata, context) => {
         if (events.length) router.events(machine, events, metadata, context);
         if (gap) {
+          if (context) readCloudWorkspaces(context);
           window.dispatchEvent(new CustomEvent("harness:service-resync"));
           window.dispatchEvent(new CustomEvent("harness:service-gap"));
         }
@@ -273,6 +279,8 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     observeEngine(fleet);
     machinesListed(fleet);
     fleet.subscribeEvents();
+    const stopListing = fleet.onListing((_machine, context) => { if (context) refresh(); });
+    for (const context of validatedContexts ?? []) readCloudWorkspaces(context);
     const screens =
       endpoint === null
         ? null
@@ -339,6 +347,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       router,
       restore: () => {
         screens?.close();
+        stopListing();
         setMachineRoute(null);
         window.removeEventListener("pagehide", onPageHide);
         setCapabilities(previous);
@@ -372,38 +381,18 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     return { self: status?.state === "connected" ? (status.computer_id ?? null) : null, account: null };
   }
 
-  /**
-   * Una salida definitiva de la cuenta (sin token, `401`, licencia): sin nube que
-   * leer, el inventario de esta época queda resuelto y la recordada ausente cae
-   * a la local. Solo la llama `check` con su época aún vigente.
-   */
-  const settled = () => {
-    setCloudInventory("settled");
-    disconnect();
-  };
-
   /** Reads the account and its computers; installs, updates or removes the fan-out to match. */
   async function check(who: { self: string | null; account: string | null }) {
     const epoch = cloudEpoch;
     const self = who.self;
-    if (!self) {
+    const client = self ? await getToken().catch(() => null) : null;
+    if (epoch !== cloudEpoch) return;
+    const answer = client && await listComputers(client.endpoint, client.token);
+    if (epoch !== cloudEpoch) return;
+    if (!self || !client || !answer || answer.kind === "unauthorized" || answer.kind === "license") {
       token = null;
+      if (installed?.key !== LOCAL_KEY) uninstall();
       return installLocal(epoch);
-    }
-    let client: ClientToken;
-    try {
-      client = await getToken();
-    } catch {
-      // An engine without `danil_client_token`, or a control plane without client tokens.
-      if (epoch === cloudEpoch) settled();
-      return;
-    }
-    if (epoch !== cloudEpoch) return;
-    const answer = await listComputers(client.endpoint, client.token);
-    if (epoch !== cloudEpoch) return;
-    if (answer.kind === "unauthorized" || answer.kind === "license") {
-      token = null;
-      return settled();
     }
     // `/v1/computers` es del sistema viejo: si no responde, las VMs de `/v1/machines` se leen igual.
     const legacyRows = answer.kind === "ok" ? answer.value : [];
@@ -425,6 +414,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       installed.fleet.setMachines([...others.map(infoOf), ...guestMachines]);
       observeEngine(installed.fleet);
       machinesListed(installed.fleet);
+      for (const context of cloud.validatedContexts() ?? []) readCloudWorkspaces(context);
       machineNamesChanged();
       return void refetchMachines();
     }
@@ -443,6 +433,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     if (installed?.key === LOCAL_KEY) {
       installed.fleet.setMachines([...cloudRows.map(infoOf), ...guests]);
       machinesListed(installed.fleet);
+      for (const context of cloud.validatedContexts() ?? []) readCloudWorkspaces(context);
       machineNamesChanged();
       return void refetchMachines();
     }

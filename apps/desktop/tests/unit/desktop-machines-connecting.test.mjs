@@ -14,7 +14,7 @@ const connecting = app => {
 };
 const rows = app => app.w.__TAURI_INTERNALS__.invoke("machine_list");
 const changed = (app, name = "harness:account-computers") => app.w.dispatchEvent(new app.w.CustomEvent(name));
-async function mount(name, read, { remembered = false, known = null, extra = {}, signed = false, nativeList, capabilities, relay = () => Response.json({ computers: [HOME] }) } = {}) {
+async function mount(name, read, { remembered = false, known = null, extra = {}, signed = false, organization, nativeList, capabilities, relay = () => Response.json({ computers: [HOME] }) } = {}) {
   let requests = 0;
   const sends = [];
   const f = fleet({ cmp_cloud: { state: "online", table: remote("Nube", "Tarea nube", { send_message: args => { sends.push(args); return "t9"; } }) }, cmp_b: { state: "online", table: remote("B", "Tarea B") } });
@@ -26,6 +26,9 @@ async function mount(name, read, { remembered = false, known = null, extra = {},
       if (path === "/v1/capabilities") return capabilities ? capabilities() : { status: 200, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } };
       if (path.endsWith("/tickets")) return { status: 201, body: { ticket: "qa", url: `wss://machines-session.danil.ai/v1/machines/${path.split("/")[3]}/session`, session_expires_at: new Date(Date.now() + 60000).toISOString() } };
       if (path === "/v1/machines") return read(++requests);
+      if (organization && path === "/v1/identity/me") return { status: 200, body: { id: "person" } };
+      if (organization && path === "/v1/workspaces") return { status: 200, body: { items: [{ id: "account-w", org: organization, name: "Danil Workspace", engine_workspace_id: "w" }] } };
+      if (organization && path === "/v1/workspaces/preferences") return { status: 200, body: { version: 2, added: ["w"] } };
       return { status: 404, body: null };
     }, ...extra,
   }), ...(extra.send_message ? { send_message: extra.send_message } : {}) }, undefined, { ...(remembered ? { "harness.layout.machines.run_on": JSON.stringify({ w: "cmp_cloud" }) } : {}), ...(known ? { "harness.layout.machines.known_names": JSON.stringify(known) } : {}) }, { beforeImport: () => {
@@ -58,6 +61,30 @@ async function ready(app) {
   assert.ok(await until(() => app.w.document.querySelector('[data-machine-option="cmp_cloud"]')), "flota instalada");
   await sleep(150); picker(app).click(); picker(app).click(); await sleep(50);
 }
+
+for (const failure of ["token", "401", "403"]) test(`Desk keeps the cloud picker and tasks when legacy machines fail (${failure})`, async () => {
+  const context = { context_id: "danil", org: "org_danil", org_name: "Danil", plan: "pro" };
+  const { app, requests } = await mount(`legacy-${failure}`, () => ok([{
+    ...cloud(), kind: "organization", organization_id: context.org,
+  }]), {
+    signed: true,
+    organization: context.org,
+    extra: {
+      danil_session_status: { state: "connected", sessions: [{ family: "family", contexts: [context] }] },
+      ...(failure === "token" ? { account_relay_token: () => { throw { detail: "service_retired" }; } } : {}),
+    },
+    relay: () => new Response("{}", { status: Number(failure) || 401 }),
+  });
+  assert.ok(await until(() => requests() > 0), "Desk reads the organization catalog");
+  const doc = app.w.document;
+  const tile = () => doc.querySelector('[data-workspace-context="danil"][data-workspace-tile="w"]');
+  assert.ok(await until(tile), "Desk shows the organization's workspace");
+  tile().click();
+  assert.ok(await until(() => tile().getAttribute("aria-current") === "true"));
+  await ready(app);
+  assert.ok(await until(() => app.w.document.querySelector('[data-sesion="cmp_cloud~t1"]')), "cloud tasks reach the sidebar");
+  assert.deepEqual(app.failures, []);
+});
 
 test("C1 R: inicial pendiente sin recordada conserva local y no monta selector", async () => {
   const gate = deferred(); const { app } = await mount("C1", () => gate.promise);
