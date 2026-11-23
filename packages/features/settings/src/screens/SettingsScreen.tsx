@@ -14,8 +14,6 @@ import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { PiezasDeAjustes } from "../model/features-port";
 import type { SesionesDeAjustes } from "../model/sessions-port";
 import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
-import type { Falla } from "../../../../ui/src/lib/bundled";
-import type { Failure } from "../../../../ui/src/Failure";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { type SettingsEntryId, settingsTarget } from "../model/settings-entries";
 import { createSuperficiesDeAjustes } from "./SettingsSurfaces";
@@ -23,7 +21,6 @@ import { type Pestana, idTab, type Entrada, SIN_PESTANA, idSub, GRUPOS, AdminLin
 
 export default function Settings(props: {
   workspace?: string | null;
-  activityMachine?: string | null;
   onClose: () => void;
   /** Con qué entrada o pestaña abrir: un id de `settings-entries.ts`, viejo o nuevo. */
   panel?: string;
@@ -35,13 +32,6 @@ export default function Settings(props: {
   agentesEnUso?: string[];
   /** Abre el perfil de un agente en esa carpeta; quien llama cierra la hoja. */
   onAgentProfile?: (project: string, name: string) => void;
-  avisoReparacion?: (p: {
-    fallas: Falla[];
-    reparando: boolean;
-    error: Failure | null;
-    onReparar: () => void;
-    onReiniciar: () => void;
-  }) => JSX.Element;
   integraciones?: (p: { solo: string[]; onCambio: () => void }) => JSX.Element;
   /** Lo de máquinas que usan las pestañas: lo enchufa el shell. */
   maquinas: MaquinasDeAjustes;

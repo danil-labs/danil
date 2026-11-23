@@ -89,6 +89,5 @@
   "settings.accounts.free.policy_changed": "The policy or workspace changed. Close this notice and review the terms again.",
   "settings.accounts.free.privacy": "{provider} privacy",
   "settings.accounts.free.terms": "{provider} terms",
-  "settings.accounts.free.paused": "Service unavailable · consent saved",
-  "settings.accounts.downloading": "Downloading · {done} of {total}"
+  "settings.accounts.free.paused": "Service unavailable · consent saved"
 }

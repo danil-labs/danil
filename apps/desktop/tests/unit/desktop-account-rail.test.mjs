@@ -10,81 +10,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { engine } from "../helpers/fake-relay.mjs";
-import { HOME, localNewTask, MAC, open, remote, row, until, VM } from "../helpers/desktop-account.mjs";
+import { HOME, MAC, open, remote, row, until, VM } from "../helpers/desktop-account.mjs";
 import { sleep } from "../helpers/jsdom-app.mjs";
-
-test("Cuenta de Danil lists the account's computers; a name edited in place reaches «Ejecutar en» without restarting", async () => {
-  const seen = new Date(Date.now() - 60_000).toISOString();
-  const computers = [HOME, { ...VM, state: "online" }, { ...MAC, state: "offline", last_seen: seen }];
-  const { app, doc, f, renamed } = await open("desktop-account-computers", {
-    computers,
-    relays: {
-      cmp_vm: { table: remote("Panel", "Tarea de la VM"), state: "online" },
-      cmp_mac: { table: remote("Notas", "Tarea del Mac"), state: "online" },
-    },
-    onRename: (_, name) => (name.includes("!") ? { status: 400, code: "invalid_name" } : null),
-    extra: { work_status: { ahead: 0, dirty: false, files: [], large: [], submodules: [] } },
-  });
-  const w = app.w;
-  w.dispatchEvent(new w.CustomEvent("harness:open-settings", { detail: "machines" }));
-  assert.ok(await until(() => doc.querySelectorAll("[data-account-computer]").length === 3), "the three computers of the account");
-  const rowOf = (id) => doc.querySelector(`[data-account-computer="${id}"]`);
-  const home = rowOf("cmp_home");
-  assert.ok(home.hasAttribute("data-self"));
-  assert.ok(home.textContent.includes("Mi Mac(esta computadora)"), home.textContent);
-  assert.match(home.querySelector("[data-computer-kind]").textContent, /^Esta (Mac|PC)$/);
-  assert.equal(rowOf("cmp_vm").querySelector("[data-computer-kind]").textContent, "VM de Danil");
-  assert.equal(rowOf("cmp_vm").querySelector("[data-computer-state]").textContent, "en línea");
-  assert.equal(rowOf("cmp_mac").querySelector("[data-computer-kind]").textContent, "Máquina propia");
-  assert.match(rowOf("cmp_mac").querySelector("[data-computer-state]").textContent, /^apagada · visto \d{1,2}:\d{2}/);
-
-  const edit = async (id, value, key = null) => {
-    rowOf(id).querySelector("[data-computer-name]")?.click();
-    assert.ok(await until(() => rowOf(id).querySelector("[data-computer-name-input]")), "the name turns into a field");
-    const input = rowOf(id).querySelector("[data-computer-name-input]");
-    input.value = value;
-    input.dispatchEvent(new w.Event("input", { bubbles: true }));
-    if (key) input.dispatchEvent(new w.KeyboardEvent("keydown", { key, bubbles: true }));
-    else input.form.requestSubmit();
-    await sleep(300);
-  };
-
-  // Esc cancels without asking the control plane, and Configuración stays open.
-  await edit("cmp_vm", "Otra cosa", "Escape");
-  assert.equal(rowOf("cmp_vm").querySelector("[data-computer-name-input]"), null);
-  assert.ok(rowOf("cmp_vm").textContent.includes("Danil VM"));
-  assert.equal(renamed.length, 0);
-
-  // A refused name says why and keeps the field.
-  await edit("cmp_vm", "VM!");
-  assert.equal(renamed.length, 1);
-  assert.equal(rowOf("cmp_vm").querySelector("[data-rename-error]")?.textContent, "El nombre debe tener de 1 a 60 caracteres, sin saltos de línea.");
-  assert.ok(rowOf("cmp_vm").querySelector("[data-computer-name-input]"), "the field stays to fix it");
-
-  await edit("cmp_vm", "  VM de trabajo ");
-  assert.deepEqual(renamed.at(-1), { id: "cmp_vm", name: "VM de trabajo", authorization: "Bearer client-tok", type: "application/json" });
-  assert.ok(await until(() => rowOf("cmp_vm").querySelector("[data-computer-name]")?.textContent.startsWith("VM de trabajo")), "the row shows the new name");
-  assert.equal(rowOf("cmp_vm").querySelector("[data-rename-error]"), null);
-
-  // The window's own name, also in «Esta computadora: …» of Cuenta › Perfil.
-  await edit("cmp_home", "Mac del estudio");
-  assert.ok(await until(() => rowOf("cmp_home").querySelector("[data-computer-name]")?.textContent.startsWith("Mac del estudio")));
-  doc.querySelector("#cfg-tab-account").click();
-  assert.ok(await until(() => doc.body.textContent.includes("Esta computadora: Mac del estudio")));
-
-  await sleep(1_200);
-  doc.querySelector('[aria-label="Cerrar configuración (Esc)"]').click();
-  assert.ok(await until(() => !doc.querySelector("[data-danil-account]")), "Configuración closes");
-  localNewTask(doc).click();
-  assert.ok(await until(() => doc.querySelector('[aria-label="Ejecutar en"]')), "the composer offers «Ejecutar en»");
-  doc.querySelector('[aria-label="Ejecutar en"]').click();
-  assert.ok(
-    await until(() => doc.querySelector('[data-machine-option="cmp_vm"]')?.textContent.includes("VM de trabajo")),
-    doc.querySelector('[data-machine-option="cmp_vm"]')?.textContent ?? "no option",
-  );
-  assert.equal(f.relays.cmp_vm.sockets.length, 1, "renaming does not reconnect the machine");
-  assert.deepEqual(app.failures, []);
-});
 
 test("el composer ofrece los modelos autenticados de la máquina seleccionada", async () => {
   const { app, doc, relayCalls } = await open("desktop-composer-machine", {

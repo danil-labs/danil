@@ -3,7 +3,6 @@ import CircleUserRound from "lucide-solid/icons/circle-user-round";
 import CreditCard from "lucide-solid/icons/credit-card";
 import ExternalLink from "lucide-solid/icons/external-link";
 import GitBranch from "lucide-solid/icons/git-branch";
-import Monitor from "lucide-solid/icons/monitor";
 import Plug from "lucide-solid/icons/plug";
 import Shield from "lucide-solid/icons/shield";
 import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
@@ -22,14 +21,11 @@ import AIProviders from "../components/AIProviders";
 import type { SurfacesState } from "../model/ai-providers-view";
 import Connections from "../components/Connections";
 import ConnectionsOperation from "../components/ConnectionsOperation";
-import Environment from "../components/Environment";
 import General from "../components/General";
 import Integrations from "../components/Integrations";
 import { PaquetesDeLengua } from "../components/LanguagePacks";
 import LoginSecurity from "../components/LoginSecurity";
 import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
-import type { Falla } from "../../../../ui/src/lib/bundled";
-import type { Failure } from "../../../../ui/src/Failure";
 import ProveedorDeMemoria from "../components/MemoryProvider";
 import { NotifyBehavior } from "../components/NotifyBehavior";
 import Providers from "../components/Providers";
@@ -47,8 +43,7 @@ const Agents = lazy(() => import("../components/Agents"));
 const AppDownloads = lazy(() => import("../components/AppDownloads"));
 
 /**
- * Configuración: siete entradas, y lo que eran secciones sueltas va en
- * pestañas dentro de su entrada (`settings-entries.ts`).
+ * Configuración: entradas y pestañas definidas en `settings-entries.ts`.
  */
 
 /** `panel: null` es una pestaña que la app todavía no tiene: sale con «pronto». */
@@ -87,20 +82,11 @@ export const pestanasDe = (
   superficies: () => Superficie[],
   agentes: ContextoDeAgentes,
   workspace: () => string | null,
-  activityMachine: () => string | null,
   maquinas: MaquinasDeAjustes,
   piezas: PiezasDeAjustes,
   sesiones: SesionesDeAjustes,
-  avisoReparacion?: (p: {
-    fallas: Falla[];
-    reparando: boolean;
-    error: Failure | null;
-    onReparar: () => void;
-    onReiniciar: () => void;
-  }) => JSX.Element,
   integraciones?: (p: { solo: string[]; onCambio: () => void }) => JSX.Element,
 ): Record<string, Pestana | undefined> => {
-  const { ActivityLogs } = maquinas;
   const cuenta = capabilities().danilAccount || capabilities().accountProfile;
   const tab = (id: string, name: () => string, panel: Pestana["panel"]): Pestana => ({ id, get name() { return name(); }, panel });
   return {
@@ -116,9 +102,6 @@ export const pestanasDe = (
     workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces maquinas={maquinas} sesiones={sesiones} />),
     download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
     "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} piezas={piezas} />; }),
-    machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" maquinas={maquinas} sesiones={sesiones} /></Suspense>) : undefined,
-    entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment avisoReparacion={avisoReparacion} />),
-    activity: tab("activity", () => t("activity.title"), () => <Suspense fallback={null}><ActivityLogs workspace={workspace()} machine={activityMachine()} /></Suspense>),
     fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers integraciones={integraciones} maquinas={maquinas} />; }),
     agentes: tab("agentes", () => t("settings.nav.agents"), () => (
       <Suspense fallback={null}>
@@ -144,7 +127,6 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   preferences: { name: () => t("settings.entry.preferences"), icono: () => <SlidersHorizontal size={15} /> },
   "ai-accounts": { name: () => t("settings.entry.ai_accounts"), icono: () => <Sparkles size={15} /> },
   "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitBranch size={15} /> },
-  machines: { name: () => t("settings.entry.machines"), icono: () => <Monitor size={15} /> },
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
   connections: { name: () => t("settings.nav.connections"), icono: () => <Plug size={15} /> },
   billing: { name: () => t("settings.entry.billing"), icono: () => <CreditCard size={15} /> },
