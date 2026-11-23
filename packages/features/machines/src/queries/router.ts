@@ -15,7 +15,7 @@
  * id, y su lista junta las de todas. Un workspace de la cuenta que esta computadora
  * no tiene se lee de sus miembros y actúa en el primero.
  */
-import { callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
+import { arrangeSpaces, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
 import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "@terminus/fleet";
 import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { setMachineRoute as engineSetMachineRoute } from "../../../../engine-client/src/client.ts";
@@ -515,8 +515,28 @@ function createRouterCore(config: RouterConfig) {
           ])).flat();
       slices.push(...result);
     }
+    const catalog = command === "list_spaces" && workspace && config.readWorkspaceSpaces
+      ? await config.readWorkspaceSpaces(workspace).catch(() => null)
+      : null;
     if (command === "list_workspace_attention") for (const s of slices) if (s.has) attention.set(s.machine, fleet.encode(s.machine, s.value));
-    const merged = learning(() => fleet.merge(command, command === "list_session_git" ? slices.map(gitSlice) : slices, workspace));
+    const merged = learning(() => {
+      if (catalog) for (const entry of catalog.spaces) fleet.markShared(entry.id);
+      const base = fleet.merge(command, command === "list_session_git" ? slices.map(gitSlice) : slices, workspace);
+      if (command !== "list_spaces" || !catalog?.spaces.length) return base;
+      const rows = new Map<string, Record<string, unknown>>();
+      if (Array.isArray(base)) {
+        for (const row of base) {
+          if (row && typeof row === "object" && typeof (row as { id?: unknown }).id === "string") {
+            rows.set((row as { id: string }).id, row as Record<string, unknown>);
+          }
+        }
+      }
+      for (const entry of catalog.spaces) {
+        const existing = rows.get(entry.id);
+        rows.set(entry.id, { created_at: 0, updated_at: 0, folders: [], ...existing, id: entry.id, name: entry.name, account: true });
+      }
+      return arrangeSpaces([...rows.values()] as { id: string }[], catalog.order);
+    });
     if (Array.isArray(merged) && unconfirmed.length) markUnconfirmedOpen(merged, unconfirmed);
     if (merged !== undefined) return merged;
     throw noAnswer(slices, workspace);
@@ -593,6 +613,19 @@ function createRouterCore(config: RouterConfig) {
     if (typeof space !== "string" || !space) return args;
     const own = unwrap(space, fleet.remotes());
     const id = own?.id ?? space;
+    if (!own || own.machine !== machine) {
+      const read = config.readWorkspaceSpaces;
+      const features = fleet.info(machine)?.features;
+      if (workspace && read && features?.includes("workspace_space_catalog_v1")) {
+        const catalog = await read(workspace).catch(() => null);
+        const entry = catalog?.spaces.find(item => item.id === id);
+        if (entry) {
+          await fleet.call({ machine, workspace, command: "ensure_workspace_space", args: { id, name: entry.name } });
+          fleet.markShared(id);
+          return { ...args, space: id };
+        }
+      }
+    }
     if (fleet.isShared(id)) return own ? { ...args, space: id } : args;
     if (own?.machine === machine) return args;
     try {
@@ -604,6 +637,20 @@ function createRouterCore(config: RouterConfig) {
     } catch {
       return { ...args, space: wrap(machine, id) };
     }
+  }
+
+  /** Si el espacio viene del catálogo compartido y aún no existe en esta Mac, se materializa antes de crear/mover aquí. */
+  async function ensureLocalSpace(workspace: string | null, args: Args, opts: Options): Promise<Args> {
+    const space = args.space;
+    if (!local || typeof space !== "string" || !space || !workspace || !config.readWorkspaceSpaces) return args;
+    const own = unwrap(space, fleet.remotes());
+    const id = own?.id ?? space;
+    const catalog = await config.readWorkspaceSpaces(workspace).catch(() => null);
+    const entry = catalog?.spaces.find(item => item.id === id);
+    if (!entry) return args;
+    await native("ensure_workspace_space", { id, name: entry.name }, opts).catch(() => null);
+    fleet.markShared(id);
+    return own ? { ...args, space: id } : args;
   }
 
   /** Una máquina que no tiene el workspace de algo nuevo lo hace suyo primero, con el mismo id. */
@@ -805,7 +852,8 @@ function createRouterCore(config: RouterConfig) {
           await native("materialize_workspace", { id: workspace }, opts);
           listed?.add(workspace);
         }
-        return await native(command, fleet.argsFor(self, args), opts);
+        const prepared = WITH_SPACE.has(command) ? await ensureLocalSpace(workspace, args, opts) : args;
+        return await native(command, fleet.argsFor(self, prepared), opts);
       }
       if (machine && machine !== self && fleet.has(machine)) return await remote(machine, command, args, callWorkspace(workspace, args));
       // Una máquina que ya no es de la cuenta no se cambia por otra en silencio.
@@ -838,7 +886,8 @@ function createRouterCore(config: RouterConfig) {
         if (lead) return await remote(lead, command, args, callWorkspace(workspace, args));
         if (!local || scopedLocal) throw noMachine();
       }
-      const value = await native(command, fleet.argsFor(self as string, args), opts);
+      const prepared = WITH_SPACE.has(command) ? await ensureLocalSpace(workspace, args, opts) : args;
+      const value = await native(command, fleet.argsFor(self as string, prepared), opts);
       rememberSources(command, self as string, workspace, value);
       if (command === "remove_workspace" && args.id === active) active = null;
       return value;

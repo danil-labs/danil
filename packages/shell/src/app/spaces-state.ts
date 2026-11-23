@@ -4,6 +4,7 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { type Project } from "../../../../apps/desktop/src/lib/model.ts";
 import { readShellCache, shellCacheWriter } from "../../../../apps/desktop/src/lib/shellCache";
 import { createSpaceNavigationOrder } from "../../../../apps/desktop/src/lib/space-navigation-order";
+import { createSpaceCatalog } from "./space-catalog";
 import { type Space } from "../../../../apps/desktop/src/lib/spaces";
 import { isContentTab, type createTabs } from "../../../../apps/desktop/src/lib/tabs";
 import { createWorkspaces } from "../../../features/settings/src/queries/workspaces-store";
@@ -12,7 +13,7 @@ import { type SearchFilter } from "../shell/GlobalSearch";
 import type { Frase } from "../../../../apps/desktop/src/lib/prose";
 import type { SidebarFilterProps } from "../shell/SidebarFilter";
 
-export type SpacesStateDeps = { bloqueo: Accessor<Frase | null>; pestanas: ReturnType<typeof createTabs>; projectCatalog: { fromCache: (projects: Project[]) => void }; projectList: Accessor<Project[]>; proyectoAbierto: Accessor<string | null>; sesiones: Accessor<Record<string, SessionRow[]>>; setError: (msg: string) => void; setSesiones: Setter<Record<string, SessionRow[]>>; workspaceActivo: Accessor<string | null>; };
+export type SpacesStateDeps = { bloqueo: Accessor<Frase | null>; pestanas: ReturnType<typeof createTabs>; projectCatalog: { fromCache: (projects: Project[]) => void }; projectList: Accessor<Project[]>; proyectoAbierto: Accessor<string | null>; sesiones: Accessor<Record<string, SessionRow[]>>; setError: (msg: string) => void; setSesiones: Setter<Record<string, SessionRow[]>>; workspaceActivo: Accessor<string | null>; onCatalogSync?: () => void; };
 
 export function createSpacesState(deps: SpacesStateDeps) {
   const { bloqueo, pestanas, projectCatalog, projectList, proyectoAbierto, sesiones, setError, setSesiones, workspaceActivo } = deps;
@@ -21,8 +22,19 @@ export function createSpacesState(deps: SpacesStateDeps) {
   // Los escritorios del workspace (`lib/spaces.ts`). Sin lista —un servicio
   // que no los conoce— la ventana se pinta como antes de los espacios.
   const [rawSpaces, setSpaces] = createSignal<Space[]>([]);
-  const spaceOrder = createSpaceNavigationOrder(() => workspaceActivo() ?? "", () => setError(t("spaces.order.error")));
-  const spaces = createMemo(() => spaceOrder.arrange(rawSpaces()));
+  const onOrderFailure = () => setError(t("spaces.order.error"));
+  const localOrder = createSpaceNavigationOrder(() => workspaceActivo() ?? "", onOrderFailure);
+  const spaceCatalog = createSpaceCatalog(workspaceActivo, deps.onCatalogSync, onOrderFailure);
+  const spaceOrder = {
+    saving: () => spaceCatalog.saving(localOrder),
+    arrange: <T extends { id: string }>(items: readonly T[]) => localOrder.arrange(items),
+    save: (ids: string[]) => spaceCatalog.saveOrder(ids, localOrder),
+  };
+  const spaces = createMemo(() => spaceCatalog.arrange(rawSpaces(), localOrder));
+  createEffect(() => {
+    const rows = rawSpaces();
+    if (rows.length > 0 && spaceCatalog.catalog()) void spaceCatalog.sync(rows);
+  });
   const [escritorio, setEscritorio] = createSignal<string | null>(null);
   const [sidebarFilter, setSidebarFilter] = createSignal<SidebarFilterProps | null>(null);
   // El nombre del workspace abierto rotula el menú de espacios de la franja.
@@ -89,5 +101,5 @@ export function createSpacesState(deps: SpacesStateDeps) {
     pestanas.open().filter(isContentTab).map((p) => p.id),
   );
 
-  return { activeSpace, bordeDeLaBarra, buscando, enCache, escritorio, guardarCache, idsDeContenido, medirBordeDeLaBarra, multipleSpaces, pestanaActiva, rawSpaces, setBuscando, setEnCache, setEscritorio, setSidebarFilter, setSpaces, shellCache, sidebarFilter, spaceOrder, spaces, workspaceActual, workspacesDeLaFranja };
+  return { activeSpace, bordeDeLaBarra, buscando, enCache, escritorio, guardarCache, idsDeContenido, medirBordeDeLaBarra, multipleSpaces, pestanaActiva, rawSpaces, setBuscando, setEnCache, setEscritorio, setSidebarFilter, setSpaces, shellCache, sidebarFilter, spaceCatalog, spaceOrder, spaces, workspaceActual, workspacesDeLaFranja };
 }

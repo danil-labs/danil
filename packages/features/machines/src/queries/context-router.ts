@@ -6,7 +6,10 @@ import { scopedFleet } from "./scoped-fleet.ts";
 
 type LocalListing = { workspaces?: { id?: unknown; account?: { org?: unknown } }[] };
 type ContextInfo = { org: string; plan?: string | null };
-export type ContextRouterConfig = RouterConfig & { contextInfo?: (context: string) => ContextInfo | null };
+export type ContextRouterConfig = RouterConfig & {
+  contextInfo?: (context: string) => ContextInfo | null;
+  readContextSpaces?: (context: string, organization: string, workspace: string) => ReturnType<NonNullable<RouterConfig["readWorkspaceSpaces"]>>;
+};
 type Core = {
   handle: Invoke; events(machine: string, events: {name:string; payload:unknown}[], metadata?: EventMetadata): void;
   deferredChanged(machine:string):void; forget(machine:string):void; createsOn(workspace:string|null):{machine:string;lead:boolean}|null;
@@ -52,6 +55,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
       router = createRouterCore({ ...config,
         fleet: scopedFleet(config.fleet, { context, org: info.org, localOnly: free }),
         localWorkspace: !free && config.native ? workspace => localWorkspaces.get(workspace) === info.org : undefined,
+        readWorkspaceSpaces: config.readContextSpaces && (workspace => config.readContextSpaces!(context, info.org, workspace)),
         deliverRemote: config.native !== null,
         deliver: events => config.deliver?.(events.filter(event => event.name === "attention" || activeContext === context).map(event => event.name === "attention" ? { ...event, payload: attention.project(event.payload, context) } : event)),
         registry: undefined, engineWorkspaces: undefined,

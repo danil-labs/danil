@@ -7,13 +7,13 @@ import { deleteStoredStrip, storedStrip } from "../../../../../apps/desktop/src/
 import type { SearchFilter } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 
 /** Lo que las acciones sobre espacios usan del estado de la ventana. */
-export type SpaceOpsDeps = { abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activeSpace: Accessor<Space | null>; cambiarEscritorio: (id: string, restaurarActiva?: boolean) => void; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; escritorio: Accessor<string | null>; grupos: Accessor<string[]>; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; refreshSessions: (proyectos: string[]) => Promise<void>; reloadSpaces: () => Promise<void>; setBuscando: Setter<SearchFilter | null>; setError: Setter<string | null>; setSpaces: Setter<Space[]>; soltarPestanaGuardada: (id: string) => void; spaces: Accessor<Space[]>; workspaceActivo: Accessor<string | null>; };
+export type SpaceOpsDeps = { abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activeSpace: Accessor<Space | null>; cambiarEscritorio: (id: string, restaurarActiva?: boolean) => void; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; escritorio: Accessor<string | null>; grupos: Accessor<string[]>; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; refreshSessions: (proyectos: string[]) => Promise<void>; reloadSpaces: () => Promise<void>; setBuscando: Setter<SearchFilter | null>; setError: Setter<string | null>; setSpaces: Setter<Space[]>; soltarPestanaGuardada: (id: string) => void; spaces: Accessor<Space[]>; workspaceActivo: Accessor<string | null>; catalog?: { create(space: Space): Promise<void>; rename(id: string, name: string): Promise<boolean>; remove(id: string): Promise<void> }; };
 
 /** Crear, renombrar, mover y borrar espacios, con el aviso de lo que acaba de pasar. */
 export function createSpaceOps(deps: SpaceOpsDeps) {
   const abrirSesion = (...a: Parameters<SpaceOpsDeps["abrirSesion"]>) => deps.abrirSesion(...a);
   const refreshSessions = (...a: Parameters<SpaceOpsDeps["refreshSessions"]>) => deps.refreshSessions(...a);
-  const { activeSpace, cambiarEscritorio, deLaTarea, escritorio, grupos, machineOf, reloadSpaces, setBuscando, setError, setSpaces, soltarPestanaGuardada, spaces, workspaceActivo } = deps;
+  const { activeSpace, cambiarEscritorio, catalog, deLaTarea, escritorio, grupos, machineOf, reloadSpaces, setBuscando, setError, setSpaces, soltarPestanaGuardada, spaces, workspaceActivo } = deps;
 
   /** El aviso de lo que un gesto sobre espacios acaba de hacer, con su «Ir». */
   const [aviso, setAviso] = createSignal<{ texto: string; boton?: string; ir?: () => void } | null>(null);
@@ -25,11 +25,17 @@ export function createSpaceOps(deps: SpaceOpsDeps) {
     const nueva = await invoke<Space>("create_space", { name, folders });
     setSpaces((lista) => [...lista.filter((i) => i.id !== nueva.id), nueva]);
     cambiarEscritorio(nueva.id);
+    void catalog?.create(nueva);
   }
 
   async function renameSpace(id: string, name: string) {
     try {
-      replaceSpace(await invoke<Space>("rename_space", { id, name }, machineOf(id)));
+      const savedInCatalog = (await catalog?.rename(id, name)) ?? false;
+      try {
+        replaceSpace(await invoke<Space>("rename_space", { id, name }, machineOf(id)));
+      } catch (e) {
+        if (!savedInCatalog) throw e;
+      }
     } catch (e) {
       setError(prosaDe(e));
     }
@@ -78,6 +84,7 @@ export function createSpaceOps(deps: SpaceOpsDeps) {
     for (const p of storedStrip(ws, i.id)) soltarPestanaGuardada(p.id);
     deleteStoredStrip(ws, i.id);
     window.dispatchEvent(new CustomEvent("harness:tasks-changed"));
+    void catalog?.remove(i.id);
     void reloadSpaces();
     setAviso({
       texto: t("spaces.delete.toast", { name: spaceName(i), count: archivadas }),

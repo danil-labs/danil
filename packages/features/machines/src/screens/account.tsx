@@ -52,6 +52,7 @@ import { MachinePicker } from "./MachinePicker";
 import { infoOf } from "../model/machine-info";
 import { createRouter, type Invoke } from "../queries/router";
 import { createSessionCloud } from "../queries/session-cloud";
+import { readContextSpaces } from "../../../../platform-client/src/workspace-spaces.ts";
 import { machineNamesChanged, refetchMachines, setCloudInventory } from "../queries/store";
 import type { WslChild } from "../model/wsl";
 import { RELIST, TOKEN_MARGIN, LOCAL, LOCAL_KEY, windowSystem, type ClientToken, type DanilStatus, type Installed } from "./account-helpers";
@@ -268,6 +269,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     });
     const router = createRouter({
       self, contextInfo: cloud.contextInfo,
+      readContextSpaces: readContextSpaces(native),
       fleet,
       native,
       onSlices: slicesChanged,
