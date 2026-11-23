@@ -3,7 +3,6 @@ import { For, Show, createSignal, type JSX } from "solid-js";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Plus from "lucide-solid/icons/plus";
 import Search from "lucide-solid/icons/search";
-import SettingsIcon from "lucide-solid/icons/settings";
 import {
   ITEM_DE_MENU,
   Popover,
@@ -37,8 +36,6 @@ export function ProjectPicker(props: {
   onPick: (id: string) => void;
   /** Abre el diálogo «Añadir un proyecto». */
   onNuevoProyecto: () => void;
-  /** Abre Ajustes → Proyectos, donde se renombra, se quita y se borra. */
-  onAdministrar?: () => void;
   /** Dónde corre la tarea: va antes del proyecto, que es de esa máquina. */
   machine?: JSX.Element;
   /** Última actividad de las tareas vivas de cada proyecto, en ms. */
@@ -166,23 +163,6 @@ export function ProjectPicker(props: {
               <Plus size={13} aria-hidden="true" />
               {t("projects.picker.add")}
             </Pressable>
-            <Show when={props.onAdministrar}>
-              {(administrar) => (
-                <Pressable
-                  class={cn(ITEM_DE_MENU, "grid grid-cols-[14px_minmax(0,1fr)_auto] items-center gap-2 text-neutral-700")}
-                  onClick={() => {
-                    setAbierto(false);
-                    administrar()();
-                  }}
-                >
-                  <SettingsIcon size={13} aria-hidden="true" />
-                  <span class="truncate">{t("projects.picker.manage")}</span>
-                  <span class="text-caption text-neutral-500">
-                    {t("projects.picker.manage_where")}
-                  </span>
-                </Pressable>
-              )}
-            </Show>
           </div>
         </PopoverContent>
       </Popover>

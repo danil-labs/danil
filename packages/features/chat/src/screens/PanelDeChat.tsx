@@ -144,7 +144,6 @@ export function createPanelDeChat<Usage, Delegated>(deps: PanelDeChatDeps<Usage>
             elegirProyecto(id);
           }}
           onNuevoProyecto={() => setAnadiendoCarpeta(true)}
-          onAdministrar={() => setSettings("proyectos")}
           // Solo al crear: una tarea abierta ya vive en la máquina que la corre.
           machine={
             <Show when={props.nueva && !props.locked}>

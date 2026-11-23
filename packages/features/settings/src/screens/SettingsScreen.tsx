@@ -14,11 +14,9 @@ import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { PiezasDeAjustes } from "../model/features-port";
 import type { SesionesDeAjustes } from "../model/sessions-port";
 import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
-import type { ContextoDeProyectos } from "./ManageProjects";
 import type { Falla } from "../../../../ui/src/lib/bundled";
 import type { Failure } from "../../../../ui/src/Failure";
 import { Pressable } from "../../../../ui/src/Pressable";
-import { secretsRoute } from "../model/secrets-support";
 import { type SettingsEntryId, settingsTarget } from "../model/settings-entries";
 import { createSuperficiesDeAjustes } from "./SettingsSurfaces";
 import { type Pestana, idTab, type Entrada, SIN_PESTANA, idSub, GRUPOS, AdminLink } from "./SettingsTabs";
@@ -37,8 +35,6 @@ export default function Settings(props: {
   agentesEnUso?: string[];
   /** Abre el perfil de un agente en esa carpeta; quien llama cierra la hoja. */
   onAgentProfile?: (project: string, name: string) => void;
-  /** Los proyectos del espacio y lo que se puede hacer con ellos. */
-  proyectos?: ContextoDeProyectos;
   avisoReparacion?: (p: {
     fallas: Falla[];
     reparando: boolean;
@@ -55,10 +51,9 @@ export default function Settings(props: {
   sesiones: SesionesDeAjustes;
 }) {
   const { ENTRADAS } = createSuperficiesDeAjustes(props);
-  // Sin soporte del motor activo, Secretos no se ofrece; su enlace directo sí abre el aviso.
   const [personal] = createResource(async () => (await capabilities().personalAccount?.isPersonal().catch(() => false)) ?? false);
   const dePersonal = (p: Pestana) => p.id === "support" || (p.id === "plan" && !capabilities().nativeWindow);
-  const pestanaVisible = (p: Pestana) => (dePersonal(p) ? personal() === true : p.id !== "secrets" || secretsRoute(capabilities().accountCredentials ? "worker" : "engine", props.maquinas.machines()) !== "unsupported");
+  const pestanaVisible = (p: Pestana) => (!dePersonal(p) || personal() === true);
   const pedido = settingsTarget(props.panel);
   const inicial = ENTRADAS.find((e) => e.id === pedido?.entry) ?? ENTRADAS[0];
   const [activo, setActivo] = createSignal<SettingsEntryId>(inicial.id);
@@ -87,7 +82,7 @@ export default function Settings(props: {
     window.addEventListener("keydown", alTeclear, true);
     onCleanup(() => window.removeEventListener("keydown", alTeclear, true));
   });
-  // Con la hoja ya abierta, `panel` no vuelve a leerse: un enlace interno («Iniciar sesión» en Secretos) cambia de destino por aquí.
+  // Con la hoja ya abierta, `panel` no vuelve a leerse: un enlace interno cambia de destino por aquí.
   onMount(() => {
     const alPedir = (e: Event) => {
       const id = (e as CustomEvent<unknown>).detail;
