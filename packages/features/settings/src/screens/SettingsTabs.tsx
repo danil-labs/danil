@@ -27,6 +27,7 @@ import Environment from "../components/Environment";
 import General from "../components/General";
 import Integrations from "../components/Integrations";
 import { PaquetesDeLengua } from "../components/LanguagePacks";
+import LoginSecurity from "../components/LoginSecurity";
 import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import type { ContextoDeProyectos } from "./ManageProjects";
 import type { Falla } from "../../../../ui/src/lib/bundled";
@@ -113,7 +114,7 @@ export const pestanasDe = (
     emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" maquinas={maquinas} sesiones={sesiones} /></Suspense>) : undefined,
     usage: capabilities().accountUsage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().accountUsage?.()) : undefined,
     plan: capabilities().nativeWindow || capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().nativeWindow ? <Suspense><DeskPlan workspace={workspace()} sesiones={sesiones} /></Suspense> : capabilities().personalAccount?.plan?.()) : undefined,
-    security: tab("security", () => t("settings.tab.security"), null),
+    security: tab("security", () => t("settings.tab.security"), () => <LoginSecurity />),
     general: tab("general", () => t("settings.nav.general"), () => <General maquinas={maquinas} />),
     appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} sesiones={sesiones} /></Suspense>),
     notify: tab("notify", () => t("settings.tab.notify"), () => <SettingsPanel><SettingsSection title={t("settings.tab.notify")}><NotifyBehavior /></SettingsSection></SettingsPanel>),
@@ -147,6 +148,7 @@ export const pestanasDe = (
 
 const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JSX.Element }> = {
   account: { name: () => t("settings.entry.account"), icono: () => <CircleUserRound size={15} /> },
+  security: { name: () => t("settings.entry.security"), icono: () => <Shield size={15} /> },
   preferences: { name: () => t("settings.entry.preferences"), icono: () => <SlidersHorizontal size={15} /> },
   "ai-accounts": { name: () => t("settings.entry.ai_accounts"), icono: () => <Sparkles size={15} /> },
   "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitBranch size={15} /> },
