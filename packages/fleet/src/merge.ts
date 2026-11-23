@@ -46,7 +46,7 @@ const ROW_IDS = new Set(["list_portfolios", "list_live_sessions", "list_delegate
 /** Respuestas con un objeto por id de tarea. */
 const KEYED = new Set(["list_session_git"]);
 /** Respuestas que son un objeto con su propio id. */
-const OWN_ID = new Set(["load_session", "add_account", "create_space", "rename_space", "set_space_folders", "move_task_to_space", "share_space"]);
+const OWN_ID = new Set(["load_session", "add_account", "rename_account", "create_space", "rename_space", "set_space_folders", "move_task_to_space", "share_space"]);
 /** Respuestas que son un space o una lista de spaces. */
 const SPACES = new Set(["list_spaces", "create_space", "rename_space", "set_space_folders", "move_task_to_space", "share_space"]);
 /** Filas que la barra marca con su máquina. */
@@ -303,7 +303,9 @@ function mergeAccounts(ctx: MergeContext, parts: Slice[]): unknown {
   const panelId = (machine: string, id: string) => machine === ctx.self ? id : wrap(machine, id);
   const accounts = groups.map((g) => ({
     ...g.row,
-    ...(!g.email ? { label: `${text(g.row.label) || g.row.id} · ${ctx.name?.(g.usageFrom.machine) ?? g.usageFrom.machine}` } : {}),
+    ...(!g.email && !g.row.custom_label && g.usageFrom.machine !== ctx.self
+      ? { label: `${text(g.row.label) || g.row.id} · ${ctx.name?.(g.usageFrom.machine) ?? g.usageFrom.machine}` }
+      : {}),
     id: panelId(g.usageFrom.machine, g.row.id),
     machines: g.members.map((m) => ({ ...m, id: panelId(m.machine, m.id) })),
   }));

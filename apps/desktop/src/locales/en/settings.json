@@ -247,6 +247,8 @@
   "settings.account_card.retry_wait": "The provider limited usage requests. You can check usage again in {count} min.",
   "settings.account_card.retry_ready": "You can refresh again now.",
   "settings.account_card.refresh_in": "updates in {count} min",
+  "settings.account_card.rename_label": "Rename {name}",
+  "settings.account_card.rename_hint": "{name} · Double-click to rename",
   "settings.update.service_busy": "Couldn't close Danil to update. Finish active tasks before updating.",
   "settings.update.busy_tasks": "Still working:",
   "settings.update.busy_elsewhere": {

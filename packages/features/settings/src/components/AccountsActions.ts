@@ -1,6 +1,6 @@
 import { createEffect, on, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { listProviders, removeAccount, resumeAwaitingQuota, setActiveAccount, submitLoginCode } from "../queries/engine-accounts";
+import { listProviders, removeAccount, renameAccount, resumeAwaitingQuota, setActiveAccount, submitLoginCode } from "../queries/engine-accounts";
 import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { detalleDe } from "../../../../ui/src/Failure";
@@ -233,6 +233,15 @@ export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas
     }
   }
 
+  async function renombrar(id: string, label: string) {
+    try {
+      await renameAccount({ provider: agente(), id, label }, machineOf(id));
+      await refrescar();
+    } catch (e) {
+      setFallo({ what: t("settings.accounts.error.rename"), detail: detalleDe(e) });
+    }
+  }
+
   async function quitar(id: string) {
     setPorQuitar(null);
     try {
@@ -243,5 +252,5 @@ export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas
       setFallo({ what: t("settings.accounts.error.remove"), detail: detalleDe(e) });
     }
   }
-  return { reponer, usar, quitar, copiarEnlace, enviarCodigo };
+  return { reponer, usar, quitar, renombrar, copiarEnlace, enviarCodigo };
 }

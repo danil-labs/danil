@@ -30,6 +30,8 @@ export type Account = {
   credential_group?: string | null;
   /** Si alguna vez terminó bien una conexión. No se borra al perder la credencial. */
   authenticated_at: number | null;
+  /** Si la persona renombró la cuenta a mano (`rename_account`): manda sobre el correo. */
+  custom_label?: boolean;
   /** En la web con varias máquinas: dónde tiene sesión esta misma cuenta. */
   machines?: { machine: string; id: string; on: boolean }[];
 };
@@ -164,7 +166,8 @@ export type AgentOpt = {
  * `account_status` persiste la identidad que acaba de leer, pero el objeto que
  * ya devolvió `list_accounts` no cambia retroactivamente. Mientras llega la
  * siguiente lista, `detail` es la lectura fresca y tiene prioridad sobre la
- * etiqueta de relleno.
+ * etiqueta de relleno, salvo cuando la persona eligió un nombre a mano
+ * (`custom_label`).
  */
 export function accountPresentation(
   account: Account,
@@ -178,10 +181,16 @@ export function accountPresentation(
     status?.authenticated && detailName && detailName !== SESION_INICIADA
       ? detailName
       : "";
-  const name = statusIdentity || account.identity?.trim() || account.label;
+  const identity = statusIdentity || account.identity?.trim() || "";
+  const custom = account.custom_label ? account.label.trim() : "";
+  const name = custom || identity || account.label;
   const read = limits?.mode === "read" ? limits : lastGood;
   const plan = read?.plan?.trim() || (statusIdentity ? detailPlan.trim() : "") || null;
   const visibleDetail =
-    detail && detail !== name && detail !== `${name} · ${plan}` ? detail : null;
+    custom && identity && identity !== name
+      ? identity
+      : detail && detail !== name && detail !== `${name} · ${plan}`
+        ? detail
+        : null;
   return { name, plan, detail: visibleDetail };
 }

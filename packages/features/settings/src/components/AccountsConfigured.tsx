@@ -17,6 +17,7 @@ export function CuentaConfigurada(props: {
   /** Autenticada, pero la última consulta de estado falló. */
   statusUnknown?: boolean;
   onRecheckStatus?: () => void | Promise<unknown>;
+  onRename?: (label: string) => void | Promise<unknown>;
   supportsLimits: boolean;
   order: number;
   afterStatusChange: number;
@@ -72,6 +73,7 @@ export function CuentaConfigurada(props: {
       checkingStatus={props.checkingStatus}
       statusUnknown={sinComprobar()}
       onRecheckStatus={props.onRecheckStatus}
+      onRename={props.onRename}
       noLimitsLabel={canonicalAgentId(props.agent) === OPENCODE ? t("settings.accounts.go_key_required") : undefined}
       limits={lectura.limits}
       lastGood={lectura.lastGood}

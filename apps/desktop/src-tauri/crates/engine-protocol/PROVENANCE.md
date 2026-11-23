@@ -322,3 +322,5 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `c9fe6c5231d7367319baef17eb42219c5c1d92d8b7bfc0a23f97a30504d0b678`.
 - `engine_adoption_v1.json`: `engine_adoption_status`, `engine_adoption_retry` and the `engine-adoption` event: the engine adopts its local workspaces into the personal organization (danil-engine#504), copied from danil-engine `feat/maquinas-conectadas` `1e96f512`,
   SHA-256 `67bbaf7c85962e7d19275dcf40310bfe98eb257355951e1e1dbb05f0c7ad510f`.
+- `account_rename_v1.json`: `rename_account` (`custom_label` persisted in `meta.json` so user-chosen names survive identity discovery, danil-engine#533), copied from danil-engine `feat/antigravity-identity-and-account-rename` `0f0cf070`,
+  SHA-256 `6e13ca78f685db33cfa5e9f7cfccc19e0a59aeda233d0d5d7626f52b1b9ef991`.

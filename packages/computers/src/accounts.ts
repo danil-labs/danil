@@ -10,6 +10,7 @@ type Lang = "es" | "en";
 export type AccountRowLike = {
   id: string;
   label?: string | null;
+  custom_label?: boolean;
   identity?: string | null;
   plan?: string | null;
   /** Identidad estable del workspace o suscripción; distingue organizaciones con el mismo plan. */

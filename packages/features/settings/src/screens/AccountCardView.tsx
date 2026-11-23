@@ -10,6 +10,7 @@ import { Spinner, RefreshSpinner } from "../../../../ui/src/Spinner";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
 import { accountPresentation, inferAuthenticated, StatusTag } from "./AccountCardStatus";
+import { AccountNameField } from "./AccountNameField";
 
 /**
  * La representación única de una cuenta de agente.
@@ -35,6 +36,7 @@ export default function AccountCard(props: {
   refreshingLimits?: boolean;
   onRefreshLimits?: () => void | Promise<unknown>;
   onRecheckStatus?: () => void | Promise<unknown>;
+  onRename?: (label: string) => void | Promise<unknown>;
   noLimitsLabel?: string;
   /** `row` es la fila de Configuración; el popover de la franja usa la tarjeta. */
   variant?: "card" | "row";
@@ -133,17 +135,12 @@ export default function AccountCard(props: {
       <div class={cn("flex", fila() ? "items-center gap-2" : "items-start gap-3")}>
         <div class={cn("min-w-0 flex-1", fila() && "mr-6 grid grid-cols-[minmax(0,1fr)] gap-[3px]")}>
           <div class={cn("flex items-center", fila() ? "min-w-0 gap-2" : "flex-wrap gap-1.5")}>
-            <span
-              class={cn(
-                "min-w-0 truncate",
-                fila()
-                  ? "text-sm font-semibold"
-                  : ["text-xs", props.active ? "font-semibold" : "font-medium"],
-              )}
-              title={presentacion().name}
-            >
-              {presentacion().name}
-            </span>
+            <AccountNameField
+              name={presentacion().name}
+              active={props.active}
+              row={fila()}
+              onRename={props.onRename}
+            />
             {/* **El plan va pegado al nombre, no al final de la fila.** Es parte
                 de con qué cuenta estás trabajando —«alguien@ejemplo.test, max»— y
                 estaba detrás de las etiquetas de estado, que son de otra cosa:

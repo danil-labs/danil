@@ -40,6 +40,7 @@
   "settings.accounts.error.install": "No se pudo instalar.",
   "settings.accounts.error.list": "No se pudieron leer las cuentas.",
   "settings.accounts.error.remove": "No se pudo quitar la cuenta.",
+  "settings.accounts.error.rename": "No se pudo cambiar el nombre de la cuenta.",
   "settings.accounts.error.resume": "No se pudieron reanudar las tareas que esperaban cupo.",
   "settings.accounts.error.save_key": "No se pudo guardar la clave.",
   "settings.accounts.error.start": "No se pudo arrancar la conexión con {agent}.",

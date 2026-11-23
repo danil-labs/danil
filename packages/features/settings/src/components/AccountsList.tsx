@@ -19,7 +19,7 @@ import { CredentialsInUse } from "./AccountsModel";
 export function createListaDeCuentas(props: Parameters<typeof Accounts>[0], cuentas: ReturnType<typeof createCuentas>, conexion: ReturnType<typeof createConexionDeCuentas>, acciones: ReturnType<typeof createAccionesDeCuentas>, partes: ReturnType<typeof createPartesDeCuentas>) {
   const { tarjetas, lista, estados, agente, comprobando, sinComprobar, conectadaVez, enCurso, setPorQuitar, porQuitar } = cuentas;
   const { etiqueta, comprobar, proveedor, conectar, agregar, refrescar, claveDe } = conexion;
-  const { usar, quitar } = acciones;
+  const { usar, quitar, renombrar } = acciones;
   const { hayCuentas } = partes;
   const Lista = () => (
     <Show when={hayCuentas()}>
@@ -41,6 +41,7 @@ export function createListaDeCuentas(props: Parameters<typeof Accounts>[0], cuen
               checkingStatus={comprobando()[a.id]}
               statusUnknown={sinComprobar()[a.id] && a.authenticated_at !== null}
               onRecheckStatus={() => comprobar(a.id)}
+              onRename={(label) => renombrar(a.id, label)}
               supportsLimits={proveedor()?.limits ?? false}
               order={i()}
               afterStatusChange={conectadaVez()[a.id] ?? 0}

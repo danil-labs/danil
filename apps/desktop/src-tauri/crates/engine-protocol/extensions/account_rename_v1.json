@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "name": "account_rename",
+  "description": "Renombrar una cuenta de agente con un nombre elegido por la persona: rename_account persiste label y marca custom_label en meta.json para que ni el correo descubierto ni la vista lo pisen. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "account_rename_v1"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "rename_account",
+      "output": "-> Result < Account , String >",
+      "parameters": [
+        {
+          "key": "provider",
+          "name": "provider",
+          "type": "String"
+        },
+        {
+          "key": "id",
+          "name": "id",
+          "type": "String"
+        },
+        {
+          "key": "label",
+          "name": "label",
+          "type": "String"
+        }
+      ],
+      "path": "accounts::rename_account",
+      "scope": "workspace",
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

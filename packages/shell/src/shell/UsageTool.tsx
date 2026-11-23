@@ -124,6 +124,7 @@ export function UsagePanel(props: { usage: Usage; agent: string; onManage: () =>
                   loadingLimits={props.usage.inProgress()[usageKey(p.agent, p.cuenta.id)]}
                   refreshingLimits={props.usage.inProgress()[usageKey(p.agent, p.cuenta.id)]}
                   onRefreshLimits={() => props.usage.refresh(p.agent, p.cuenta.id)}
+                  onRename={(label) => props.usage.rename(p.agent, p.cuenta.id, label)}
                 />
               </div>
             </section>
