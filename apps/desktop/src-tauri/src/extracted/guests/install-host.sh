@@ -18,7 +18,6 @@ BASE_URL='@BASE_URL@'
 VERSION='@VERSION@'
 SHA_x86_64_unknown_linux_gnu='@SHA_x86_64_unknown_linux_gnu@'
 SHA_aarch64_unknown_linux_gnu='@SHA_aarch64_unknown_linux_gnu@'
-SHA_x86_64_apple_darwin='@SHA_x86_64_apple_darwin@'
 SHA_aarch64_apple_darwin='@SHA_aarch64_apple_darwin@'
 
 LABEL=ai.danil.seldon.host
@@ -55,8 +54,7 @@ case "$os/$arch" in
   Linux/x86_64|Linux/amd64) target=x86_64-unknown-linux-gnu;;
   Linux/aarch64|Linux/arm64) target=aarch64-unknown-linux-gnu;;
   Darwin/arm64) target=aarch64-apple-darwin;;
-  Darwin/x86_64) target=x86_64-apple-darwin;;
-  *) fail plataforma "No hay Seldon Host para $os $arch." "usa Linux (x86_64 o arm64) o macOS.";;
+  *) fail plataforma "No hay Seldon Host para $os $arch." "usa Linux (x86_64 o arm64) o macOS (Apple Silicon).";;
 esac
 if [ "$os" = Linux ] && { ldd --version 2>&1 || true; } | grep -qi musl; then
   fail plataforma "Esta distribución usa musl (Alpine) y el motor necesita glibc." \
@@ -81,7 +79,6 @@ asset="seldon-host-$target.tar.gz"
 case "$target" in
   x86_64-unknown-linux-gnu) sha=$SHA_x86_64_unknown_linux_gnu;;
   aarch64-unknown-linux-gnu) sha=$SHA_aarch64_unknown_linux_gnu;;
-  x86_64-apple-darwin) sha=$SHA_x86_64_apple_darwin;;
   *) sha=$SHA_aarch64_apple_darwin;;
 esac
 case "$sha" in @*) sha='';; esac

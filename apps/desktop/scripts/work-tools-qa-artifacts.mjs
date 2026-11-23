@@ -8,7 +8,7 @@ const [directory, output, target] = process.argv.slice(2);
 if (!directory || !output || !["linux", "macos", "windows"].includes(target)) {
   throw new Error("Expected release-assets, output and platform");
 }
-const suffix = { linux: "_amd64.AppImage", macos: "_universal.dmg", windows: "_x64-setup.exe" }[target];
+const suffix = { linux: "_amd64.AppImage", macos: "_aarch64.dmg", windows: "_x64-setup.exe" }[target];
 const names = (await readdir(directory)).filter((name) => name.endsWith(suffix));
 if (names.length !== 1) throw new Error("Expected one canonical installer");
 const name = names[0], source = path.resolve(directory, name);

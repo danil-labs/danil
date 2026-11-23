@@ -8,7 +8,7 @@ npx @danil-labs/terminus
 
 Es un canal de distribución para desarrolladores —que ya tienen Node— adicional
 a los instaladores que se bajan a mano desde [danil.ai/download](https://danil.ai/download/).
-Funciona en Windows, macOS (Apple Silicon e Intel) y Linux x86_64.
+Funciona en Windows x64, macOS (Apple Silicon) y Linux x86_64.
 
 Este paquete instala la app; su único bin `danil-terminus` es el
 instalador de escritorio. `danil` y `dn` se configuran por separado; consulta la
@@ -30,11 +30,10 @@ descarga conservan compatibilidad con las instalaciones existentes.
    `~/Applications/Terminus.AppImage`, ejecutable. A partir de ahí, la app se
    actualiza sola.
 
-El comando selecciona Windows x64, Mac Apple Silicon, Mac Intel o Linux x86_64
-según la entrada disponible en `latest.json`. El workflow universal asigna el
-mismo archivo y firma a `darwin-aarch64` y `darwin-x86_64`. Si falta la entrada
-de una plataforma —por ejemplo, una release anterior a la que trajo Linux—,
-informa que no hay build y termina con error. No hace falta cambiar el comando.
+El comando selecciona Windows x64, Mac Apple Silicon o Linux x86_64 según la
+entrada disponible en `latest.json` (`windows-x86_64`, `darwin-aarch64` o
+`linux-x86_64`). En una plataforma no soportada —o si falta la entrada en una
+release anterior— informa y termina con error. No hace falta cambiar el comando.
 
 **En Linux** no hay instalador que ejecutar: el AppImage es un ejecutable
 portátil. Se copia a `~/Applications/Terminus.AppImage` (la misma ruta que usa

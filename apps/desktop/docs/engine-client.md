@@ -252,8 +252,8 @@ is a new folder name. `scripts/work-tools.py` builds it from the pins in
 `resources/work-tools/<target>/pins.json`; see
 [development](development.md#bundled-work-tools).
 
-- **macOS:** two trees in the universal app, one per architecture, under
-  `Contents/Resources/work-tools/`. Their Mach-O files are signed in place
+- **macOS:** the Apple Silicon (`aarch64-apple-darwin`) tree under
+  `Contents/Resources/work-tools/`. Its Mach-O files are signed in place
   before the app is signed and notarized.
 - **Windows:** NSIS installs the tree per user in
   `%LOCALAPPDATA%\Terminus\work-tools\<target>\<tree>\`. The build fails if a
@@ -671,10 +671,9 @@ those systems.
 
 ## Not done yet
 
-- The engine is pinned for the four platforms and bundled on all of them. The
-  published installers were tried on Windows 11, macOS 15.8 (Apple silicon)
-  and Linux, updating from 0.2.74 with real data (#60). The macOS universal
-  bundle carries a `lipo` of the two pinned macOS binaries.
+- The engine is pinned for the three desktop platforms and bundled on all of
+  them. The published installers were tried on Windows 11, macOS 15.8 (Apple
+  silicon) and Linux, updating from 0.2.74 with real data (#60).
 - The engine still installs, updates and removes the Typst plugin, while the
   window runs its Tinymist. Settings stops every live view before touching the
   plugin (`typst_live_stop`); moving the plugin into the window is planned in

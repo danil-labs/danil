@@ -18,7 +18,7 @@ spec.loader.exec_module(tools)
 
 
 def targets():
-    return {"Darwin": ["aarch64-apple-darwin", "x86_64-apple-darwin"],
+    return {"Darwin": ["aarch64-apple-darwin"],
             "Windows": ["x86_64-pc-windows-msvc"],
             "Linux": ["x86_64-unknown-linux-gnu"]}[platform.system()]
 

@@ -222,6 +222,15 @@ async function main() {
   const plat = detectPlatform();
   log(`  ${t('system')}${plat.label}  ${paint(C.dim, `(${plat.platform}/${plat.arch})`)}`);
 
+  if (!plat.key) {
+    // No fingimos soporte que no existe.
+    err(
+      paint(C.yellow, t('unsupportedPlatform', { label: plat.label })) +
+        t('supportedPlatforms')
+    );
+    process.exit(1);
+  }
+
   // 1) Manifiesto de la release. Es la fuente de verdad de versión, URL del
   //    asset y firma — y es multiplataforma por diseño.
   let manifest;
@@ -232,9 +241,8 @@ async function main() {
     process.exit(1);
   }
 
-  const entry = plat.key ? manifest.platforms?.[plat.key] : null;
+  const entry = manifest.platforms?.[plat.key] ?? null;
   if (!entry) {
-    // No fingimos soporte que no existe.
     err(
       paint(C.yellow, t('noBuild', { label: plat.label })) +
         t('downloadByHand', { url: paint(C.cyan, MANUAL_DOWNLOAD_URL) })

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const main = process.env.DANIL_CLI_TEST_MAIN ?? fileURLToPath(new URL("../../src-tauri/src/main.rs", import.meta.url));
 const windows = process.platform === "win32";
-const triple = { win32: "x86_64-pc-windows-msvc", darwin: `${process.arch === "arm64" ? "aarch64" : "x86_64"}-apple-darwin`, linux: "x86_64-unknown-linux-gnu" }[process.platform];
+const triple = { win32: "x86_64-pc-windows-msvc", darwin: "aarch64-apple-darwin", linux: "x86_64-unknown-linux-gnu" }[process.platform];
 const sidecar = fileURLToPath(new URL(`../../src-tauri/binaries/seldon-runtime-${triple}${windows ? ".exe" : ""}`, import.meta.url));
 
 test("el main de producción reenvía la CLI con pipes, archivos, salida descartada y sin consola nueva", async (t) => {

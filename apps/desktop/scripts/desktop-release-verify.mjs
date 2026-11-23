@@ -13,7 +13,7 @@ export const ENGINE_NAMES = ["danil-engine", "seldon-runtime"];
 export const TARGETS = {
   win32: ["x86_64-pc-windows-msvc"],
   linux: ["x86_64-unknown-linux-gnu"],
-  darwin: ["aarch64-apple-darwin", "x86_64-apple-darwin"],
+  darwin: ["aarch64-apple-darwin"],
 };
 
 /** Qué plataforma es el artefacto y dónde quedan sus herramientas una vez abierto. */
