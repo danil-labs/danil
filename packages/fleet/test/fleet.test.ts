@@ -752,6 +752,27 @@ test("AI credentials keep their machine even when their email matches", () => {
   assert.deepEqual(merged.accounts[2].machines, [{ machine: "cmp_mac", id: "cmp_mac~b1", on: false }]);
 });
 
+test("local desktop accounts never append '· local', custom_label is never suffixed, and fleet.name(self) uses selfName", () => {
+  const { fleet } = setup({ cmp_vm: { state: "online" } }, [VM], { self: "local", selfName: () => "MacBook Pro" });
+  assert.equal(fleet.name("local"), "MacBook Pro");
+  const slice = (machine: string, value: unknown): Slice => ({ machine, status: "ok", has: true, value, at: 0 });
+  const merged = fleet.merge("list_accounts", [
+    slice("local", { active: "a1", accounts: [{ id: "a1", label: "Cuenta 1", identity: null }] }),
+    slice("cmp_vm", { active: null, accounts: [
+      { id: "v1", label: "Trabajo", custom_label: true, identity: null },
+      { id: "v2", label: "Cuenta 2", identity: null },
+    ] }),
+  ]) as { active: string; accounts: { id: string; label?: string }[] };
+  assert.deepEqual(
+    merged.accounts.map((a) => [a.id, a.label]),
+    [
+      ["a1", "Cuenta 1"],
+      ["cmp_vm~v1", "Trabajo"],
+      ["cmp_vm~v2", "Cuenta 2 · Danil VM"],
+    ],
+  );
+});
+
 test("the active account comes from the first machine that has one: a hosted machine without accounts, answering first, does not hide the Mac's", () => {
   const { fleet } = setup({ cmp_vm: { state: "online" }, cmp_mac: { state: "online" } }, [VM, MAC], { self: null });
   const slice = (machine: string, value: unknown): Slice => ({ machine, status: "ok", has: true, value, at: 0 });

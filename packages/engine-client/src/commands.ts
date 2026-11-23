@@ -113,6 +113,7 @@ export const APP_ACTIONS = [
   "prepare_attachments",
   // Iniciar sesión en una cuenta de IA en otra máquina (enlace y código) y cerrarla.
   "add_account",
+  "rename_account",
   "login_account",
   "submit_login_code",
   "cancel_login",

@@ -40,6 +40,7 @@
   "settings.accounts.error.install": "Could not install it.",
   "settings.accounts.error.list": "Could not read the accounts.",
   "settings.accounts.error.remove": "Could not remove the account.",
+  "settings.accounts.error.rename": "Could not rename the account.",
   "settings.accounts.error.resume": "Could not resume the tasks that were waiting for quota.",
   "settings.accounts.error.save_key": "Could not save the key.",
   "settings.accounts.error.start": "Could not start the connection with {agent}.",

@@ -37,6 +37,10 @@ export function removeAccount<res = unknown>(args?: InvokeArgs, options?: Invoke
   return invoke<res>("remove_account", args, options);
 }
 
+export function renameAccount<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
+  return invoke<res>("rename_account", args, options);
+}
+
 export function resumeAwaitingQuota<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
   return invoke<res>("resume_awaiting_quota", args, options);
 }

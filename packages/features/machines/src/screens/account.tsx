@@ -225,6 +225,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     const cloudRelay = createCloudRelayFactory(cloud, () => cloudRenew, () => void sync(), { suspended: info => router.attentionSuspended(info.id, info.context), resumed: (info, value) => router.attentionResumed(info.id, info.context, value) });
     const fleet = new Fleet({
       self,
+      selfName: homeName,
       connect: (info) => {
         if (isGuestMachine(info.id)) return createGuestLink(info.id);
         if (cloudIds.has(info.id)) return cloudRelay(info);

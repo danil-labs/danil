@@ -94,6 +94,8 @@ export type FleetEvent = { name: string; payload: unknown; seq?: number };
 export type FleetConfig = {
   /** La máquina de la ventana (sus ids van sueltos), o `null` en la web. */
   self?: string | null;
+  /** Nombre legible de la máquina de la ventana (evita mostrar el id `"local"`). */
+  selfName?: () => string;
   connect(info: MachineInfo): Link;
   /** Si este cliente habla el contrato de un motor: `null` si no se sabe. */
   compatible?(contract: string | null): boolean | null;

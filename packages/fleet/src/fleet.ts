@@ -229,6 +229,10 @@ export class Fleet {
   }
 
   name(machine: string, context?: string): string {
+    if (machine === this.self) {
+      const own = this.config.selfName?.().trim();
+      if (own) return own;
+    }
     return this.info(machine, context)?.name ?? machine;
   }
 

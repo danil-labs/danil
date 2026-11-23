@@ -223,6 +223,32 @@ export function createUsage(props: {
 
   const updating = () => activeAccounts().some(([a, id]) => inProgress()[usageKey(a, id)]);
 
+  async function rename(agent: string, id: string, label: string) {
+    try {
+      const updated = await invoke<Account>(
+        "rename_account",
+        { provider: agent, id, label },
+        machineOf(id),
+      );
+      setAccountsByAgent((previous) =>
+        previous.map((group) =>
+          group.agent !== agent
+            ? group
+            : {
+                ...group,
+                accounts: group.accounts.map((acc) =>
+                  acc.id === id
+                    ? { ...acc, label: updated.label, custom_label: updated.custom_label ?? true }
+                    : acc,
+                ),
+              },
+        ),
+      );
+    } catch {
+      // Un motor anterior sin `rename_account` deja el nombre como estaba.
+    }
+  }
+
   return {
     accountsByAgent,
     activeCards,
@@ -231,6 +257,7 @@ export function createUsage(props: {
     statuses,
     inProgress,
     updating,
+    rename,
     refresh: (agent: string, id: string) => void querySequentially([[agent, id]], true),
     refreshAll: () => void querySequentially(activeAccounts(), true),
   };
