@@ -33,11 +33,21 @@ export function detectPlatform() {
   const arch = process.arch;
   const label = `${LABELS[platform] || platform} ${ARCH_LABELS[arch] || arch}`;
   const key = tauriPlatformKey(platform, arch);
+  const target = !key
+    ? null
+    : platform === 'win32'
+      ? 'windows'
+      : platform === 'darwin'
+        ? 'darwin'
+        : platform === 'linux'
+          ? 'linux'
+          : null;
   return {
     platform,
     arch,
     label,
     key,
+    target,
     // Qué hay que hacer con lo que se baja, que no es lo mismo en las tres:
     // Windows recibe un instalador que se ejecuta, macOS el `.app` comprimido,
     // que se descomprime y se copia, y Linux un AppImage, que no se instala: se
