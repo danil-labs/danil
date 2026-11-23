@@ -1,5 +1,5 @@
 import { createResource, createSignal, Show } from "solid-js";
-import { createAccountAddAction } from "../../../../../apps/desktop/src/lib/account-add";
+import { createAccountAddAction } from "../model/account-add";
 import { type GroupAccount, type GroupSend, readGroupBalance } from "../../../../../apps/desktop/src/lib/group-account";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";

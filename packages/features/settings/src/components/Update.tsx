@@ -9,7 +9,7 @@ import { SettingsBlock, SettingsRow, SettingsSection } from "../../../../ui/src/
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { lengua, t } from "../../../../../apps/desktop/src/lib/i18n";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
-import { releaseNotes } from "../../../../../apps/desktop/src/lib/releaseNotes";
+import { releaseNotes } from "../model/releaseNotes";
 
 /**
  * Si hay una versión nueva, y ponerla.

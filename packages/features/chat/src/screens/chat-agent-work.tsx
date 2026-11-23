@@ -8,7 +8,7 @@ import { formatearDuracion, type Paso } from "../../../../../apps/desktop/src/li
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { type VisualBudget } from "../model/visualBudget";
-import { stripNextSteps } from "../../../../../apps/desktop/src/lib/nextSteps";
+import { stripNextSteps } from "../../../../ui/src/lib/chat/nextSteps";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../../ui/src/Tooltip";
 import { AltoMonotono } from "../components/MonotonicHeight";
 import RegistroPreguntas from "../components/QuestionLog";

@@ -1,5 +1,5 @@
 import { createEffect, on, type Accessor } from "solid-js";
-import { VELO_DE_FONDO } from "../../../../apps/desktop/src/lib/chat-background";
+import { VELO_DE_FONDO } from "../../../ui/src/lib/chat-background";
 import { fondoDeChat, imagenDelWorkspace, veloDeFondo } from "../../../../apps/desktop/src/lib/chat-background-store";
 import { createChatBackground } from "../../../features/chat/src";
 import type { machineOf as T_machineOf } from "../../../features/machines/src/queries/store";

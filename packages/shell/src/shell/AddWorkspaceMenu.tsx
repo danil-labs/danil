@@ -7,7 +7,7 @@ import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { type Component, createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { canRedeemPromo } from "../../../../apps/desktop/src/lib/promo-role";
+import { canRedeemPromo } from "../../../session/src/promo-role";
 import { capabilities } from "../../../host/src/platform";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../apps/desktop/src/lib/utils";

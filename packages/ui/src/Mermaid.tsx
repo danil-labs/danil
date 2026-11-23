@@ -5,7 +5,7 @@ import Minus from "lucide-solid/icons/minus";
 import Plus from "lucide-solid/icons/plus";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { temaPintado } from "../../../apps/desktop/src/lib/theme";
+import { temaPintado } from "./lib/theme";
 import { t } from "../../../apps/desktop/src/lib/i18n";
 import { Button } from "./Button";
 import { detalleDe } from "./Failure";

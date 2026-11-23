@@ -1,4 +1,4 @@
-import type { ReturnGroup } from "../../../../apps/desktop/src/lib/account-add-return.ts";
+import type { ReturnGroup } from "../../../session/src/account-add-return.ts";
 
 export function accountReturnTarget(groups: readonly ReturnGroup[] | null, before: readonly string[]) {
   for (const group of groups ?? []) {

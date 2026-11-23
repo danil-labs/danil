@@ -1,10 +1,10 @@
 import Pin from "lucide-solid/icons/pin";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { createMemo, Show } from "solid-js";
-import { arrastrar, fueArrastre, tareaEnVuelo } from "../../../../../apps/desktop/src/lib/drag";
-import { enfocarYSeleccionar } from "../../../../../apps/desktop/src/lib/focus";
+import { arrastrar, fueArrastre, tareaEnVuelo } from "../../../../ui/src/lib/drag";
+import { enfocarYSeleccionar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { SESSION_TITLE_MAX_LENGTH } from "../../../../../apps/desktop/src/lib/projectNames";
+import { SESSION_TITLE_MAX_LENGTH } from "../../../../ui/src/lib/projectNames";
 import { esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { FinishTaskButton } from "../../../../ui/src/FinishTaskButton";

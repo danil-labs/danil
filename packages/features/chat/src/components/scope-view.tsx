@@ -7,7 +7,7 @@ import X from "lucide-solid/icons/x";
 import { MarcaFuente } from "../../../../ui/src/sources";
 import { MarcaGitHost } from "../../../../ui/src/icons";
 import { Popover, PopoverTrigger } from "../../../../ui/src/Popover";
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocar } from "../../../../ui/src/lib/focus";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { Pressable } from "../../../../ui/src/Pressable";

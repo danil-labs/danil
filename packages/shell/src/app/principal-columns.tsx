@@ -1,8 +1,8 @@
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { type Project } from "../../../../apps/desktop/src/lib/model.ts";
 import { type CatalogosDeModelos } from "../../../../apps/desktop/src/lib/models.ts";
-import { type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../../apps/desktop/src/lib/panels-types.ts";
-import { type DragPoint } from "../../../../apps/desktop/src/lib/pointer-drag.ts";
+import { type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../ui/src/lib/panels-types.ts";
+import { type DragPoint } from "../../../ui/src/lib/pointer-drag.ts";
 import { sidebarViewKey } from "../../../../apps/desktop/src/lib/sidebarView";
 import { spaceName } from "../../../../apps/desktop/src/lib/spaces";
 import { type Space } from "../../../../apps/desktop/src/lib/spaces.ts";

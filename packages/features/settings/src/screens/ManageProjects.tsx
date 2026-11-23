@@ -1,12 +1,12 @@
 import Ellipsis from "lucide-solid/icons/ellipsis";
 import Plus from "lucide-solid/icons/plus";
 import { createSignal, Show } from "solid-js";
-import { enfocarYSeleccionar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocarYSeleccionar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { openExternal } from "../queries/engine-open";
 import { carpetaDeTrabajo, type Project } from "../../../../../apps/desktop/src/lib/model";
 import { ubicacionDeProyecto } from "../../../../../apps/desktop/src/lib/projectLocation";
-import { PROJECT_NAME_MAX_LENGTH } from "../../../../../apps/desktop/src/lib/projectNames";
+import { PROJECT_NAME_MAX_LENGTH } from "../../../../ui/src/lib/projectNames";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { isMac } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";

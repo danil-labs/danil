@@ -10,7 +10,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "../../../../ui/src/Popover";
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { type Project, type Source } from "../../../../../apps/desktop/src/lib/model";

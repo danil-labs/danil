@@ -4,8 +4,8 @@ import Sun from "lucide-solid/icons/sun";
 import { type Component } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { AgentProfile, AgenteDeMaquina } from "../../../../../apps/desktop/src/lib/model";
-import { FONDOS, type FondoDeChat } from "../../../../../apps/desktop/src/lib/chat-background";
-import { type Apariencia, type DarkStyle, type LightStyle } from "../../../../../apps/desktop/src/lib/theme";
+import { FONDOS, type FondoDeChat } from "../../../../ui/src/lib/chat-background";
+import { type Apariencia, type DarkStyle, type LightStyle } from "../../../../ui/src/lib/theme";
 
 /** Guardar en el workspace va en su propio trozo: la carga inicial solo pinta. */
 export const motor = () => import("../../../../../apps/desktop/src/lib/chat-background-engine");

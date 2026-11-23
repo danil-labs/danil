@@ -1,6 +1,6 @@
-import type { ObservedTurnActivity as TurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation";
+import type { ObservedTurnActivity as TurnActivity } from "../model/activityObservation";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { stripNextSteps } from "../../../../../apps/desktop/src/lib/nextSteps";
+import { stripNextSteps } from "../../../../ui/src/lib/chat/nextSteps";
 import { pasoDe, pasoDePermiso, pasoDeSistema } from "../../../../../apps/desktop/src/lib/steps";
 import { coalesceLiveActivity, isActivityOnlyMessage, placeActivities, visibleActivityMessages } from "../model/activityBlocks";
 import { cupoResuelveElFallo } from "../model/failures";

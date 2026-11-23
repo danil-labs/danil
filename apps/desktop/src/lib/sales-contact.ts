@@ -1,1 +1,1 @@
-export const BUSINESS_SALES_EMAIL = "hola@danil.ai";
+export * from "../../../../packages/features/settings/src/model/sales-contact.ts";

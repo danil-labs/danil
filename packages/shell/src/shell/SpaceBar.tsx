@@ -1,6 +1,6 @@
 import Plus from "lucide-solid/icons/plus";
 import { createSignal, For, Show } from "solid-js";
-import { enfocarYSeleccionar } from "../../../../apps/desktop/src/lib/focus";
+import { enfocarYSeleccionar } from "../../../ui/src/lib/focus";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { type Space, spaceName } from "../../../../apps/desktop/src/lib/spaces";
 import type { Project } from "../../../../apps/desktop/src/lib/model";

@@ -4,7 +4,7 @@ import { type Accessor, For, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { capabilities } from "../../../host/src/platform";
-import { type Apariencia, elegirApariencia } from "../../../../apps/desktop/src/lib/theme";
+import { type Apariencia, elegirApariencia } from "../../../ui/src/lib/theme";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import { Pressable } from "../../../ui/src/Pressable";

@@ -5,7 +5,7 @@ import type { Accessor, JSX } from "solid-js";
 import type { Agent, AgentProfile, Project, Source } from "../../../../../apps/desktop/src/lib/model";
 import type { OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
 import type { JournalEvent } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import type { Tab } from "../../../../../apps/desktop/src/lib/tabs-types";
+import type { Tab } from "../../../../ui/src/lib/tabs-types";
 import type { TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
 import type { Carry, CarriedBase, CarryCheck } from "../../../../ui/src/lib/carry.ts";
 import type { Draft, DraftConfiguration, HistoryEntry } from "../../../../ui/src/lib/draft.ts";

@@ -6,7 +6,7 @@ import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { AccountEmailsError, type AccountEmailsSource, type EmailRow, emailErrorText } from "../model/account-emails";
-import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
+import { createNow } from "../../../../ui/src/lib/sharedClock";
 
 export type Feedback = { kind: "success" | "error"; text: string } | null;
 
