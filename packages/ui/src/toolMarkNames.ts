@@ -13,7 +13,7 @@
  */
 
 export type ToolMarkId =
-  | "github" | "git" | "bitbucket" | "gitlab" | "atlassian" | "notion" | "figma" | "excalidraw" | "mcp" | "drive" | "zotero" | "drawio" | "typst" | "libreoffice" | "cua" | "danil" | "supabase" | "slack" | "linear" | "sentry" | "vercel" | "docker" | "postgresql" | "playwright" | "stripe" | "cloudflare" | "googlecloud" | "aws" | "workos";
+  | "github" | "git" | "bitbucket" | "atlassian" | "notion" | "figma" | "excalidraw" | "mcp" | "drive" | "zotero" | "drawio" | "typst" | "libreoffice" | "cua" | "danil" | "supabase" | "slack" | "linear" | "sentry" | "vercel" | "docker" | "postgresql" | "playwright" | "stripe" | "cloudflare" | "googlecloud" | "aws" | "workos";
 
 export type ToolMarkPath = { d: string; fill: string | null };
 
@@ -35,7 +35,6 @@ export const TOOL_LABELS: Record<ToolMarkId, string> = {
   github: "GitHub",
   git: "Git",
   bitbucket: "Bitbucket",
-  gitlab: "GitLab",
   atlassian: "Atlassian",
   notion: "Notion",
   figma: "Figma",
@@ -72,7 +71,6 @@ const ALIASES: Record<ToolMarkId, readonly string[]> = {
   github: ["github", "gh", "github-enterprise", "github.com"],
   // `git` es el programa, no el anfitrión: lleva la marca de Git, nunca la de GitHub.
   git: ["git"],
-  gitlab: ["gitlab", "gitlab.com", "glab"],
   bitbucket: ["bitbucket", "bitbucket.org"],
   atlassian: ["atlassian", "jira", "confluence", "jira-cloud", "atlassian-jira"],
   notion: ["notion"],

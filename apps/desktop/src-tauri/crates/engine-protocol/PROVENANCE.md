@@ -108,10 +108,8 @@ announce this same hash as its `contract`; the `contract` guard
 (`scripts/guards/contract.mjs`) compares the three.
 
 `phrase-keys.json`: the catalog keys the engine sends as `Frase` values, taken
-from the engine source at `fdf4dd9863a80363a0dd7b15ea21fd6b69e1f4bd`. The 24
-`providers.*` keys for GitLab, `providers.error.other_host`, and each host's
-`summary` and `vocabulary` come from seldon-host `34ebefa`
-(`feat/gitlab-git-host`). The eleven `danil.error.*` keys come from seldon-host
+from the engine source at `fdf4dd9863a80363a0dd7b15ea21fd6b69e1f4bd`. The `providers.*` keys for `providers.error.other_host` and each host's
+`summary` and `vocabulary` come from seldon-host `34ebefa`. The eleven `danil.error.*` keys come from seldon-host
 `4e21caf`; `danil.error.not_connected`, `image_too_large`,
 `unsupported_image`, `unauthorized` and `unsupported` from `cb4ae57` ([connector.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/connector.md)).
 `settings.appearance.background.workspace_missing` comes from `1687dbf`, where

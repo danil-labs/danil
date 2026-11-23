@@ -282,7 +282,7 @@ export function Integraciones(props: IntegracionesProps) {
       <VerMas
         abierto={verMas()}
         resto={escondidas().map((i) => ({ id: i.id, nombre: i.nombre, icono: <MarcaIntegracion id={i.id} size={12} /> }))}
-        primero={["gitlab", "bitbucket", "notion"]}
+        primero={["bitbucket", "notion"]}
         onClick={() => setVerMas((v) => !v)}
       />
     </>

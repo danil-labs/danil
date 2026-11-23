@@ -332,11 +332,11 @@ test("a connection GitHub stopped accepting asks to reconnect", async () => {
   assert.deepEqual(app.failures, []);
 });
 
-test("the providers list puts GitHub first, then GitLab, then Bitbucket", async () => {
-  const e = engine({ signedIn: false, hosts: [host("bitbucket", "Bitbucket"), host("gitlab", "GitLab"), github()] });
+test("the providers list puts GitHub first, then Bitbucket", async () => {
+  const e = engine({ signedIn: false, hosts: [host("bitbucket", "Bitbucket"), github()] });
   const app = await openSources("github-account-order", e);
   const { w } = app;
-  const titles = [...w.document.querySelectorAll("section h3, section h2")].map((h) => h.textContent.trim()).filter((s) => ["GitHub", "GitLab", "Bitbucket"].includes(s));
-  assert.deepEqual(titles, ["GitHub", "GitLab", "Bitbucket"], text(w).slice(0, 400));
+  const titles = [...w.document.querySelectorAll("section h3, section h2")].map((h) => h.textContent.trim()).filter((s) => ["GitHub", "Bitbucket"].includes(s));
+  assert.deepEqual(titles, ["GitHub", "Bitbucket"], text(w).slice(0, 400));
   assert.deepEqual(app.failures, []);
 });

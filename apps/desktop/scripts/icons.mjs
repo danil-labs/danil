@@ -76,7 +76,7 @@ const ICONOS = [
   // Empaquetado y opacos
   "zip", "exe", "hex", "disc", "lib", "certificate", "key", "lock",
   // Herramientas cuyo archivo se reconoce por el logo
-  "docker", "git", "gitlab", "nodejs", "npm", "pnpm", "yarn", "bun", "deno",
+  "docker", "git", "nodejs", "npm", "pnpm", "yarn", "bun", "deno",
   "vite", "webpack", "rollup", "esbuild", "babel", "eslint", "prettier",
   "tailwindcss", "jest", "vitest", "playwright", "cypress", "storybook",
   "tauri", "graphql", "prisma", "supabase", "firebase", "terraform",

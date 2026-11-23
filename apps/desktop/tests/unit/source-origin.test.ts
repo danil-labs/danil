@@ -18,7 +18,6 @@ test("un repositorio se nombra por su proveedor, su slug y su rama", () => {
     ["git@github.com:danil-labs/harness-app.git", "GitHub", "danil-labs/harness-app"],
     ["https://x-token@bitbucket.org/equipo/repo.git", "Bitbucket", "equipo/repo"],
     ["ssh://git@bitbucket.org/equipo/repo.git", "Bitbucket", "equipo/repo"],
-    ["https://gitlab.com/g/sub/repo.git", "GitLab", "g/sub/repo"],
     ["https://git.empresa.test/a/b.git", "git.empresa.test", "a/b"],
   ] as const) {
     const p = procedencia({ kind: "git", location, branch: "main" });

@@ -25,8 +25,7 @@ let gitRows = {
 const vocabulary = (id, prefix) => ({ change: { clave: `providers.${id}.change` }, change_short: { clave: `providers.${id}.change_short` },
   change_prefix: prefix, checks: { clave: `providers.${id}.checks` } });
 const sidebarResponses = { ...TASK_AFTER_QUEUE,
-  list_git_hosts: [{ id: "github", name: "GitHub", connected: null, summary: { clave: "providers.github.summary" }, vocabulary: vocabulary("github", "#") },
-    { id: "gitlab", name: "GitLab", connected: null, summary: { clave: "providers.gitlab.summary" }, vocabulary: vocabulary("gitlab", "!") }],
+  list_git_hosts: [{ id: "github", name: "GitHub", connected: null, summary: { clave: "providers.github.summary" }, vocabulary: vocabulary("github", "#") }],
   list_live_sessions: [task("p", null, "delivered"), task("shared", "p", null), task("own", "p", "failed"), task("local", "p", null), { ...task("native", "p", null), title: "/root/prueba_sidebar", subagent: "native-id" }],
   list_session_git: ({ remote }) => { if (!remote) { gitLocalCalls++; if (cause.getStore() === "delta") gitDeltaCalls++; } if (remote && blockRemote) return new Promise(resolve => { releaseRemote = resolve; }); return rejectGit ? Promise.reject(new Error("offline")) : structuredClone(gitRows); },
 };
@@ -214,16 +213,6 @@ for (const [checks, review, visible, overrides, signal] of [
   if (checks === "unknown") assert.match(tab("p").title, /Comprobaciones: sin dato/);
   if (overrides.state === "draft") assert.ok(tab("p").querySelector('.text-neutral-500 > svg.lucide-git-pull-request-draft'));
 }
-// GitLab nombra lo suyo: `!12`, «Pipeline» y «MR», dichos por el motor.
-gitRows.p = gitRow("feature/parent", { pull: { git_host: "gitlab", number: 12, state: "merged", head_sha: "abc", checks: "success", review: "approved" }, pull_known: true });
-sidebar.w.dispatchEvent(new sidebar.w.Event("focus"));
-await sleep(100);
-assert.match(tab("p").title, /MR integrado/);
-assert.match(tab("p").title, /!12/);
-assert.doesNotMatch(tab("p").title, /#12/);
-gitRows.p = gitRow("feature/parent", { pull: { number: 12, state: "merged", head_sha: "abc" }, pull_known: true });
-sidebar.w.dispatchEvent(new sidebar.w.Event("focus"));
-await sleep(100);
 sidebar.emit("chat", { kind: "started", session: "p", workspace: "w" });
 await sleep(100);
 const workingDot = tab("p").querySelector('.signal-dot[data-tone="working"]');
