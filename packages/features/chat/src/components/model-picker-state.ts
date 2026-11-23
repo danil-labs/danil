@@ -6,7 +6,7 @@ import { listAccounts, getAccountLimits } from "../queries";
 import type { Query } from "../../../../../apps/desktop/src/lib/limits";
 import { modelPresentation, effortOptions, effortValue, esFavorito, favoritosDeModelos, seccionDeModelo, type GrupoDeModelos, type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
 import { createPref } from "../../../../../apps/desktop/src/lib/prefs";
-import { DANIL_CREDITS } from "../model/danil-credits";
+import { DANIL_CREDITS, isDanilCreditsModel } from "../model/danil-credits";
 import { esServicio, nombreDeServicio, gruposDeModelos, nombreDeNivel, type SelectorDeModeloProps } from "./model-picker-types";
 
 export function createSelectorDeModelo(props: SelectorDeModeloProps, deps: { campo: () => HTMLInputElement | undefined }) {
@@ -32,9 +32,17 @@ export function createSelectorDeModelo(props: SelectorDeModeloProps, deps: { cam
   const bloqueado = (opcion: OpcionDeModelo) =>
     !!props.lockedAgent && opcion.agent !== props.lockedAgent;
   const disponible = (opcion: OpcionDeModelo) => opcion.usable && !bloqueado(opcion);
+  const creditsModels = () =>
+    props.models.filter((option) => isDanilCreditsModel(option.model.id));
   const creditsModel = () => {
-    const credits = props.models.filter((option) => option.model.id === DANIL_CREDITS.modelId);
-    return credits.find(disponible) ?? credits[0];
+    const credits = creditsModels();
+    const current = elegido();
+    if (current && isDanilCreditsModel(current.model.id)) return current;
+    return (
+      credits.find((option) => option.model.id === DANIL_CREDITS.modelId && disponible(option)) ??
+      credits.find(disponible) ??
+      credits[0]
+    );
   };
   const routerModel = () => {
     const router = props.models.filter((option) => option.model.id === FREE_ROUTER_MODEL);
@@ -45,6 +53,14 @@ export function createSelectorDeModelo(props: SelectorDeModeloProps, deps: { cam
     selected: !!opcion && opcion.key === elegido()?.key,
     onUse: () => { if (opcion) elegir(opcion.key); },
   });
+  const creditsTiers = () =>
+    creditsModels().map((option) => ({
+      id: option.model.id,
+      label: option.model.label,
+      ready: !props.disabled && disponible(option),
+      selected: option.key === elegido()?.key,
+      onUse: () => elegir(option.key),
+    }));
   const grupos = createMemo<GrupoDeModelos[]>(() => {
     const busquedaActiva = busqueda().trim().length > 0;
     const actual = seccion();
@@ -160,5 +176,5 @@ export function createSelectorDeModelo(props: SelectorDeModeloProps, deps: { cam
         : [...favoritos(), key],
     );
   };
-  return { abierto, busqueda, activo, setActivo, seccion, setSeccion, favoritos, cupoGo, filas, consent, estadoRouter, elegido, todosLosGrupos, bloqueado, disponible, creditsModel, routerModel, servicio, grupos, visibles, niveles, nivel, rotuloDeNivel, selectedName, nombre, abrir, buscar, mover, elegir, alternarFavorito };
+  return { abierto, busqueda, activo, setActivo, seccion, setSeccion, favoritos, cupoGo, filas, consent, estadoRouter, elegido, todosLosGrupos, bloqueado, disponible, creditsModel, creditsTiers, routerModel, servicio, grupos, visibles, niveles, nivel, rotuloDeNivel, selectedName, nombre, abrir, buscar, mover, elegir, alternarFavorito };
 }

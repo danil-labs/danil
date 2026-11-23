@@ -263,11 +263,6 @@ export function createPanelDeChatCell(deps: PanelDeChatCellDeps) {
         onAgregarAdjuntos={agregarArchivos}
         agent={agent()}
         modelOptions={composer.options()}
-        onCreditsPrepare={async () => {
-          const prepare = capabilities().danilCredits?.prepare;
-          if (!prepare) return;
-          await composer.prepareCredits(prepare);
-        }}
         /* Lo utilizable, más la superficie de la tarea abierta si dejó de
            serlo: una tarea viva no puede cambiar de agente en silencio. El
            `&&` va dentro del accesor y no aquí — ver `menuDeSuperficies`. */

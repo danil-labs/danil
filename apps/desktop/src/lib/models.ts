@@ -1,6 +1,7 @@
 import { modelPresentation, providerMark } from "../../../../packages/ui/src/lib/tasks/model-presentation.ts";
 export { modelPresentation, providerMark };
 import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "../../../../packages/ui/src/lib/tasks/agents.ts";
+import { isDanilCreditsModel } from "../../../../packages/ui/src/lib/tasks/danil-services.ts";
 import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
 import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
@@ -52,7 +53,7 @@ export function proveedorDe(
   }
   // Una máquina con un motor anterior todavía publica `opencode-zen`.
   if (canonicalAgentId(superficie.provider) === OPENCODE) {
-    if (model.id === "danil-credits/deepseek/deepseek-v4.1-flash") {
+    if (isDanilCreditsModel(model.id)) {
       return { id: "danil-credits", label: t("chat.credits.label"), logo: "danil" };
     }
     if (model.id.startsWith("opencode-go/")) {

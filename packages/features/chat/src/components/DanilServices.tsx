@@ -1,31 +1,24 @@
 import Check from "lucide-solid/icons/check";
 import type { RouterOfferState } from "../../../../ui/src/lib/tasks/index.ts";
-import { createResource, Show, type JSX } from "solid-js";
+import { For, Show, type JSX } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
-import { prosaDe } from "../../../../ui/src/Failure";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { createDanilCreditsBalance } from "../queries/danil-credits-balance";
 
 type Service = { ready: boolean; selected: boolean; onUse: () => void };
+type CreditsTier = { id: string; label: string; ready: boolean; selected: boolean; onUse: () => void };
 
-/** Los servicios de Danil eligen el modelo por su cuenta: aquí no se nombra ninguno. */
+/** Los servicios de Danil eligen el modelo subyacente por su cuenta: aquí solo se muestran el servicio y sus niveles. */
 export default function DanilServices(props: {
-  onPrepare?: () => Promise<void>;
-  credits: Service;
+  credits: Service & { tiers?: readonly CreditsTier[] };
   router: Service & { state: RouterOfferState; activating: boolean; onActivate: () => void };
 }) {
   const balance = createDanilCreditsBalance();
-  // Abrir la sección prepara Credits; su fallo se queda en la tarjeta y se reintenta aquí.
-  const [preparation, { refetch: retryPreparation }] = createResource(
-    () => props.onPrepare,
-    async (prepare) => {
-      try { await prepare(); return null; }
-      catch (cause) { return prosaDe(cause); }
-    },
-  );
-  const credits = (): Service => ({ ...props.credits, ready: props.credits.ready && !preparation.loading && !preparation() });
   const recharge = () => capabilities().danilCredits?.recharge;
+  const tiers = () => props.credits.tiers ?? [];
   return (
     <div class="grid min-w-0 divide-y divide-border">
       <section class="grid min-w-0 gap-2 p-3" aria-label={t("chat.credits.label")}>
@@ -43,15 +36,26 @@ export default function DanilServices(props: {
             )}
           </Show>
         </div>
-        <Show when={!preparation.loading && preparation()}>
-          {(failure) => (
-            <div class="flex items-center justify-between gap-2" data-credits-status="">
-              <p class="m-0 min-w-0 text-caption text-neutral-500" role="status">{failure()}</p>
-              <Button variant="ghost" size="compact" onClick={() => void retryPreparation()}>{t("common.part.retry")}</Button>
-            </div>
-          )}
+        <Show when={tiers().length > 1}>
+          <div role="group" aria-label={t("chat.credits.label")} class="grid grid-cols-3 gap-0.5 rounded-md bg-surface-muted p-0.5">
+            <For each={tiers()}>
+              {(tier) => (
+                <Pressable
+                  aria-pressed={tier.selected}
+                  disabled={!tier.ready}
+                  class={cn(
+                    "h-7 truncate rounded-sm px-2 text-xs text-neutral-500 outline-none hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50",
+                    tier.selected && "bg-surface-raised font-semibold text-neutral-950 shadow-sm",
+                  )}
+                  onClick={() => tier.onUse()}
+                >
+                  {tier.label}
+                </Pressable>
+              )}
+            </For>
+          </div>
         </Show>
-        <UseButton service={credits()} unavailable={t("chat.credits.unavailable")} />
+        <UseButton service={props.credits} unavailable={t("chat.credits.unavailable")} />
       </section>
       <section class="grid min-w-0 gap-2 p-3" aria-label={t("surfaces.label.free")} data-router-state={props.router.state}>
         <div class="flex items-center justify-between gap-2">

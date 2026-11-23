@@ -40,7 +40,7 @@ test("la marca es la de Danil cuando el turno lo sirvió Danil: Free Router o cr
   assert.equal(mark("opencode", "opencode-go/kimi"), "opencode");
   assert.equal(mark("free-router-opencode", "danil-free/reflection/beam-free"), "danil");
   assert.equal(mark("opencode", "danil-free/reflection/beam-free"), "danil");
-  assert.equal(mark("opencode", "danil-credits/deepseek/deepseek-v4.1-flash"), "danil");
+  assert.equal(mark("opencode", "danil-credits/danil/equilibrado"), "danil");
   assert.equal(taskCard(row, { live: [], approving: [] }).mark, null);
 });
 

@@ -12,7 +12,7 @@ import {
   type SlashMenu,
 } from "@terminus/protocol";
 import { replaceSlash, slashAt } from "@terminus/chat";
-import { canonicalAgentId, creditsBalanceState, DANIL_CREDITS_MODEL, danilServiceOf, FREE_ROUTER_MODEL, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, previewLabel, type CreditsBalanceState, type RouterOfferState, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
+import { canonicalAgentId, creditsBalanceState, DANIL_CREDITS_MODEL, danilServiceOf, FREE_ROUTER_MODEL, isDanilCreditsModel, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, previewLabel, type CreditsBalanceState, type RouterOfferState, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -831,8 +831,9 @@ export function Composer({
           const routerState: RouterOfferState = host?.power() === "on" ? freeRouterState(routerRows) : "unavailable";
           const shownModels = surfaceModels.filter((m) => !danilServiceOf(m.id) && matches(query, m.label, m.id, modelName(m.id, models)));
           const showServices = matches(query, t("services.label"), t("services.credits"), t("composer.free_models"), w("surfaces.label.free"));
-          // Credits se elige solo si el motor de esta máquina lo anuncia en el catálogo abierto; su saldo no llega al teléfono.
-          const creditsReady = !disabled && !!models?.models.some((m) => m.id === DANIL_CREDITS_MODEL);
+          // Credits se elige solo si el motor de esta máquina anuncia algún nivel en el catálogo abierto; su saldo no llega al teléfono.
+          const creditsOption = models?.models.find((m) => m.id === DANIL_CREDITS_MODEL) ?? models?.models.find((m) => isDanilCreditsModel(m.id));
+          const creditsReady = !disabled && !!creditsOption;
           const routerReady = !disabled && routerState === "ready" && !!routerProvider && !(locked && routerProvider !== current);
           return (
             <>
@@ -874,7 +875,7 @@ export function Composer({
               {showServices ? (
                 <DanilServices
                   balance={creditsBalanceState(null)}
-                  credits={{ ready: creditsReady, selected: model === DANIL_CREDITS_MODEL, onUse: () => pickService(DANIL_CREDITS_MODEL, current) }}
+                  credits={{ ready: creditsReady, selected: isDanilCreditsModel(model), onUse: () => pickService(creditsOption?.id ?? DANIL_CREDITS_MODEL, current) }}
                   router={{
                     state: routerState,
                     ready: routerReady,

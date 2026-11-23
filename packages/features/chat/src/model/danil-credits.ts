@@ -1,18 +1,18 @@
-import { DANIL_CREDITS_MODEL } from "../../../../ui/src/lib/tasks/danil-services.ts";
+import { DANIL_CREDITS_MODEL, DANIL_CREDITS_TIERS, isDanilCreditsModel } from "../../../../ui/src/lib/tasks/danil-services.ts";
 
-// El engine anuncia este modelo solo con una delegación vigente del pagador.
+// El engine anuncia estos niveles desde `GET /v1/credits/inference/v1/models` con la sesión activa de Danil.
 export const DANIL_CREDITS = Object.freeze({
   modelId: DANIL_CREDITS_MODEL,
-  upstreamModelId: "deepseek/deepseek-v4.1-flash",
+  tiers: DANIL_CREDITS_TIERS,
 } as const);
 
 /** El saldo ya validado para el contexto de la ventana. */
 export type DanilCreditsSource = {
   readBalance: (signal: AbortSignal) => Promise<number | null>;
-  prepare?: (headers: Record<string, string>) => Promise<unknown>;
   subscribe?: (clear: () => void) => () => void;
   /** Abre la recarga en el navegador para la cuenta autenticada; sin ella no se ofrece. */
   recharge?: () => Promise<void>;
 };
 
+export { isDanilCreditsModel };
 export { availableDanilCredits } from "../../../../platform-client/src/treasury.ts";

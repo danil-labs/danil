@@ -18,7 +18,7 @@ test("la vista previa dice lo de la tarjeta flotante del escritorio, en su orden
   assert.deepEqual(taskPreview("es", { ...row, pinned: true, archived: true }, { live: [], approving: [] }).actions, ["open", "unpin"]);
   assert.equal(taskPreview("es", { ...row, model: null, last_message: " " }, { live: [], approving: [] }).model, null);
   assert.equal(taskPreview("es", { ...row, last_message: " " }, { live: [], approving: [] }).excerpt, null);
-  const credits = taskPreview("es", { ...row, provider: "opencode", model: "danil-credits/deepseek/deepseek-v4.1-flash" }, { live: [], approving: [] });
+  const credits = taskPreview("es", { ...row, provider: "opencode", model: "danil-credits/danil/equilibrado" }, { live: [], approving: [] });
   assert.equal(credits.mark, "danil");
 });
 

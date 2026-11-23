@@ -3,7 +3,6 @@ import type { Agent, AgentModels, ModoDePermiso } from "../../../../../apps/desk
 import { type CatalogosDeModelos, effortAlCambiarDeModelo, type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models.ts";
 import type { CliCommand, Skill, SlashMenu } from "../../../../../apps/desktop/src/lib/skills.ts";
 import { esDe, paraElMenu, type Superficie, superficieDe } from "../../../../../apps/desktop/src/lib/surfaces.ts";
-import { OPENCODE } from "../../../../ui/src/lib/tasks/agents.ts";
 
 type Invoke = <T>(command: string, args?: Record<string, unknown>, options?: { headers: Record<string, string> }) => Promise<T>;
 export type ComposerConfiguration = { agent: string; surface: string; model: string; effort: string; mode?: string };
@@ -181,15 +180,6 @@ export function createComposerStore(deps: {
     try { const rows = await invoke<Agent[]>("list_providers"); if (!disposed) setAgents(rows); }
     catch { /* A transient provider probe keeps the last known installation list. */ }
   }
-  async function prepareCredits(prepare: (headers: Record<string, string>) => Promise<unknown>) {
-    if (disposed) return;
-    const revision = composerRevision, routed = options();
-    await prepare(routed.headers);
-    if (disposed || revision !== composerRevision) return;
-    await cargarSuperficies(false);
-    if (disposed || revision !== composerRevision) return;
-    await cargarModelos(OPENCODE, true);
-  }
   function installEffects() {
     if (installed || disposed) return;
     installed = true;
@@ -276,7 +266,7 @@ export function createComposerStore(deps: {
   }
   return {
     agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes, model, effort, modo, modos, skills, cliCommands, sideCommand,
-    menu: menuDeSuperficies, options, installEffects, refreshProviders, prepareCredits, startNewDraft: startWithWorkspaceMode,
+    menu: menuDeSuperficies, options, installEffects, refreshProviders, startNewDraft: startWithWorkspaceMode,
     refreshSurfaces: cargarSuperficies, refreshCommands: cargarComandos, readModels: cargarModelos,
     snapshot: (): ComposerConfiguration => ({ agent: agent(), surface: superficie(), model: model(), effort: effort() }),
     effortForTurn: () => effort() || models()?.models.find(option => option.id === model())?.default_effort || null,
