@@ -60,7 +60,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
       start: (id: string, context?: string) => target(id, context).start(id),
       wake: (id: string, context?: string) => target(id, context).wake(id),
     },
-    async rows() {
+    async rows(allowLegacy = true) {
       const version = ++epoch;
       unsupported = false;
       validated = null;
@@ -69,7 +69,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
       catch {
         if (version !== epoch) return { state: "retrying" as const };
         contexts = null; clients.clear(); current.clear();
-        return legacy.rows();
+        return allowLegacy ? legacy.rows() : { state: "denied" as const };
       }
       if (version !== epoch) return { state: "retrying" as const };
       const settled = settledContextIds(status?.sessions);
@@ -77,7 +77,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
         contexts = null;
         clients.clear();
         current.clear();
-        return status?.state === "disconnected" ? { state: "ready" as const, computers: [], renewInChannel: false } : legacy.rows();
+        return status?.state === "disconnected" || !allowLegacy ? { state: "ready" as const, computers: [], renewInChannel: false } : legacy.rows();
       }
       validated = settled;
       onContextsSettled?.(settled);
@@ -89,7 +89,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
       if (unsupported) {
         contexts = null;
         current.clear();
-        return legacy.rows();
+        return allowLegacy ? legacy.rows() : { state: "denied" as const };
       }
       const rows = mergeContextMachines(answers.flatMap(({ context, answer }) => answer.state === "ready" ? [{ context, computers: answer.computers }] : []), here?.own());
       current = new Map(rows.map((r) => [contextMachineKey(r.computer_id, r.context), r]));

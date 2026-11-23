@@ -125,12 +125,12 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     syncing = null;
     again = false;
   }
-  function readCloud(): Promise<Computer[]> {
+  function readCloud(allowLegacy = true): Promise<Computer[]> {
     if (cloudRead) return cloudRead;
     const epoch = cloudEpoch;
     cloudRead = (async () => {
       try {
-        const answer = await cloud.rows();
+        const answer = await cloud.rows(allowLegacy);
         if (epoch !== cloudEpoch) return [];
         cloudRetrying = answer.state === "retrying" || ("retrying" in answer && answer.retrying === true);
         if (!cloudRetrying) setCloudInventory("settled");
@@ -149,7 +149,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
           cloudRetryDelay = cloudRetrying ? Math.min(cloudRetryDelay * 2, CLOUD_RETRY_MS) : CLOUD_RETRY_INITIAL_MS;
           cloudRetry = setTimeout(() => {
             cloudRetry = null;
-            void readCloud().then(() => { if (epoch === cloudEpoch && !cloudRetrying) void sync(); });
+            void readCloud(allowLegacy).then(() => { if (epoch === cloudEpoch && !cloudRetrying) void sync(); });
           }, delay);
           (cloudRetry as unknown as { unref?: () => void }).unref?.();
         } else cloudRetryDelay = CLOUD_RETRY_INITIAL_MS;
@@ -392,7 +392,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     if (!self || !client || !answer || answer.kind === "unauthorized" || answer.kind === "license") {
       token = null;
       if (installed?.key !== LOCAL_KEY) uninstall();
-      return installLocal(epoch);
+      return installLocal(epoch, !self);
     }
     // `/v1/computers` es del sistema viejo: si no responde, las VMs de `/v1/machines` se leen igual.
     const legacyRows = answer.kind === "ok" ? answer.value : [];
@@ -423,10 +423,10 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
   }
 
   /** Sin cuenta: la flota de los huéspedes y los contextos de la sesión; sin ninguno, nada, como antes. */
-  async function installLocal(epoch: number) {
+  async function installLocal(epoch: number, allowLegacy: boolean) {
     const guests = await readGuestMachines();
     if (epoch !== cloudEpoch) return;
-    const cloudRows = await readCloud();
+    const cloudRows = (await readCloud(allowLegacy)).filter((row) => allowLegacy || "context" in row);
     if (epoch !== cloudEpoch) return;
     // Un contexto Free corre en este motor: sin VM ni huéspedes, el router sigue para conservar la pareja activa de la ventana.
     if (!guests.length && !cloudRows.length && !cloud.validatedContexts()?.length) return disconnect();
