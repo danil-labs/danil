@@ -399,7 +399,7 @@
   "projects.hover_card.machine": "Máquina",
   "projects.add.clone_lost": "La máquina ya no recuerda este clon (quizá se reinició). Revisa si la carpeta quedó en la lista y, si no, vuelve a clonarlo.",
   "projects.add.remote_directory": "Se clona en la carpeta de proyectos de {name}.",
-  "projects.add.remote_git_host": "Si {name} no tiene tu cuenta de git conectada en este workspace, conéctala en esa máquina (Configuración → Control de Fuentes) o pega la dirección HTTPS o SSH del repositorio.",
+  "projects.add.remote_git_host": "Si {name} no tiene tu cuenta de git conectada en este workspace, conéctala en esa máquina (Configuración → Control git) o pega la dirección HTTPS o SSH del repositorio.",
   "projects.memory.busy": "La memoria de la cuenta está ocupada en este momento. Intenta otra vez.",
   "projects.memory.changed_meanwhile": "La entrada cambió mientras la tenías abierta y no se borró. La volví a cargar.",
   "projects.memory.conflict_badge": "Copia de un conflicto de {file}",

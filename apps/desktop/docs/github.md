@@ -9,7 +9,7 @@ instalación en GitHub.
 
 ## Conectar
 
-1. Abre Configuración → Control de Fuentes → GitHub y conecta la cuenta.
+1. Abre Configuración → Control git → GitHub y conecta la cuenta.
 2. El selector oficial de GitHub permite instalar o configurar la App en una
    cuenta personal u organización, aunque existan instalaciones previas.
 3. Al volver a Danil, elige las cuentas que usará este workspace.

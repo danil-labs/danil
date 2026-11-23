@@ -55,7 +55,7 @@ for (const scenario of ["connected-workspace", "existing-installation", "no-inst
   };
   button("Configuración")?.click(); await espera(100);
   app.w.document.querySelector("#cfg-tab-source-control")?.click(); await espera(50);
-  button("Control de Fuentes")?.click(); await espera(100);
+  button("Control git")?.click(); await espera(100);
   if (scenario === "connected-workspace") {
     const rows = () => app.w.document.querySelectorAll("section li");
     assert.ok(app.w.document.body.textContent.includes("Acceso de este workspace"));
@@ -170,7 +170,7 @@ for (const scenario of ["absent", "incompatible", "unknown"]) {
   const button = text => [...app.w.document.querySelectorAll("button")].find(el => el.textContent?.trim() === text || el.getAttribute("aria-label") === text);
   button("Configuración").click(); await espera(100);
   app.w.document.querySelector("#cfg-tab-source-control").click(); await espera(50);
-  button("Control de Fuentes")?.click(); await espera(100);
+  button("Control git")?.click(); await espera(100);
   const tools = [...app.w.document.querySelectorAll("details")].find(el => el.querySelector("summary")?.textContent.startsWith("Herramientas para agentes"));
   const summary = tools.querySelector("summary");
   assert.equal(tools.open, false);
