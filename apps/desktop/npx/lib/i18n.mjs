@@ -86,6 +86,14 @@ const MESSAGES = {
     es: ({ reason }) => `\nNo se pudo leer la información de la última versión.\n  ${reason}`,
     en: ({ reason }) => `\nCould not read the latest version's information.\n  ${reason}`,
   },
+  'unsupportedPlatform': {
+    es: ({ label }) => `\n${label} no está soportado.`,
+    en: ({ label }) => `\n${label} is not supported.`,
+  },
+  'supportedPlatforms': {
+    es: '\nDanil está disponible para Windows x64, macOS Apple Silicon (arm64) y Linux x64.',
+    en: '\nDanil is available for Windows x64, macOS Apple Silicon (arm64), and Linux x64.',
+  },
   'noBuild': {
     es: ({ label }) => `\nTodavía no hay build para ${label}.`,
     en: ({ label }) => `\nThere is no build for ${label} yet.`,

@@ -22,7 +22,7 @@ window` to open another window against the running engine.
 | Command | What it does |
 |---|---|
 | `download [--from <path>]` | Downloads the engine pinned in `seldon-runtime.lock` and checks its SHA-256, or copies a local binary |
-| `sidecar` | Places the pinned engine in `src-tauri/binaries/` for `bundle.externalBin` (on macOS both architectures and their `lipo`); Rust builds need it, and `beforeDevCommand`, `beforeBuildCommand` and `pnpm verify` run it |
+| `sidecar` | Places the pinned engine in `src-tauri/binaries/` for `bundle.externalBin`; Rust builds need it, and `beforeDevCommand`, `beforeBuildCommand` and `pnpm verify` run it |
 | `engine` | Starts the engine with data under `.engine/lab/` and identity `ai.danil.seldon.dev` |
 | `select` | Asks the engine for `status` and writes a private `selection.json` |
 | `window [--window <path>]` | Opens the window against that selection |
@@ -312,8 +312,7 @@ python3 tests/release/work-tools.test.py
 
 `prepare` downloads into `build/work-tools/.payloads/`, extracts every archive
 into one tree, installs the wheels with the pinned uv (`--target`
-`--python-platform`, so the x86_64 macOS tree builds on Apple silicon without
-Rosetta), drops the packages' `tests/`, precompiles bytecode with
+`--python-platform`), drops the packages' `tests/`, precompiles bytecode with
 `--invalidation-mode unchecked-hash`, adds `EXTERNALLY-MANAGED` and the
 `python` alias, and writes `inventory.json` and `manifest.json`. Building a
 macOS tree off macOS needs `--cross` and skips Cua's signature check; it is
@@ -369,8 +368,8 @@ person's explicit confirmation of the version and its type.
 4. Run `node scripts/desktop-release-verify.mjs <artifact>` on the final
    `*_x64-setup.exe` (needs 7-Zip), `*.AppImage`, `Danil.app` or `.dmg`
    (needs `APPLE_TEAM_ID`), on that artifact's platform. It requires
-   `work-tools/<target>` with a schema 2 manifest (both architectures for
-   the universal app), then runs `work-tools-release.py verify` and
+   `work-tools/<target>` with a schema 2 manifest, then runs
+   `work-tools-release.py verify` and
    `work-tools-runtime-smoke.py --browser --clone` against the packaged
    engine. It also requires `danil-engine` and its alias `seldon-runtime`
    beside the window: on Windows both with the SHA-256 of

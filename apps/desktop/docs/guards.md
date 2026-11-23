@@ -46,7 +46,7 @@ sends).
 
 | Guard | File | Contract and limit |
 |---|---|---|
-| `engine` | `scripts/engine.mjs` | Before the Rust steps, places the engine pinned in `seldon-runtime.lock` (SHA-256 checked) as the `externalBin` sidecars of this platform, `danil-engine` and its alias `seldon-runtime` with the same bytes (on macOS both architectures and their `lipo`); `tauri-build` refuses to compile without it. |
+| `engine` | `scripts/engine.mjs` | Before the Rust steps, places the engine pinned in `seldon-runtime.lock` (SHA-256 checked) as the `externalBin` sidecars of this platform, `danil-engine` and its alias `seldon-runtime` with the same bytes; `tauri-build` refuses to compile without it. |
 | `front-modularization` | `scripts/guards/front-modularization.mjs`, `tests/unit/front-modularization.test.mjs` | Ratchets private feature imports and cycles by identity, Solid-only ESLint findings per file/rule, source file lengths (new files <400 lines), App createEffect calls and harness CustomEvent counts per file/name. Baseline can only decrease with `node scripts/guards/front-modularization.mjs --update`; no automatic debt absorption. |
 | `scripts/guards/no-legacy-billing.mjs` | Los clientes no llaman al antiguo BFF de cobro. |
 | `web-network-budget` | `tests/integration/web-network-budget.test.mjs` | Mounts the built browser entry with simulated edge/relay and a fixed clock. Ratchets startup and 60 idle seconds by HTTP route, RPC command, new WebSocket count, and request/response plus sent/received payload bytes. Excludes headers, TLS and assets; the shell marker is distinct from socket opening and first engine result. Does not certify authenticated beta or native Desk. |

@@ -1,7 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
   // Binarios del sistema que llaman los scripts de publicación y de prueba: no son paquetes npm.
-  "ignoreBinaries": ["jq", "hdiutil", "icacls", "lipo", "getent", "rustc", "ruby"],
+  "ignoreBinaries": ["jq", "hdiutil", "icacls", "getent", "rustc", "ruby"],
   "ignoreIssues": {
     // Estas pruebas y scripts importan las rutas de apps/desktop/src de antes del move
     // (src/features/*, src/lib/*, src/web/*). Arreglar esos imports es otra tarea; mientras

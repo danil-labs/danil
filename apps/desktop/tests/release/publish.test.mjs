@@ -34,7 +34,7 @@ try {
   mkdirSync(join(merged, 'release-assets'), { recursive: true });
   const matrices = workflow.jobs.build.strategy.matrix.include;
   assert.deepEqual(matrices.map(m => m.name), ['windows', 'macos', 'linux']);
-  assert.deepEqual(workflow.jobs['test-macos'].strategy.matrix.so, ['macos-latest', 'macos-15-intel']);
+  assert.deepEqual(workflow.jobs['test-macos'].strategy.matrix.so, ['macos-latest']);
   for (const job of ['test-macos', 'test-linux']) assert(workflow.jobs.publish.needs.includes(job), `publish no espera a ${job}`);
   // Ruby (YAML 1.1) lee la clave `on` como el booleano `true`.
   const triggers = workflow.on ?? workflow.true;
@@ -44,7 +44,7 @@ try {
   assert.equal(triggers.workflow_dispatch.inputs.rebuild.type, 'boolean');
   for (const row of matrices) {
     const cwd = join(scratch, row.name);
-    const bundle = join(cwd, row.name === 'macos' ? 'src-tauri/target/universal-apple-darwin/release/bundle' : 'src-tauri/target/release/bundle');
+    const bundle = join(cwd, row.name === 'macos' ? 'src-tauri/target/aarch64-apple-darwin/release/bundle' : 'src-tauri/target/release/bundle');
     const resources = join(cwd, 'src-tauri/resources');
     mkdirSync(bundle, { recursive: true });
     mkdirSync(resources, { recursive: true });
@@ -52,17 +52,17 @@ try {
     const archive = { windows: 'Danil_9.9.9_x64-setup.exe', macos: 'Danil.app.tar.gz', linux: 'Danil_9.9.9_amd64.AppImage' }[row.name];
     writeFileSync(join(bundle, archive), `Fixture for ${row.name}`);
     execFileSync(pnpm, [...cli, 'signer', 'sign', join(bundle, archive)], { env: { ...process.env, ...signing }, stdio: 'pipe' });
-    if (row.name === 'macos') writeFileSync(join(bundle, 'Danil_9.9.9_universal.dmg'), row.name);
+    if (row.name === 'macos') writeFileSync(join(bundle, 'Danil_9.9.9_aarch64.dmg'), row.name);
     const code = step('build', 'collect-artifacts').replaceAll('${{ matrix.name }}', row.name);
     const env = { ...signing, PATH: `${bin}:${process.env.PATH}`, V: '9.9.9', MAC_ARCH: row.arch || '', GITHUB_STEP_SUMMARY: join(cwd, 'summary') };
     run(code, cwd, env);
     const files = readdirSync(join(cwd, 'release-assets'));
     if (row.name === 'macos') {
       // Los nombres estables `Terminus-*` siguen: terminus.danil.ai y los npx publicados los enlazan.
-      assert.deepEqual(files.sort(), ['Danil.app.tar.gz', 'Danil.app.tar.gz.sig', 'Danil-macOS.dmg', 'Danil-macOS-Intel.dmg', 'Terminus-macOS.dmg', 'Terminus-macOS-Intel.dmg', 'Danil_9.9.9_universal.dmg'].sort());
-      for (const name of ['Danil-macOS-Intel.dmg', 'Terminus-macOS.dmg', 'Terminus-macOS-Intel.dmg']) assert.deepEqual(readFileSync(join(cwd, 'release-assets/Danil-macOS.dmg')), readFileSync(join(cwd, 'release-assets', name)));
-      await assert.rejects(verifyFile({ filePath: join(bundle, archive), sigFileB64: readFileSync(join(bundle, `${archive}.sig`), 'utf8'), publicKeyB64, expectedFileName: 'Danil-Intel.app.tar.gz' }), /la firma es para|the signature is for/);
-      rmSync(join(bundle, 'Danil_9.9.9_universal.dmg'));
+      assert.deepEqual(files.sort(), ['Danil.app.tar.gz', 'Danil.app.tar.gz.sig', 'Danil-macOS.dmg', 'Terminus-macOS.dmg', 'Danil_9.9.9_aarch64.dmg'].sort());
+      assert.deepEqual(readFileSync(join(cwd, 'release-assets/Danil-macOS.dmg')), readFileSync(join(cwd, 'release-assets/Terminus-macOS.dmg')));
+      await assert.rejects(verifyFile({ filePath: join(bundle, archive), sigFileB64: readFileSync(join(bundle, `${archive}.sig`), 'utf8'), publicKeyB64, expectedFileName: 'Danil-Other.app.tar.gz' }), /la firma es para|the signature is for/);
+      rmSync(join(bundle, 'Danil_9.9.9_aarch64.dmg'));
       run(code, cwd, env, 1);
     }
     if (row.name === 'linux') {
@@ -91,8 +91,7 @@ try {
   assert.deepEqual(manifest.notes_by_locale, { es: 'Solo español', en: '' });
   console.log('PASS notes: notes + notes_by_locale, with and without an English note');
 
-  assert.deepEqual(Object.keys(manifest.platforms).sort(), ['windows-x86_64', 'darwin-aarch64', 'darwin-x86_64', 'linux-x86_64'].sort());
-  assert.deepEqual(manifest.platforms['darwin-aarch64'], manifest.platforms['darwin-x86_64']);
+  assert.deepEqual(Object.keys(manifest.platforms).sort(), ['windows-x86_64', 'darwin-aarch64', 'linux-x86_64'].sort());
   for (const [platform, entry] of Object.entries(manifest.platforms)) {
     const name = basename(new URL(entry.url).pathname);
     await verifyFile({ filePath: join(merged, 'release-assets', name), sigFileB64: entry.signature, publicKeyB64, expectedFileName: name });
@@ -106,13 +105,14 @@ try {
     const { detectPlatform } = await import(`data:text/javascript,${encodeURIComponent(platformSource.replace('const platform = process.platform;', `const platform = '${platform}';`).replace('const arch = process.arch;', `const arch = '${arch}';`))}`);
     return detectPlatform();
   };
-  for (const [arch, expected] of [['x64', 'darwin-x86_64'], ['arm64', 'darwin-aarch64']]) {
-    assert.equal((await detect('darwin', arch)).key, expected);
-  }
+  assert.equal((await detect('darwin', 'arm64')).key, 'darwin-aarch64');
+  assert.equal((await detect('darwin', 'arm64')).installerKind, 'macos');
+  assert.equal((await detect('darwin', 'x64')).key, null);
+  assert.equal((await detect('darwin', 'x64')).installerKind, 'unknown');
   const linux = await detect('linux', 'x64');
   assert.equal(linux.key, 'linux-x86_64');
   assert.equal(linux.installerKind, 'linux-appimage');
-  console.log('PASS npx platform selection: Mac Intel, Apple Silicon and Linux x86_64');
+  console.log('PASS npx platform selection: Apple Silicon, unsupported darwin/x64, and Linux x86_64');
 
   // El idioma de los mensajes de `npx`: el entorno manda y el inglés es el
   // valor por defecto.
@@ -136,7 +136,7 @@ try {
   assert(!/(?<![\w-])dist\//.test(publishYml), 'publish.yml usa la carpeta dist/, que es la de Vite');
   console.log('PASS installers are collected outside Vite\'s dist/');
 
-  console.log('PASS negative controls: stale filename signature rejected; missing universal DMG and missing AppImage signature abort collection');
+  console.log('PASS negative controls: stale filename signature rejected; missing aarch64 DMG and missing AppImage signature abort collection');
 } finally {
   rmSync(scratch, { recursive: true, force: true });
 }

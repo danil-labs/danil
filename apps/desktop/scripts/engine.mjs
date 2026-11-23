@@ -150,23 +150,13 @@ async function download() {
 /**
  * The engine the installer packages: Tauri looks for `src-tauri/binaries/<name>-<triple>` for every
  * name in `bundle.externalBin`. The pinned binary is downloaded once and placed as `danil-engine`
- * and as the alias `seldon-runtime`, byte for byte. macOS also
- * gets `universal-apple-darwin`, a `lipo` of both pinned binaries, copied to both names.
+ * and as the alias `seldon-runtime`, byte for byte.
  */
 const SIDECAR_NAMES = ["danil-engine", "seldon-runtime"];
 
 async function sidecar() {
-  const triples = process.platform === "darwin" ? ["aarch64-apple-darwin", "x86_64-apple-darwin"] : [PLATFORM];
-  const placed = [];
-  for (const triple of triples) placed.push(await placeSidecar(triple));
-  if (process.platform === "darwin") {
-    const [primary, ...aliases] = SIDECAR_NAMES.map((name) => sidecarPath("universal-apple-darwin", name));
-    const result = spawnSync("lipo", ["-create", "-output", primary, ...placed], { stdio: "inherit" });
-    if (result.status !== 0) fail(`lipo could not build ${primary}.`);
-    chmodSync(primary, 0o755);
-    for (const alias of aliases) copyExecutable(primary, alias);
-    console.log(`Sidecar ready: ${primary} and its alias (lipo of ${triples.join(", ")}).`);
-  }
+  const triple = process.platform === "darwin" ? "aarch64-apple-darwin" : PLATFORM;
+  await placeSidecar(triple);
 }
 
 function copyExecutable(from, to) {

@@ -211,8 +211,8 @@ def main():
             execute(["/usr/bin/security", "list-keychains", "-d", "user", "-s", *previous, keychain],
                     "make imported signing identity available")
             signer = Signer(signing_identity(keychain, identity, team), team, keychain, entitlements)
-            for target in ("aarch64-apple-darwin", "x86_64-apple-darwin"):
-                print(json.dumps(sign_tree(args.directory / target, target, signer)))
+            target = "aarch64-apple-darwin"
+            print(json.dumps(sign_tree(args.directory / target, target, signer)))
         finally:
             if created:
                 try:

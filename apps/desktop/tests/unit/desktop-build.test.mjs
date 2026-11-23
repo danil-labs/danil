@@ -79,7 +79,7 @@ test("macOS and the AppImage read their own overlay shape", () => {
     const linux = l.tree("x86_64-unknown-linux-gnu");
     const macOverlay = l.config("mac.json", { bundle: { macOS: { files: { "Resources/work-tools/aarch64-apple-darwin": mac } } } });
     const linuxOverlay = l.config("linux.json", { bundle: { linux: { appimage: { files: { "/usr/share/Danil/work-tools/x86_64-unknown-linux-gnu": linux } } } } });
-    const darwin = ["--target", "universal-apple-darwin"];
+    const darwin = ["--target", "aarch64-apple-darwin"];
 
     assert.equal(missingWorkTools([...darwin, "--config", macOverlay], { platform: "linux", env: {} }), null);
     assert.match(missingWorkTools([...darwin, "--config", linuxOverlay], { platform: "linux", env: {} }), /work-tools/);
@@ -148,7 +148,7 @@ test("an AppImage build gets linuxdeploy's environment, or does not start withou
 test("a macOS bundle signs danil-engine with the identifier seldon-runtime", { skip: process.platform === "win32" && "the shim is POSIX sh" }, () => {
   const l = lab();
   try {
-    const { env } = bundleEnvironment(["--target", "universal-apple-darwin"], { platform: "darwin", cwd: root, env: { PATH: "/usr/bin" } });
+    const { env } = bundleEnvironment(["--target", "aarch64-apple-darwin"], { platform: "darwin", cwd: root, env: { PATH: "/usr/bin" } });
     const shim = join(env.PATH.split(delimiter)[0], "codesign");
     assert.equal(env.PATH.split(delimiter)[1], "/usr/bin");
     const real = join(l.dir, "real-codesign");

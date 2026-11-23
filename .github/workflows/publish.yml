@@ -1,4 +1,4 @@
-# Builds Danil (the desktop app) for macOS (universal), Windows and Linux from this repository,
+# Builds Danil (the desktop app) for macOS (Apple Silicon), Windows and Linux from this repository,
 # signs it and publishes it as a GitHub release.
 #
 # **Who can run it.** Only a tag push (`v*`) or a manual `workflow_dispatch`,
@@ -35,13 +35,12 @@
 #
 #         curl -fsSL https://github.com/danil-labs/danil/releases/latest/download/latest.json | jq .version
 #
-#   • **danil.ai/download/** sirve `Danil-Windows-Setup.exe`, `Danil-macOS.dmg`,
-#     `Danil-macOS-Intel.dmg` y `Danil-Linux-x86_64.AppImage` redirigiendo a
+#   • **danil.ai/download/** sirve `Danil-Windows-Setup.exe`, `Danil-macOS.dmg`
+#     y `Danil-Linux-x86_64.AppImage` redirigiendo a
 #     `releases/latest/download/<mismo nombre>` (ver
 #     `apps/desktop/docs/download-urls.md`). Es decir, a `releases/latest/download/Danil-Windows-Setup.exe`,
-#     `.../Danil-macOS.dmg`, `.../Danil-macOS-Intel.dmg` y
-#     `.../Danil-Linux-x86_64.AppImage`. Son **nombres estables sin versión
-#     dentro**: la página no se toca al publicar, y por eso este workflow sube
+#     `.../Danil-macOS.dmg` y `.../Danil-Linux-x86_64.AppImage`. Son **nombres
+#     estables sin versión dentro**: la página no se toca al publicar, y por eso este workflow sube
 #     una copia con ese nombre además del archivo versionado. Cambiarlos rompe
 #     el botón de descarga sin que nada avise. Desde la 0.3.0 la app se llama
 #     Danil; las copias `Terminus-*` se siguen subiendo durante la transición
@@ -365,7 +364,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
         with:
-          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
         with:
@@ -383,8 +382,7 @@ jobs:
 
       # El motor fijado en `seldon-runtime.lock`, verificado por su SHA-256 y
       # copiado a `src-tauri/binaries/` para `bundle.externalBin`, que lo declara
-      # para las cuatro plataformas. En macOS también deja el universal (`lipo`
-      # de los dos) que pide `--target universal-apple-darwin`.
+      # para las tres plataformas.
       - name: Colocar el motor como sidecar
         shell: bash
         run: |
@@ -392,7 +390,7 @@ jobs:
           pnpm engine:sidecar
           case "${{ matrix.name }}" in
             windows) triples=(x86_64-pc-windows-msvc.exe) ;;
-            macos) triples=(aarch64-apple-darwin x86_64-apple-darwin universal-apple-darwin) ;;
+            macos) triples=(aarch64-apple-darwin) ;;
             linux) triples=(x86_64-unknown-linux-gnu) ;;
           esac
           expected=()
@@ -764,7 +762,7 @@ jobs:
           APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
         run: |
           python3 scripts/work-tools-macos.py --directory "$RUNNER_TEMP/work-tools-release/work-tools"
-          pnpm desktop:build --target universal-apple-darwin --config "$WORK_TOOLS_CONFIG"
+          pnpm desktop:build --target aarch64-apple-darwin --config "$WORK_TOOLS_CONFIG"
 
       # `tauri.linux.conf.json` vive en el repo del código y ajusta el bundle a
       # AppImage. Firma con la llave de minisign, como en las otras dos.
@@ -783,7 +781,7 @@ jobs:
           set -euo pipefail
           case "$RUNNER_OS" in
             macOS)
-              app=src-tauri/target/universal-apple-darwin/release/bundle/macos/Danil.app
+              app=src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Danil.app
               resources="$app/Contents/Resources/work-tools"
               engine="$app/Contents/MacOS/danil-engine"
               ;;
@@ -805,24 +803,23 @@ jobs:
           [ "$RUNNER_OS" != macOS ] || app_args=(--app "$app")
           python3 scripts/work-tools-runtime-smoke.py --engine "$engine" --resources "$(dirname "$resources")" --browser --clone "${app_args[@]}"
 
-      - name: Comprobar el bundle universal
+      - name: Comprobar el bundle arm64
         if: runner.os == 'macOS'
         run: |
           set -euo pipefail
-          APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/Danil.app
-          lipo "$APP/Contents/MacOS/terminus" -verify_arch arm64 x86_64
-          # Las herramientas van en un árbol por arquitectura: cada uno con la suya.
+          APP=src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Danil.app
+          file -b "$APP/Contents/MacOS/terminus" | grep -q 'Mach-O 64-bit.*arm64'
           TOOLS="$APP/Contents/Resources/work-tools"
           while IFS= read -r f; do
-            file -b "$f" | grep -q 'Mach-O' || continue
-            lipo "$f" -verify_arch arm64 x86_64
+            info=$(file -b "$f")
+            echo "$info" | grep -q 'Mach-O' || continue
+            echo "$info" | grep -q 'arm64' || { echo "::error::$f no incluye arquitectura arm64: $info"; exit 1; }
           done < <(find "$APP" -type f -not -path "$TOOLS/*")
-          for pair in aarch64-apple-darwin:arm64 x86_64-apple-darwin:x86_64; do
-            while IFS= read -r f; do
-              file -b "$f" | grep -q 'Mach-O' || continue
-              lipo "$f" -verify_arch "${pair#*:}"
-            done < <(find "$TOOLS/${pair%%:*}" -type f)
-          done
+          while IFS= read -r f; do
+            info=$(file -b "$f")
+            echo "$info" | grep -q 'Mach-O' || continue
+            echo "$info" | grep -q 'arm64' || { echo "::error::$f no incluye arquitectura arm64: $info"; exit 1; }
+          done < <(find "$TOOLS/aarch64-apple-darwin" -type f)
 
       # Con `CI=true` Tauri arma el `.dmg` sin acomodar la ventana (`--skip-jenkins`)
       # y le pone al disco el ícono de la app: la gente abría la app desde el
@@ -836,7 +833,7 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           set -euo pipefail
-          B=src-tauri/target/universal-apple-darwin/release/bundle
+          B=src-tauri/target/aarch64-apple-darwin/release/bundle
           APP="$B/macos/Danil.app"
           DMG=$(find "$B" -type f -name '*.dmg' | head -1)
           [ -n "$DMG" ] || { echo "::error::No se construyó el .dmg."; exit 1; }
@@ -884,7 +881,7 @@ jobs:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
         run: |
           set -euo pipefail
-          DMG=$(find src-tauri/target/universal-apple-darwin/release/bundle -type f -name '*.dmg' | head -1)
+          DMG=$(find src-tauri/target/aarch64-apple-darwin/release/bundle -type f -name '*.dmg' | head -1)
           [ -n "$DMG" ] || { echo "::error::No se construyó el .dmg."; exit 1; }
           xcrun notarytool submit "$DMG"             --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER"             --wait
           xcrun stapler staple "$DMG"
@@ -893,7 +890,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           set -euo pipefail
-          B=src-tauri/target/universal-apple-darwin/release/bundle
+          B=src-tauri/target/aarch64-apple-darwin/release/bundle
           APP=$(find "$B" -name 'Danil.app' -type d | head -1)
           DMG=$(find "$B" -type f -name '*.dmg' | head -1)
           [ -n "$APP" ] || { echo "::error::No se construyó Danil.app."; exit 1; }
@@ -931,7 +928,7 @@ jobs:
           mkdir -p release-assets
           B=src-tauri/target/release/bundle
           if [ "${{ matrix.name }}" = "macos" ]; then
-            B=src-tauri/target/universal-apple-darwin/release/bundle
+            B=src-tauri/target/aarch64-apple-darwin/release/bundle
           fi
 
           require_file() {
@@ -958,9 +955,9 @@ jobs:
           elif [ "${{ matrix.name }}" = "macos" ]; then
             require_file '*.app.tar.gz'     "Danil.app.tar.gz"
             require_file '*.app.tar.gz.sig' "Danil.app.tar.gz.sig"
-            require_file '*_universal.dmg'  "Danil_${V}_universal.dmg"
-            for name in Danil-macOS Danil-macOS-Intel Terminus-macOS Terminus-macOS-Intel; do
-              cp "release-assets/Danil_${V}_universal.dmg" "release-assets/$name.dmg"
+            require_file '*_aarch64.dmg'    "Danil_${V}_aarch64.dmg"
+            for name in Danil-macOS Terminus-macOS; do
+              cp "release-assets/Danil_${V}_aarch64.dmg" "release-assets/$name.dmg"
             done
           else
             # El AppImage es lo que el updater baja y lo que la página enlaza:
@@ -1065,7 +1062,7 @@ jobs:
           if-no-files-found: error
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Una sola release con Windows, macOS universal y Linux dentro, y el
+  # Una sola release con Windows, macOS (Apple Silicon) y Linux dentro, y el
   # `latest.json` que la app consulta. Va en un job aparte porque **publicar
   # media release es peor que no publicarla**: si macOS falla, aquí no se llega
   # y Windows tampoco sale.
@@ -1074,7 +1071,7 @@ jobs:
     needs: [check, build]
     strategy:
       matrix:
-        so: [macos-latest, macos-15-intel]
+        so: [macos-latest]
     runs-on: ${{ matrix.so }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -1088,16 +1085,16 @@ jobs:
         with:
           name: dist-macos
           path: release-assets
-      - name: Ejecutar el mismo universal en ambas arquitecturas
+      - name: Ejecutar el bundle en macOS Apple Silicon
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           tar xzf release-assets/Danil.app.tar.gz
-          lipo Danil.app/Contents/MacOS/terminus -verify_arch arm64 x86_64
+          file -b Danil.app/Contents/MacOS/terminus | grep -q 'Mach-O 64-bit.*arm64'
           codesign --verify --deep --strict Danil.app
           for engine in danil-engine seldon-runtime; do
-            lipo "Danil.app/Contents/MacOS/$engine" -verify_arch arm64 x86_64
+            file -b "Danil.app/Contents/MacOS/$engine" | grep -q 'Mach-O 64-bit.*arm64'
             codesign -dv "Danil.app/Contents/MacOS/$engine" 2>&1 | grep -qx 'Identifier=seldon-runtime' \
               || { echo "::error title=Motor con otro identificador::$engine no está firmado como seldon-runtime."; exit 1; }
           done
@@ -1235,7 +1232,6 @@ jobs:
               platforms: {
                 "windows-x86_64": { signature: $win_sig, url: $win_url },
                 "darwin-aarch64": { signature: $mac_sig, url: $mac_url },
-                "darwin-x86_64": { signature: $mac_sig, url: $mac_url },
                 "linux-x86_64": { signature: $linux_sig, url: $linux_url }
               }
             }' > release-assets/latest.json
@@ -1273,12 +1269,12 @@ jobs:
           # shellcheck disable=SC2016  # Los backticks son Markdown literal.
           BODY=$(
             printf '%s\n\n' "$NOTE_EN"
-            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · macOS Intel: `Danil-macOS-Intel.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
-            printf 'The two macOS files contain the same universal DMG. If you already have it installed there is nothing to download: the app notifies you on its own.\n\n'
+            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
+            printf 'If you already have it installed there is nothing to download: the app notifies you on its own.\n\n'
             printf 'Built from `%s` in run `%s`.\n\n---\n\n' "$SHA" "$GITHUB_RUN_ID"
             printf '%s\n\n' "$NOTE_ES"
-            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · macOS Intel: `Danil-macOS-Intel.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
-            printf 'Los dos archivos de macOS traen el mismo DMG universal. Quien ya la tenga instalada no necesita bajar nada: la app avisa sola.\n\n'
+            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
+            printf 'Quien ya la tenga instalada no necesita bajar nada: la app avisa sola.\n\n'
             printf 'Construida desde `%s` en `%s`.\n' "$SHA" "$GITHUB_RUN_ID"
           )
 
@@ -1336,19 +1332,19 @@ jobs:
             || { echo "::error::releases/latest sirve otra versión"; exit 1; }
           echo "$J" | jq -e '.notes_by_locale | has("es") and has("en")' >/dev/null \
             || { echo "::error::latest.json se publicó sin notes_by_locale"; exit 1; }
-          for p in windows-x86_64 darwin-aarch64 darwin-x86_64 linux-x86_64; do
+          for p in windows-x86_64 darwin-aarch64 linux-x86_64; do
             echo "$J" | jq -e --arg p "$p" '.platforms[$p].signature | length > 0' >/dev/null \
               || { echo "::error::$p se publicó sin firma"; exit 1; }
           done
 
           # Todos los enlaces de descarga estables deben existir antes de dar
           # esto por bueno.
-          for a in {Danil,Terminus}-Windows-Setup.exe {Danil,Terminus}-macOS.dmg {Danil,Terminus}-macOS-Intel.dmg {Danil,Terminus}-Linux-x86_64.AppImage; do
+          for a in {Danil,Terminus}-Windows-Setup.exe {Danil,Terminus}-macOS.dmg {Danil,Terminus}-Linux-x86_64.AppImage; do
             curl -fsSIL -o /dev/null "$BASE/$a" \
               || { echo "::error::$a no se puede descargar — el botón de la página está roto"; exit 1; }
           done
 
-          echo "v$V publicada, firmada para Windows, ambas arquitecturas de macOS y Linux x86_64, y descargable."
+          echo "v$V publicada, firmada para Windows, macOS (Apple Silicon) y Linux x86_64, y descargable."
 
       # Lo contrario: la prerelease tiene su `latest.json` y `releases/latest`
       # sigue sirviendo otra versión a la app y a la página.

@@ -19,12 +19,11 @@ repository and is downloaded pinned by version and SHA-256.
 Download the latest installer from [danil.ai/download](https://danil.ai/download/):
 
 - **[Danil-Windows-Setup.exe](https://danil.ai/download/Danil-Windows-Setup.exe)** — Windows 10 or 11, 64-bit
-- **[Danil-macOS.dmg](https://danil.ai/download/Danil-macOS.dmg)** — macOS, Apple Silicon and Intel
+- **[Danil-macOS.dmg](https://danil.ai/download/Danil-macOS.dmg)** — macOS (Apple Silicon)
 - **[Danil-Linux-x86_64.AppImage](https://danil.ai/download/Danil-Linux-x86_64.AppImage)** — Linux x86_64 (Ubuntu 22.04 or later)
 
-The macOS DMG is universal. `Danil-macOS-Intel.dmg` is an alias with the
-same file. Until 0.2.x the app was called Terminus; a copy installed with that
-name updates in place and keeps its folder.
+Until 0.2.x the app was called Terminus; a copy installed with that name updates
+in place and keeps its folder.
 
 On Linux there is nothing to install: the AppImage is a portable executable.
 

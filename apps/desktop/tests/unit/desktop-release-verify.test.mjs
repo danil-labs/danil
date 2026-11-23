@@ -31,7 +31,7 @@ test("each artifact opens on its own platform and names where its tools live", (
   assert.deepEqual(artifactPlan("/x/Danil.app", "darwin").engines, ["Contents/MacOS/danil-engine", "Contents/MacOS/seldon-runtime"]);
   assert.equal(artifactPlan("/x/Danil_0.3.3_amd64.AppImage", "linux").resources, "squashfs-root/usr/share/Danil/work-tools");
   assert.deepEqual(artifactPlan("/x/Danil.app/", "darwin").targets, TARGETS.darwin);
-  assert.equal(artifactPlan("/x/Danil_0.3.3_universal.dmg", "darwin").platform, "darwin");
+  assert.equal(artifactPlan("/x/Danil_0.3.3_aarch64.dmg", "darwin").platform, "darwin");
   assert.throws(() => artifactPlan("/x/Danil_0.3.3_x64-setup.exe", "linux"), /win32/);
   assert.throws(() => artifactPlan("/x/Danil.zip", "linux"), /no sé abrir/);
 });
@@ -51,14 +51,14 @@ test("a package without its tree, or with another generation's manifest, does no
   }
 });
 
-test("the universal macOS app needs both architectures", () => {
-  const one = tree({ "aarch64-apple-darwin": good("aarch64-apple-darwin") });
-  const both = tree({ "aarch64-apple-darwin": good("aarch64-apple-darwin"), "x86_64-apple-darwin": good("x86_64-apple-darwin") });
+test("the macOS app needs the Apple Silicon work-tools tree", () => {
+  const empty = tree({});
+  const arm = tree({ "aarch64-apple-darwin": good("aarch64-apple-darwin") });
   try {
-    assert.match(checkManifests(one, TARGETS.darwin).join(), /x86_64-apple-darwin/);
-    assert.deepEqual(checkManifests(both, TARGETS.darwin), []);
+    assert.match(checkManifests(empty, TARGETS.darwin).join(), /aarch64-apple-darwin/);
+    assert.deepEqual(checkManifests(arm, TARGETS.darwin), []);
   } finally {
-    for (const dir of [one, both]) rmSync(dir, { recursive: true, force: true });
+    for (const dir of [empty, arm]) rmSync(dir, { recursive: true, force: true });
   }
 });
 
