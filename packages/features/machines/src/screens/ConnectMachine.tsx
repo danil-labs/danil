@@ -17,7 +17,6 @@ import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { Spinner } from "../../../../ui/src/Spinner";
-import { SettingsBlock, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 export type ConnectMachineProps = {
   /** `GET /v1/computers` con la sesión de la cuenta. */
@@ -175,33 +174,4 @@ export function connectSource(account?: string | null): ConnectMachineProps | nu
     // La flota del escritorio vuelve a leer la cuenta (`account.tsx`) y suma la nueva.
     onReady: () => window.dispatchEvent(new CustomEvent("harness:account-computers")),
   };
-}
-
-/** Configuración → Cuenta de Danil: el botón y, abierto, el comando y la espera. */
-export function ConnectMachineSection(props: { account?: string | null } = {}) {
-  const source = connectSource(props.account);
-  const [open, setOpen] = createSignal(false);
-  return (
-    <Show when={source}>
-      {(s) => (
-        <SettingsSection title={t("danil.connect_machine.title")} description={t("danil.connect_machine.description")}>
-          <SettingsBlock>
-            <Show
-              when={open()}
-              fallback={
-                <Button size="sm" variant="secondary" class="justify-self-start" onClick={() => setOpen(true)} data-connect-machine-open="">
-                  {t("danil.connect_machine.button")}
-                </Button>
-              }
-            >
-              <div class="grid gap-3">
-                <p class="m-0 text-xs text-neutral-500">{t("danil.connect_machine.workspace_hint")}</p>
-                <ConnectMachine {...s()} onReady={(c) => { s().onReady(c); setOpen(false); }} />
-              </div>
-            </Show>
-          </SettingsBlock>
-        </SettingsSection>
-      )}
-    </Show>
-  );
 }

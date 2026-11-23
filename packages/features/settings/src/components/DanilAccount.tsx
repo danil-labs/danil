@@ -21,25 +21,14 @@ import WorkspaceAccount from "./WorkspaceAccount";
 import type { SesionesDeAjustes } from "../model/sessions-port";
 
 /**
- * `profile`: la persona y su sesión (Cuenta › Perfil); `machines`: sus máquinas
- * (Máquinas), o la sesión mientras no hay máquinas que listar; `emails`: sus correos (solo la web).
+ * `profile`: la persona y su sesión (Cuenta › Perfil); `emails`: sus correos (solo la web).
  */
-export type DanilAccountPart = "profile" | "emails" | "machines";
-
-/** El nombre nuevo de esta computadora: Perfil lo enseña aunque se haya cambiado en Máquinas. */
-const [selfRename, setSelfRename] = createSignal<{ id: string; name: string } | null>(null);
-const renamedFor = (id: string | null | undefined) => {
-  const r = selfRename();
-  return r && id && r.id === id ? r.name : null;
-};
-const renameFor = (id: string | null | undefined) => (name: string) => {
-  if (id) setSelfRename({ id, name });
-};
+export type DanilAccountPart = "profile" | "emails";
 
 /** Configuración → Cuenta de Danil. Chunk aparte: solo lo carga quien abre esta sección. */
 export default function DanilAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes; sesiones: SesionesDeAjustes }) {
   const web = capabilities().accountProfile;
-  return web ? <WebAccount source={web} part={props.part} maquinas={props.maquinas} /> : <MachineAccount part={props.part} maquinas={props.maquinas} sesiones={props.sesiones} />;
+  return web ? <WebAccount source={web} part={props.part} /> : <MachineAccount maquinas={props.maquinas} sesiones={props.sesiones} />;
 }
 
 /** Los correos se administran en la web de alfa (vive en la raíz del dominio), con la sesión del navegador. */
@@ -62,10 +51,8 @@ function ManageEmailsRow(props: { web?: boolean }) {
 }
 
 /** En la web la persona ya entró con su cuenta. Perfil se monta de nuevo al volver a su pestaña, así que relee un principal cambiado en Correos. */
-function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
-  const { AccountComputersSection, ConnectMachineSection, WslMachineSection } = props.maquinas;
+function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPart }) {
   const identity = createAccountIdentity(props.source);
-  const workspaces = createWorkspaces();
   const emails = () => props.part === "emails" ? capabilities().accountEmails : undefined;
   return (
     <SettingsPanel data-danil-account="web">
@@ -77,28 +64,19 @@ function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPa
       <Show when={emails()}>
         {(source) => <EmailsSection source={source()} onPrimaryChanged={() => window.dispatchEvent(new CustomEvent(PROFILE_CHANGED))} />}
       </Show>
-      <Show when={props.part === "machines"}>
-        {/* Por el id: cada recarga trae otro objeto del mismo workspace y desmontaba la lista. */}
-        {/* Sin workspace actual la lista de la cuenta se pinta igual: la web las lee de `/v1/machines`. */}
-        <Show when={workspaces.actual()?.id} keyed fallback={<AccountComputersSection />}>
-          {(id) => <AccountComputersSection workspace={id} />}
-        </Show>
-        <ConnectMachineSection />
-        <WslMachineSection />
-      </Show>
     </SettingsPanel>
   );
 }
 
 /** La cuenta se resuelve por el workspace, nunca por la sesión principal de la máquina. */
-function MachineAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes; sesiones: SesionesDeAjustes }) {
+function MachineAccount(props: { maquinas: MaquinasDeAjustes; sesiones: SesionesDeAjustes }) {
   const workspaces = createWorkspaces();
   const accounts = createDanilAccounts({ workspace: () => workspaces.actual()?.id, machines: props.maquinas.machines });
   const loadFailed = () => accounts.loadFailed() || Boolean(workspaces.fallo());
   const retry = () => void Promise.all([accounts.reload(), workspaces.cargar()]);
   const aLoadText = () => t(loadFailed() ? "danil.workspace.read_failed" : "danil.account.loading");
   return (
-    <Show when={accounts.sessions() !== null} fallback={<SingleAccount part={props.part} maquinas={props.maquinas} />}>
+    <Show when={accounts.sessions() !== null} fallback={<SingleAccount />}>
       <Show when={accounts.sessions() !== undefined && !accounts.loadingOf() && !workspaces.cargando() && accounts.workspaceOf() === workspaces.actual()?.id && workspaces.actual()?.id} keyed fallback={
         <SettingsPanel data-danil-account={loadFailed() ? "failed" : "loading"}>
           <SettingsRow label={aLoadText()}>
@@ -108,14 +86,13 @@ function MachineAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAj
           </SettingsRow>
         </SettingsPanel>
       }>
-        {(id) => <WorkspacePanel workspace={{ id, name: workspaces.actual()!.name }} accounts={accounts} part={props.part} maquinas={props.maquinas} sesiones={props.sesiones} />}
+        {(id) => <WorkspacePanel workspace={{ id, name: workspaces.actual()!.name }} accounts={accounts} maquinas={props.maquinas} sesiones={props.sesiones} />}
       </Show>
     </Show>
   );
 }
 
-function WorkspacePanel(props: { workspace: { id: string; name: string }; accounts: DanilAccounts; part?: DanilAccountPart; maquinas: MaquinasDeAjustes; sesiones: SesionesDeAjustes }) {
-  const { AccountComputersSection, ConnectMachineSection } = props.maquinas;
+function WorkspacePanel(props: { workspace: { id: string; name: string }; accounts: DanilAccounts; maquinas: MaquinasDeAjustes; sesiones: SesionesDeAjustes }) {
   const a = props.accounts;
   const [manage, setManage] = createSignal(false);
   const session = () => a.of()?.signed_in ? sessionForWorkspace(a.sessions(), a.of()) : null;
@@ -127,7 +104,6 @@ function WorkspacePanel(props: { workspace: { id: string; name: string }; accoun
     shownAccount = key;
     setManage(false);
   });
-  const onlyMachines = () => props.part === "machines" && Boolean(session() && a.of()?.linked);
   const line = () => syncLine(a.of(), a.sessions());
   const description = () => {
     const l = line();
@@ -138,7 +114,6 @@ function WorkspacePanel(props: { workspace: { id: string; name: string }; accoun
   };
   return (
     <SettingsPanel data-danil-account="workspace">
-      <Show when={!onlyMachines()}>
       <SettingsSection title={t("danil.here.title", { name: props.workspace.name })} data-danil-here="">
         <Show when={a.of()} fallback={
           <SettingsRow label={t("danil.workspace.read_failed")}>
@@ -157,30 +132,20 @@ function WorkspacePanel(props: { workspace: { id: string; name: string }; accoun
           </Show>
         </Show>
       </SettingsSection>
-      </Show>
       <Show when={session() && sessionKey(session()!)} keyed>
-        {(key) => (
-          <>
-            <Show when={!onlyMachines()}>
-              <SettingsSection title={t("danil.account.title")}>
-                <SessionCard session={session()!} accounts={a} computerName={renamedFor(session()?.computer_id) ?? undefined} />
-                <Show when={a.problem()}>{(code) => <p class="m-0 text-sm text-error-strong" role="alert">{said(code())}</p>}</Show>
-              </SettingsSection>
-            </Show>
-            <Show when={a.of()?.linked && props.part !== "profile"}>
-              <AccountComputersSection account={key} workspace={props.workspace.id} self={session()?.computer_id} onSelfName={renameFor(session()?.computer_id)} />
-              <ConnectMachineSection account={key} />
-            </Show>
-          </>
+        {(_key) => (
+          <SettingsSection title={t("danil.account.title")}>
+            <SessionCard session={session()!} accounts={a} />
+            <Show when={a.problem()}>{(code) => <p class="m-0 text-sm text-error-strong" role="alert">{said(code())}</p>}</Show>
+          </SettingsSection>
         )}
       </Show>
-      <LocalMachines part={props.part} maquinas={props.maquinas} />
     </SettingsPanel>
   );
 }
 
 /** Una cuenta: su persona (con la foto), esta computadora en ella, y sus acciones. */
-function SessionCard(props: { session: DanilSessionInfo; accounts: DanilAccounts; computerName?: string }) {
+function SessionCard(props: { session: DanilSessionInfo; accounts: DanilAccounts }) {
   const key = sessionKey(props.session) as string;
   const s = () => props.session;
   const identity = createAccountIdentity(engineAccountProfileOf(key), undefined, {
@@ -203,7 +168,7 @@ function SessionCard(props: { session: DanilSessionInfo; accounts: DanilAccounts
       <AccountIdentityBlock identity={shown} />
       <ManageEmailsRow />
       <SettingsRow
-        label={t("danil.account.this_computer", { name: props.computerName || s().computer_name || s().computer_id || "" })}
+        label={t("danil.account.this_computer", { name: s().computer_name || s().computer_id || "" })}
         description={state()}
       >
         <Show when={!asking()}>
@@ -238,15 +203,12 @@ function SessionCard(props: { session: DanilSessionInfo; accounts: DanilAccounts
 /**
  * Compatibilidad con el motor anterior: su única sesión pertenece a esta computadora.
  */
-function SingleAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
-  const { AccountComputersSection, ConnectMachineSection } = props.maquinas;
+function SingleAccount() {
   const session = createDanilSession();
   const { view, status, name, setName, busy } = session;
-  const onlyMachines = () => props.part === "machines" && status()?.state === "connected";
 
   return (
     <SettingsPanel data-danil-account={status()?.state ?? view().t}>
-      <Show when={!onlyMachines()}>
       <SettingsSection title={t("danil.account.title")} description={t("danil.account.description")}>
         <Switch>
           <Match when={view().t === "loading"}>
@@ -263,7 +225,7 @@ function SingleAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAju
             <ConnectedIdentity status={status} />
             <ManageEmailsRow />
             <SettingsRow
-              label={t("danil.account.this_computer", { name: renamedFor(status()?.computer_id) || status()?.name || status()?.computer_id || "" })}
+              label={t("danil.account.this_computer", { name: status()?.name || status()?.computer_id || "" })}
               description={status()?.online ? t("danil.account.online") : t("danil.account.offline")}
             >
               <Button size="sm" variant="secondary" disabled={busy()} onClick={() => void session.signOut()}>
@@ -312,23 +274,7 @@ function SingleAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAju
           {(text) => <p class="m-0 pt-2 text-ui text-error-strong" role="alert">{text()}</p>}
         </Show>
       </SettingsSection>
-      </Show>
-      <Show when={status()?.state === "connected" && props.part !== "profile"}>
-        <AccountComputersSection self={status()?.computer_id ?? null} onSelfName={renameFor(status()?.computer_id)} />
-        <ConnectMachineSection />
-      </Show>
-      <LocalMachines part={props.part} maquinas={props.maquinas} />
     </SettingsPanel>
-  );
-}
-
-/** Linux en esta Mac o PC: es local y no pide cuenta de Danil. */
-function LocalMachines(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
-  const { WslMachineSection } = props.maquinas;
-  return (
-    <Show when={props.part !== "profile"}>
-      <WslMachineSection />
-    </Show>
   );
 }
 
