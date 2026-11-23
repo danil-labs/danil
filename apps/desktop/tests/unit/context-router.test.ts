@@ -8,7 +8,7 @@ import { createRouter } from "../../../../packages/features/machines/src/queries
 import { scopedFleet } from "../../../../packages/features/machines/src/queries/scoped-fleet.ts";
 import { activeWorkspaceContext, captureWorkspaceContext, displayWorkspaceContext, displayWorkspaceSnapshot, rememberWorkspaceSnapshot, requestedWorkspaceSnapshot, setActiveWorkspaceContext, setDisplayWorkspaceContext } from "../../src/lib/workspace-context.ts";
 
-function setup(plans: Record<string, string> = {}, localOrg?: string) {
+function setup(plans: Record<string, string> = {}, localOrg?: string, engineFeatures?: () => string[]) {
   const calls: { context: string; command: string; args: unknown; workspace: string | null }[] = [];
   const delivered: { name:string; payload:unknown }[] = [];
   const native: { command: string; args: unknown; options: unknown }[] = [];
@@ -24,6 +24,7 @@ function setup(plans: Record<string, string> = {}, localOrg?: string) {
   for (const context of ["a", "b"]) fleet.setListing("vm", [{ id: "same", name: "Shared" }], context);
   const router = createRouter({ self: "local", fleet, contextInfo: context => context === "free" ? { org: "free-org", plan: "free" } : ["a", "b"].includes(context) ? { org: "org", plan: plans[context] ?? "teams" } : null,
     deliver: events => delivered.push(...events),
+    engineFeatures,
     native: async (command, args, options) => {
       if (command === "list_workspaces") {
         native.push({ command, args, options });
@@ -270,5 +271,13 @@ test("a task sent to another machine retains its selected space when legacy shar
   await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
   assert.equal(await router.handle("send_message", { text: "New", space: "selected" }, contextOptions("a", "vm")), "vm~task-a");
   assert.equal((calls.find(call => call.command === "send_message")?.args as { space: string }).space, "selected");
+  router.close();
+});
+
+test("Desk advertises its own engine capabilities in a scoped organization fleet", async () => {
+  const { router } = setup({}, "org", () => ["task_lifecycle_v1"]);
+  await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+  const rows = await router.handle("machine_list") as { local: boolean; features?: string[] }[];
+  assert.deepEqual(rows.find(row => row.local)?.features, ["task_lifecycle_v1"]);
   router.close();
 });

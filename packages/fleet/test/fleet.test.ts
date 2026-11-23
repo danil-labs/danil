@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { type CallResult, type DeferredFrame, type EventsPage, INTENT_COMMANDS, isDeferrable, type MachineState } from "../../computers/src/index.ts";
+import { type CallResult, type DeferredFrame, type EngineInfo, type EventsPage, INTENT_COMMANDS, isDeferrable, type MachineState } from "../../computers/src/index.ts";
 import { classOf, encodeEvent, Fleet, type FleetError, type Link, type MachineInfo, memberKey, PASSIVE, SLICES_KEY, type Slice, SliceBook } from "../src/index.ts";
 
 type Answer = unknown | ((args: Record<string, unknown>) => unknown);
@@ -18,7 +18,7 @@ function fakeLink(options: FakeOptions = {}) {
   const calls: { id: string; command: string; workspace: string | null; args: Record<string, unknown>; timeout?: number }[] = [];
   const stateListeners = new Set<(s: MachineState) => void>();
   const eventListeners = new Set<(p: EventsPage) => void>();
-  const engineListeners = new Set<(e: { contract: string | null; host_version: string | null }) => void>();
+  const engineListeners = new Set<(e: EngineInfo) => void>();
   const blockedListeners = new Set<(b: "license_required" | "machine_stopped" | null) => void>();
   let stopped: "license_required" | "machine_stopped" | null = null;
   let retries = 0;
@@ -47,8 +47,8 @@ function fakeLink(options: FakeOptions = {}) {
     push(p) {
       for (const l of eventListeners) l(p);
     },
-    hello(contract) {
-      for (const l of engineListeners) l({ contract, host_version: null });
+    hello(contract, service_features?: string[]) {
+      for (const l of engineListeners) l({ contract, host_version: null, service_features });
     },
     onEngine(l) {
       engineListeners.add(l);
@@ -1383,4 +1383,18 @@ test("a blocked session reports its change with the member's context", () => {
   links.get("a")!.block("machine_stopped");
   assert.deepEqual(changes, [["cmp_vm", "a"]]);
   assert.equal(fleet.power("cmp_vm", changes[0][1]), "off");
+});
+
+test("live engine capabilities survive an inventory refresh and belong to their context", () => {
+  const incoming = fakeLink(), other = fakeLink();
+  const fleet = new Fleet({ connect: info => info.context === "a" ? incoming : other });
+  const inventory = ["a", "b"].map(context => ({ id: "machine", name: "Machine", wakes: false, context }));
+  fleet.setMachines(inventory);
+  incoming.hello("revision", ["task_lifecycle_v1"]);
+  fleet.setMachines(inventory);
+  assert.deepEqual(fleet.info("machine", "a")?.features, ["task_lifecycle_v1"]);
+  assert.equal(fleet.info("machine", "b")?.features, undefined);
+  incoming.hello("revision", []);
+  assert.deepEqual(fleet.info("machine", "a")?.features, []);
+  fleet.close();
 });

@@ -181,6 +181,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     onChange: () => {
       if (!installed) return void window.dispatchEvent(new CustomEvent("harness:workspace-name"));
       observeEngine(installed.fleet);
+      void refetchMachines();
       slicesChanged(["workspaces"]);
     },
   });
@@ -251,6 +252,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       onChange: () => {
         bump((n) => n + 1);
         window.dispatchEvent(new CustomEvent("harness:machines"));
+        void refetchMachines();
       },
       // La cola de aplazadas cambió (aquí, en la web o en el teléfono): la lista se relee.
       onDeferred: (machine, _frame, context) => router.deferredChanged(machine, context),

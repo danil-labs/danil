@@ -29,7 +29,7 @@ export function createEngineQueue(env: {
     const machine = env.machineOf(session)?.headers["x-terminus-machine"];
     return env.machines().find((m) => (machine ? m.id === machine : m.local));
   };
-  // No listing of the web carries the features: there every one is absent.
+  // Remote machines advertise capabilities over their authenticated relay session.
   const announces = (session: string, feature: string) => rowOf(session)?.features?.includes(feature) === true;
 
   /**

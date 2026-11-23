@@ -325,3 +325,23 @@ test('an account discovered on a newly listed machine restores the web usage bar
   await until(() => fake.sockets.some(s => s.url.includes('/mpeer/')), 'new peer joins');
   await until(() => doc.querySelector('button [role="progressbar"][aria-valuenow="75"]'), 'usage bar after peer joins');
 });
+
+test('web discovers safe deletion on the engine that owns the task', async t => {
+  edge();
+  const fake = relay({ serviceFeatures: ['task_lifecycle_v1'], table: {
+    ...table, task_lifecycle_preview: ({ id }) => ({ members: [{ id }], consent: 'preview-proof' }),
+  } });
+  const app = await open(t, 'web-delete-capability', fake);
+  const doc = app.w.document;
+  await until(() => tile(doc, 'wp'), 'workspace tile');
+  tile(doc, 'wp').click();
+  await until(() => tile(doc, 'wp')?.getAttribute('aria-current') === 'true', 'workspace selected');
+  const ipc = app.w.__TAURI_INTERNALS__;
+  const headers = { 'x-danil-context': 'ctx_p', 'x-terminus-machine': 'mp', 'x-terminus-workspace': 'wp' };
+  const machines = await ipc.invoke('machine_list', {}, { headers });
+  assert.ok(machines.find(row => row.id === 'mp')?.features.includes('task_lifecycle_v1'));
+  const review = await ipc.invoke('task_lifecycle_preview', { project: 'p1', id: 'mp~t1', action: 'delete' }, { headers });
+  assert.equal(review.consent, 'preview-proof');
+  assert.ok(fake.calls.some(call => call.command === 'task_lifecycle_preview' && call.workspace === 'wp' && call.args.id === 't1'));
+  assert.equal(fake.calls.some(call => call.command === 'task_lifecycle_apply'), false);
+});

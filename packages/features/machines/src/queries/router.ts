@@ -680,8 +680,9 @@ function createRouterCore(config: RouterConfig) {
     const owned = (!local || !!scopedLocal) && !!workspace;
     const home = config.home?.();
     const selfOs = systemOf(home?.os);
+    const selfFeatures = config.engineFeatures?.() ?? home?.features;
     return [
-      ...(self !== null ? [{ id: self, local: true, active: lead === self, on: true, power: "on" as const, hosts: hasHere(workspace), ...selfMaterializes(workspace), wakes: home?.wakes ?? false, ...(home?.features?.length ? { features: [...home.features] } : {}), ...(home?.version ? { version: home.version } : {}), ...(selfOs ? { os: selfOs } : {}) }] : []),
+      ...(self !== null ? [{ id: self, local: true, active: lead === self, on: true, power: "on" as const, hosts: hasHere(workspace), ...selfMaterializes(workspace), wakes: home?.wakes ?? false, ...(selfFeatures?.length ? { features: [...selfFeatures] } : {}), ...(home?.version ? { version: home.version } : {}), ...(selfOs ? { os: selfOs } : {}) }] : []),
       // Una de otro contrato no corre tareas nuevas hasta actualizarse.
       ...fleet.machines().filter((m) => fleet.power(m.id) !== "outdated").map((m) => {
         const os = systemOf(m.os);

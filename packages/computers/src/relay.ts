@@ -494,7 +494,10 @@ export class RelaySession {
       }
       case "engine": {
         const text = (v: unknown) => (typeof v === "string" && v ? v : typeof v === "number" ? String(v) : null);
-        this.engineInfo = { contract: text(message.contract), host_version: text(message.host_version) };
+        this.engineInfo = {
+          contract: text(message.contract), host_version: text(message.host_version),
+          ...(Array.isArray(message.service_features) ? { service_features: message.service_features.filter((feature): feature is string => typeof feature === "string") } : {}),
+        };
         for (const listener of this.engineListeners) listener(this.engineInfo);
         return;
       }
