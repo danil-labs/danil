@@ -276,7 +276,7 @@ test('the usage control reads the active account again after switching workspace
       active: workspace === 'wx1' ? 'cloud' : null,
     }),
     account_status: { connected: true },
-    account_limits: { mode: 'read', windows: [], at: Date.now() },
+    account_limits: { mode: 'read', windows: [{ label: '5 hours', used_pct: 25, duration_s: 18_000, resets_at: null }], plan: null, fetched_at: Date.now() },
     list_spaces: [{ id: 'cloud-space', name: 'Cloud', folders: [], created_at: 1, updated_at: 1 }],
     send_message: 'test-task',
   } });
@@ -287,7 +287,7 @@ test('the usage control reads the active account again after switching workspace
   await until(() => tile(doc, 'wx1'), 'organization workspace tile');
   tile(doc, 'wx1').click();
   await until(() => fake.calls.some(c => c.command === 'account_limits' && c.workspace === 'wx1' && c.args.id === 'cloud'), 'usage reads the cloud account');
-  await until(() => doc.querySelector('button[aria-label="Lo que te queda en las cuentas activas"]'), 'usage button appears');
+  await until(() => doc.querySelector('button [role="progressbar"][aria-valuenow="75"]'), 'the usage bar shows the remaining quota');
   const headers = { 'x-danil-context': 'ctx_x', 'x-terminus-workspace': 'wx1', 'x-terminus-machine': 'mx' };
   const workspaceSpaces = await app.w.__TAURI_INTERNALS__.invoke('list_spaces', {}, { headers });
   assert.equal(workspaceSpaces[0].id, 'mx~cloud-space');
