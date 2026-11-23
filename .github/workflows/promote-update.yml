@@ -1,0 +1,186 @@
+# Promotes or rolls back Danil Desk updates per OS by updating the fixed
+# `updater-stable` pointer release on GitHub Releases — without rebuilding or
+# consuming signing quota (eSigner / Apple notarization).
+#
+# Example (promote macOS only to v0.3.5):
+#
+#     gh workflow run promote-update.yml -R danil-labs/danil \
+#       -f version=0.3.5 -f platforms=macos
+#
+# Example (rollback macOS to v0.3.4):
+#
+#     gh workflow run promote-update.yml -R danil-labs/danil \
+#       -f version=0.3.4 -f platforms=macos
+#
+name: promote-update
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Versión a promover o revertir (ej. 0.3.5 o v0.3.5)"
+        type: string
+        required: true
+      platforms:
+        description: "Sistema operativo a promover en updater-stable"
+        type: choice
+        default: macos
+        required: true
+        options:
+          - macos
+          - windows
+          - linux
+          - all
+      dry_run:
+        description: "Descargar y verificar firmas sin tocar updater-stable"
+        type: boolean
+        default: false
+
+concurrency:
+  group: promote-update
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  PUBLIC_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5ODEzRDE1M0QwQ0RFQjgKUldTNDNndzlGVDJCT1hPSnp4ZzBIbkowOW9kVGFYb0YyRkZKZjNTT2N3eERXOXhuRi9UblY5d3EK
+
+jobs:
+  promote:
+    if: github.repository == 'danil-labs/danil'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Traer la fuente
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Validar entradas y llave pública
+        id: validate
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+          RAW_PLATFORMS: ${{ inputs.platforms }}
+        run: |
+          set -euo pipefail
+          V="${RAW_VERSION#v}"
+          if ! [[ "$V" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.]+)?$ ]]; then
+            echo "::error::Versión inválida «$RAW_VERSION». Usa formato semver (ej. 0.3.5)."
+            exit 1
+          fi
+          CONF_KEY=$(jq -r .plugins.updater.pubkey apps/desktop/src-tauri/tauri.conf.json)
+          if [ "$CONF_KEY" != "$PUBLIC_KEY" ]; then
+            echo "::error::PUBLIC_KEY en promote-update.yml no coincide con tauri.conf.json."
+            exit 1
+          fi
+          PLATFORMS=$(node apps/desktop/scripts/release-manifest.mjs platforms --platforms "$RAW_PLATFORMS")
+          {
+            echo "version=$V"
+            echo "platforms=$PLATFORMS"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Descargar y verificar artefactos de v<versión>
+        id: verify-artifacts
+        env:
+          V: ${{ steps.validate.outputs.version }}
+          PLATFORMS: ${{ steps.validate.outputs.platforms }}
+        run: |
+          set -euo pipefail
+          WORK="$RUNNER_TEMP/promote"
+          STAGE="$WORK/upload"
+          mkdir -p "$WORK/verify" "$STAGE"
+
+          BASE="https://github.com/$GITHUB_REPOSITORY/releases/download/v$V"
+          IFS=',' read -r -a plat_arr <<< "$PLATFORMS"
+          for plat in "${plat_arr[@]}"; do
+            mf=$(node apps/desktop/scripts/release-manifest.mjs manifest-files --platforms "$plat")
+            asset=$(node apps/desktop/scripts/release-manifest.mjs updater-asset --platform "$plat" --version "$V")
+
+            echo "Verificando $plat desde v$V ($mf + $asset)..."
+            curl -fsSL "$BASE/$mf" -o "$STAGE/$mf"
+            curl -fsSL "$BASE/$asset" -o "$WORK/verify/$asset"
+
+            node apps/desktop/scripts/release-manifest.mjs verify \
+              --manifest "$STAGE/$mf" \
+              --platform "$plat" \
+              --version "$V" \
+              --repo "$GITHUB_REPOSITORY" \
+              --pubkey "$PUBLIC_KEY" \
+              --asset "$WORK/verify/$asset"
+
+            while IFS= read -r stable; do
+              curl -fsSL "$BASE/$stable" -o "$STAGE/$stable"
+              [ -s "$STAGE/$stable" ] || { echo "::error::$stable quedó vacío al bajarlo de v$V."; exit 1; }
+            done < <(node apps/desktop/scripts/release-manifest.mjs stable-files --platforms "$plat")
+          done
+
+          ls -la "$STAGE"
+
+      - name: Actualizar updater-stable por SO
+        id: upload-pointer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.validate.outputs.version }}
+          PLATFORMS: ${{ steps.validate.outputs.platforms }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          STAGE="$RUNNER_TEMP/promote/upload"
+          FILES=("$STAGE"/*)
+
+          if [ "${DRY_RUN:-false}" = "true" ]; then
+            echo "Ensayo: firmas verificadas para v$V ($PLATFORMS); no se modifica updater-stable."
+            printf '### Promoción (dry-run)\n\nVersión: `v%s` · Plataformas: `%s` · Archivos listos: %d\n' "$V" "$PLATFORMS" "${#FILES[@]}" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if ! gh release view updater-stable --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create updater-stable \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "Danil Desk — updater-stable" \
+              --notes "Puntero por sistema operativo para actualizaciones de Danil Desk (\`latest-darwin.json\`, \`latest-windows.json\`, \`latest-linux.json\`). Los binarios firmados viven en cada release versionada \`v<versión>\`." \
+              --latest=false
+          fi
+
+          # Solo reemplaza los archivos del SO elegido; los demás SO quedan intactos.
+          gh release upload updater-stable --repo "$GITHUB_REPOSITORY" --clobber "${FILES[@]}"
+          printf '### Promoción aplicada en `updater-stable`\n\nVersión: `v%s` · Plataformas: `%s`\n' "$V" "$PLATFORMS" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comprobar que la app lo ve en updater-stable
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.validate.outputs.version }}
+          PLATFORMS: ${{ steps.validate.outputs.platforms }}
+        run: |
+          set -euo pipefail
+          [ "$(gh release view updater-stable --repo "$GITHUB_REPOSITORY" --json isLatest -q .isLatest)" = "false" ] \
+            || { echo "::error::updater-stable no debe estar marcada como Latest"; exit 1; }
+
+          BASE="https://github.com/$GITHUB_REPOSITORY/releases/download/updater-stable"
+          TMP=$(mktemp -d)
+          IFS=',' read -r -a plat_arr <<< "$PLATFORMS"
+          for plat in "${plat_arr[@]}"; do
+            mf=$(node apps/desktop/scripts/release-manifest.mjs manifest-files --platforms "$plat")
+            curl -fsSL "$BASE/$mf" -o "$TMP/$mf"
+            node apps/desktop/scripts/release-manifest.mjs verify \
+              --manifest "$TMP/$mf" \
+              --platform "$plat" \
+              --version "$V" \
+              --repo "$GITHUB_REPOSITORY"
+            while IFS= read -r stable; do
+              curl -fsSIL -o /dev/null "$BASE/$stable" \
+                || { echo "::error::$stable no responde en updater-stable"; exit 1; }
+            done < <(node apps/desktop/scripts/release-manifest.mjs stable-files --platforms "$plat")
+          done
+          rm -rf "$TMP"
+
+          echo "updater-stable sirve v$V para: $PLATFORMS."

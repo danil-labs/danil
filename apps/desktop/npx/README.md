@@ -18,8 +18,9 @@ descarga conservan compatibilidad con las instalaciones existentes.
 ## Qué hace
 
 1. Detecta tu sistema operativo y arquitectura (`process.platform` / `process.arch`).
-2. Lee `latest.json` de la última release pública de
-   [`danil-labs/danil`](https://github.com/danil-labs/danil/releases/latest)
+2. Lee `latest-<target>.json` (`latest-darwin.json`, `latest-windows.json` o
+   `latest-linux.json`) de la release puntero pública `updater-stable` en
+   [`danil-labs/danil`](https://github.com/danil-labs/danil/releases/tag/updater-stable)
    (repo público, sin autenticación) y resuelve el instalador de tu plataforma.
 3. Descarga el instalador a una carpeta temporal, con barra de progreso.
 4. **Verifica su firma antes de ejecutar ni copiar nada.** Si la verificación
@@ -31,7 +32,7 @@ descarga conservan compatibilidad con las instalaciones existentes.
    actualiza sola.
 
 El comando selecciona Windows x64, Mac Apple Silicon o Linux x86_64 según la
-entrada disponible en `latest.json` (`windows-x86_64`, `darwin-aarch64` o
+entrada disponible en el manifiesto de su SO (`windows-x86_64`, `darwin-aarch64` o
 `linux-x86_64`). En una plataforma no soportada —o si falta la entrada en una
 release anterior— informa y termina con error. No hace falta cambiar el comando.
 

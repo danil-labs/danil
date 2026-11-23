@@ -31,7 +31,7 @@ import { t } from './lib/i18n.mjs';
 const PUBKEY_B64 =
   'dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5ODEzRDE1M0QwQ0RFQjgKUldTNDNndzlGVDJCT1hPSnp4ZzBIbkowOW9kVGFYb0YyRkZKZjNTT2N3eERXOXhuRi9UblY5d3EK';
 
-const LATEST_JSON_URL = 'https://github.com/danil-labs/danil/releases/latest/download/latest.json';
+const UPDATER_STABLE_BASE = 'https://github.com/danil-labs/danil/releases/download/updater-stable';
 const MANUAL_DOWNLOAD_URL = 'https://danil.ai/download/';
 // Nombres con los que la 0.2.x se instaló, antes de llamarse Danil.
 const LEGACY_MAC_BUNDLE = 'Terminus.app';
@@ -231,11 +231,11 @@ async function main() {
     process.exit(1);
   }
 
-  // 1) Manifiesto de la release. Es la fuente de verdad de versión, URL del
-  //    asset y firma — y es multiplataforma por diseño.
+  // 1) Manifiesto de la release por SO en `updater-stable`.
+  const manifestUrl = `${UPDATER_STABLE_BASE}/latest-${plat.target}.json`;
   let manifest;
   try {
-    manifest = JSON.parse(await fetchText(LATEST_JSON_URL));
+    manifest = JSON.parse(await fetchText(manifestUrl));
   } catch (e) {
     err(paint(C.red, t('manifestUnreadable', { reason: e.message })));
     process.exit(1);
