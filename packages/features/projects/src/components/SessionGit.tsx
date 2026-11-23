@@ -77,7 +77,7 @@ function ReviewSignals(props: { status?: GitStatus; size: number }) {
   </>;
 }
 
-function gitLabels(status: GitStatus | undefined, shared: boolean) {
+function etiquetasGit(status: GitStatus | undefined, shared: boolean) {
   const stateLabel = () => {
     const s = status;
     if (s?.kind === "kn") return s.kn ? knLabel(s.kn) : "";
@@ -213,12 +213,12 @@ export function RailPull(props: { status: GitStatus }) {
 }
 
 export function sessionGitDescription(status?: GitStatus) {
-  return compactGitKind(status) ? gitLabels(status, !!status?.shared_with).summary() : "";
+  return compactGitKind(status) ? etiquetasGit(status, !!status?.shared_with).summary() : "";
 }
 
 export default function SessionGit(props: { status?: GitStatus; compact?: boolean; shared?: boolean; lead?: JSX.Element; hasLead?: boolean }) {
   const shared = () => !!props.shared || !!props.status?.shared_with;
-  const labels = () => gitLabels(props.status, shared());
+  const labels = () => etiquetasGit(props.status, shared());
   const branch = () => labels().branch();
   const summary = () => labels().summary();
   const appearance = () => {
