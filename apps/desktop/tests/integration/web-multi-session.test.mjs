@@ -296,3 +296,32 @@ test('the usage control reads the active account again after switching workspace
   assert.ok(fake.calls.some(c => c.command === 'send_message' && c.workspace === 'wx1' && c.args.space === 'cloud-space'));
 
 });
+
+test('an account discovered on a newly listed machine restores the web usage bar in the same workspace', async t => {
+  const realTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (run, ms, ...rest) => realTimeout(run, ms >= 1000 ? 100 : ms, ...rest);
+  t.after(() => { globalThis.setTimeout = realTimeout; });
+  let peer = false;
+  const machine = (id, organization_id) => ({ machine_id: id, name: id, kind: 'organization', organization_id, state: 'running', connection: 'connected' });
+  edge({ machinesFor: ctx => ctx === 'ctx_p'
+    ? [machine('mp', ORGS.ctx_p), ...(peer ? [machine('mpeer', ORGS.ctx_p)] : [])]
+    : [machine('mx', ORGS.ctx_x)] });
+  const fake = relay({ table: {
+    ...table,
+    list_providers: [{ id: 'codex', label: 'Codex', available: true, driver: true, limits: true }],
+    list_accounts: ({ provider }) => ({
+      provider, env_var: '',
+      accounts: peer ? [{ id: 'cloud', label: 'Cloud', created_at: 1 }] : [],
+      active: peer ? 'cloud' : null,
+    }),
+    account_limits: { mode: 'read', windows: [{ label: '5 hours', used_pct: 25, duration_s: 18_000, resets_at: null }], plan: null, fetched_at: Date.now() },
+  } });
+  const app = await open(t, 'web-usage-peer', fake);
+  const doc = app.w.document;
+  await until(() => tile(doc, 'wp'), 'personal workspace tile');
+  tile(doc, 'wp').click();
+  await until(() => fake.calls.some(c => c.command === 'list_accounts' && c.workspace === 'wp'), 'usage reads the initial inventory');
+  peer = true;
+  await until(() => fake.sockets.some(s => s.url.includes('/mpeer/')), 'new peer joins');
+  await until(() => doc.querySelector('button [role="progressbar"][aria-valuenow="75"]'), 'usage bar after peer joins');
+});
