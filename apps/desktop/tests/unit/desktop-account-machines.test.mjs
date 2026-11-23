@@ -88,14 +88,16 @@ test("the account and danil_* stay on this computer, and whoAmI asks for the win
   assert.deepEqual(app.failures, []);
 });
 
-test("a new task is born on this computer unless «Ejecutar en» picks another for the workspace", async () => {
-  const { app, relayCalls, native } = await open("desktop-account-run-on", {
+test("a new task follows «Ejecutar en» even when the selected engine speaks another RPC1 contract", async () => {
+  const { app, f, relayCalls, native } = await open("desktop-account-run-on", {
     relays: {
-      cmp_vm: { table: remote("Panel", "Tarea de la VM", { send_message: () => "r7" }), state: "online" },
+      cmp_vm: { table: remote("Panel", "Tarea de la VM", { send_message: () => "r7" }), state: "online", contract: "previous-rpc1" },
       cmp_mac: { table: remote("Notas", "Tarea del Mac"), state: "online" },
     },
     extra: { work_status: { ahead: 0, dirty: false, files: [], large: [], submodules: [] } },
   });
+  const relayUrl = new URL(f.relays.cmp_vm.sockets[0].url);
+  assert.equal(relayUrl.searchParams.has("contracts"), false);
   await newTask(app);
   await write(app, "aquí");
   assert.ok(await until(() => native("send_message").length === 1), "without a pick, the task is born on the window's machine");
@@ -114,6 +116,7 @@ test("a new task is born on this computer unless «Ejecutar en» picks another f
   assert.ok(await until(remoteProject), "the VM offers its own folders");
   remoteProject().click();
   await sleep(100);
+  f.relays.cmp_vm.hello("next-rpc1");
   await write(app, "en la VM");
   assert.ok(await until(() => relayCalls("cmp_vm", "send_message").length === 1), "the picked machine gets it");
   assert.deepEqual(relayCalls("cmp_vm", "send_message").map((c) => [c.args.project, c.args.session, c.workspace]), [["p1", null, "w"]], "with the same project and workspace ids");
