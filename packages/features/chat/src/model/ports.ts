@@ -159,7 +159,7 @@ export type MachinePickerPort = (props: { workspace: string | null; project?: Pr
 export type WatchProfilesPort = (project: string) => () => Record<string, AgentProfile>;
 export type ProjectPickerPort = (props: {
   branch?: JSX.Element; locked?: boolean; projects: Project[]; project: string; sources: Source[]; onPick: (id: string) => void; onNuevoProyecto: () => void;
-  onAdministrar?: () => void; machine?: JSX.Element; activity?: Record<string, number>; picked?: PickedAt; hidden?: ReadonlySet<string>; onShow?: (id: string) => void; taskCounts?: Record<string, number>;
+  machine?: JSX.Element; activity?: Record<string, number>; picked?: PickedAt; hidden?: ReadonlySet<string>; onShow?: (id: string) => void; taskCounts?: Record<string, number>;
 }) => JSX.Element;
 export type TabStripPort = (props: {
   tabs: Tab[]; pinnedIds?: ReadonlySet<string>; onPin?: (id: string) => void; session: (id: string) => SessionRow | undefined; activeId: string | null; liveIds: string[]; approvingIds: string[];

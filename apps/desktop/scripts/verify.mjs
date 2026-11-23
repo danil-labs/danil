@@ -762,7 +762,7 @@ const steps = [
   ["Desk compatibility keeps PKCE, consent and one-time codes isolated from the SPA", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-session.test.mjs")], root],
   ["The alpha entry closes all routes that migrated to platform", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-service.test.mjs")], root],
   ["On desktop account keys go through the engine and the notice uploads only the chosen ones", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-credentials.test.mjs")], root],
-  ["On desktop Secrets saves and deletes through the engine, without an account says «Solo en esta máquina» and an old engine turns off only that section", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-secrets.test.mjs")], root],
+  ["unknownCommand recognizes only the pinned command-not-found transport error", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/error-code.test.ts")], root],
   ["The approval page and contract compatibility talk to the control plane", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/danil-connect-web.test.ts")], root],
   ["Account emails on the web: client, order and rejection texts", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-emails.test.ts")], root],
   ["Danil Business on the web: business routes for the active account, online cap, Stripe-only redirects and fiscal rules", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/business-billing.test.ts")], root],

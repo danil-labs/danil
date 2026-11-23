@@ -76,6 +76,8 @@
     "packages/features/machines/src/queries/engine-workspaces.ts": ["exports", "types"], // LIGHT_STATE_MACHINES_FEATURE, RailWorkspace: engine-workspaces.test.ts (#1111/#1136)
     "packages/shell/src/shell/danil-rail.ts": ["exports"],            // columnDanil: Alberto (#1111/#1136)
     "packages/shell/src/shell/SessionWorkspaceRows.tsx": ["types"],   // SessionWorkspaceRowsProps: Alberto (#1111/#1136)
+    "packages/features/settings/src/components/AccountCredentials.tsx": ["exports"], // CredentialMachines: Alberto (#1147)
+    "packages/features/settings/src/queries/credentials-store.ts": ["exports"],      // credentialsBackend: Alberto (#1147)
     "apps/desktop/src/lib/{activityObservation,projectNames,promo-role,scrollbars,sharedLazy,terminal-themes,turnActivity}.ts": ["files"], // reexportaciones de F4.4 lote 3
     "packages/features/machines/src/queries/router.ts": ["exports"],  // unconfirmedOpen: machine-router.test.ts
     "packages/features/machines/src/queries/session-cloud.ts": ["exports"], // mergeContextMachines: connected-status, session-machines
