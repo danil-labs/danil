@@ -1,5 +1,4 @@
 import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import ChartColumn from "lucide-solid/icons/chart-column";
 import FileText from "lucide-solid/icons/file-text";
 import FileType from "lucide-solid/icons/file-type";
 import MousePointerClick from "lucide-solid/icons/mouse-pointer-click";
@@ -16,7 +15,7 @@ import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure
 import { Toggle } from "../../../../ui/src/Toggle";
 import { SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
-type Plugin = "agentsview" | "libreoffice" | "drawio" | "computer-use" | "typst";
+type Plugin = "libreoffice" | "drawio" | "computer-use" | "typst";
 type IntegrationStatus = {
   id: Plugin;
   installed: boolean;
@@ -39,7 +38,6 @@ type Readiness = {
 type Operation = "install" | "update" | "enable" | "uninstall" | "check";
 
 const ICONOS = {
-  agentsview: ChartColumn,
   drawio: Workflow,
   libreoffice: FileText,
   "computer-use": MousePointerClick,
@@ -47,7 +45,6 @@ const ICONOS = {
 } as const;
 
 function label(id: Plugin) {
-  if (id === "agentsview") return t("settings.integrations.agentsview.name");
   if (id === "drawio") return t("settings.integrations.drawio.name");
   if (id === "computer-use") return t("settings.integrations.computer_use.name");
   if (id === "typst") return t("settings.integrations.typst.name");
@@ -55,7 +52,6 @@ function label(id: Plugin) {
 }
 
 function description(id: Plugin) {
-  if (id === "agentsview") return t("settings.integrations.agentsview.description");
   if (id === "drawio") return t("settings.integrations.drawio.description");
   if (id === "computer-use") return t("settings.integrations.computer_use.description");
   if (id === "typst") return t("settings.integrations.typst.description");
@@ -63,7 +59,6 @@ function description(id: Plugin) {
 }
 
 function scope(id: Plugin) {
-  if (id === "agentsview") return t("settings.integrations.agentsview.scope");
   if (id === "drawio") return t("settings.integrations.drawio.scope");
   if (id === "computer-use") return t("settings.integrations.computer_use.scope");
   if (id === "typst") return t("settings.integrations.typst.scope");
@@ -151,7 +146,7 @@ export default function Integrations() {
         title={t("settings.integrations.title")}
         description={t("settings.integrations.description")}
       >
-        <For each={catalog()?.plugins}>
+        <For each={catalog()?.plugins.filter(({ id }) => Object.hasOwn(ICONOS, id))}>
           {(plugin) => (
             <SettingsRow
               lead={

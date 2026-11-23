@@ -41,7 +41,7 @@ export const INTEGRACIONES = (): Integracion[] => [
   { id: "zotero", nombre: "Zotero", comun: false, via: "referencias" },
 ];
 export const RECOMENDADOS = ["drawio", "typst", "libreoffice"];
-export const ORDEN_PLUGINS = ["drawio", "typst", "libreoffice", "agentsview", "computer-use"];
+export const ORDEN_PLUGINS = ["drawio", "typst", "libreoffice", "computer-use"];
 export const CON_PESO = new Set(["drawio", "typst", "libreoffice", "computer-use"]);
 export const descripcion = (id: string) => t(`onboarding.tools.about.${id}`);
 export const SIN_BORRADOR: Borrador = { data: {}, token: "" };

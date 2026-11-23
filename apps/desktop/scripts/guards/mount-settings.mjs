@@ -117,45 +117,12 @@ assert.deepEqual(selectedKeys("ws-a"), ["other"]);
 assert.equal(authentications, 0);
 assert.ok(providerCalls.includes("ws-a") && providerCalls.includes("ws-b"));
 assert.deepEqual(providers.failures, []);
-let integrationStatus = { installed: true, enabled: false };
-let pendingIntegration = null;
-const integration = await boot("listo", 9, {
-  ...RESPONSES,
-  agentsview_status: () => pendingIntegration ?? integrationStatus,
-});
-const integrationButton = () => integration.w.document.querySelector('button[aria-label="Analytics"]');
-const workspaceChanged = () => integration.w.dispatchEvent(new integration.w.CustomEvent("harness:workspace"));
-assert.equal(integrationButton(), null);
-integrationStatus = { installed: true, enabled: true };
-workspaceChanged();
-await sleep(30);
-assert.ok(integrationButton(), "switching to an enabled workspace reveals AgentsView");
-let finishIntegration;
-pendingIntegration = new Promise(resolve => { finishIntegration = resolve; });
-workspaceChanged();
-assert.equal(integrationButton(), null);
-pendingIntegration = null;
-integrationStatus = { installed: true, enabled: false };
-workspaceChanged();
-await sleep(30);
-finishIntegration({ installed: true, enabled: true });
-await sleep(30);
-assert.equal(integrationButton(), null, "a late response cannot enable AgentsView in another workspace");
-integration.emit("agentsview-changed", true);
-await sleep(30);
-assert.equal(integrationButton(), null, "integration events must read the active workspace");
-integrationStatus = { installed: true, enabled: true };
-integration.emit("agentsview-changed", true);
-await sleep(30);
-assert.ok(integrationButton());
-assert.deepEqual(integration.failures, []);
 let pluginWorkspace = "w";
 let officeInstalled = false;
 let officeEnabled = false;
 let pendingCatalog = null;
 const pluginCalls = [];
 const catalog = () => ({ workspace: pluginWorkspace, plugins: [
-  { id: "agentsview", installed: true, enabled: true, version: "0.39.0", bytes: 1000, supported: true },
   { id: "libreoffice", installed: officeInstalled, enabled: officeEnabled, version: officeInstalled ? "26.2.6" : null, bytes: officeInstalled ? 800000000 : null, supported: true },
 ] });
 const plugins = await boot("listo", "plugins", {
@@ -177,7 +144,7 @@ await sleep(100);
 const officeCard = () => [...plugins.w.document.querySelectorAll("div")].find(d => d.textContent === "LibreOffice")?.parentElement?.parentElement?.parentElement;
 const officeButton = (text) => [...officeCard().querySelectorAll("button")].find(b => b.textContent?.trim() === text);
 const officeSwitch = () => officeCard().querySelector('button[role="switch"][aria-label="Activar en este espacio"]');
-assert.ok(officeCard(), "Connections offers LibreOffice alongside AgentsView");
+assert.ok(officeCard(), "Connections offers LibreOffice");
 officeButton("Instalar").click();
 await sleep(50);
 assert.deepEqual(pluginCalls, [["install", "libreoffice"]]);

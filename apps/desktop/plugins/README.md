@@ -14,7 +14,6 @@ también pertenece al workspace.
 | Id | Capacidad | Ficha |
 |---|---|---|
 | `yua` | Catálogo y perfil de salida en maya yucateco | [Lengua](languages/yua/README.md) |
-| `agentsview` | Índice local de sesiones | AgentsView (motor) |
 | `libreoffice` | Conversión de documentos | LibreOffice (motor) |
 | `drawio` | Visor de diagramas en el chat | draw.io (motor) |
 | `computer-use` | Pantalla y acciones de escritorio por MCP | Cua Driver (motor) |

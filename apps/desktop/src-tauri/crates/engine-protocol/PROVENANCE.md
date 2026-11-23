@@ -6,8 +6,8 @@ Apache-2.0); the manifest was regenerated on
 `b40d34999d140d30a0e1192ba752b2fdb860dc90`. The generator reads the engine
 source and is not part of this repository.
 
-`commands.json`: 553 entries: 370 invocations, 146 CLI routes, 12 RPC routes,
-three channels and twenty-two window/bridge functions; 37 events. Names, camelCase parameters, reference Rust
+`commands.json`: 550 entries: 367 invocations, 146 CLI routes, 12 RPC routes,
+three channels and twenty-two window/bridge functions; 36 events. Names, camelCase parameters, reference Rust
 types and literal events are kept.
 
 On 2026-10-19 the contract renamed its two concepts (317 commands, 27 events):
@@ -20,7 +20,7 @@ repositories, and `GitHostInfo`. Files on disk keep their keys; the types that
 are stored and also travel cross the contract wrapped in `Wire`, which renames
 their keys. There are no aliases. This copy is byte-identical to the engine's.
 SHA-256:
-`46798e8630db16622e62b79747cde5b02073681ca602d92adc6fdae559d802e5`.
+`7e93081ea2f2d246943fdf5486cb4714a225df2a89371e11ed483aa868a08eae`.
 
 seldon-host `4e21caf` (#66) added the Danil account (321 commands, 28 events):
 `danil_connect_start`, `danil_connect_status`, `danil_connect_options`,
@@ -246,7 +246,7 @@ copy is `git show b8e7fcd:crates/engine-manifest/commands.json` byte for byte; n
 danil-engine `85335139` (release 0.3.1, `seldon-runtime-v0.3.1-85335139`) keeps
 553 entries and 37 events. Since #355 the CLI route `skill list` accepts the flag
 `agent`, which changes the hash to `46798e86…`. The window invokes no CLI route.
-This copy is `git show 85335139:crates/engine-manifest/commands.json` byte for byte.
+That revision matches `git show 85335139:crates/engine-manifest/commands.json` byte for byte.
 
 Handler and peer error keys come from the CLI catalogs at seldon-host
 `437a280` (`crates/terminus-cli/src/messages.{es,en}.json`); the window completes

@@ -46,7 +46,7 @@ export function createRenderTab(props: TabStripProps, deps: { gitRows: Accessor<
           ? t("projects.threads.heading", { name: displayName(agent, profiles()[agent]), title: threadTitle(row()) })
           : displayName(agent, profiles()[agent]);
       }
-      return isTaskTab(p) || p.clase === "observabilidad" || p.clase === "pantalla"
+      return isTaskTab(p) || p.clase === "pantalla"
         ? (isTaskTab(p) && props.session(p.session)?.subagent ? readableSessionTitle(p.titulo) : p.titulo)
         : (labels().get(p.id) ?? "");
     };
@@ -154,7 +154,7 @@ export function createRenderTab(props: TabStripProps, deps: { gitRows: Accessor<
               when={isTaskTab(p)}
               fallback={
               <Show
-                  when={p.clase !== "sitio" && p.clase !== "observabilidad" && p.clase !== "pantalla"}
+                  when={p.clase !== "sitio" && p.clase !== "pantalla"}
                   fallback={
                     <Show when={p.clase === "pantalla"} fallback={<Globe size={12} class="shrink-0 text-neutral-500" aria-hidden={true} />}>
                       <Monitor size={12} class="shrink-0 text-neutral-500" aria-hidden={true} />
