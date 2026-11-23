@@ -386,8 +386,6 @@
   "projects.tabs.new_browser": "Navegador",
   "projects.tabs.draft": "Nueva tarea",
   "projects.picker.add": "Añadir un proyecto…",
-  "projects.picker.manage": "Administrar proyectos",
-  "projects.picker.manage_where": "Ajustes",
   "projects.picker.tasks": {
     "one": "{count} tarea",
     "other": "{count} tareas"

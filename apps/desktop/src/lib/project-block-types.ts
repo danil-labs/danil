@@ -24,7 +24,6 @@ export { type OptimisticHistoryState } from "../../../../packages/features/chat/
 export { type Author } from "../../../../packages/features/chat/src/model/messageTypes.ts";
 export { type Preview } from "../../../../packages/features/artifacts/src/components/Preview.tsx";
 export { type ChatExportado } from "../../../../packages/features/chat/src/model/transcript.ts";
-export { type ContextoDeProyectos } from "../../../../packages/features/settings/src/screens/ManageProjects.tsx";
 export { type Capabilities } from "../../../../packages/host/src/platform.ts";
 export { type SearchFilter } from "../../../../packages/shell/src/shell/GlobalSearch.tsx";
 export { clave } from "../../../../packages/features/chat/src/model/transcript.ts";

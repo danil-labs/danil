@@ -10,6 +10,5 @@ export * from "./model/fiscal";
 export * from "./model/github-account-failures";
 export * from "./model/logo-crop";
 export * from "./model/orchestratorSnippets";
-export * from "./model/secrets-support";
 export * from "./model/settings-entries";
 export * from "./model/workspace-menu-escape";

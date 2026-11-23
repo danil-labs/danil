@@ -1,5 +1,5 @@
 /**
- * Las diez entradas de Configuración y sus pestañas. Los ids de destinos que
+ * Las nueve entradas de Configuración y sus pestañas. Los ids de destinos que
  * ya no son pestaña siguen en `MOVED`: `setSettings("plugins")` y los enlaces
  * guardados abren la pestaña que ahora los contiene.
  */
@@ -10,14 +10,12 @@ export const SETTINGS_ENTRIES = [
   { id: "ai-accounts", group: "you", tabs: ["proveedores-ia"] },
   { id: "source-control", group: "you", tabs: ["fuentes"] },
   { id: "machines", group: "you", tabs: ["machines", "entorno", "activity"] },
-  { id: "projects", group: "workspace", tabs: ["proyectos", "secrets"] },
   { id: "agents-skills", group: "workspace", tabs: ["agentes", "skills"] },
   { id: "connections", group: "workspace", tabs: ["operation", "plugins", "memory", "external"] },
   { id: "billing", group: "workspace", tabs: ["business", "fiscal"] },
 ] as const;
 
 const MOVED: Record<string, string> = {
-  secretos: "secrets",
   mcp: "operation",
   conexiones: "external",
   radiant: "operation",

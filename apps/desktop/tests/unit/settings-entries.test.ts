@@ -14,7 +14,10 @@ test("old settings ids open the entry and tab that now hold them", () => {
   assert.deepEqual(settingsTarget("plugins"), { entry: "connections", tab: "plugins" });
   assert.deepEqual(settingsTarget("mcp"), { entry: "connections", tab: "operation" });
   assert.deepEqual(settingsTarget("conexiones"), { entry: "connections", tab: "external" });
-  assert.deepEqual(settingsTarget("secretos"), { entry: "projects", tab: "secrets" });
+  assert.equal(settingsTarget("projects"), null);
+  assert.equal(settingsTarget("proyectos"), null);
+  assert.equal(settingsTarget("secrets"), null);
+  assert.equal(settingsTarget("secretos"), null);
   assert.deepEqual(settingsTarget("radiant"), { entry: "connections", tab: "operation" });
   assert.equal(settingsTarget("integrations"), null);
   assert.equal(settingsTarget("support"), null);
@@ -29,8 +32,8 @@ test("unknown or empty ids open nothing in particular", () => {
   assert.equal(settingsTarget("bitacora"), null);
 });
 
-test("ten entries, security stands after account in group you, every tab in exactly one", () => {
-  assert.equal(SETTINGS_ENTRIES.length, 10);
+test("nine entries, security stands after account in group you, every tab in exactly one", () => {
+  assert.equal(SETTINGS_ENTRIES.length, 9);
   const accountIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "account");
   const securityIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "security");
   assert.equal(securityIndex, accountIndex + 1);

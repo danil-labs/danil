@@ -2,7 +2,6 @@ import Bot from "lucide-solid/icons/bot";
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
 import CreditCard from "lucide-solid/icons/credit-card";
 import ExternalLink from "lucide-solid/icons/external-link";
-import Folders from "lucide-solid/icons/folders";
 import GitBranch from "lucide-solid/icons/git-branch";
 import Monitor from "lucide-solid/icons/monitor";
 import Plug from "lucide-solid/icons/plug";
@@ -29,7 +28,6 @@ import Integrations from "../components/Integrations";
 import { PaquetesDeLengua } from "../components/LanguagePacks";
 import LoginSecurity from "../components/LoginSecurity";
 import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
-import type { ContextoDeProyectos } from "./ManageProjects";
 import type { Falla } from "../../../../ui/src/lib/bundled";
 import type { Failure } from "../../../../ui/src/Failure";
 import ProveedorDeMemoria from "../components/MemoryProvider";
@@ -37,15 +35,12 @@ import { NotifyBehavior } from "../components/NotifyBehavior";
 import Providers from "../components/Providers";
 import Skills from "../components/Skills";
 import { SETTINGS_ENTRIES, type SettingsEntryId, type SettingsGroup } from "../model/settings-entries";
-import { Secrets } from "../settings-panels";
 import Workspaces from "../components/Workspaces";
 
 // Chunks aparte: solo los carga quien abre la sección.
 const DanilAccount = lazy(() => import("../components/DanilAccountsEntry"));
 
 const Appearance = lazy(() => import("../components/Appearance"));
-
-const ManageProjects = lazy(() => import("./ManageProjects"));
 
 const Agents = lazy(() => import("../components/Agents"));
 
@@ -91,7 +86,6 @@ type ContextoDeAgentes = {
 export const pestanasDe = (
   superficies: () => Superficie[],
   agentes: ContextoDeAgentes,
-  proyectos: ContextoDeProyectos | undefined,
   workspace: () => string | null,
   activityMachine: () => string | null,
   maquinas: MaquinasDeAjustes,
@@ -125,9 +119,7 @@ export const pestanasDe = (
     machines: cuenta ? tab("machines", () => t("settings.tab.machines"), () => <Suspense fallback={null}><DanilAccount part="machines" maquinas={maquinas} sesiones={sesiones} /></Suspense>) : undefined,
     entorno: tab("entorno", () => t("settings.nav.environment"), () => <Environment avisoReparacion={avisoReparacion} />),
     activity: tab("activity", () => t("activity.title"), () => <Suspense fallback={null}><ActivityLogs workspace={workspace()} machine={activityMachine()} /></Suspense>),
-    proyectos: tab("proyectos", () => t("settings.tab.folders"), proyectos ? () => { machineAction(); return <Suspense fallback={null}><ManageProjects contexto={proyectos} /></Suspense>; } : null),
     fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers integraciones={integraciones} maquinas={maquinas} />; }),
-    secrets: tab("secrets", () => t("settings.tab.secrets"), capabilities().nativeWindow || capabilities().accountCredentials ? () => <Suspense fallback={null}><Secrets maquinas={maquinas} /></Suspense> : null),
     agentes: tab("agentes", () => t("settings.nav.agents"), () => (
       <Suspense fallback={null}>
         <Agents
@@ -153,7 +145,6 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   "ai-accounts": { name: () => t("settings.entry.ai_accounts"), icono: () => <Sparkles size={15} /> },
   "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitBranch size={15} /> },
   machines: { name: () => t("settings.entry.machines"), icono: () => <Monitor size={15} /> },
-  projects: { name: () => t("settings.entry.projects"), icono: () => <Folders size={15} /> },
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
   connections: { name: () => t("settings.nav.connections"), icono: () => <Plug size={15} /> },
   billing: { name: () => t("settings.entry.billing"), icono: () => <CreditCard size={15} /> },

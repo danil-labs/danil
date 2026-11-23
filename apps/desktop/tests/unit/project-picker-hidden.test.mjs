@@ -1,10 +1,10 @@
 /**
- * «Ocultar del selector»: se oculta en Ajustes → Proyectos y se muestra desde el
- * selector o desde Ajustes. El oculto deja los 8 recientes y va al final de
- * «Más proyectos…», el buscador lo encuentra, sigue en Ajustes y ninguna tarea
- * cambia. El contador de la fila y la columna «Tareas» de Ajustes cuentan las
- * tareas activas, no el `sessions` del motor, que incluye las archivadas; el
- * aviso de borrado sí las cuenta todas. Monta `dist/` con el IPC simulado.
+ * Un proyecto oculto del selector (preferencia guardada en `localStorage`) deja
+ * los 8 recientes y va al final de «Más proyectos…», el buscador lo encuentra,
+ * «Mostrar» lo regresa al selector y ninguna tarea cambia. El contador de la
+ * fila cuenta las tareas activas, no el `sessions` del motor (que incluye las
+ * archivadas). El selector mantiene «Añadir un proyecto…» y ya no ofrece
+ * «Administrar proyectos». Monta `dist/` con el IPC simulado.
  */
 import assert from "node:assert/strict";
 import test from "node:test";
@@ -56,8 +56,10 @@ async function until(check, ms = 3000) {
 // Lo que cambiaría una tarea o un proyecto en el motor.
 const MUTATES = /archive|delete|remove|rename|move|update_session|set_session|update_project|set_project|save_session/;
 
-test("hide from Settings, it leaves the 8 and goes last under «Más proyectos…»; «Mostrar» brings it back; counts are of active tasks; no task changes", async () => {
-  const app = await boot("listo", "project-picker-hidden", responses);
+test("hidden project leaves the 8 and goes last under «Más proyectos…»; «Mostrar» brings it back; counts are of active tasks; no task changes", async () => {
+  const app = await boot("listo", "project-picker-hidden", responses, undefined, {
+    "harness.layout.projects.hidden": JSON.stringify({ w: ["old9"] }),
+  });
   const doc = app.w.document;
   const search = () => doc.querySelector('input[placeholder="Buscar proyecto"]');
   const trigger = () => doc.querySelector('[aria-label="Proyecto"]');
@@ -73,50 +75,25 @@ test("hide from Settings, it leaves the 8 and goes last under «Más proyectos�
     assert.ok(await until(() => trigger()), "the project picker is on the new task");
     assert.ok(await until(() => doc.querySelector('[data-sesion="t1"]')), "the task of «Danil App» is loaded");
 
+    const before = app.commands.length;
+
     trigger().click();
     assert.ok(await until(() => row("danil-app")), "«Danil App» is offered");
     assert.match(row("danil-app").textContent, /1 tarea$/, "1 active task, not the engine's 363");
-    assert.ok(row("old9"), "«Viejo 09» is among the 8 recent");
-    assert.match(row("old9").textContent, /sin tareas$/, "all its tasks are archived: no active ones");
-    assert.equal(more().textContent.trim(), "Más proyectos… (3)");
-    await close();
-
-    // Ajustes → Proyectos: «Ocultar del selector».
-    trigger().click();
-    assert.ok(await until(() => search()));
-    [...doc.querySelectorAll("button")].find((b) => b.textContent.includes("Administrar proyectos")).click();
-    assert.ok(await until(() => doc.querySelector('[data-settings-project="old9"]')), "Settings → Projects is open");
-    // La columna «Tareas» cuenta las activas, como el selector; el aviso de borrado, todas.
-    const cell = (id) => doc.querySelector(`[data-settings-project="${id}"] [data-active-tasks]`);
-    assert.equal(cell("danil-app").textContent.trim(), "1 tarea", "active tasks, not the engine's 363");
-    assert.equal(cell("old9").textContent.trim(), "sin tareas", "all its tasks are archived");
-    doc.querySelector('[data-settings-project="danil-app"] button[aria-haspopup="menu"]').click();
-    assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent.trim() === "Borrar el proyecto")));
-    [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent.trim() === "Borrar el proyecto").click();
-    assert.ok(await until(() => doc.body.textContent.includes("También se borrarán sus 363 tareas")), "the delete warning still counts archived tasks: they are deleted too");
-    [...doc.querySelectorAll("button")].find((b) => b.textContent.trim() === "Conservarlo").click();
-    assert.ok(await until(() => !doc.body.textContent.includes("También se borrarán sus 363 tareas")));
-    const before = app.commands.length;
-    doc.querySelector('[data-settings-project="old9"] button[aria-haspopup="menu"]').click();
-    assert.ok(await until(() => doc.querySelector('[data-picker-visibility="shown"]')), "the menu offers «Ocultar del selector»");
-    const hide = doc.querySelector('[data-picker-visibility="shown"]');
-    assert.equal(hide.textContent.trim(), "Ocultar del selector");
-    hide.click();
-    await sleep(50);
-    assert.ok(doc.querySelector('[data-settings-project="old9"]'), "it stays in Settings");
-    doc.querySelector('[data-settings-project="old9"] button[aria-haspopup="menu"]').click();
-    assert.ok(await until(() => doc.querySelector('[data-picker-visibility="hidden"]')), "Settings now offers «Mostrar en el selector»");
-    assert.equal(doc.querySelector('[data-picker-visibility="hidden"]').textContent.trim(), "Mostrar en el selector");
-    doc.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    await sleep(50);
-    doc.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    assert.ok(await until(() => !doc.querySelector('[data-settings-project="old9"]')), "Settings closes");
-
-    trigger().click();
-    assert.ok(await until(() => more()));
     assert.equal(row("old9"), null, "hidden: not among the 8");
     assert.equal(order().length, 8, "the next one takes its place");
     assert.equal(more().textContent.trim(), "Más proyectos… (3)", "the hidden one counts under «Más proyectos…»");
+
+    const dialog = search().closest("[role=dialog]");
+    assert.ok(
+      [...dialog.querySelectorAll("button")].some((b) => b.textContent.includes("Añadir un proyecto")),
+      "the picker still offers adding a project",
+    );
+    assert.ok(
+      ![...dialog.querySelectorAll("button")].some((b) => b.textContent.includes("Administrar proyectos")),
+      "the picker no longer links to retired Settings → Projects",
+    );
+
     more().click();
     assert.ok(await until(() => order().length === 11));
     assert.equal(order().at(-1), "old9", "the hidden one goes last");
@@ -140,6 +117,7 @@ test("hide from Settings, it leaves the 8 and goes last under «Más proyectos�
     await close();
     trigger().click();
     assert.ok(await until(() => row("old9")), "back among the 8 recent");
+    assert.match(row("old9").textContent, /sin tareas$/, "all its tasks are archived: no active ones");
     assert.equal(more().textContent.trim(), "Más proyectos… (3)");
     await close();
 
