@@ -37,6 +37,6 @@ export type SesionesDeAjustes = {
   noteWebAccountMode: () => void;
   usesGroupAccounts: () => boolean;
   MoveWorkspaceDialog: Component<{ sessions: RielDeAjustes; workspace: { id: string; name: string }; onClose: () => void }>;
-  MarcaDeWorkspace: Component<{ id?: string; name: string; logo?: string | null; load?: () => Promise<string | null> }>;
+  MarcaDeWorkspace: Component<{ id?: string; context?: string | null; name: string; logo?: string | null; load?: () => Promise<string | null> }>;
   organizationLogo?: (context: string, workspace: string, path: string | null) => Promise<string | null>;
 };

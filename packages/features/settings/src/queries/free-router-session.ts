@@ -1,5 +1,5 @@
 /** El Free router de plataforma de esta ventana: un anfitrión (Desk o web) y un cliente por motor; sin anfitrión, cerrado. */
-import type { FreeModelPolicy } from "../../../../session/src/free-model-policy.ts";
+import { isPlatformFreeModelPolicy, type FreeModelPolicy } from "../../../../session/src/free-model-policy.ts";
 import { createFreeRouterPlatform, platformScope, type EdgeSend, type EngineCall, type FreeRouterPlatform, type FreeRouterScope } from "./free-router-platform.ts";
 import type { WorkspaceList } from "../../../../platform-client/src/workspaces.ts";
 
@@ -90,7 +90,7 @@ export async function signOutPlatform(): Promise<void> {
 }
 
 /** El motor marca la política de un workspace que no es personal (campo aditivo); sin la marca, camino personal. */
-export const isPlatformPolicy = (policy: FreeModelPolicy): boolean => (policy as { authority?: unknown }).authority === "platform";
+export const isPlatformPolicy = (policy: FreeModelPolicy): boolean => isPlatformFreeModelPolicy(policy);
 
 /** Si un rechazo del motor pide el camino de plataforma. */
 export const needsPlatform = (e: unknown): boolean =>

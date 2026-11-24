@@ -1,6 +1,7 @@
 import { batch } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
 import { callEngine } from "../../../../engine-client/src/client.ts";
+import { freeModelPolicyAvailable } from "../../../../session/src/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
 import type { Superficie } from "../../../../ui/src/lib/surfaces.ts";
 import { textoDeFalta } from "../../../../ui/src/lib/no-space";
@@ -34,7 +35,7 @@ export function crearCargaDeConexiones(estado: EstadoDeConexiones) {
   }
 
   async function consentida() {
-    const policy = await loadFreeModelPolicy();
+    const policy = await loadFreeModelPolicy(undefined, true);
     return policy?.accepted ? policy : null;
   }
 
@@ -46,7 +47,7 @@ export function crearCargaDeConexiones(estado: EstadoDeConexiones) {
       if (f.modo === "consentimiento") {
         const policy = await consentida();
         return a?.available && policy
-          ? { k: "conectada", cuenta: policy.enabled ? t("settings.accounts.free.warning_short") : t("settings.accounts.free.paused"), id: null }
+          ? { k: "conectada", cuenta: freeModelPolicyAvailable(policy) ? t("settings.accounts.free.warning_short") : t("settings.accounts.free.paused"), id: null }
           : base;
       }
       const conectada = await cuentaConectada(f.agente);

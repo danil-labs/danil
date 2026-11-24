@@ -337,7 +337,23 @@ function createRouterCore(config: RouterConfig) {
     return out;
   }
 
-  const differs = (a: Slice | null, b: Slice) => !a || a.status !== b.status || a.has !== b.has || JSON.stringify(a.value) !== JSON.stringify(b.value);
+  /** Los listados traen telemetría viva (`machine_resources`, `cached_at`) que cambia en cada lectura sin alterar los workspaces. */
+  function stableSliceValue(value: unknown): unknown {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+    if (!("machine_resources" in value) && !("cached_at" in value)) return value;
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).filter(
+        ([name]) => name !== "machine_resources" && name !== "cached_at",
+      ),
+    );
+  }
+
+  const differs = (a: Slice | null, b: Slice, command?: string) => {
+    if (!a || a.status !== b.status || a.has !== b.has) return true;
+    const va = command && LISTING.has(command) ? stableSliceValue(a.value) : a.value;
+    const vb = command && LISTING.has(command) ? stableSliceValue(b.value) : b.value;
+    return JSON.stringify(va) !== JSON.stringify(vb);
+  };
 
   /** Pregunta otra vez a `envelope.machine` si hace rato que no; si su rebanada cambió, la ventana relee. */
   function refresh(envelope: Envelope, before: Slice | null) {
@@ -347,7 +363,7 @@ function createRouterCore(config: RouterConfig) {
     lastRead.set(id, Date.now());
     void fleet.read(envelope).then(
       (slice) => {
-        if (differs(before, slice)) notify(envelope.command);
+        if (differs(before, slice, envelope.command)) notify(envelope.command);
       },
       () => {},
     );
@@ -380,7 +396,8 @@ function createRouterCore(config: RouterConfig) {
     if (quick) return quick;
     void live.then(
       (slices) => {
-        if (slices.some((slice, i) => differs(before[i], slice))) notify(envelopes[0]?.command ?? "");
+        const command = envelopes[0]?.command ?? "";
+        if (slices.some((slice, i) => differs(before[i], slice, command))) notify(command);
       },
       () => {},
     );
@@ -402,7 +419,7 @@ function createRouterCore(config: RouterConfig) {
       slices[i] = slice;
       if (envelope.command === "list_live_sessions" && slice.has) sessionReads.set(JSON.stringify([envelope.machine, envelope.workspace, envelope.args?.project]), envelope);
       if (returned) {
-        if (differs(before, slice)) notify(envelope.command);
+        if (differs(before, slice, envelope.command)) notify(envelope.command);
       } else if (slice.has) soon();
     });
     await Promise.race([Promise.all(live), available]);
