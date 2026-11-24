@@ -150,10 +150,6 @@ const SIN_INTERFAZ = {
   state_resource: "lo pide el router de máquinas (features/machines/router.ts, `native`): la barra de esta máquina sale de su índice con la versión que ya tiene",
   state_manifest: "la ventana pide cada recurso con su versión (state_resource); el manifiesto lo leen los motores de otras máquinas para sus copias",
   tree_diff: "el diff de un turno se pintaba bajo cada turno del chat; ahora «Editó N archivos» abre el panel de la tarea en «Cambios» (tree_changes)",
-  // La sección Configuración › Máquinas (Máquinas, Estado del entorno y Actividad) se retiró de Desk y Web.
-  list_dependencies: "la llamaba Configuración › Máquinas › Estado del entorno, ya retirada; queda en el contrato del motor",
-  service_prepare_update: "la llamaba Update.tsx dentro de Estado del entorno, ya retirada; queda en el contrato del motor",
-  service_cancel_update: "la llamaba Update.tsx dentro de Estado del entorno, ya retirada; queda en el contrato del motor",
   ...Object.fromEntries([
     "list_activity", "read_activity", "read_activity_log",
   ].map(command => [command, "se retiró la pestaña Actividad de Configuración; sigue en uso desde apps/mobile"])),

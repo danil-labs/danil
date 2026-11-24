@@ -52,7 +52,7 @@ const app = await boot("listo", `connection-access-${scenario}`, {
   list_workspaces: workspace, workspaces_startup: workspace,
   list_projects: [], list_sources: [], list_live_sessions: [], list_live_turns: [], list_providers: [],
   list_models: { models: [], fallback: false }, tasks_awaiting_quota: [],
-  list_local_orchestrators: [], account_relay_token: { token: "fake-token", expires_at: 9999999999, endpoint: "https://qa.invalid" },
+  account_relay_token: { token: "fake-token", expires_at: 9999999999, endpoint: "https://qa.invalid" },
   service_poll: { cursor: 0, gap: false, replay: false, runtime: "fixture", reset: false },
 }, undefined, {}, { workspaces: [{ id: "w1", name: "Same" }, { id: "w2", name: "Same" }] });
 const doc = app.w.document;

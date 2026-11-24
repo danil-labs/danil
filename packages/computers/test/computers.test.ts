@@ -371,7 +371,7 @@ test("un bloque MCP con valores escritos no sale al socket; uno con marcadores s
   await assert.rejects(relay.call("m-3", "add_mcp_servers", "w", null, { bloque: "{ ACME_TOKEN: abc" }), (e: { code: string }) => e.code === "mcp_block_invalid");
   assert.equal(socket.sent.filter((m) => m.type === "call").length, 0, "nada llegó al socket");
   // Con la clave repetida `JSON.parse` se queda con la última: viaja eso, no el texto original.
-  const repeated = '{"acme":{"command":"npx","env":{"T":"${secret:env/*/T}"},"args":[],"env":{"T":"${secret:env/*/T}"}}}';
+  const repeated = '{"acme":{"command":"npx","env":{"T":"${secret:mcp/acme/env/T}"},"args":[],"env":{"T":"${secret:mcp/acme/env/T}"}}}';
   const pending = relay.call("m-4", "add_mcp_servers", "w", null, { bloque: repeated });
   const sent = socket.sent.find((m) => m.id === "m-4") as { args: { bloque: string } };
   assert.equal(sent.args.bloque, JSON.stringify(JSON.parse(repeated)));

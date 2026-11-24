@@ -63,11 +63,6 @@ const ENGINE_CODES: Record<string, string> = {
   unauthorized: "danil.credentials.failed.unauthorized",
   license_required: "danil.credentials.failed.license",
   invalid_recipient: "danil.credentials.failed.recipient",
-  env_secret_invalid_folder: "credentials.error.env_secret_invalid_folder",
-  env_secret_invalid_name: "credentials.error.env_secret_invalid_name",
-  env_secret_reserved: "credentials.error.env_secret_reserved",
-  env_secret_empty: "credentials.error.env_secret_empty",
-  env_secret_exists: "credentials.error.env_secret_exists",
   too_large: "credentials.error.too_large",
   storage: "credentials.error.storage",
   recipients_unsupported: "credentials.error.recipients_unsupported",
@@ -125,7 +120,6 @@ function workerBackend(source: CredentialSource): CredentialsBackend {
   async function sealAndPut(workspace: string, draft: SealedDraft, value: string, listing: CredentialsListing) {
     if (!(await canSeal())) throw { what: t("danil.credentials.rotate.no_webcrypto"), detail: "webcrypto_x25519" } satisfies Failure;
     const copies = await sealForRecipients(sealRecipientsFor(draft.kind, listing.recipients), workspace, draft.slot, value);
-    if (draft.kind === "env_secret" && !copies.length) throw { what: t("danil.secrets.no_recipients"), detail: "no_recipients" } satisfies Failure;
     await done(putCredential(source, workspace, { ...draft, hint: credentialHint(draft.kind, value), copies }));
   }
 }

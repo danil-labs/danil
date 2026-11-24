@@ -5,7 +5,7 @@ import { unknownCommand } from "../../src/lib/errorCode.ts";
 test("unknown command recognizes the pinned legacy transport literal only", () => {
   assert.equal(unknownCommand("service.error.command"), true);
   assert.equal(unknownCommand({ what: { clave: "shell.service.failed" }, detail: "service.error.command" }), true);
-  assert.equal(unknownCommand({ detail: { code: "command", detail: "env_secrets_list" } }), true);
+  assert.equal(unknownCommand({ detail: { code: "command", detail: "list_ports" } }), true);
   for (const error of [
     "service.error.io",
     "command",

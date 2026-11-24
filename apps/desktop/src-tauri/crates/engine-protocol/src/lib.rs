@@ -90,7 +90,6 @@ pub const EXTENSIONS: &[&str] = &[
     include_str!("../extensions/orchestrators.json"),
     include_str!("../extensions/engine_update_v1.json"),
     include_str!("../extensions/machine_usage_v1.json"),
-    include_str!("../extensions/secrets_v1.json"),
     include_str!("../extensions/artifact_parts_v1.json"),
     include_str!("../extensions/task-lifecycle-v1.json"),
     include_str!("../extensions/attachment_documents_v1.json"),
