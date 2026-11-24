@@ -4,7 +4,7 @@ import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { Toast, ToastPortal } from "../../../../ui/src/Toast";
-import DeleteTaskMember from "../components/DeleteTaskMember";
+import DeleteTaskMember from "./DeleteTaskMember";
 import {
   type DeleteMember,
   type DeletePreview,

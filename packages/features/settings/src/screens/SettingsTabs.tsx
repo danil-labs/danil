@@ -1,6 +1,5 @@
 import Bot from "lucide-solid/icons/bot";
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
-import GitBranch from "lucide-solid/icons/git-branch";
 import Palette from "lucide-solid/icons/palette";
 import Plug from "lucide-solid/icons/plug";
 import Shield from "lucide-solid/icons/shield";
@@ -10,6 +9,7 @@ import Wrench from "lucide-solid/icons/wrench";
 import { type JSX, lazy, Suspense } from "solid-js";
 import { machineAction } from "../../../../host/src/machine-action";
 import { capabilities } from "../../../../host/src/platform";
+import { GitMark } from "../../../../ui/src/icons";
 import { t } from "../../../../ui/src/lib/i18n";
 import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
 import { type Superficie } from "../../../../ui/src/lib/surfaces";
@@ -58,8 +58,6 @@ export type Entrada = {
 type ContextoDeAgentes = {
   readonly modelos: ModelChoices;
   readonly proyecto: string;
-  /** Los agentes de las tareas abiertas: sus proveedores llegan desplegados. */
-  readonly agentesEnUso: string[];
   onAgentProfile: (project: string, name: string) => void;
   /** Si `list_surfaces` todavía no contesta, contestó o falló. */
   readonly estadoSuperficies: SurfacesState;
@@ -90,7 +88,7 @@ export const pestanasDe = (
     "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.nav.danil_account"), () => <Suspense fallback={null}><DanilAccount workspace={workspace()} context={context()} sesiones={sesiones} /></Suspense>) : undefined,
     security: tab("security", () => t("settings.tab.security"), () => <LoginSecurity />),
     general: tab("general", () => t("settings.nav.general"), () => <General maquinas={maquinas} />),
-    appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} sesiones={sesiones} /></Suspense>),
+    appearance: tab("appearance", () => t("settings.nav.appearance"), () => { machineAction(); return <Suspense fallback={null}><Appearance workspace={workspace()} proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} /></Suspense>; }),
     "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} piezas={piezas} />; }),
     fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers integraciones={integraciones} maquinas={maquinas} />; }),
     agentes: tab("agentes", () => t("settings.nav.agents"), () => (
@@ -118,7 +116,7 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   account: { name: () => t("settings.entry.account"), icono: () => <CircleUserRound size={15} /> },
   security: { name: () => t("settings.entry.security"), icono: () => <Shield size={15} /> },
   "ai-accounts": { name: () => t("settings.entry.ai_accounts"), icono: () => <Sparkles size={15} /> },
-  "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitBranch size={15} /> },
+  "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitMark size={15} /> },
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
   connections: { name: () => t("settings.nav.connections"), icono: () => <Plug size={15} /> },
   maintenance: { name: () => t("settings.entry.maintenance"), icono: () => <Wrench size={15} /> },

@@ -12,7 +12,7 @@ import { cn } from "../../../../ui/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { Pressable } from "../../../../ui/src/Pressable";
-import { DISPARADOR, nombreDeNivel, type SelectorDeModeloProps } from "./model-picker-types";
+import { DISPARADOR, nombreDeNivel, type SelectorDeModeloProps } from "../components/model-picker-types";
 import { createSelectorDeModelo } from "./model-picker-state";
 import { Input } from "../../../../ui/src/Input";
 

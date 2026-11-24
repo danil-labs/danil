@@ -6,10 +6,10 @@ import { partesDelTramo, type Paso } from "../../../../../ui/src/lib/steps";
 import { cn } from "../../../../../ui/src/lib/utils";
 import { Markdown } from "../../../../../ui/src/Markdown";
 import type { ActivityChunk } from "../../model/activityBlocks";
-import { ActivityIndicator, ActivityCaption } from "./ActivityIndicator";
+import { ActivityIndicator, ActivityCaption } from "../../components/activity/ActivityIndicator";
 import McpAppView from "../McpAppView";
 import type { Msg, Razonamiento } from "../../model/messageTypes";
-import LineaDeTiempo, { SUPERFICIE_DE_EJECUCION } from "../Timeline";
+import LineaDeTiempo, { SUPERFICIE_DE_EJECUCION } from "../../components/Timeline";
 import { currentActivityAction, presentActivity, type ActivityAction } from "../../model/activityPresentation";
 import { Pressable } from "../../../../../ui/src/Pressable";
 type Avance = ActivityChunk<Msg>;
@@ -18,7 +18,7 @@ const SIN_AVANCE: Avance[] = [];
 const FILA_DEL_TRAMO =
   "inline-flex min-w-0 max-w-full items-center gap-2 rounded-sm py-1.5 text-left text-ui font-normal text-neutral-500 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary";
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
-const Reasoning = sharedLazy(() => import("../Reasoning"));
+const Reasoning = sharedLazy(() => import("../../components/Reasoning"));
 export function RegistroDeTrabajo(props: {
   pasos: Paso[];
   /** Lo que el turno hizo y dijo antes de su respuesta; se pliega con los pasos. */

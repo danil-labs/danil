@@ -41,14 +41,6 @@ export function setWorkspaceHostGithub<res = unknown>(args?: InvokeArgs, options
   return invoke<res>("set_workspace_host_github", args, options);
 }
 
-export function setWorkspaceLogo<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
-  return invoke<res>("set_workspace_logo", args, options);
-}
-
-export function setWorkspaceLogoPng<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
-  return invoke<res>("set_workspace_logo_png", args, options);
-}
-
 export function setWorkspacePermissionMode<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
   return invoke<res>("set_workspace_permission_mode", args, options);
 }

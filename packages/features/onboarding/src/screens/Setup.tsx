@@ -38,9 +38,9 @@ export type { SetupProps } from "./setup-run";
 const RITMO_CONSEJOS = 5000;
 
 // Conectar la IA y personalizar solo se cargan en el primer arranque: la carga inicial está en su techo.
-const MapaDeConexiones = lazy(() => import("../components/ConnectAI").then((m) => ({ default: m.MapaDeConexiones })));
-const PanelDeIA = lazy(() => import("../components/ConnectAI").then((m) => ({ default: m.PanelDeIA })));
-const Comprobacion = lazy(() => import("../components/ConnectAI").then((m) => ({ default: m.Comprobacion })));
+const MapaDeConexiones = lazy(() => import("./ConnectAI").then((m) => ({ default: m.MapaDeConexiones })));
+const PanelDeIA = lazy(() => import("./ConnectAI").then((m) => ({ default: m.PanelDeIA })));
+const Comprobacion = lazy(() => import("./ConnectAI").then((m) => ({ default: m.Comprobacion })));
 const Personalizar = lazy(() => import("./Personalize"));
 const PreparationProgress = lazy(() => import("../components/Prepare").then((m) => ({ default: m.PreparationProgress })));
 const FuncionesAfectadas = lazy(() => import("../components/Repair").then((m) => ({ default: m.FuncionesAfectadas })));
@@ -86,7 +86,7 @@ export default function Setup(props: SetupProps) {
       if (!workspace()) setWorkspace(await entrarAlWorkspaceFree(props.sealFirstFreeWorkspace));
       if (!workspace()) return;
       if (!conexiones()) {
-        const [{ crearConexiones }] = await Promise.all([import("../queries/connect-store"), import("../components/ConnectAI")]);
+        const [{ crearConexiones }] = await Promise.all([import("../queries/connect-store"), import("./ConnectAI")]);
         runWithOwner(dueño, () => setConexiones(crearConexiones()));
       }
       await conexiones()?.cargar();

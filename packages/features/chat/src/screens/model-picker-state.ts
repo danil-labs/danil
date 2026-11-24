@@ -8,7 +8,7 @@ import { modelPresentation, effortOptions, effortValue, esFavorito, favoritosDeM
 import { createPref } from "../../../../session/src/prefs";
 import { danilCreditsTierLabel } from "../../../../ui/src/lib/tasks/index.ts";
 import { DANIL_CREDITS, isDanilCreditsModel } from "../model/danil-credits";
-import { esServicio, nombreDeServicio, gruposDeModelos, nombreDeNivel, type SelectorDeModeloProps } from "./model-picker-types";
+import { esServicio, nombreDeServicio, gruposDeModelos, nombreDeNivel, type SelectorDeModeloProps } from "../components/model-picker-types";
 
 export function createSelectorDeModelo(props: SelectorDeModeloProps, deps: { campo: () => HTMLInputElement | undefined }) {
   const [abierto, setAbierto] = createSignal(false);

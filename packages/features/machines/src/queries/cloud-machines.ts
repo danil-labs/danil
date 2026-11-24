@@ -15,6 +15,7 @@ import { machineToComputer, machinesClient, wokeOf as platformWokeOf } from "../
 import type { MachinesAnswer } from "../../../../platform-client/src/machines-config.ts";
 
 import { cancelEdgeWrites as platformCancelEdgeWrites, edgeUntil, type EdgeMethod, type EdgeReply as NativeReply, type Patience } from "../../../../platform-client/src/client.ts";
+import { isNotAvailableStatus } from "../../../../platform-client/src/index.ts";
 import { capabilitiesUrl } from "../../../../platform-client/src/machines.ts";
 import { invoke as defaultInvoke } from "../../../../engine-client/src/client.ts";
 import { machinesQuery } from "./machines-query.ts";
@@ -82,7 +83,7 @@ export function createCloudMachines(invoke: Invoke = defaultInvoke, onProblem?: 
     try {
       const response = await fetch(capabilitiesUrl(endpoint));
       if (response.status === 401 || response.status === 403) return "denied";
-      if (response.status === 404 || response.status === 501) return null;
+      if (isNotAvailableStatus(response.status)) return null;
       if (response.status !== 200) return undefined;
       return capabilityList(await response.json()) ?? undefined;
     } catch {

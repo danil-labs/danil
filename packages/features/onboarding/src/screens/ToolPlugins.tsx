@@ -1,5 +1,5 @@
 import { listen } from "../../../../host/src/serviceEvents.ts";
-import { AvanceDeDescarga, BarraDeCarga } from "./DownloadProgress";
+import { AvanceDeDescarga, BarraDeCarga } from "../components/DownloadProgress";
 import Check from "lucide-solid/icons/check";
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { createStore } from "solid-js/store";
@@ -25,7 +25,7 @@ import {
   type Plugin,
 } from "../queries";
 import { CON_PESO, ORDEN_PLUGINS, RECOMENDADOS, descripcion } from "../model/tool-cards";
-import { VerMas } from "./ToolCardParts";
+import { VerMas } from "../components/ToolCardParts";
 
 /** Los plugins se instalan dentro de su tarjeta; instalar sigue en segundo plano si se avanza. */
 export function Plugins(props: { onCambio: (estado: { instalados: number; instalando: number }) => void }) {

@@ -1,5 +1,5 @@
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import { AvanceDeDescarga, BarraDeCarga, CodigoParaConfirmar, Peso } from "./DownloadProgress";
+import { AvanceDeDescarga, BarraDeCarga, CodigoParaConfirmar, Peso } from "../components/DownloadProgress";
 import Check from "lucide-solid/icons/check";
 import FileText from "lucide-solid/icons/file-text";
 import { For, Match, Show, Switch } from "solid-js";
@@ -26,7 +26,7 @@ import { type Integracion, type IntegracionesProps, nombreDeArchivo } from "../m
 import { createEstadoDeIntegraciones } from "../queries/integrations-state";
 import { createConexiones } from "../queries/integrations-connect";
 import { createFormulario } from "./IntegrationForm";
-import { MarcaIntegracion, VerMas } from "./ToolCardParts";
+import { MarcaIntegracion, VerMas } from "../components/ToolCardParts";
 
 /** Las integraciones: cada tarjeta mide lo mismo en todos sus estados y se conecta o desconecta en su sitio. */
 export function Integraciones(props: IntegracionesProps) {

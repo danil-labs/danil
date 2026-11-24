@@ -28,14 +28,20 @@ import { asFailure, type Failure, FailureNote } from "../../../ui/src/Failure";
 export default function DeleteSpace(props: {
   space: Space;
   proyectos: Project[];
+  managed?: {
+    taskCount: number;
+    defaultSpaceName: string;
+    onDelete: () => Promise<number>;
+  };
   onAbrir: (folder: string, task: string) => void;
   onCerrar: () => void;
-  onEliminada: (archivadas: number) => void;
+  onEliminada: (archivadas: number, ungrouped?: boolean) => void;
   /** Las carpetas donde el intento pudo archivar algo, falle o no. */
   onTocadas: (folders: string[]) => void;
 }) {
-  const [previa, { mutate }] = createResource(() => props.space.id, (id) =>
-    invoke<DeletePreview>("space_delete_preview", { id }, machineOf(id)),
+  const [previa, { mutate }] = createResource(
+    () => (props.managed ? null : props.space.id),
+    (id) => invoke<DeletePreview>("space_delete_preview", { id }, machineOf(id)),
   );
   const [marcas, setMarcas] = createSignal(new Map<string, "new" | "changed">());
   const [fallos, setFallos] = createSignal<{ task: string; title: string; error: Failure }[]>([]);
@@ -56,8 +62,22 @@ export default function DeleteSpace(props: {
   const releer = () => invoke<DeletePreview>("space_delete_preview", { id: props.space.id }, machineOf(props.space.id));
 
   const confirmar = async () => {
+    if (borrando()) return;
+    if (props.managed) {
+      setBorrando(true);
+      setFallo(null);
+      try {
+        const count = await props.managed.onDelete();
+        props.onEliminada(count, true);
+      } catch (e) {
+        setFallo(asFailure(e));
+      } finally {
+        setBorrando(false);
+      }
+      return;
+    }
     const vista = previa();
-    if (!vista || borrando()) return;
+    if (!vista) return;
     setBorrando(true);
     setFallo(null);
     for (const s of vista.tasks) enviadas.add(claveDeVista(s));
@@ -134,6 +154,7 @@ export default function DeleteSpace(props: {
   );
 
   const boton = () => {
+    if (props.managed) return t("spaces.delete.delete_empty");
     const n = tareas().length;
     if (sinCommitear().length > 0) return t("spaces.delete.discard_and_delete");
     if (n > 0) return t("spaces.delete.archive_and_delete", { count: n });
@@ -155,10 +176,21 @@ export default function DeleteSpace(props: {
         <DialogTitle class="m-0 px-5 pt-5 pb-2 text-lead font-semibold">
           {t("spaces.delete.title", { name: nombre() })}
         </DialogTitle>
-        <div class="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 pb-4" aria-busy={previa.loading || borrando()}>
+        <div class="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 pb-4" aria-busy={(!props.managed && previa.loading) || borrando()}>
           <p id="delete-space-what-happens" class="m-0 text-ui leading-relaxed text-neutral-700">
-            <Show when={previa()} fallback={t("spaces.delete.reading")}>
-              {tareas().length > 0 ? t("spaces.delete.body", { count: tareas().length }) : t("spaces.delete.body_empty")}
+            <Show
+              when={props.managed}
+              fallback={
+                <Show when={previa()} fallback={t("spaces.delete.reading")}>
+                  {tareas().length > 0 ? t("spaces.delete.body", { count: tareas().length }) : t("spaces.delete.body_empty")}
+                </Show>
+              }
+            >
+              {(managed) =>
+                managed().taskCount > 0
+                  ? t("spaces.delete.body_ungrouped", { count: managed().taskCount, defaultSpace: managed().defaultSpaceName })
+                  : t("spaces.delete.body_empty")
+              }
             </Show>
           </p>
           <Show when={marcas().size > 0}>
@@ -212,14 +244,14 @@ export default function DeleteSpace(props: {
             porque={t("spaces.delete.unsaved_why")}
             filas={sinGuardar()}
           />
-          <Show when={previa.error}>{(e) => <FailureNote f={asFailure(e())} />}</Show>
+          <Show when={!props.managed && previa.error}>{(e) => <FailureNote f={asFailure(e())} />}</Show>
           <Show when={fallo()}>{(f) => <FailureNote f={f()} />}</Show>
         </div>
         <div class="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-3">
           <Button ref={cancelar} variant="secondary" size="sm" disabled={borrando()} onClick={() => props.onCerrar()}>
             {t("spaces.delete.cancel")}
           </Button>
-          <Button variant="danger" size="sm" disabled={!previa() || borrando()} onClick={() => void confirmar()}>
+          <Button variant="danger" size="sm" disabled={(!props.managed && !previa()) || borrando()} onClick={() => void confirmar()}>
             {boton()}
           </Button>
         </div>

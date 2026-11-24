@@ -11,7 +11,7 @@ import { connectGitHost, openExternal } from "../queries";
 import { type Integracion, SIN_BORRADOR } from "../model/tool-cards";
 import type { EstadoDeIntegraciones } from "../queries/integrations-state";
 import type { Conexiones } from "../queries/integrations-connect";
-import { EspacioEnNegrita, MarcaIntegracion } from "./ToolCardParts";
+import { EspacioEnNegrita, MarcaIntegracion } from "../components/ToolCardParts";
 
 /** El formulario de datos y token de un servicio de código, y su envío. */
 export function createFormulario(estado: EstadoDeIntegraciones, conexiones: Conexiones) {

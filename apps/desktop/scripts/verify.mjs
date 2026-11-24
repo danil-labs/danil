@@ -395,12 +395,6 @@ const steps = [
     root,
   ],
   [
-    "Logo cropping keeps the chosen square",
-    process.execPath,
-    ["--test", "--experimental-strip-types", join(root, "tests/unit/logo-crop.test.ts")],
-    root,
-  ],
-  [
     "The chat paints no destination that executes",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/links.test.ts")],

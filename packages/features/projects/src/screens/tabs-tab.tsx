@@ -13,7 +13,7 @@ import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
 import { colorDeMarca, describirEstado, localDe } from "../model/ports";
 import { AstroAvatar } from "./AstroAvatar";
 import { displayName } from "../queries/profiles";
-import SessionGit, { sessionGitDescription } from "../components/SessionGit";
+import SessionGit, { sessionGitDescription } from "./SessionGit";
 import { readableSessionTitle, threadTitle } from "./Sessions";
 import EstadoDeTarea, { taskLabel } from "./TaskStatus";
 import { taskPriority } from "../../../../ui/src/index";

@@ -27,7 +27,7 @@ export type ComposerPort = {
   refreshProviders: () => Promise<void>;
   refreshSurfaces: (inicial: boolean) => Promise<void>;
   restoreDraft: (configuration?: DraftConfiguration) => void;
-  restoreSessionDraft: (draft: Pick<Draft, "configuration" | "provider">, session?: { provider?: string | null }) => void;
+  restoreSessionDraft: (draft: Pick<Draft, "configuration" | "provider">, current?: { provider?: string | null }) => void;
   runtimeFact: (fact: { kind: "model" | "effort" | "mode"; value: string }) => void;
   selectModel: (choice: OpcionDeModelo) => string;
   snapshot: () => DraftConfiguration;
@@ -103,7 +103,7 @@ type TaskQueuesPort = {
   saved: (session: string) => Readonly<Saved> | undefined;
   openSession: (session: string, project: string, isCurrent?: () => boolean, fromEngine?: boolean) => Promise<void>;
   detach: () => void;
-  remove: (id: string, session?: string | null) => void;
+  remove: (id: string, sessionId?: string | null) => void;
   persist: (session: string, project: string, queued: Encolado[]) => Promise<unknown>;
   adopt: (session: string) => string;
   editMode: (value: boolean) => boolean;

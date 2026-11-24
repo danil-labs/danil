@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import "../helpers/catalog.ts";
 import { elegirLengua, t } from "../../src/lib/i18n.ts";
-import { aiProvidersView, SUPPORTED_AGENTS } from "../../src/features/settings/ai-providers-view.ts";
+import { aiProvidersView, SUPPORTED_AGENTS } from "../../../../packages/features/settings/src/model/ai-providers-view.ts";
 
 test("Cuentas de IA is never blank: loading, failed, the supported agents or the list", () => {
   const failed = { k: "failed" as const, f: { what: "x", detail: "" } };

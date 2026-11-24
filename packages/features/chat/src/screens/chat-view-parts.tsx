@@ -7,7 +7,7 @@ import { Select } from "../../../../ui/src/Select";
 import TarjetaDeTerminal from "../components/ShellCard";
 import type { VirtualThreadApi } from "../components/VirtualThread";
 import YourMessages from "../components/YourMessages";
-import { PendingHandoff } from "../components/thread/PendingHandoff";
+import { PendingHandoff } from "./thread/PendingHandoff";
 import { HOLGURA } from "../model/paste";
 import { chunkOf, chunkStart } from "../model/threadWindow";
 import type { createChatAttachments } from "./chat-attachments";
