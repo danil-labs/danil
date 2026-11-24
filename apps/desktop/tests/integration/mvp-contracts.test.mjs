@@ -1,23 +1,23 @@
 /**
  * Paridad por contrato: la web y Desk leen los mismos ejemplos publicados de mvp-v1 con el
  * código que usan de verdad (web: cookie, CSRF y `platformTransport`; Desk: `danil_edge_fetch`
- * simulado) y llegan al mismo resultado. Sin el directorio de contratos (DANIL_MVP_CONTRACTS o
- * el clon de la VM), la prueba se omite con su motivo; nunca pasa en silencio.
+ * simulado) y llegan al mismo resultado. Sin `DANIL_MVP_CONTRACTS` apuntando a un directorio
+ * que exista, la prueba se omite con su motivo; nunca pasa en silencio.
  */
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
-import { platformSession, platformTransport } from '../../src/web/platform-session.ts';
+import { platformSession, platformTransport } from '../../../../packages/session/src/platform-session.ts';
 import { readCapabilities, supports } from '../../src/web/service-capabilities.ts';
 import { webOrganizationSource } from '../../src/web/organizations.ts';
-import { edgeOrganizationSource } from '../../src/features/shell/organization-edge.ts';
+import { edgeOrganizationSource } from '../../../../packages/shell/src/shell/organization-edge.ts';
 import { createOrganizationSelection } from "@terminus/computers";
-import { createCloudMachines } from '../../src/features/machines/cloud-machines.ts';
+import { createCloudMachines } from '../../../../packages/features/machines/src/queries/cloud-machines.ts';
 import { machineToComputer, machinesClient } from '../../../../packages/platform-client/src/machines.ts';
 
-const directory = process.env.DANIL_MVP_CONTRACTS ?? '/home/alejandro/danil/mvp/contracts/mvp-v1';
-const examples = `${directory}/examples/`;
-const available = existsSync(examples);
+const directory = process.env.DANIL_MVP_CONTRACTS;
+const examples = directory ? `${directory}/examples/` : null;
+const available = Boolean(examples) && existsSync(examples);
 const sample = path => JSON.parse(readFileSync(examples + path, 'utf8'));
 const MACHINE = 'cmp_01JD6Z8K2M3N4P5Q6R7S8T9V0W';
 const OPERATION = '/v1/operations/op_01JD7Q3W4E5R6T7Y8U9I0O1P2A';
@@ -70,7 +70,7 @@ function deskClients() {
 }
 
 const run = available ? test : test.skip;
-const why = available ? undefined : `sin ${examples}`;
+const why = available ? undefined : directory ? `sin ${examples}` : 'sin DANIL_MVP_CONTRACTS';
 
 run('la web y Desk leen las capacidades publicadas igual', async () => {
   const caps = await readCapabilities(webClients().transport);

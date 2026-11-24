@@ -21,8 +21,8 @@ import { render } from "solid-js/web";
 import { SolidMarkdown } from "solid-markdown";
 import remarkGfm from "remark-gfm";
 
-import { Markdown } from "../src/ui/Markdown";
-import { envolver, SANDBOX_ARTEFACTO } from "../src/features/artifacts/sandbox";
+import { Markdown } from "../../../../packages/ui/src/Markdown";
+import { envolver, SANDBOX_ARTEFACTO } from "../../../../packages/features/artifacts/src/model/sandbox";
 import { RESPUESTA_HOSTIL, ARTEFACTO_LEGITIMO } from "./hostile-response";
 
 /**
