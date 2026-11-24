@@ -11,7 +11,7 @@
  * a guests-only fleet as `"local"`; with no guest either, nothing is installed.
  * Lazy from `app/main.tsx`.
  */
-import "../../../../../apps/desktop/src/web/phrases";
+import "../../../../ui/src/phrases";
 import {
   type Computer,
   createScreenAccess,

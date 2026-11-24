@@ -1,6 +1,6 @@
 import { createOrganizationSelection, type OrganizationSource } from "@terminus/computers";
 import type { platformTransport } from "./platform-session.ts";
-import { webOrganizationSource } from "../../../apps/desktop/src/web/organizations.ts";
+import { webOrganizationSource } from "./organizations.ts";
 
 /** The page owns optional organization retries, including responses arriving after pagehide. */
 export function organizationSession(transport: ReturnType<typeof platformTransport>, signal: AbortSignal, onSelected: () => void) {
