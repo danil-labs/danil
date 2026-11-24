@@ -61,12 +61,7 @@ export function webhookUrlOk(raw: string): boolean {
 /** Los modos del motor, del más estricto al más permisivo; el de la conexión es su techo. */
 export const PERMISSION_MODES = ["lectura", "manual", "ediciones", "auto"] as const;
 
-/** La URL que se pega en el orquestador. */
-export function mcpUrl(endpoint: string): string {
-  const url = apiUrl(endpoint, "/mcp");
-  // Producción (machines.danil.ai y su alias computers.danil.ai) publica el MCP en mcp.danil.ai.
-  return url === "https://machines.danil.ai/mcp" || url === "https://computers.danil.ai/mcp" ? "https://mcp.danil.ai/mcp" : url;
-}
+export const MCP_URL = "https://mcp.danil.ai/mcp";
 
 const rows = (body: unknown): Connection[] =>
   Array.isArray(body) ? (body.filter((c) => typeof c?.id === "string" && typeof c?.state === "string") as Connection[]) : [];

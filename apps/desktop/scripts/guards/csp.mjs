@@ -66,7 +66,7 @@ const PERMITIDO = {
   // caja de Tauri). Sin ellas cada `invoke` falla y cae a `postMessage`.
   // Y el plano de control de Danil Machines: con la cuenta abierta la ventana lista las
   // computadoras de la persona y abre su sesión del relay (`features/machines/account.tsx`).
-  "connect-src": ["'self'", "ipc:", "http://ipc.localhost", "https://machines.danil.ai", "https://computers.danil.ai", "wss://*.danil.ai"],
+  "connect-src": ["'self'", "ipc:", "http://ipc.localhost", "wss://*.danil.ai"],
   // El tercer candado del contenedor: a dónde puede navegar un marco hijo. Sin
   // esto el HTML del agente hace `location.href = "http://…/?" + contenido`.
   // `terminus-page` es la vista previa de un `.html` de la tarea (`page_preview.rs`):
@@ -147,13 +147,13 @@ if (politica) {
 // 3 · Y el filtro del chat sigue en su sitio. La política es la segunda capa; la
 //     primera es que `Markdown.tsx` no pinte un destino que ejecute. Las dos se
 //     midieron por separado, y ninguna de las dos basta sola.
-const md = readFileSync(raiz("src/ui/Markdown.tsx"), "utf8");
+const md = readFileSync(raiz("../../packages/ui/src/markdown-components.tsx"), "utf8");
 if (!/destinoAbrible|imagenInerte/.test(md)) {
-  failures.push("src/ui/Markdown.tsx ya no filtra el esquema: no usa `destinoAbrible` ni `imagenInerte`");
+  failures.push("../../packages/ui/src/markdown-components.tsx ya no filtra el esquema: no usa `destinoAbrible` ni `imagenInerte`");
 }
 for (const crudo of ["href={p.href}", "src={p.src}"]) {
   if (md.includes(crudo)) {
-    failures.push(`src/ui/Markdown.tsx pinta \`${crudo}\` tal cual — eso es lo que dejaba salir la imagen sin un clic`);
+    failures.push(`../../packages/ui/src/markdown-components.tsx pinta \`${crudo}\` tal cual — eso es lo que dejaba salir la imagen sin un clic`);
   }
 }
 

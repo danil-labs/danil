@@ -10,16 +10,15 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { webAccountProfile } from "../../src/web/account.ts";
 
-import { platformTransport, PlatformSessionError } from "../../src/web/platform-session.ts";
+import { platformTransport, PlatformSessionError } from "../../../../packages/session/src/platform-session.ts";
 
 // Como el teléfono: un motor con otro contrato sigue en servicio y solo falla la
 // orden que no conoce. Ni la ventana ni la web lo marcan desactualizado por su hash.
 test("neither the window nor the web gates a machine by its engine contract", () => {
   const repo = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
   for (const file of [
-    "packages/features/machines/src/queries/account.tsx",
+    "packages/features/machines/src/screens/account.tsx",
     "apps/desktop/src/web/main.tsx",
-    "packages/features/machines/src/screens/ConnectMachine.tsx",
   ]) {
     const source = readFileSync(join(repo, file), "utf8");
     assert.doesNotMatch(source, /machineCompatibility|machineContracts|__TERMINUS_CONTRACT__/, file);
