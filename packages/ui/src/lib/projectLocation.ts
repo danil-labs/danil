@@ -1,4 +1,4 @@
-import type { Project } from "../../../../apps/desktop/src/lib/model";
+import type { Project } from "./model";
 import { abreviarHome } from "./sourceOrigin.ts";
 
 type Nube = NonNullable<Project["cloud"]>;

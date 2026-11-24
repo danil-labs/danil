@@ -1,5 +1,5 @@
 
-import { type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
+import { type OpcionDeModelo } from "../../../../ui/src/lib/models";
 import { idProvisional } from "../../../../ui/src/lib/taskDraft";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
@@ -11,8 +11,8 @@ import { type Session } from "../model/transcript";
 import { PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "../../../../engine-client/src/index.ts";
 import { batch, type Accessor, type Setter } from "solid-js";
 import type { ComposerPort, Draft, DraftsPort, MachinesPort, SessionRow, createThreadsStore } from "./types.ts";
-import type { createPanels } from "../../../../../apps/desktop/src/lib/panels.ts";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { createPanels } from "../../../../ui/src/lib/panels.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createPanelDeChat } from "../screens/PanelDeChat.tsx";
 import type { createDraftSend } from "./draft-send.ts";
 import type { createResyncCommands } from "./resync-commands.ts";

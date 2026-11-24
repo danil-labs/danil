@@ -12,7 +12,7 @@ import {
   type HandlerList,
   type Project,
   type Source,
-} from "../../../../../apps/desktop/src/lib/model";
+} from "../../../../ui/src/lib/model";
 import { lineaDeProcedencia, procedencia } from "../../../../ui/src/lib/sourceOrigin";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { agentsWithDifferentReaders } from "../model/agentReaders";

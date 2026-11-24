@@ -1,8 +1,8 @@
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type Agent, type Project, type Source } from "../../../../../apps/desktop/src/lib/model.ts";
-import { sameSite, type PanelSite as SitioDePanel } from "../../../../../apps/desktop/src/lib/panels";
-import { type Tab, type TaskTab } from "../../../../../apps/desktop/src/lib/tabs.ts";
-import { type TaskSideMode } from "../../../../../apps/desktop/src/lib/taskFiles";
+import { type Agent, type Project, type Source } from "../../../../ui/src/lib/model.ts";
+import { sameSite, type PanelSite as SitioDePanel } from "../../../../ui/src/lib/panels";
+import { type Tab, type TaskTab } from "../../../../ui/src/lib/tabs.ts";
+import { type TaskSideMode } from "../../../../ui/src/lib/taskFiles";
 import { isWindows } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";
 import { BotonConAtajo } from "../../../../ui/src/Shortcut";
@@ -12,13 +12,13 @@ import { type SearchSurface, type ThreadSearchTarget } from "./ThreadSearch";
 import FolderOpen from "lucide-solid/icons/folder-open";
 import { For, Show, Suspense, createMemo, createSignal, type Accessor, type JSX, type Setter } from "solid-js";
 import type { ContextSourcePort, CreateUsagePort, Hilo, MachinePickerPort, PickedAt, ProjectPickerPort, SessionRow, TabStripPort } from "../queries/types.ts";
-import type { createPanels } from "../../../../../apps/desktop/src/lib/panels.ts";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
-import type { createTaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles.ts";
+import type { createPanels } from "../../../../ui/src/lib/panels.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
+import type { createTaskFiles } from "../../../../ui/src/lib/taskFiles.ts";
 import type { createAttachments } from "../queries/attachments.ts";
 import type { createThreadSide } from "../queries/thread-side.ts";
 import type { createThreadStream } from "../queries/thread-stream.ts";
-import type { PanelSite } from "../../../../../apps/desktop/src/lib/panels";
+import type { PanelSite } from "../../../../ui/src/lib/panels";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */

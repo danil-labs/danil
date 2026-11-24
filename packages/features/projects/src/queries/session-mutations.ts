@@ -2,10 +2,10 @@ import { createEffect, createSignal, on, type Accessor, type Setter } from "soli
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
-import type { ArbolEnTarea, Project, Source } from "../../../../../apps/desktop/src/lib/model.ts";
+import type { ArbolEnTarea, Project, Source } from "../../../../ui/src/lib/model.ts";
 import type { Capabilities, DraftsStore, Machine, PanelsStore, TabsStore, TaskFilesStore, ThreadsStore } from "../../../../ui/src/lib/project-block-types.ts";
 import type { Space } from "../../../../ui/src/lib/spaces.ts";
-import type { Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { Tab } from "../../../../ui/src/lib/tabs.ts";
 import type { WorkspaceStore } from "../screens/workspace-session.ts";
 import type { SessionRow } from "../screens/Sessions.tsx";
 import type { Etapa } from "../screens/TaskStage.tsx";

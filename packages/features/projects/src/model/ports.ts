@@ -1,5 +1,5 @@
 import type { Component } from "solid-js";
-import type { OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
+import type { OpcionDeModelo } from "../../../../ui/src/lib/models";
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import type { EstadoLocal, MarcaLocal } from "../../../../ui/src/lib/localStatus";
 import type { Machine } from "../../../../ui/src/lib/machine";

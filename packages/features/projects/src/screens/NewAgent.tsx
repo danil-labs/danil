@@ -2,13 +2,13 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 import { lockedBy } from "../../../../ui/src/lib/governance";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { createAgent, saveAgentProfile, setAgentModel } from "../queries";
-import type { CreatedHandler, HandlerScope } from "../../../../../apps/desktop/src/lib/model";
+import type { CreatedHandler, HandlerScope } from "../../../../ui/src/lib/model";
 import {
   effortOptions,
   effortValue,
   type OpcionDeModelo,
   opcionesDeModelos,
-} from "../../../../../apps/desktop/src/lib/models";
+} from "../../../../ui/src/lib/models";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";

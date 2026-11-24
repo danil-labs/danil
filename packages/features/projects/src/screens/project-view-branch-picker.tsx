@@ -2,7 +2,7 @@ import GitBranch from "lucide-solid/icons/git-branch";
 import { createSignal, For, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { listSourceBranches, setSourceBranch } from "../queries";
-import type { Source } from "../../../../../apps/desktop/src/lib/model";
+import type { Source } from "../../../../ui/src/lib/model";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { Pressable } from "../../../../ui/src/Pressable";

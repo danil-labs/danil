@@ -1,5 +1,5 @@
 import { type Accessor, createResource, createSignal, onCleanup } from "solid-js";
-import type { HandlerDefinition } from "../../../../apps/desktop/src/lib/model.ts";
+import type { HandlerDefinition } from "./model.ts";
 
 const known = new Map<string, HandlerDefinition[]>();
 

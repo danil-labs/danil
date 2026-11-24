@@ -9,7 +9,7 @@ import { type Session } from "../model/transcript.ts";
 import { TRANSPORTE } from "./sleepSession.ts";
 import { batch, createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 import type { ComposerPort, ContextSourcePort, CreateBatchDelivery, Hilo, ListaBastaPort, ProjectsPort, ReconciliarPort, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createAttachments } from "./attachments.ts";
 import type { createResyncCommands } from "./resync-commands.ts";
 import type { createResync } from "./resync.ts";

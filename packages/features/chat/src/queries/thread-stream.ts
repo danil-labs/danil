@@ -2,14 +2,14 @@
 import { lastRoster, rememberRoster } from "../../../../ui/src/lib/handlerRoster.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type MentionSources } from "../../../../ui/src/lib/mentions";
-import { type HandlerDefinition, type HandlerList, type HandlerStatusRow } from "../../../../../apps/desktop/src/lib/model";
-import { type Project } from "../../../../../apps/desktop/src/lib/model.ts";
+import { type HandlerDefinition, type HandlerList, type HandlerStatusRow } from "../../../../ui/src/lib/model";
+import { type Project } from "../../../../ui/src/lib/model.ts";
 import { recipientCandidatesOf, type RecipientCandidate } from "../../../../ui/src/lib/recipients";
 import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
 import { alHilo } from "../../../../ui/src/lib/side-question";
 import { type PlaceCandidate, type TaskCandidate } from "../../../../ui/src/lib/taskMentions";
 import { type TextEdit } from "../../../../ui/src/lib/taskMentions.ts";
-import { type Ventana } from "../../../../../apps/desktop/src/lib/usage";
+import { type Ventana } from "../../../../ui/src/lib/usage";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { asFailure, prosaDe } from "../../../../ui/src/Failure";
@@ -22,7 +22,7 @@ import { type PermissionRequest } from "../screens/Chat";
 import { type ComandoQueNace, type TerminalLanzada } from "./sleepSession.ts";
 import { batch, createEffect, createMemo, createResource, createSignal, on, onCleanup, type Accessor } from "solid-js";
 import type { ConversationScope, CreateConversationHandoff, CreateEngineQueue, CreateTaskQueues, MachineWait, MachinesPort, SessionRow, WatchProfilesPort, WorkspaceContextPort, createThreadsStore } from "./types.ts";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createResync } from "./resync.ts";
 import type { createShellCommand } from "./shell-command.ts";
 

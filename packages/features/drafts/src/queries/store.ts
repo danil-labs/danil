@@ -1,5 +1,5 @@
 import { createMemo, createSignal, untrack } from "solid-js";
-import type { Project, Source } from "../../../../../apps/desktop/src/lib/model";
+import type { Project, Source } from "../../../../ui/src/lib/model";
 import type { Trigger } from "../../../../ui/src/lib/mentions";
 import { editDraft, insertMention, insertRecipient } from "../../../../ui/src/lib/recipients.ts";
 import type { MentionTarget, TaskMention, TextEdit } from "../../../../ui/src/lib/taskMentions";

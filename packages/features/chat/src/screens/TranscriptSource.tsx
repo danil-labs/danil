@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import type { Agent } from "../../../../../apps/desktop/src/lib/model";
+import type { Agent } from "../../../../ui/src/lib/model";
 import type { TranscriptOrigin } from "../model/transcript";
 
 /** De dónde sale lo que dijo el agente en una tarea archivada. */

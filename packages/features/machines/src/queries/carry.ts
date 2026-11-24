@@ -10,7 +10,7 @@ import { type CarryFailure, type CarryJob, type CarryResult, type CarryState, Ca
 import { PART_RELAY, type Selection, keyVerdict, needsSheet, withoutRemote } from "../model/carryPlan.ts";
 import "../../../../../apps/desktop/src/locales/workPhrases";
 import { invoke } from "../../../../engine-client/src/client";
-import type { Project } from "../../../../../apps/desktop/src/lib/model";
+import type { Project } from "../../../../ui/src/lib/model";
 import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type CarryOrigin, machineName, rememberOrigin } from "./store";

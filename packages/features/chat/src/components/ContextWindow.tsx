@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import { ProgressRing } from "./ProgressRing";
-import { formatTokens, type Ventana } from "../../../../../apps/desktop/src/lib/usage";
+import { formatTokens, type Ventana } from "../../../../ui/src/lib/usage";
 import { nf, percent } from "../../../../ui/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../../ui/src/Tooltip";

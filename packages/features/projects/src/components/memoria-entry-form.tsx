@@ -8,7 +8,7 @@ import { Input } from "../../../../ui/src/Input";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import type { MemoriaEntrada, MemoriaScope } from "../../../../../apps/desktop/src/lib/model";
+import type { MemoriaEntrada, MemoriaScope } from "../../../../ui/src/lib/model";
 import type { EntradaDeCuenta, MemoriaDeCuenta } from "../queries/memory-account";
 
 /**

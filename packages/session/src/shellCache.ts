@@ -1,6 +1,6 @@
 import type { SessionRow } from "../../features/projects/src/screens/Sessions";
 import { contextSnapshotKey, contextualSnapshot, createSnapshotWriter, snapshotMatchesContext, snapshotStorageKey } from "./context-snapshot.ts";
-import type { Project } from "../../../apps/desktop/src/lib/model";
+import type { Project } from "../../ui/src/lib/model";
 import type { Space } from "../../ui/src/lib/spaces";
 
 /**

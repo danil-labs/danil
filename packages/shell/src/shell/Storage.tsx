@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { haceCuanto } from "../../../../apps/desktop/src/lib/limits";
+import { haceCuanto } from "../../../ui/src/lib/limits";
 import { cn } from "../../../ui/src/lib/utils";
 import Server from "lucide-solid/icons/server";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";

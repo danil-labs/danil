@@ -3,9 +3,9 @@
 import type { createComposerStore } from "../../../features/composer/src/index.ts";
 import type { createDraftsStore } from "../../../features/drafts/src/index.ts";
 import type { createThreadsStore } from "../../../features/chat/src/index.ts";
-import type { createPanels } from "../../../../apps/desktop/src/lib/panels.ts";
-import type { createTabs } from "../../../../apps/desktop/src/lib/tabs.ts";
-import type { createTaskFiles } from "../../../../apps/desktop/src/lib/taskFiles.ts";
+import type { createPanels } from "./panels.ts";
+import type { createTabs } from "./tabs.ts";
+import type { createTaskFiles } from "./taskFiles.ts";
 
 export type ComposerStore = ReturnType<typeof createComposerStore>;
 export type DraftsStore = ReturnType<typeof createDraftsStore>;

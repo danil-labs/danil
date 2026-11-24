@@ -5,7 +5,7 @@
  * guarda bajo AppData no se enseña: no la eligió nadie y no dice nada.
  */
 
-import type { Source } from "../../../../apps/desktop/src/lib/model";
+import type { Source } from "./model";
 
 export type Procedencia = {
   /** `null` es una carpeta de esta computadora; si no, el nombre del proveedor. */

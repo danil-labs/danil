@@ -8,7 +8,7 @@ import { type Session } from "../model/transcript.ts";
 import { type LiveTurn } from "./sleepSession.ts";
 import { createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 import type { CreateServiceStream, MachinesPort, ServicePage, WorkspaceContextPort, createThreadsStore } from "./types.ts";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
 import type { createAttachments } from "./attachments.ts";
 import type { createResyncCommands } from "./resync-commands.ts";

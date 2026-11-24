@@ -7,8 +7,8 @@
  */
 // Con extensión: este módulo se carga también desde `node --test`.
 import { isFreeRouterAgent } from "../../../../ui/src/lib/tasks/agents.ts";
+import type { Superficie } from "../../../../ui/src/lib/surfaces.ts";
 import type { Prosa } from "../../../../ui/src/lib/prose.ts";
-import type { Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
 import { SUPPORTED_AGENTS } from "./ai-providers-view.ts";
 
 /** Por qué un proveedor no deja agregar ahora (`bloqueoAlta()` de `Accounts`, § 3). */

@@ -1,4 +1,4 @@
-import type { Project } from "../../../../apps/desktop/src/lib/model";
+import type { Project } from "./model";
 
 export const claveDeBorrador = (session: string | null, project: string, handler?: string | null) =>
   session ?? (handler ? `borrador:${project}:agent:${handler}` : `borrador:${project}`);

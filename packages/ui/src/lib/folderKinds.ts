@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import type { Project } from "../../../../apps/desktop/src/lib/model";
+import type { Project } from "./model";
 
 type Tipo = Pick<Project, "kind" | "cloud">;
 

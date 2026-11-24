@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { createSignal, onCleanup } from "solid-js";
-import type { AgentProfile } from "../../../../../apps/desktop/src/lib/model";
+import type { AgentProfile } from "../../../../ui/src/lib/model";
 
 type Entry = {
   profiles: () => Record<string, AgentProfile>;

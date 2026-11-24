@@ -1,5 +1,5 @@
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import type { Project } from "../../../../../apps/desktop/src/lib/model";
+import type { Project } from "../../../../ui/src/lib/model";
 
 /**
  * El clon que corre ahora mismo, tal y como lo pinta el riel.

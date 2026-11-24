@@ -9,7 +9,7 @@
  * La aritmética de intervalos se importa de `taskMentions.ts`: las dos
  * gramáticas comparten convención de `start` y `end`.
  */
-import type { AgentProfile, HandlerDefinition, HandlerStatus, HandlerStatusRow } from "../../../../apps/desktop/src/lib/model.ts";
+import type { AgentProfile, HandlerDefinition, HandlerStatus, HandlerStatusRow } from "./model.ts";
 import type { Trigger } from "./mentions.ts";
 import {
   editMentions,

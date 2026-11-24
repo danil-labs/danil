@@ -1,4 +1,4 @@
-import { marcaDeSuperficie } from "../../../../../apps/desktop/src/lib/surfaces";
+import { marcaDeSuperficie } from "../../../../ui/src/lib/surfaces";
 import Check from "lucide-solid/icons/check";
 import { For, Show } from "solid-js";
 import { lista } from "../../../../ui/src/lib/format";

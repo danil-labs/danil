@@ -1,6 +1,6 @@
 import { type JSX, Show, createSignal } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { setMoviendoHueco } from "../../../../../apps/desktop/src/lib/sites";
+import { setMoviendoHueco } from "../../../../ui/src/lib/sites";
 import { cn } from "../../../../ui/src/lib/utils";
 import { BELOW_LOCATION_MARGIN } from "../../../../host/src/window";
 

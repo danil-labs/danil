@@ -1,13 +1,13 @@
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { type Project, type Source } from "../../../../apps/desktop/src/lib/model.ts";
-import { sameSite, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../../apps/desktop/src/lib/panels";
+import { type Project, type Source } from "../../../ui/src/lib/model.ts";
+import { sameSite, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../ui/src/lib/panels";
 import { type Layout, type PanelGroup } from "../../../ui/src/lib/panels-types.ts";
 import { createPointerDrag } from "../../../ui/src/lib/pointer-drag";
 import { type Space } from "../../../ui/src/lib/spaces.ts";
-import { isTaskTab } from "../../../../apps/desktop/src/lib/tabs";
+import { isTaskTab } from "../../../ui/src/lib/tabs";
 import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
 import { esProvisional } from "../../../ui/src/lib/taskDraft";
-import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
+import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../ui/src/lib/taskFiles.ts";
 import { arbolesDe, contiene, ubicar } from "../../../features/code/src/queries/treeKind";
 import { machineName, machineOf, machines, senderTaskId, setRunOn } from "../../../features/machines/src/queries/store";
 import { createSessionMutations, type createDeskStrip as T_createDeskStrip, type createWorkspaceSession as T_createWorkspaceSession } from "../../../features/projects/src";

@@ -1,5 +1,5 @@
 import type { HistoryRef } from "../../../../engine-client/src/index.ts";
-import type { CodeRange } from "../../../../../apps/desktop/src/lib/model";
+import type { CodeRange } from "../../../../ui/src/lib/model";
 import type { Recipient, SenderTask } from "../../../../ui/src/lib/recipients";
 import type { Paso } from "../../../../ui/src/lib/steps";
 import type { TaskMention } from "../../../../ui/src/lib/taskMentions";

@@ -1,22 +1,22 @@
 
 import { lista } from "../../../../ui/src/lib/format";
 import { aplicarLenguaDeWorkspace, t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type Source } from "../../../../../apps/desktop/src/lib/model";
-import { readLayout } from "../../../../../apps/desktop/src/lib/panels";
+import { type Source } from "../../../../ui/src/lib/model";
+import { readLayout } from "../../../../ui/src/lib/panels";
 import { type Frase } from "../../../../ui/src/lib/prose.ts";
 import { NotMovable, attachmentsOn } from "./remoteAttachments";
 import { shellCacheMatches } from "../../../../session/src/shellCache";
 import { type ShellSnapshot } from "../../../../session/src/shellCache.ts";
 import { type Space } from "../../../../ui/src/lib/spaces";
-import { isTaskTab } from "../../../../../apps/desktop/src/lib/tabs";
+import { isTaskTab } from "../../../../ui/src/lib/tabs";
 import { aplicarTemaDeTerminal } from "../model/terminal-themes";
 import { displayWorkspaceSnapshot, invoke, requestedWorkspaceSnapshot } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { batch, type Accessor, type Setter } from "solid-js";
 import type { ComposerPort, ContextSourcePort, DraftsPort, Hilo, MachinesPort, ProjectsPort, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
-import type { createPanels } from "../../../../../apps/desktop/src/lib/panels.ts";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { createPanels } from "../../../../ui/src/lib/panels.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { sessionRefresh } from "../../../../session/src/sessionRefresh.ts";
 import type { createResync } from "./resync.ts";
 import type { createThreadStream } from "./thread-stream.ts";

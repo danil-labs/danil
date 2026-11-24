@@ -1,9 +1,9 @@
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { type HandlerList } from "../../../../apps/desktop/src/lib/model";
-import { type AgentProfile, type HandlerStatus } from "../../../../apps/desktop/src/lib/model.ts";
+import { type HandlerList } from "../../../ui/src/lib/model";
+import { type AgentProfile, type HandlerStatus } from "../../../ui/src/lib/model.ts";
 import { type SenderTask } from "../../../ui/src/lib/recipients";
 import { esProvisional } from "../../../ui/src/lib/taskDraft";
-import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
+import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../ui/src/lib/taskFiles.ts";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { conservar } from "../../../session/src/sessionRefresh";
 import { type Encolado } from "../../../ui/src/lib/queue.ts";

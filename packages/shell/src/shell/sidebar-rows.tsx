@@ -4,7 +4,7 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { createMemo, type JSX, type Setter, Show, Suspense } from "solid-js";
 import { destinoEnVuelo } from "../../../ui/src/lib/drag";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import type { Project } from "../../../../apps/desktop/src/lib/model";
+import type { Project } from "../../../ui/src/lib/model";
 import { sharedLazy } from "../../../ui/src/lib/sharedLazy";
 import { cn } from "../../../ui/src/lib/utils";
 import { type ClonEnCurso, faseDeClon } from "../../../features/projects/src/screens/AddWorkdir";

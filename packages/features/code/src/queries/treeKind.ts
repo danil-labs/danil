@@ -1,6 +1,6 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { machineOf } from "../../../../host/src/machine";
-import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
+import type { ArbolEnTarea } from "../../../../ui/src/lib/model";
 import { esDeCodigo } from "../../../../ui/src/lib/workdirKind";
 
 /**

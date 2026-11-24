@@ -4,7 +4,7 @@ import { listMachineAgents, setAgentAvatar } from "../queries/engine-agents";
 import { previewFile } from "../queries/engine-workspaces";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { elegirArchivoDeImagen } from "../../../../host/src/pick-image";
-import type { AgentProfile, CatalogoDeAgentes } from "../../../../../apps/desktop/src/lib/model";
+import type { AgentProfile, CatalogoDeAgentes } from "../../../../ui/src/lib/model";
 import { type FondoDeChat } from "../../../../ui/src/lib/chat-background";
 import { elegirFondoDeChat, fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo, veloDePaneles, veloDePestanas } from "../../../../ui/src/lib/chat-background-store";
 import type { Preview } from "../../../../ui/src/lib/preview";

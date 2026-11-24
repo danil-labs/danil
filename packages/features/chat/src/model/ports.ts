@@ -2,8 +2,8 @@
 // las firmas que llama y en tipos del chat, de `packages/ui` o de `apps/desktop/src/lib`. El shell le
 // pasa los stores reales y TypeScript comprueba por estructura que cumplen; nada se importa de ellos.
 import type { Accessor, JSX } from "solid-js";
-import type { Agent, AgentProfile, Project, Source } from "../../../../../apps/desktop/src/lib/model";
-import type { OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
+import type { Agent, AgentProfile, Project, Source } from "../../../../ui/src/lib/model";
+import type { OpcionDeModelo } from "../../../../ui/src/lib/models";
 import type { JournalEvent } from "../../../../host/src/serviceEvents.ts";
 import type { Tab } from "../../../../ui/src/lib/tabs-types";
 import type { TaskMention } from "../../../../ui/src/lib/taskMentions";

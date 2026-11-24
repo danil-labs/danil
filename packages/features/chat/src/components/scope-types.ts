@@ -1,6 +1,6 @@
 import type { InvokeOptions } from "@tauri-apps/api/core";
 import type { GitHost } from "../../../../ui/src/lib/gitHosts";
-import type { Source } from "../../../../../apps/desktop/src/lib/model";
+import type { Source } from "../../../../ui/src/lib/model";
 
 type Proveedor = GitHost;
 

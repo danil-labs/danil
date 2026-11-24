@@ -5,7 +5,7 @@ import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, Match, Show, Switch } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import type { Project } from "../../../../apps/desktop/src/lib/model";
+import type { Project } from "../../../ui/src/lib/model";
 import { type Space, spaceName } from "../../../ui/src/lib/spaces";
 import { cn } from "../../../ui/src/lib/utils";
 import { Button } from "../../../ui/src/Button";

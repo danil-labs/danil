@@ -17,7 +17,7 @@ import {
   readMemoryFile,
 } from "@terminus/computers";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { MemoriaEntrada, MemoriaScope } from "../../../../../apps/desktop/src/lib/model";
+import type { MemoriaEntrada, MemoriaScope } from "../../../../ui/src/lib/model";
 import { capabilities } from "../../../../host/src/platform";
 
 /** La memoria de un workspace en la cuenta: a dónde hablar y de qué workspace. */
