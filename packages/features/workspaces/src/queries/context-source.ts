@@ -6,7 +6,7 @@ import { esProvisional, sameSources, unirFuentes } from "../../../../ui/src/lib/
 import { isTaskTab, type Tab } from "../../../../ui/src/lib/tabs.ts";
 import { t } from "../../../../ui/src/lib/i18n.ts";
 import { type SessionUsage, ventanaDe } from "../../../../ui/src/lib/usage.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { canonicalAgentId } from "../../../../ui/src/lib/tasks/agents.ts";
 import { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
@@ -49,7 +49,7 @@ export function createContextSource(deps: Deps) {
       onCleanup(() => {
         current = false;
       });
-      invoke<MentionSources>("list_mentions", {
+      callEngine<MentionSources>("list_mentions", {
         project: p,
         sources: fs,
         excludedSources: excluidas,
@@ -72,7 +72,7 @@ export function createContextSource(deps: Deps) {
         setVentana(null);
         return;
       }
-      invoke<SessionUsage>("session_usage", { project: p, session: id }, deLaTarea(id))
+      callEngine<SessionUsage>("session_usage", { project: p, session: id }, deLaTarea(id))
         .then((s) => setVentana(ventanaDe(s.records)))
         .catch(() => setVentana(null));
     }),
@@ -83,8 +83,8 @@ export function createContextSource(deps: Deps) {
     const r = await open({ directory: true, multiple: false });
     if (typeof r !== "string") return;
     try {
-      await invoke("set_workspace_source", { kind: "folder", locator: r });
-      await aplicar(await invoke<Startup>("list_workspaces"));
+      await callEngine("set_workspace_source", { kind: "folder", locator: r });
+      await aplicar(await callEngine<Startup>("list_workspaces"));
     } catch (e) {
       setError(prosaDe(e));
     }
@@ -252,7 +252,7 @@ export function createContextSource(deps: Deps) {
       // corrió — sin tocar los turnos ya escritos, solo la caja.
       if (s.chat_de_agente && s.agent) {
         try {
-          const perfiles = await invoke<Record<string, AgentProfileData>>(
+          const perfiles = await callEngine<Record<string, AgentProfileData>>(
             "list_agent_profiles",
             { project: proyecto },
           );
@@ -276,7 +276,7 @@ export function createContextSource(deps: Deps) {
     } catch (e) {
       if (!current()) return;
       try {
-        const state = await invoke<Session>("load_session", {
+        const state = await callEngine<Session>("load_session", {
           project: proyecto, id, history_request: { version: 1, kind: "state" },
         }, deLaTarea(id));
         if (!current()) return;

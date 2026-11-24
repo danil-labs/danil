@@ -79,7 +79,7 @@ export type EngineWorkspaces = {
  * motor anuncia (`machine_list`). `onChange` avisa cuando la lista cambia.
  */
 export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen; features: () => Promise<readonly string[]>; onChange?: () => void }): EngineWorkspaces {
-  const { invoke } = options;
+  const { invoke: rpc } = options;
   let current: EngineWorkspace[] | null = null;
   let states = new Map<string, string>();
   let announced: readonly string[] = [];
@@ -102,7 +102,7 @@ export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen
     }
     let answer: { version?: unknown; not_modified?: unknown; workspaces?: unknown } | null;
     try {
-      answer = (await invoke("state_machines", version ? { version } : {})) as typeof answer;
+      answer = (await rpc("state_machines", version ? { version } : {})) as typeof answer;
     } catch {
       // Un motor que dejó de saberlo (otro motor tras actualizar) vuelve a la flota; un fallo pasajero conserva lo último.
       return featuresChanged;

@@ -17,7 +17,7 @@ import type { MachinesAnswer } from "../../../../platform-client/src/machines-co
 import { cancelEdgeWrites as platformCancelEdgeWrites, edgeUntil, type EdgeMethod, type EdgeReply as NativeReply, type Patience } from "../../../../platform-client/src/client.ts";
 import { isNotAvailableStatus } from "../../../../platform-client/src/index.ts";
 import { capabilitiesUrl } from "../../../../platform-client/src/machines.ts";
-import { invoke as defaultInvoke } from "../../../../engine-client/src/client.ts";
+import { callEngine as defaultRpc } from "../../../../engine-client/src/client.ts";
 import { machinesQuery } from "./machines-query.ts";
 
 export const wokeOf = (answer: Parameters<typeof platformWokeOf>[0]) => platformWokeOf(answer);
@@ -34,10 +34,10 @@ type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unkno
 type EdgeError = { detail?: unknown; status?: unknown; retry_after_ms?: number; body?: unknown };
 
 /** El adaptador conserva el recibo nativo; solo las escrituras necesitan reintento por intención. */
-export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void, patience: Patience = {}): Fetch {
+export function edgeFetch(rpc: Invoke, onProblem?: (error: unknown) => void, patience: Patience = {}): Fetch {
   // Máquinas solo pide GET y POST (más abajo se rechaza lo demás); el tipo es el del transporte común.
   const send = <T>(method: EdgeMethod, path: string, body?: unknown, idempotencyKey?: string) =>
-    invoke("danil_edge_fetch", { method, path, ...(method !== "GET" ? { body, idempotencyKey } : {}) }) as Promise<NativeReply<T>>;
+    rpc("danil_edge_fetch", { method, path, ...(method !== "GET" ? { body, idempotencyKey } : {}) }) as Promise<NativeReply<T>>;
   return async (input, init) => {
     const method = init?.method ?? "GET";
     if (method !== "GET" && method !== "POST") return { status: 400, ok: false, json: async () => ({ code: "invalid_request" }) };
@@ -71,9 +71,9 @@ export function edgeFetch(invoke: Invoke, onProblem?: (error: unknown) => void, 
   };
 }
 
-export function createCloudMachines(invoke: Invoke = defaultInvoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT) {
-  const fetch = edgeFetch(invoke, onProblem);
-  const client = machinesQuery(machinesClient({ endpoint, fetch }));
+export function createCloudMachines(rpc: Invoke = defaultRpc, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT) {
+  const edgeRequest = edgeFetch(rpc, onProblem);
+  const client = machinesQuery(machinesClient({ endpoint, fetch: edgeRequest }));
   /**
    * Lo que el borde anuncia, con la lectura común de Desk y la web (`@terminus/computers`):
    * `denied` sin acceso; `null` sin catálogo (404/501); `undefined` un fallo transitorio
@@ -81,7 +81,7 @@ export function createCloudMachines(invoke: Invoke = defaultInvoke, onProblem?: 
    */
   async function capabilities(): Promise<CapabilityList | null | undefined | "denied"> {
     try {
-      const response = await fetch(capabilitiesUrl(endpoint));
+      const response = await edgeRequest(capabilitiesUrl(endpoint));
       if (response.status === 401 || response.status === 403) return "denied";
       if (isNotAvailableStatus(response.status)) return null;
       if (response.status !== 200) return undefined;

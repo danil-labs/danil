@@ -7,7 +7,7 @@
  * La máquina hija no se inscribe en el plano de control: su id es
  * `<canal>:<huésped>` (`wsl:<distro>`) y sólo existe en esta computadora.
  */
-import { invokeNative as invoke } from "../../../../host/src/native.ts";
+import { invokeNative } from "../../../../host/src/native.ts";
 import type { CallResult, EventsPage } from "../model/relay-frames.ts";
 import { classOf, type Link, type MachineInfo } from "../model/fleet/index.ts";
 import type { Invoke } from "../model/router-commands";
@@ -41,7 +41,7 @@ export function invalidateGuestChildren() {
 function sharedChildren(): Promise<ChildHealth[]> {
   const now = Date.now();
   if (!childrenRead || now - childrenRead.at > CHILDREN_FOR) {
-    const read = invoke<ChildHealth[]>("guest_children").catch((error) => {
+    const read = invokeNative<ChildHealth[]>("guest_children").catch((error) => {
       if (childrenRead?.list === read) childrenRead = null;
       throw error;
     });
@@ -72,12 +72,12 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
   const channels = createGuestLinkChannels("unknown");
 
   const childCall = <T,>(command: string, args: unknown, workspace: string | null, timeoutMs = 30_000) =>
-    invoke<T>("guest_call", { machine, command, args: args ?? {}, workspace, folder: null, timeoutMs });
+    invokeNative<T>("guest_call", { machine, command, args: args ?? {}, workspace, folder: null, timeoutMs });
 
   const localRead = <T,>(command: string, workspace: string | null): Promise<T> =>
     native
       ? (native(command, {}, workspace ? { headers: { "x-terminus-workspace": workspace } } : undefined) as Promise<T>)
-      : invoke<T>(command);
+      : invokeNative<T>(command);
 
   const spaces = new Set<string>();
 
@@ -85,7 +85,7 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
   async function syncSpaces(workspace: string) {
     const here = await localRead<{ id: string }[]>("list_spaces", workspace).catch(() => [] as { id: string }[]);
     const list = Array.isArray(here) ? here : [];
-    await invoke("guest_sync_spaces", { machine, workspace, spaces: list });
+    await invokeNative("guest_sync_spaces", { machine, workspace, spaces: list });
     for (const s of list) spaces.add(s.id);
   }
 
@@ -129,7 +129,7 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
     const here = await localRead<Folder[]>("list_projects", workspace);
     const folder = Array.isArray(here) ? here.find((f) => f.id === project) : undefined;
     if (!folder?.working_directory) throw { code: "folder_missing", detail: project };
-    await invoke("guest_copy_folder", { machine, project, name: folder.name ?? project, path: folder.working_directory, workspace });
+    await invokeNative("guest_copy_folder", { machine, project, name: folder.name ?? project, path: folder.working_directory, workspace });
     copied.add(project);
   }
 
@@ -158,7 +158,7 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
     if (closed || !subscribed) return;
     let quiet = true;
     try {
-      const page = await invoke<EventsPage & { latest?: number | null }>("guest_events", { machine, cursor });
+      const page = await invokeNative<EventsPage & { latest?: number | null }>("guest_events", { machine, cursor });
       if (channels.state() !== "online") channels.setState("online");
       const events = page.events ?? [];
       if (events.length || page.gap) {
@@ -197,7 +197,7 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
         const space = (args as { space?: unknown } | null)?.space;
         if (workspace && typeof space === "string" && space && !spaces.has(space)) await syncSpaces(workspace);
       }
-      const value = await invoke<unknown>("guest_call", { machine, command, workspace, folder, args: args ?? {}, timeoutMs: timeoutMs ?? null });
+      const value = await invokeNative<unknown>("guest_call", { machine, command, workspace, folder, args: args ?? {}, timeoutMs: timeoutMs ?? null });
       if (channels.state() !== "online") channels.setState("online");
       return { value, cached: null, deferred: null };
     },
@@ -230,7 +230,7 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
 
 /** Enciende el huésped (en WSL, la ventana deja abierto un `wsl.exe`) y avisa al enlace local en cuanto contesta. */
 export async function wakeGuestMachine(machine: string): Promise<boolean> {
-  const ok = await invoke<boolean>("guest_start", { machine });
+  const ok = await invokeNative<boolean>("guest_start", { machine });
   if (ok) {
     invalidateGuestChildren();
     for (const notify of awakeHooks.get(machine) ?? []) notify();

@@ -55,7 +55,9 @@ export function setMachineRoute(next: Route | null) {
 const call = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> =>
   (route ? route(command, args, options) : tauri<T>(command, withoutAbout(args as Record<string, unknown> | undefined) as InvokeArgs | undefined, options)) as Promise<T>;
 
-export const invoke = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> => {
+export const callEngine = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> => {
   const captured = route && !GLOBAL_READS.has(command) ? captureWorkspaceContext(options) : options;
   return untilConnected(() => retrying(() => call<T>(command, args, captured), sleep, (e) => canRepeat(command, e)));
 };
+
+export const invoke = callEngine;

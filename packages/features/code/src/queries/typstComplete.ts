@@ -9,7 +9,7 @@ import {
 import type { Extension, Text } from "@codemirror/state";
 import { EditorView, ViewPlugin } from "@codemirror/view";
 import { t } from "../../../../ui/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { machineOf } from "../../../../host/src/machine";
 import type { InsercionDeRuta } from "./typst";
 
@@ -174,7 +174,7 @@ function miniatura(donde: DondeTypst, ruta: string): Promise<string | null> {
   let pedida = miniaturas.get(clave);
   if (!pedida) {
     if (miniaturas.size > 200) miniaturas.clear();
-    pedida = invoke<{ kind: string; data_url: string | null }>("tree_show", {
+    pedida = callEngine<{ kind: string; data_url: string | null }>("tree_show", {
       project: donde.project,
       session: donde.session,
       tree: donde.arbol,
@@ -274,7 +274,7 @@ export function autocompletadoTypst(donde: () => DondeTypst): Extension {
       ultimo = {
         clave,
         inicio,
-        pedido: invoke<Sugerencia[]>("typst_live_complete", {
+        pedido: callEngine<Sugerencia[]>("typst_live_complete", {
           key: d.key,
           path: d.ruta,
           text: ctx.state.doc.toString(),
