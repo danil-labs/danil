@@ -57,25 +57,35 @@ export function readOrganizationLogo(context: string, workspace: string, path: s
   let image = images.get(key);
   if (!image) {
     image = (async (): Promise<LogoRead> => {
-      const accountAssets = !capabilities().nativeWindow ? capabilities().accountAssets : undefined;
+      const accountAssets = capabilities().accountAssets;
+      let accountConfirmedNone = false;
       if (accountAssets) {
-        const fromAccount = await accountAssets.read(workspace, "logo").catch(() => undefined);
-        if (fromAccount !== undefined) {
+        const fromAccount = await accountAssets.read(workspace, "logo", context).catch(() => undefined);
+        if (typeof fromAccount === "string") {
           resolved.set(rk, fromAccount);
           return { ok: true, url: fromAccount };
         }
+        if (fromAccount === null) accountConfirmedNone = true;
       }
       let resolvedPath = path;
       let machines: readonly string[] | undefined;
       if (!resolvedPath) {
         const map = await listContextWorkspaces(context);
         if (!map) {
+          if (accountConfirmedNone && !capabilities().nativeWindow) {
+            resolved.set(rk, null);
+            return { ok: true, url: null };
+          }
           images.delete(key);
           scheduleLogoRetry();
           return { ok: false };
         }
         const entry = map.get(workspace);
         if (!entry) {
+          if (accountConfirmedNone) {
+            resolved.set(rk, null);
+            return { ok: true, url: null };
+          }
           // El workspace aún no apareció en el listado del motor de este contexto.
           images.delete(key);
           return { ok: false };
