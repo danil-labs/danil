@@ -9,7 +9,9 @@ for (const labels of [{ free: "Router IA gratis" }, { free: "Free AI Router" }])
     // Un motor anterior todavía publica `opencode-zen`, partido en dos superficies.
     const legacyPaid = { provider: "opencode-zen", catalogo: "de_pago", label: "Go" };
     const legacyFree = { ...legacyPaid, catalogo: "gratuitos", label: "Router IA gratis" };
+    const credits = { id: "danil-credits", provider: "opencode", catalogo: "todo", label: "Danil Credits" };
     assert.deepEqual(surfacePresentation(paid, labels), { label: "OpenCode", mark: "opencode" });
+    assert.deepEqual(surfacePresentation(credits, { ...labels, credits: "Danil Credits" }), { label: "Danil Credits", mark: "danil" });
     assert.deepEqual(surfacePresentation(router, labels), { label: labels.free, mark: "danil" });
     assert.deepEqual(surfacePresentation(legacyPaid, labels), { label: "OpenCode", mark: "opencode" });
     assert.deepEqual(surfacePresentation(legacyFree, labels), { label: labels.free, mark: "danil" });

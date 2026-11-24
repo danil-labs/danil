@@ -14,7 +14,7 @@ export function createDraftSend(deps: DraftSendDeps) {
   const { activarPestana, cerrarPestanasYa, cierreSinGuardar, claveAbierta, pestanas, sessionId, setCierreSinGuardar } = deps;
   /** El cambio de CLI con el que se está a punto de mandar el siguiente turno. */
   const [traspasoPendiente, setTraspasoPendiente] = createSignal<
-    { clave: string; sesion: string; desde: string; opcion: OpcionDeModelo } | null
+    { clave: string; sesion: string; desde: string; desdeModelo: string | null; opcion: OpcionDeModelo } | null
   >(null);
   // Cambiar de tarea o de borrador cancela la confirmación: lo que se aplique
   // tiene que ser de la tarea que está delante.
