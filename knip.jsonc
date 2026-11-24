@@ -108,6 +108,7 @@
     "packages/features/settings/src/components/AppDownloads.tsx": ["exports"], // default: #1151 Maintenance.tsx usa el export nombrado AppDownloads
     "packages/features/settings/src/model/ai-providers-groups.ts": ["exports"], // idsDeGrupos, sinCuentas: ai-providers-groups.test.ts
     "packages/features/settings/src/model/settings-workspaces.ts": ["types"], // EngineWorkspaceLike, OtherAccountLike: settings-workspaces.test.ts / #1155
+    "packages/features/settings/src/queries/account-engine.ts": ["exports"], // engineAccountProfileOf: #1178
     "packages/features/settings/src/queries/free-router-platform.ts": ["exports"], // supportsPlatformFreeRouter: free-router-platform.test.ts
     "packages/features/settings/src/queries/workspaces-store.ts": ["exports"], // anunciarMudanza: #1155
     "packages/host/src/downloads.ts": ["exports"],                    // DESKTOP_DOWNLOADS, platformOf: account-welcome.test.ts
@@ -195,7 +196,11 @@
         // La hoja que carga apps/desktop/index.html con <link>, que knip no lee.
         "src/styles/desktop.css"
       ],
-      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts"]
+      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts"],
+      "ignoreDependencies": [
+        // Movido con file-preview.ts a packages/host/src/file-preview.ts (r1-ui-metrics).
+        "@tauri-apps/api"
+      ]
     },
     "packages/engine-client": {
       "entry": [
