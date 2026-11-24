@@ -24,20 +24,30 @@ const cabecera = (s, id) => s.grupo(id).querySelector("button[aria-expanded]");
 const ILEGIBLE = { what: "lectura", detail: "disco ilegible" };
 const sinFallos = (s) => { assert.deepEqual(s.app.failures, []); s.cerrar(); };
 
-test("P20: the header counts the painted cards, not one per machine, open and collapsed", async () => {
+test("P20: the header starts collapsed with active account and painted card count, and keeps the count when expanded", async () => {
   const m = motor();
   // Con la cuenta Danil cada cuenta trae sus máquinas; c1 está en dos.
   const en = (id, ...machines) => cuenta(id, { credential_group: "pro", machines: machines.map((machine, i) => ({ machine, id: i ? `${id}-${machine}` : id, on: true })) });
   m.provs.claude = { cuentas: [en("c1", "m1", "m2"), en("c2", "m1"), en("c3", "m1"), en("c4", "m2")], active: "c1" };
   const s = await montar(fixture, "p20", m, ["claude"]);
   await waitFor(() => tarjetas(s, "claude") === 4, "4 tarjetas");
+  assert.equal(cabecera(s, "claude").getAttribute("aria-expanded"), "false", "plegada al montar");
+  assert.ok(s.cuerpo("claude").classList.contains("hidden"), "el cuerpo inicia oculto");
+  assert.ok(cabecera(s, "claude").textContent.includes("c1@ejemplo.test"), "muestra la cuenta activa plegada");
+  assert.ok(cabecera(s, "claude").textContent.includes("activa"), "muestra el badge activa plegada");
   assert.equal(conteo(s, "claude"), "· 4 cuentas");
   assert.equal(s.g.ultimo("claude").cuentas, 4);
   // Cada celda lleva su tarjeta y lo que cuelga de ella, no hermanos sueltos.
   for (const li of s.grupo("claude").querySelectorAll("[data-account-grid] > li")) assert.ok(li.firstElementChild, "celda vacía");
   cabecera(s, "claude").click();
   await sleep(30);
-  assert.equal(cabecera(s, "claude").getAttribute("aria-expanded"), "false");
+  assert.equal(cabecera(s, "claude").getAttribute("aria-expanded"), "true", "se despliega al hacer clic");
+  assert.ok(!s.cuerpo("claude").classList.contains("hidden"), "el cuerpo se muestra al desplegar");
+  assert.equal(conteo(s, "claude"), "· 4 cuentas", "desplegada también");
+  cabecera(s, "claude").click();
+  await sleep(30);
+  assert.equal(cabecera(s, "claude").getAttribute("aria-expanded"), "false", "vuelve a plegarse");
+  assert.ok(s.cuerpo("claude").classList.contains("hidden"));
   assert.equal(conteo(s, "claude"), "· 4 cuentas", "plegada también");
   sinFallos(s);
 });

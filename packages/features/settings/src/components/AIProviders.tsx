@@ -100,7 +100,7 @@ export default function AIProviders(props: { superficies: Superficie[]; estado?:
           <For each={ids()}>
             {(id) => (
               <div onFocusIn={() => (focoEn = id)} onFocusOut={(e) => e.relatedTarget && (focoEn = null)} class={seVe(id) ? "grid min-w-0" : "hidden"} data-provider-slot={id}>
-                <Accounts agente={id} titulo={nombre(id)} marca={<Show when={porId().get(id)?.[0]}>{(s) => <Marca superficie={s()} />}</Show>} sinAgregar onEstado={(e) => avisar(id, e)} onControl={(c) => controles.set(id, c)} maquinas={props.maquinas} />
+                <Accounts agente={id} titulo={nombre(id)} desplegado={false} marca={<Show when={porId().get(id)?.[0]}>{(s) => <Marca superficie={s()} />}</Show>} sinAgregar onEstado={(e) => avisar(id, e)} onControl={(c) => controles.set(id, c)} maquinas={props.maquinas} />
               </div>
             )}
           </For>

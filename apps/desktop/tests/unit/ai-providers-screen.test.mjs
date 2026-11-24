@@ -84,7 +84,7 @@ test("P51: while a provider has not answered there is no 'no accounts' text", as
   s.fin();
 });
 
-test("P52: only providers with accounts show, in list_surfaces order, open, with their name and count", async () => {
+test("P52: only providers with accounts show, in list_surfaces order, collapsed by default with active account and count, and expand on click", async () => {
   const m = motor();
   m.provs.claude = { cuentas: [1, 2, 3, 4].map((n) => cuenta(`c${n}`)), active: "c1" };
   m.provs.codex = { cuentas: [] };
@@ -92,11 +92,18 @@ test("P52: only providers with accounts show, in list_surfaces order, open, with
   const s = await abrir("p52", m, [sup("grok", "Grok"), sup("claude", "Claude Code"), sup("codex", "Codex")]);
   await waitFor(() => s.vistos().length === 2, "dos grupos");
   assert.deepEqual(s.vistos(), ["grok", "claude"]);
-  for (const [id, nombre, conteo] of [["grok", "Grok", "1 cuenta"], ["claude", "Claude Code", "4 cuentas"]]) {
+  for (const [id, nombre, activa, conteo] of [["grok", "Grok", "g1@ejemplo.test", "1 cuenta"], ["claude", "Claude Code", "c1@ejemplo.test", "4 cuentas"]]) {
     const cabecera = s.hueco(id).querySelector("button[aria-expanded]");
-    assert.equal(cabecera.getAttribute("aria-expanded"), "true", `${id} abierto al entrar`);
-    assert.ok(cabecera.textContent.includes(nombre) && cabecera.textContent.includes(conteo), cabecera.textContent);
+    const cuerpo = s.hueco(id).querySelector(`[data-provider-group="${id}"]`);
+    assert.equal(cabecera.getAttribute("aria-expanded"), "false", `${id} plegado al entrar`);
+    assert.ok(cuerpo.classList.contains("hidden"), `${id} cuerpo oculto al entrar`);
+    assert.doesNotMatch(cabecera.className, /focus-visible:outline-solid|focus-visible:outline-primary/, `${id} sin anillo de foco`);
+    assert.ok(cabecera.textContent.includes(nombre) && cabecera.textContent.includes(activa) && cabecera.textContent.includes("activa") && cabecera.textContent.includes(conteo), cabecera.textContent);
+    cabecera.click();
+    assert.equal(cabecera.getAttribute("aria-expanded"), "true", `${id} se despliega al hacer clic`);
+    assert.ok(!cuerpo.classList.contains("hidden"), `${id} cuerpo visible al desplegar`);
   }
+  assert.equal(esqueletosVisibles(s.panel).length, 0, "sin skeletons visibles tras cargar y desplegar");
   assert.equal(s.panel.querySelector("[data-no-accounts]"), null);
   s.fin();
 });
@@ -164,6 +171,7 @@ test("P57: choosing a hidden provider opens its group, adds once and the new acc
   await waitFor(() => s.seVe("codex"), "codex aparece");
   await waitFor(() => s.opciones().length === 0, "el selector se cierra");
   assert.equal(s.hueco("codex").querySelector("button[aria-expanded]").getAttribute("aria-expanded"), "true");
+  assert.ok(!s.hueco("codex").querySelector('[data-provider-group="codex"]').classList.contains("hidden"), "codex queda desplegado al elegirlo");
   await waitFor(() => m.de("login_account", "codex").length === 1, "login");
   assert.equal(m.de("add_account", "codex").length, 1);
   assert.deepEqual(m.de("add_account", "codex")[0].args, { provider: "codex", label: "" });
@@ -172,6 +180,7 @@ test("P57: choosing a hidden provider opens its group, adds once and the new acc
   s.app.emit("account", { account: id, kind: "done", text: "" });
   await waitFor(() => s.hueco("codex").querySelector("[data-account-count]")?.textContent.includes("1 cuenta"), "1 cuenta");
   assert.ok(s.hueco("codex").querySelector("[data-account-grid] > li"), "la tarjeta nueva");
+  assert.equal(esqueletosVisibles(s.panel).length, 0);
   s.fin();
 });
 
@@ -205,7 +214,7 @@ test("P59: with a login under way its provider is busy in the picker and another
   s.fin();
 });
 
-test("P60/P61: reordering or dropping providers in list_surfaces keeps the live login, the folded group and each node", async () => {
+test("P60/P61: reordering or dropping providers in list_surfaces keeps the live login, the expanded/folded state and each node", async () => {
   const m = motor();
   m.provs.claude = { cuentas: [cuenta("c1")], active: "c1" };
   m.provs.codex = { cuentas: [], label: "Codex" };
@@ -214,8 +223,9 @@ test("P60/P61: reordering or dropping providers in list_surfaces keeps the live 
   const s = await abrir("p60", m, () => orden.map((id) => sup(id, LABEL[id])));
   await waitFor(() => s.seVe("claude") && s.seVe("grok"), "grupos");
   const grok = s.hueco("grok");
+  assert.equal(grok.querySelector("button[aria-expanded]").getAttribute("aria-expanded"), "false", "grok inicia plegado");
   grok.querySelector("button[aria-expanded]").click();
-  assert.equal(grok.querySelector("button[aria-expanded]").getAttribute("aria-expanded"), "false");
+  assert.equal(grok.querySelector("button[aria-expanded]").getAttribute("aria-expanded"), "true", "grok desplegado al hacer clic");
   await elegir(s, "codex");
   await waitFor(() => s.login(), "modal de codex");
   const codex = s.hueco("codex");
@@ -226,7 +236,7 @@ test("P60/P61: reordering or dropping providers in list_surfaces keeps the live 
     assert.ok(s.login()?.textContent.includes("Codex"), "el modal sigue siendo de codex");
     assert.equal(s.hueco("codex"), codex, "mismo nodo de codex");
     assert.equal(s.hueco("grok"), grok, "mismo nodo de grok");
-    assert.equal(grok.querySelector("button[aria-expanded]").getAttribute("aria-expanded"), "false", "grok sigue plegado");
+    assert.equal(grok.querySelector("button[aria-expanded]").getAttribute("aria-expanded"), "true", "grok conserva su despliegue");
   }
   assert.equal(m.de("cancel_login").length, 0);
   s.fin();
@@ -388,7 +398,10 @@ test("SKELETON: accounts loaded with hanging tasks_awaiting_quota and pending/fa
   const s = await abrir("skeleton-partial-load", m, [sup("claude", "Claude Code"), sup("codex", "Codex"), sup("grok", "Grok")]);
   await waitFor(() => s.seVe("claude") && s.seVe("grok"), "claude cargado y grok con error");
   await sleep(100);
-  assert.equal(esqueletosVisibles(s.panel).length, 0, "ningún Skeleton visible con cuentas ya pintadas aunque codex siga pendiente y tasks_awaiting_quota cuelgue");
+  assert.equal(esqueletosVisibles(s.panel).length, 0, "ningún Skeleton visible plegado aunque codex siga pendiente y tasks_awaiting_quota cuelgue");
+  s.hueco("claude").querySelector("button[aria-expanded]").click();
+  s.hueco("grok").querySelector("button[aria-expanded]").click();
+  assert.equal(esqueletosVisibles(s.panel).length, 0, "ningún Skeleton visible tras desplegar claude y grok");
   assert.equal(s.hueco("claude").querySelectorAll("[data-account-grid] > li").length, 1);
   assert.ok(s.hueco("grok").textContent.includes("No se pudieron leer las cuentas."));
   codexPendiente.resolve({ provider: "codex", env_var: "", shared_credential: null, secret_note: null, active: null, accounts: [] });
@@ -427,6 +440,7 @@ test("SKELETON: multi-surface providers (opencode + danil-credits / opencode-zen
   ]);
   await waitFor(() => s.seVe("opencode") && s.hueco("opencode").querySelectorAll("[data-account-grid] > li").length === 1, "una sola tarjeta de opencode");
   await sleep(200);
+  s.hueco("opencode").querySelector("button[aria-expanded]").click();
   assert.equal(s.hueco("opencode").querySelectorAll("[data-account-grid]").length, 1, "un solo Accounts dentro del grupo");
   assert.equal(s.hueco("opencode").querySelectorAll("[data-account-grid] > li").length, 1, "sin tarjetas duplicadas");
   assert.doesNotMatch(s.hueco("opencode").textContent, /Danil Credits|OpenCode Zen/);
@@ -453,6 +467,7 @@ test("SKELETON: switching workspace resets stale surfaces, ignores out-of-order 
     workspaces_startup: () => ({ workspaces: [w1, w2], active: activeWs }),
   });
   await waitFor(() => s.seVe("claude"), "claude en w1");
+  assert.equal(s.hueco("claude").querySelector("button[aria-expanded]").getAttribute("aria-expanded"), "false");
   assert.equal(esqueletosVisibles(s.panel).length, 0);
 
   activeWs = "w2";
@@ -462,7 +477,9 @@ test("SKELETON: switching workspace resets stale surfaces, ignores out-of-order 
   ws2Surfaces.resolve([sup("codex", "Codex")]);
   await waitFor(() => s.seVe("codex"), "codex en w2");
   await sleep(100);
-  assert.equal(esqueletosVisibles(s.panel).length, 0, "sin Skeleton tras cargar w2");
+  assert.equal(s.hueco("codex").querySelector("button[aria-expanded]").getAttribute("aria-expanded"), "false");
+  s.hueco("codex").querySelector("button[aria-expanded]").click();
+  assert.equal(esqueletosVisibles(s.panel).length, 0, "sin Skeleton tras cargar y desplegar w2");
   assert.ok(call >= 2);
   s.fin();
 });

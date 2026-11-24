@@ -40,7 +40,7 @@ export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cue
     setOfrecerTerminal(false);
   }
 
-  const [abierto, setAbierto] = createSignal(untrack(() => props.desplegado ?? true));
+  const [abierto, setAbierto] = createSignal(untrack(() => props.desplegado ?? false));
   const idCuerpo = createUniqueId();
   const cuentaActiva = () => lista()?.accounts.find((a) => a.id === lista()?.active);
 
@@ -53,7 +53,7 @@ export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cue
       <SettingsSection
         title={
           <Pressable
-            class="flex w-full min-w-0 items-center gap-2 rounded-sm bg-transparent p-0 text-left font-[inherit] text-neutral-950 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            class="flex w-full min-w-0 items-center gap-2 rounded-sm bg-transparent p-0 text-left font-[inherit] text-neutral-950 outline-none focus:outline-none focus-visible:outline-none"
             aria-expanded={abierto()}
             aria-controls={idCuerpo}
             onClick={() => setAbierto(!abierto())}
