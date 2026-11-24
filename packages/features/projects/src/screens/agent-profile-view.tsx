@@ -1,4 +1,4 @@
-import { invokeNative as invoke } from "../../../../host/src/native.ts";
+import { openAgentExternalFolder } from "../queries/profiles.ts";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import EyeOff from "lucide-solid/icons/eye-off";
 import FolderOpen from "lucide-solid/icons/folder-open";
@@ -223,7 +223,7 @@ export default function AgentProfile(props: AgentProfileProps) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => void invoke("open_external", { target: folder() })}
+                    onClick={() => void openAgentExternalFolder(folder())}
                   >
                     <FolderOpen size={14} />
                     {t("projects.agents.profile_folder")}
