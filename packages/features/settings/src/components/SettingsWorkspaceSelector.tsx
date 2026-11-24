@@ -1,10 +1,10 @@
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
-import { For, Show } from "solid-js";
+import { Show } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
-import { capabilities } from "../../../../host/src/platform";
 import { FailureNote, type Failure } from "../../../../ui/src/Failure";
+import { KeyedList } from "../../../../ui/src/KeyedList";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { Pressable } from "../../../../ui/src/Pressable";
 import type { SesionesDeAjustes } from "../model/sessions-port";
@@ -23,7 +23,7 @@ export function SettingsWorkspaceSelector(props: {
   sesiones: SesionesDeAjustes;
   class?: string;
 }) {
-  const { MarcaDeWorkspace, organizationLogo } = props.sesiones;
+  const { MarcaDeWorkspace } = props.sesiones;
 
   const metadataLabels = () => ({
     personal: t("settings.workspace_selector.personal"),
@@ -35,17 +35,6 @@ export function SettingsWorkspaceSelector(props: {
 
   const metadataOf = (option: SettingsWorkspaceOption) =>
     workspaceMetadataLabel(option, metadataLabels());
-
-  const logoLoaderFor = (option: SettingsWorkspaceOption): (() => Promise<string | null>) | undefined => {
-    if (option.otherAccount) return option.otherAccount.loadLogo;
-    if (capabilities().nativeWindow && option.context && option.logo && organizationLogo) {
-      const ctx = option.context;
-      const id = option.id;
-      const logo = option.logo;
-      return () => organizationLogo(ctx, id, logo);
-    }
-    return undefined;
-  };
 
   function onMenuKeyDown(e: KeyboardEvent) {
     if (e.key === "Escape") {
@@ -93,9 +82,10 @@ export function SettingsWorkspaceSelector(props: {
                 >
                   <MarcaDeWorkspace
                     id={current().id}
+                    context={current().context}
                     name={current().name}
                     logo={current().logo}
-                    load={logoLoaderFor(current())}
+                    load={current().otherAccount?.loadLogo}
                   />
                 </span>
                 <span class="grid min-w-0 flex-1 gap-0.5">
@@ -131,9 +121,10 @@ export function SettingsWorkspaceSelector(props: {
                 >
                   <MarcaDeWorkspace
                     id={current().id}
+                    context={current().context}
                     name={current().name}
                     logo={current().logo}
-                    load={logoLoaderFor(current())}
+                    load={current().otherAccount?.loadLogo}
                   />
                 </span>
                 <span class="grid min-w-0 flex-1 gap-0.5">
@@ -171,36 +162,37 @@ export function SettingsWorkspaceSelector(props: {
                   onKeyDown={onMenuKeyDown}
                   class="flex max-h-64 flex-col gap-0.5 overflow-y-auto"
                 >
-                  <For each={props.options}>
+                  <KeyedList each={props.options} by={(option) => option.key}>
                     {(option) => (
                       <Pressable
                         role="option"
-                        aria-selected={option.active}
-                        data-settings-workspace-option={option.id}
-                        data-workspace-context={option.context ?? undefined}
+                        aria-selected={option().active}
+                        data-settings-workspace-option={option().id}
+                        data-workspace-context={option().context ?? undefined}
                         class={cn(
                           "flex w-full items-center gap-2.5 rounded-sm px-2 py-1.5 text-left text-neutral-950 transition-colors outline-none hover:bg-surface-muted focus:outline-none focus-visible:bg-surface-muted focus-visible:outline-none",
-                          option.active && "bg-surface-muted font-medium",
-                          option.otherAccount && !option.otherAccount.signedIn && "opacity-65",
+                          option().active && "bg-surface-muted font-medium",
+                          option().otherAccount && !option().otherAccount!.signedIn && "opacity-65",
                         )}
-                        onClick={() => select(option)}
+                        onClick={() => select(option())}
                       >
                         <span
                           aria-hidden="true"
                           class="relative grid size-6 shrink-0 place-items-center overflow-hidden rounded-sm bg-neutral-200 text-caption font-semibold text-neutral-950"
                         >
                           <MarcaDeWorkspace
-                            id={option.id}
-                            name={option.name}
-                            logo={option.logo}
-                            load={logoLoaderFor(option)}
+                            id={option().id}
+                            context={option().context}
+                            name={option().name}
+                            logo={option().logo}
+                            load={option().otherAccount?.loadLogo}
                           />
                         </span>
                         <span class="grid min-w-0 flex-1 gap-0.5">
                           <span class="truncate text-ui leading-tight text-neutral-950">
-                            {option.name}
+                            {option().name}
                           </span>
-                          <Show when={metadataOf(option)}>
+                          <Show when={metadataOf(option())}>
                             {(meta) => (
                               <span class="truncate text-caption leading-tight text-neutral-500">
                                 {meta()}
@@ -208,12 +200,12 @@ export function SettingsWorkspaceSelector(props: {
                             )}
                           </Show>
                         </span>
-                        <Show when={option.active}>
+                        <Show when={option().active}>
                           <Check size={14} class="shrink-0 text-neutral-950" aria-hidden="true" />
                         </Show>
                       </Pressable>
                     )}
-                  </For>
+                  </KeyedList>
                 </div>
               </PopoverContent>
             </Popover>

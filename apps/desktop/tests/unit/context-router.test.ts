@@ -548,3 +548,59 @@ test("catalog spaces are authoritative without resurrecting deleted engine space
   ]);
   router.close();
 });
+
+test("Web ignores volatile machine_resources changes when comparing progressive list_workspaces slices", async () => {
+  let measuredAt = 100;
+  let workspaceName = "Danil Workspace";
+  const changes: string[] = [];
+  const fleet = new Fleet({
+    self: null,
+    connect() {
+      return {
+        state: () => "online", start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {},
+        async call(_id, command) {
+          await new Promise((resolve) => setTimeout(resolve, 15));
+          if (command === "list_workspaces") {
+            return {
+              value: {
+                workspaces: [{ id: "same", name: workspaceName, logo: "/ws/logo.png" }],
+                active: "same",
+                machine_resources: { measured_at: ++measuredAt, storage: [] },
+              },
+              cached: null,
+            };
+          }
+          return { value: null, cached: null };
+        },
+      } satisfies Link;
+    },
+  });
+  fleet.setMachines([{ id: "vm", name: "Cloud", wakes: true, kind: "organization", organizationId: "org", context: "a", linked: new Set(["same"]) }]);
+  const router = createRouter({
+    self: null,
+    native: null,
+    fleet,
+    contextInfo: (context) => (context === "a" ? { org: "org", plan: "teams" } : null),
+    onSlices: (batch) => changes.push(...batch),
+  });
+  try {
+    // Initial read seeds the cached slice.
+    await router.handle("list_workspaces", {}, contextOptions("a"));
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    changes.length = 0;
+
+    // A progressive re-read where only machine_resources changes must not trigger onSlices("workspaces").
+    await router.handle("list_workspaces", {}, contextOptions("a"));
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    assert.deepEqual(changes, [], "volatile machine_resources must not trigger workspaces slice notifications");
+
+    // A genuine workspace metadata change still announces a workspaces slice change.
+    workspaceName = "Renamed Workspace";
+    await router.handle("list_workspaces", {}, contextOptions("a"));
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    assert.ok(changes.includes("workspaces"), "real workspace change must still announce workspaces slice");
+  } finally {
+    router.close();
+  }
+});
+
