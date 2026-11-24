@@ -207,6 +207,7 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
         ("POST", ["", "v1", "machines", id, "start" | "tickets"]) => opaque_id(id),
         ("GET", ["", "v1", "operations", id]) => opaque_id(id),
         ("PUT" | "DELETE", ["", "v1", "workspaces", "preferences", "added", id]) => opaque_id(id),
+        ("GET" | "POST", ["", "v1", "workspaces", id, "spaces"]) => opaque_id(id),
         // Traspaso a otra organización (plan de cuentas § 8): se pide con el contexto de origen y
         // se acepta con el del destino.
         ("POST", ["", "v1", "workspaces", id, "transfers"]) => opaque_id(id),

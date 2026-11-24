@@ -288,10 +288,11 @@ test("shared workspace catalog orders spaces, unwraps remote task spaces, and en
   const catalog = {
     version: 3,
     spaces: [
-      { id: "mac_s1", name: "Producto", folders: [] },
+      { id: "mac_s1", name: "Producto", folders: ["f1"] },
       { id: "cloud_s1", name: "Nube", folders: [] },
     ],
     order: ["cloud_s1", "mac_s1"],
+    task_spaces: {},
   };
   const fleet = new Fleet({
     self: "local",
@@ -364,6 +365,7 @@ test("Web ensures a catalog space on a cloud VM even before engine features are 
       { id: "cloud_s1", name: "Nube", folders: [] },
     ],
     order: ["mac_s1", "cloud_s1"],
+    task_spaces: {},
   };
   const fleet = new Fleet({
     self: null,
@@ -415,6 +417,7 @@ test("Web falls back to the VM default space when creating a task in a catalog s
         { id: "cloud_s1", name: "Nube", folders: [] },
       ],
       order: ["mac_s1", "cloud_s1"],
+      task_spaces: {},
     };
     const fleet = new Fleet({
       self: null,
@@ -507,5 +510,41 @@ test("Web retries task creation once with space null when a cold VM rejects with
   assert.equal(await router.handle("send_message", { text: "Cold", space: "mac_s1" }, contextOptions("a", "vm")), "vm~task-cold");
   assert.deepEqual(sentSpaces, ["mac_s1", null]);
   await assert.rejects(router.handle("move_task_to_space", { id: "vm~task-cold", space: "mac_s1" }, contextOptions("a", "vm")));
+  router.close();
+});
+
+test("catalog spaces are authoritative without resurrecting deleted engine spaces or requiring online machines", async () => {
+  const catalog = {
+    version: 2,
+    spaces: [
+      { id: "sp_user1", name: "Personal", folders: ["p1"] },
+    ],
+    order: ["sp_user1"],
+    task_spaces: {},
+  };
+  const fleet = new Fleet({
+    self: null,
+    connect() {
+      return {
+        state: () => "offline", start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {},
+        async call() {
+          throw new Error("should not query offline machine when catalog has spaces");
+        },
+      } satisfies Link;
+    },
+  });
+  const router = createRouter({
+    self: null,
+    native: null,
+    fleet,
+    contextInfo: context => context === "a" ? { org: "org", plan: "teams" } : null,
+    readContextSpaces: async (context, organization, workspace) =>
+      context === "a" && organization === "org" && workspace === "same" ? catalog : null,
+  });
+  await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+  const spaces = await router.handle("list_spaces") as { id: string; name: string | null; folders: string[] }[];
+  assert.deepEqual(spaces.map(s => ({ id: s.id, name: s.name, folders: s.folders })), [
+    { id: "sp_user1", name: "Personal", folders: ["p1"] },
+  ]);
   router.close();
 });
