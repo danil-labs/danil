@@ -227,6 +227,12 @@ export function createServiceListeners(deps: ServiceListenersDeps) {
     });
     onCleanup(() => void cliOpen.then((stop) => stop()));
 
+    const sourcesEv = listen<{ workspace?: string | null; source?: string; commit?: string }>("sources-updated", (e) => {
+      if (!esDelWorkspaceAbierto(e.payload?.workspace ?? undefined)) return;
+      window.dispatchEvent(new CustomEvent("harness:sources"));
+    });
+    onCleanup(() => void sourcesEv.then((stop) => stop()));
+
     const sesionEv = listen<SessionEvent>("session", (e) => {
       const generation = workspaceContext.generation();
       const { session, project, workspace } = e.payload;
@@ -262,6 +268,6 @@ export function createServiceListeners(deps: ServiceListenersDeps) {
     const trasHueco = () => releerTrasHueco();
     window.addEventListener("harness:service-gap", trasHueco);
     onCleanup(() => window.removeEventListener("harness:service-gap", trasHueco));
-    deps.serviceListenersReady = Promise.all([chat, question, usageEv, agentsEv, cuentaEv, cliChanged, cliOpen, sesionEv]);
+    deps.serviceListenersReady = Promise.all([chat, question, usageEv, agentsEv, cuentaEv, cliChanged, cliOpen, sourcesEv, sesionEv]);
   });
 }

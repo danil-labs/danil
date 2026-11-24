@@ -1,5 +1,5 @@
 import { linkedWorkspaces, organizationOf, serviceFeatures, systemOf, wakes } from "@terminus/computers";
-import type { MachineInfo } from "@terminus/fleet";
+import type { MachineInfo } from "./fleet/index.ts";
 import type { ContextComputer } from "../queries/session-cloud";
 
 /** La fila de una computadora de la cuenta como la lee la flota; `kind` y `organizationId` salen de `/v1/machines`. */

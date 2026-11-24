@@ -1,4 +1,4 @@
-import { type Fleet, FleetError } from "@terminus/fleet";
+import { type Fleet, FleetError } from "../model/fleet/index.ts";
 
 type Sources = { fleet: Fleet; self: string | null; machine: string | null; native: (() => Promise<unknown>) | null; here: boolean };
 /** Execution admission requires every member's current answer; display copies cannot prove either start or close. */

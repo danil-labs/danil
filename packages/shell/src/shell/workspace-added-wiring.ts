@@ -7,7 +7,7 @@
  * - Desk: `edgeFetch` y la persona de `GET /v1/identity/me`. La web: la cookie y CSRF.
  */
 import type { OrganizationSelection } from "@terminus/computers";
-import type { Listed } from "@terminus/fleet";
+import type { Listed } from "../../../features/machines/src/model/fleet/index.ts";
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
 import { edgeFetch, ORGANIZATION_CHANGED, platformFetch } from "../../../platform-client/src/client.ts";
 import { capabilities } from "../../../host/src/platform.ts";
