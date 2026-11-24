@@ -32,8 +32,10 @@
   "spaces.delete.mark_changed": "changed",
   "spaces.delete.mark_new": "new",
   "spaces.delete.open": "Open",
+  "spaces.delete.no_answer": "The service didn't answer. Try again.",
   "spaces.delete.open_named": "Open {title}",
   "spaces.delete.reading": "Reading what it has…",
+  "spaces.delete.see_details": "See what isn't saved",
   "spaces.delete.see_archived": "See in Archived",
   "spaces.delete.title": "Delete “{name}”",
   "spaces.delete.toast": {
