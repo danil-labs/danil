@@ -299,6 +299,8 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "guest_copy_folder"
                 | "guest_sync_spaces"
                 | "guest_events"
+                | "loopback_login_listen"
+                | "loopback_login_cancel"
         )
 }
 pub(super) fn with_desktop(

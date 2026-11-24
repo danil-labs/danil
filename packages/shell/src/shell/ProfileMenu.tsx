@@ -1,5 +1,5 @@
 import { createSignal, lazy, Show, Suspense } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
 import { type Apariencia, apariencia } from "../../../ui/src/lib/theme";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../ui/src/Popover";

@@ -45,13 +45,15 @@ export type ShellCommandDeps = { DEFAULT_PERMISSION_MODE_EVENT: "harness:default
   setPermissionError: ReturnType<typeof createThreadStream>["setPermissionError"]; setPorContestar: ReturnType<typeof createResyncCommands>["setPorContestar"]; setSessionId: Setter<string | null>;
   setTerminales: ReturnType<typeof createThreadStream>["setTerminales"]; settleTurn: ReturnType<typeof createAttachmentsMount>["settleTurn"];
   settlingTurns: ReturnType<typeof createThreadStream>["settlingTurns"]; soltarTerminal: ReturnType<typeof createResyncCommands>["soltarTerminal"];
-  stopping: ReturnType<typeof createThreadStream>["stopping"]; taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; terminales: ReturnType<typeof createThreadStream>["terminales"];
+  stopping: ReturnType<typeof createThreadStream>["stopping"]; taskQueues: ReturnType<typeof createThreadStream>["taskQueues"];
+  taskSpaceCreate?: (requested: string | null | undefined) => { engineSpace: string | null; record: (taskId: string) => void };
+  terminales: ReturnType<typeof createThreadStream>["terminales"];
   threads: ReturnType<typeof createThreadsStore>; vivas: ReturnType<typeof createThreadStream>["vivas"]; workspaceActivo: Accessor<string | null>;
   workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2961–3259, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createShellCommand(deps: ShellCommandDeps) {
-  const { DEFAULT_PERMISSION_MODE_EVENT, agent, agents, busy, carpetasDeTerminal, claveAbierta, cola, comandosDeLaCola, composer, conversationScope, deLaTarea, draftBases, draftMachine, draftOptions, effort, enCache, engineCanDispatch, escritorio, esperando, grupos, hablandoCon, handoff, handoffAt, injecting, lanzados, machineOf, machines, marcarQuieta, marcarViva, model, modo, nacenConComando, pendingStarts, pestanas, ponerTerminal, project, projectCatalog, quitarDeLaCola, refreshFolder, refreshSessions, retenidaPorElMotor, retirarNaciendo, sesiones, sessionId, setArrancando, setHablandoCon, setInjecting, setPermissionError, setPorContestar, setSessionId, setTerminales, settleTurn, settlingTurns, soltarTerminal, stopping, taskQueues, terminales, threads, vivas, workspaceActivo, workspaceContext } = deps;
+  const { DEFAULT_PERMISSION_MODE_EVENT, agent, agents, busy, carpetasDeTerminal, claveAbierta, cola, comandosDeLaCola, composer, conversationScope, deLaTarea, draftBases, draftMachine, draftOptions, effort, enCache, engineCanDispatch, escritorio, esperando, grupos, hablandoCon, handoff, handoffAt, injecting, lanzados, machineOf, machines, marcarQuieta, marcarViva, model, modo, nacenConComando, pendingStarts, pestanas, ponerTerminal, project, projectCatalog, quitarDeLaCola, refreshFolder, refreshSessions, retenidaPorElMotor, retirarNaciendo, sesiones, sessionId, setArrancando, setHablandoCon, setInjecting, setPermissionError, setPorContestar, setSessionId, setTerminales, settleTurn, settlingTurns, soltarTerminal, stopping, taskQueues, taskSpaceCreate, terminales, threads, vivas, workspaceActivo, workspaceContext } = deps;
   const adoptarNacida: ShellCommandDeps["adoptarNacida"] = (...a: Parameters<ShellCommandDeps["adoptarNacida"]>) => deps.adoptarNacida(...a);
   const configDeLaSesion: ShellCommandDeps["configDeLaSesion"] = (...a: Parameters<ShellCommandDeps["configDeLaSesion"]>) => deps.configDeLaSesion(...a);
   const detenerYEnviar: ShellCommandDeps["detenerYEnviar"] = (...a: Parameters<ShellCommandDeps["detenerYEnviar"]>) => deps.detenerYEnviar(...a);
@@ -131,6 +133,8 @@ export function createShellCommand(deps: ShellCommandDeps) {
     if (!nace) return false;
     nacenConComando.delete(runId);
     nace.session = session;
+    nace.recordSpace?.(session);
+    nace.recordSpace = undefined;
     if (nace.generation !== workspaceContext.generation()) return true;
     lanzados.set(session, nace.lanzado);
     batch(() => {
@@ -153,6 +157,9 @@ export function createShellCommand(deps: ShellCommandDeps) {
     const lanzado = { project: proyecto, provider: agent(), model: model() || null, effort: effort() || null, permission_mode: modo() || null };
     const titulo = tituloProvisional(command);
     const runId = crypto.randomUUID();
+    const spacePlan = taskSpaceCreate
+      ? taskSpaceCreate(escritorio())
+      : { engineSpace: escritorio(), record: () => {} };
     const nace: ComandoQueNace = {
       lanzado,
       provisional: pintarNaciendo(proyecto, titulo, lanzado, encargado),
@@ -160,6 +167,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
       claveBorrador,
       generation: workspaceContext.generation(),
       session: null,
+      recordSpace: spacePlan.record,
     };
     nacenConComando.set(runId, nace);
     deps.lifecycleRevision++;
@@ -178,11 +186,13 @@ export function createShellCommand(deps: ShellCommandDeps) {
         model: lanzado.model,
         effort: lanzado.effort,
         permissionMode: lanzado.permission_mode,
-        space: escritorio(),
+        space: spacePlan.engineSpace,
         agent: encargado,
         baseRef: draftBases()[claveBorrador] ?? null,
         runId,
       }, enOtra);
+      nace.recordSpace?.(corrida.session);
+      nace.recordSpace = undefined;
       // Sin su `shell_started` no hay nada pintado: se adopta aquí y se lee del disco.
       if (adoptarComando(runId, corrida.session) && nace.generation === workspaceContext.generation()) void settleTurn(corrida.session, true);
       return true;

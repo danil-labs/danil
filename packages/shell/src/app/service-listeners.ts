@@ -1,10 +1,11 @@
-import { aplicarLenguaDeWorkspace, t } from "../../../../apps/desktop/src/lib/i18n";
+import { aplicarLenguaDeWorkspace, t } from "../../../ui/src/lib/i18n";
 import { type InternalTaskLink } from "../../../ui/src/lib/chat/links";
 import { listen } from "../../../host/src/serviceEvents.ts";
 import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
 import { type UsageRecord, ventanaDe } from "../../../ui/src/lib/usage";
 import { type Ventana } from "../../../ui/src/lib/usage.ts";
 import { invoke } from "../../../engine-client/src/client.ts";
+import { mountLoopbackLoginBridge } from "../../../engine-client/src/loopbackLogin.ts";
 import { type createChatEvents as T_createChatEvents } from "../../../features/chat/src";
 import { type ChatEvent, type PreguntaEvent, type SessionEvent } from "../../../features/chat/src/model/transcript";
 import { type Session } from "../../../features/chat/src/model/transcript.ts";
@@ -92,6 +93,7 @@ export function createServiceListeners(deps: ServiceListenersDeps) {
       setCuentasTocadas((n) => n + 1);
     });
     onCleanup(() => void cuentaEv.then((f) => f()));
+    onCleanup(mountLoopbackLoginBridge());
 
     // La otra ventana escribió en esta carpeta de datos: hay que releer,
     // igual que el `done` de un turno propio, con dos diferencias. Rust

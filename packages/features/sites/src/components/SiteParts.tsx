@@ -1,7 +1,7 @@
 import { Show } from "solid-js";
 import { Button } from "../../../../ui/src/Button";
 import { corta } from "../../../../ui/src/lib/sites";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 
 /** `inicio` es la pestaña de navegador recién abierta: no hay capa hasta que se teclea a dónde ir. */
 export type Estado = "inicio" | "abriendo" | "cargando" | "listo" | "fallo";

@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { AgentProfile as Profile, HandlerDefinition } from "../../../../ui/src/lib/model";
 import { type OpcionDeModelo, opcionesDeModelos } from "../../../../ui/src/lib/models";
 import { prosaDe } from "../../../../ui/src/Failure";

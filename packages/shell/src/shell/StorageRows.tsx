@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { peso } from "../../../ui/src/lib/format";
 import { cn } from "../../../ui/src/lib/utils";
 import Trash2 from "lucide-solid/icons/trash-2";

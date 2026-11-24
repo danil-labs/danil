@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { detalleDe, prosaDe } from "../../../../ui/src/Failure";
 import { canonicalAgentId, OPENCODE } from "../../../../ui/src/lib/tasks/agents.ts";

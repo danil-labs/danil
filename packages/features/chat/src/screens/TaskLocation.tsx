@@ -4,7 +4,7 @@ import Monitor from "lucide-solid/icons/monitor";
 import { MachineIcon } from "../../../../ui/src/MachineIcon";
 import { type JSX, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { abbreviateHomePath } from "../../../../ui/src/lib/remote-path";
 import { capabilities, machineScreen } from "../../../../host/src/platform";
 import { cn } from "../../../../ui/src/lib/utils";

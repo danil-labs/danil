@@ -1,7 +1,7 @@
 import Minus from "lucide-solid/icons/minus";
 import Plus from "lucide-solid/icons/plus";
 import { createResource, createSignal, For, onMount, Show } from "solid-js";
-import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { manifiesto, t } from "../../../../ui/src/lib/i18n";
 import { BUSINESS_SALES_EMAIL } from "../model/sales-contact";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";

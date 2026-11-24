@@ -7,9 +7,10 @@
  * `GET /v1/capabilities` (Desk compilado no se recompila por cambios del servidor).
  * El canal de datos no pasa por aquí: va directo al relay con el ticket, solo a un origen exacto (`DEFAULT_RELAY_ORIGINS`).
  */
-import { type Computer, type Fetch, listComputers, sessionProbe, startComputer, startedOf } from "../../../../platform-client/src/api.ts";
+import { type Computer, type Fetch, isRetiredComputersEndpoint, listComputers, sessionProbe, startComputer, startedOf } from "../../../../platform-client/src/api.ts";
 import { type CapabilityList, announces, capabilityList, mayCall } from "../../../../platform-client/src/capabilities.ts";
-export { listComputers, sessionProbe, startComputer, startedOf };
+export { isRetiredComputersEndpoint, listComputers, sessionProbe, startComputer, startedOf };
+export { readContextSpaces } from "../../../../platform-client/src/workspace-spaces.ts";
 import { machineToComputer, machinesClient, wokeOf as platformWokeOf } from "../../../../platform-client/src/machines.ts";
 import type { MachinesAnswer } from "../../../../platform-client/src/machines-config.ts";
 

@@ -2,9 +2,9 @@
  * La cuenta de Danil del workspace, dentro de su tarjeta en Workspaces o en Cuenta de
  * Danil: con qué cuenta está, iniciar sesión y desvincularla (se confirma). Chunk aparte.
  */
-import "../../../../../apps/desktop/src/locales/danilPhrases";
+import "../../../../ui/src/locales/danilPhrases";
 import { createEffect, createSignal, on, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { cn } from "../../../../ui/src/lib/utils";

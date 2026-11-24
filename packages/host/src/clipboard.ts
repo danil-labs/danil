@@ -2,7 +2,7 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { createSignal, onCleanup } from "solid-js";
 
 import type { Failure } from "../../ui/src/Failure";
-import { t } from "../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../ui/src/lib/i18n.ts";
 
 /**
  * El único copiado de la ventana. `navigator.clipboard` pide un gesto

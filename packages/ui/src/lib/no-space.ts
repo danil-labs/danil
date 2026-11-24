@@ -4,7 +4,7 @@
  * otros con la clave sola, y las cifras llegan aparte por el evento `install`.
  */
 import { peso } from "./format.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "./i18n.ts";
 
 /** La clave del motor; `needed` y `free` van en bytes. */
 export const SIN_ESPACIO = "common.install.no_space";

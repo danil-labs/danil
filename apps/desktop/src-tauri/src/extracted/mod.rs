@@ -16,6 +16,7 @@ mod legacy;
 #[cfg(target_os = "linux")]
 mod linux_engine;
 mod local_image;
+mod loopback_login;
 #[cfg(target_os = "macos")]
 mod master_handoff;
 mod page_preview;
@@ -541,7 +542,9 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             guest_call,
             guest_copy_folder,
             guest_sync_spaces,
-            guest_events
+            guest_events,
+            loopback_login::loopback_login_listen,
+            loopback_login::loopback_login_cancel
         ]))
         .build(context)
         .expect("tauri extracted client")
@@ -560,6 +563,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
                 tray::show_window(app);
             }
             if matches!(event, tauri::RunEvent::Exit) {
+                loopback_login::cancel_all();
                 instance::exiting();
                 placement::write(&placed_on_exit);
                 if let Some(state) = app.try_state::<Arc<proxy::State>>() {

@@ -1,7 +1,7 @@
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Input } from "../../../../ui/src/Input";
 import {
   LOGO_MAX,

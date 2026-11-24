@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { type Aviso, readableSessionTitle } from "../screens/Sessions";

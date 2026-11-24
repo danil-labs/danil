@@ -6,7 +6,7 @@
  * every other engine command goes to the machines of the account through the
  * same router as the desktop (`features/machines/router.ts`).
  */
-import { t } from "../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../ui/src/lib/i18n.ts";
 import type { ControlPlaneCommands } from "./github-account.ts";
 
 type Args = Record<string, unknown>;

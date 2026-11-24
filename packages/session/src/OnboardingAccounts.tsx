@@ -5,7 +5,7 @@ import { Pantalla } from "../../features/onboarding/src/components/Screen";
 import { accountKeyUrl } from "../../ui/src/lib/account-auth.ts";
 import type { AccountList, AgentOpt, LoginEvent } from "../../features/settings/src/queries/accounts-store";
 import { LoginCodeForm } from "../../features/settings/src/screens/LoginCodeForm";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "../../ui/src/lib/i18n";
 import { invoke } from "../../engine-client/src/client.ts";
 import { listen } from "../../host/src/serviceEvents";
 import { Badge } from "../../ui/src/Badge";
@@ -66,7 +66,7 @@ export function OnboardingAccounts(props: { workspace: string; onDone: () => voi
 type Phase =
   | { t: "idle" }
   | { t: "starting" }
-  | { t: "browser"; url: string | null; code: string | null; asks: boolean }
+  | { t: "browser"; url: string | null; code: string | null; notice: string | null; asks: boolean }
   | { t: "key"; id: string };
 
 function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) => void; register: (stop: () => void) => void }) {
@@ -167,7 +167,7 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
       if (account !== running()) return;
       const shown = (): Extract<Phase, { t: "browser" }> => {
         const p = phase();
-        return p.t === "browser" ? p : { t: "browser", url: null, code: null, asks: false };
+        return p.t === "browser" ? p : { t: "browser", url: null, code: null, notice: null, asks: false };
       };
       if (kind === "url") {
         setPhase({ ...shown(), url: text });
@@ -175,7 +175,10 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
         invoke("open_external", { target: text }).catch(() => {});
       } else if (kind === "confirm") setPhase({ ...shown(), code: text });
       else if (kind === "code") setPhase({ ...shown(), asks: true });
-      else if (kind === "done") {
+      else if (kind === "notice") {
+        const msg = text.trim();
+        if (msg && !/^https?:\/\//.test(msg)) setPhase({ ...shown(), notice: msg });
+      } else if (kind === "done") {
         reset();
         if (text) {
           setFailure({ what: t("web.onboarding.accounts.failed", { agent: nombreDeAgente(props.provider) }), detail: text });
@@ -244,6 +247,9 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
                     {t("web.onboarding.accounts.type_code")} <strong class="font-mono select-all">{code()}</strong>
                   </p>
                 )}
+              </Show>
+              <Show when={p().notice}>
+                {(notice) => <p class="m-0 text-xs text-neutral-500" data-login-notice="">{notice()}</p>}
               </Show>
               <Show when={p().asks}>
                 <LoginCodeForm value={typed()} onInput={setTyped} onSubmit={() => void sendCode()} />

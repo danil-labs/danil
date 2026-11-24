@@ -1,5 +1,5 @@
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import { createWorkspaceSourceWait } from "./workspace-source-wait";
 import { Pressable } from "../../../ui/src/Pressable";

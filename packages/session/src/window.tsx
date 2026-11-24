@@ -8,9 +8,9 @@ import { createContextRelayPool, createRemoteGuestManager, isRemoteGuestMachine,
 import { sessionRailState } from "../../shell/src/shell";
 import { createRouter, type SliceChange } from "../../features/machines/src/queries/router";
 import type { AccountProfileSource } from "../../features/settings/src/model/account-profile";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "../../ui/src/lib/i18n";
 import { type Capabilities, setCapabilities, type WebAccountsSource } from "../../host/src/platform";
-import { leerPref } from "../../../apps/desktop/src/lib/prefs";
+import { leerPref } from "./prefs";
 import { deliver } from "../../host/src/serviceEvents";
 import { installIpc } from "./ipc";
 import type { MachineStatus } from "../../features/machines/src/model/SyncNote";

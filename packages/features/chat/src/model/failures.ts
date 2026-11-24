@@ -8,7 +8,7 @@
 import { asFailure, prosaDe } from "../../../../ui/src/lib/failure.ts";
 import { prosa } from "../../../../ui/src/lib/prose.ts";
 import { df } from "../../../../ui/src/lib/format.ts";
-import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { clavesConocidas, t } from "../../../../ui/src/lib/i18n.ts";
 
 /**
  * Por qué el proveedor no contestó, tal como lo guardó Rust

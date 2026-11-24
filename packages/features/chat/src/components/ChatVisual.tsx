@@ -6,7 +6,7 @@ import X from "lucide-solid/icons/x";
 import { envolver, SANDBOX_ARTEFACTO } from "../../../../ui/src/lib/chat/sandbox.ts";
 import { VISUAL_THEME_TOKENS, type VisualTheme } from "../../../../ui/src/lib/chat/inlineVisual.ts";
 import geist from "../../../../ui/src/styles/fonts/Geist-Variable.woff2?inline";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { suspendSiteLayers } from "../../../../ui/src/lib/sites";
 import { Button } from "../../../../ui/src/Button";
 import { Spinner } from "../../../../ui/src/Spinner";

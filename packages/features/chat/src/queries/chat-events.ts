@@ -1,5 +1,5 @@
 import { type createThreadStream as T_createThreadStream } from "./thread-stream.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type Encolado } from "../../../../ui/src/lib/queue.ts";
 import { type Author } from "../model/messageTypes.ts";
 import { type ChatEvent } from "../model/transcript";

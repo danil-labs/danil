@@ -4,7 +4,7 @@ import Plus from "lucide-solid/icons/plus";
 import Search from "lucide-solid/icons/search";
 import SquarePen from "lucide-solid/icons/square-pen";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, on, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import type { Project } from "../../../ui/src/lib/model";
 import { type Space, type SpaceRef, spaceName } from "../../../ui/src/lib/spaces";

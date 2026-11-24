@@ -3,7 +3,7 @@ import MessageCircle from "lucide-solid/icons/message-circle";
 import MessageCircleQuestion from "lucide-solid/icons/message-circle-question-mark";
 import X from "lucide-solid/icons/x";
 import { Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { Markdown } from "../../../../ui/src/Markdown";

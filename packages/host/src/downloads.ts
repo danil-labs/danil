@@ -26,7 +26,7 @@ export function platformOf(userAgent: string): DesktopPlatform | null {
 }
 
 /** Las descargas con la de esta computadora primero. */
-export function downloadsFor(userAgent: string): DesktopDownload[] {
+export function downloadsFor(userAgent: string = typeof navigator === "undefined" ? "" : navigator.userAgent): DesktopDownload[] {
   const mine = platformOf(userAgent);
   return [...DESKTOP_DOWNLOADS].sort((a, b) => Number(b.platform === mine) - Number(a.platform === mine));
 }

@@ -1,11 +1,11 @@
 import { FREE_ROUTER_MODEL, FREE_ROUTER_OPENCODE, OPENCODE } from "../../../../ui/src/lib/tasks/index.ts";
 import { routerOfferState } from "../../../../ui/src/lib/tasks/index.ts";
 import { createMemo, createSignal } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { listAccounts, getAccountLimits } from "../queries";
 import type { Query } from "../../../../ui/src/lib/limits";
 import { modelPresentation, effortOptions, effortValue, esFavorito, favoritosDeModelos, seccionDeModelo, type GrupoDeModelos, type OpcionDeModelo } from "../../../../ui/src/lib/models";
-import { createPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { createPref } from "../../../../session/src/prefs";
 import { danilCreditsTierLabel } from "../../../../ui/src/lib/tasks/index.ts";
 import { DANIL_CREDITS, isDanilCreditsModel } from "../model/danil-credits";
 import { esServicio, nombreDeServicio, gruposDeModelos, nombreDeNivel, type SelectorDeModeloProps } from "./model-picker-types";

@@ -10,7 +10,7 @@ import GitPullRequestDraft from "lucide-solid/icons/git-pull-request-draft";
 import { type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { FolderSquare } from "../screens/FolderChip";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { AgentModels, AgentProfile, HandlerStatus } from "../../../../ui/src/lib/model";
 import { nombreDeModelo, providerMark } from "../../../../ui/src/lib/models";
 import { MarcaAgente } from "../../../../ui/src/icons";

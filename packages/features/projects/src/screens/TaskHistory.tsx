@@ -1,7 +1,7 @@
 import { getTaskHistory, recreateTaskWork } from "../queries";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { Show, createMemo, createResource, createSignal, onCleanup, onMount } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import BaseBranchPicker from "./BaseBranchPicker";

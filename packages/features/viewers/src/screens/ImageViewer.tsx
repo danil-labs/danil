@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { IconButton } from "../../../../ui/src/IconButton";
 import { clampZoom, offsetOnZoom, ZOOM_STEP } from "../../../../ui/src/lib/zoom";
 

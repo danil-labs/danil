@@ -4,7 +4,7 @@ import { listWorkspaces } from "../queries/engine-workspaces";
 import { Button } from "../../../../ui/src/Button";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { MemoriaProveedor, Startup } from "../queries/workspaces-store";
 import { Input } from "../../../../ui/src/Input";
 

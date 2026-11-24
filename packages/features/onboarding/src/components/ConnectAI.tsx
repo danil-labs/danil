@@ -2,7 +2,7 @@ import CircleCheck from "lucide-solid/icons/circle-check";
 import Circle from "lucide-solid/icons/circle";
 import Sparkles from "lucide-solid/icons/sparkles";
 import { For, Match, Show, Switch } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { Consentir, DialogoDeConexion } from "../model/ports";

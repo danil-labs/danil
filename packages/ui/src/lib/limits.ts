@@ -17,7 +17,7 @@
  * estas fechas en español debajo de una interfaz en otra lengua, **sin error**
  * (`lib/format.ts` lo cuenta para los números).
  */
-import { t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "./i18n.ts";
 
 /** Una ventana de límite, ya normalizada por Rust. */
 export type Window = {

@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type DeleteMember, failureText, type Integration } from "../queries/deleteTask";
 
 /** One task of the family in the delete review: what is lost, and its own acceptance when there is a loss. */

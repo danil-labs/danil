@@ -5,7 +5,7 @@ import ImagePlus from "lucide-solid/icons/image-plus";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { SesionesDeAjustes } from "../model/sessions-port";
 import { LogoCrop } from "./LogoCrop";
 import { imagenInerte } from "../../../../ui/src/lib/chat/links";

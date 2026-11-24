@@ -1,5 +1,5 @@
 import { createSignal, For, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { cn } from "../../../ui/src/lib/utils";
 import { TITULO_DE_GRUPO } from "../../../ui/src/ContextMenu";
 import { KeyedList } from "../../../ui/src/KeyedList";

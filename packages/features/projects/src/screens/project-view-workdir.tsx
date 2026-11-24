@@ -2,7 +2,7 @@ import Check from "lucide-solid/icons/check";
 import Copy from "lucide-solid/icons/copy";
 import FolderOpen from "lucide-solid/icons/folder-open";
 import { Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { openExternal } from "../queries";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";

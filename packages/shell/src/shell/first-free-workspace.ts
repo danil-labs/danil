@@ -5,7 +5,7 @@
  * El alta tapa el riel, así que no usa `sessionRail` (un singleton con las
  * funciones del riel): lee los contextos y el catálogo por su cuenta.
  */
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { escribirPref, leerPref } from "../../../session/src/prefs.ts";
 import { adoptionTarget } from "./account-adoption.ts";
 import { createAccountWorkspaces } from "./session-account-workspaces.ts";
 import type { ContextGroup, ContextInvoke } from "./session-context-types.ts";

@@ -2,7 +2,7 @@
 import type { PermissionRequest } from "../screens/Chat";
 import { mensajeDeFallo } from "./failures.ts";
 import { claveDe } from "../../../../ui/src/lib/failure.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
 
 type Pendiente = { id?: string; request_id: string; state?: string; closed?: string | null };
 type Pendientes = { permissions: Pendiente[]; records?: { permissions: Pendiente[] } };

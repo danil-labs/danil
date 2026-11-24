@@ -2,7 +2,7 @@ import { Match, Switch } from "solid-js";
 import { Icon } from "lucide-solid";
 import Folder from "lucide-solid/icons/folder";
 import FolderGit from "lucide-solid/icons/folder-git-2";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "./lib/i18n";
 import { workdirIconKind } from "./lib/workdirKind";
 
 /** El tipo dicho como lo reconoce la persona: «Código», «Archivos» o «Nube». */

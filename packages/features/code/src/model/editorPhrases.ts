@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 
 /**
  * Las frases que CodeMirror pinta o anuncia. La clave es su identificador en

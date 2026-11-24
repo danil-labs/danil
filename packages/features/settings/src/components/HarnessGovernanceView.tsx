@@ -4,7 +4,7 @@ import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { adoptGovernance, governance, type GovernanceStatus, type RemoteConnection } from "../../../../session/src/governance";
 import { df } from "../../../../ui/src/lib/format";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type Frase, prosa } from "../../../../ui/src/lib/prose";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";

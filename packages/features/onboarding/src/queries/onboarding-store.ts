@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { semillaDelAlta, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { semillaDelAlta, t } from "../../../../ui/src/lib/i18n";
 import type { SellarWorkspaceFree } from "../model/shell-port";
 /** Activa el workspace con la lengua del alta. La ventana entra al Free (F1.2); `add_workspace` solo en la web. */
 async function activar(w: { id: string; name: string }) {

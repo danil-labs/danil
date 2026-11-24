@@ -1,6 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { capabilities } from "../../../host/src/platform";
 import { isWindows } from "../../../host/src/window";

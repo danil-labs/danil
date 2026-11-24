@@ -110,6 +110,7 @@ function mentionOf(machine: string, m: unknown): unknown {
 /** Un evento de `machine` para el panel: también el id suelto de `account-rejected`. */
 export function encodeEvent(ctx: MergeContext, machine: string, name: string, payload: unknown): unknown {
   if (name === "activity" && isRow(payload)) return { ...payload, machine };
+  if (name === "loopback-login" && isRow(payload)) return { ...(encode(ctx, machine, payload) as Row), machine };
   if (name === "account-rejected" && typeof payload === "string" && machine !== ctx.self) return wrap(machine, payload);
   return encode(ctx, machine, payload);
 }
@@ -312,7 +313,17 @@ function mergeAccounts(ctx: MergeContext, parts: Slice[]): unknown {
   // La activa es la de la primera que tenga una: la hospedada sin cuentas, primera, no borra la de la Mac.
   const owner = lists.find((s) => typeof (s.value as Row).active === "string") ?? lead, activeId = (owner.value as Row).active;
   const active = typeof activeId === "string" ? accounts.find((a) => a.machines.some((m) => m.machine === owner.machine && m.id === panelId(owner.machine, activeId)))?.id ?? null : null;
-  return { ...(lead.value as Row), active, accounts };
+  const leadRow = lead.value as Row;
+  if (lists.length === 1) return { ...leadRow, active, accounts };
+  const sharedByMachine: Record<string, string> = {};
+  for (const s of lists) {
+    const row = s.value as Row;
+    const sc = typeof row.shared_credential === "string" && row.shared_credential ? row.shared_credential : null;
+    if (sc && (row.accounts as Row[]).length > 0) sharedByMachine[s.machine] = sc;
+  }
+  const allBlocked = lists.every((s) => s.machine in sharedByMachine);
+  const shared_credential = allBlocked ? sharedByMachine[lead.machine] : null;
+  return { ...leadRow, shared_credential, ...(Object.keys(sharedByMachine).length ? { shared_credential_by_machine: sharedByMachine } : {}), active, accounts };
 }
 
 const entriesOf = (value: unknown): Entry[] => (Array.isArray(value) ? value.filter(isEntry) : []);

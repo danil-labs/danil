@@ -1,5 +1,5 @@
 import { type Accessor, createSignal, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { KeyedList } from "../../../ui/src/KeyedList";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../ui/src/Popover";
 import { contextAttentionStale } from "../../../features/machines/src/index";

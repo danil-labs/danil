@@ -1,7 +1,7 @@
 import { Pressable } from "../../../ui/src/Pressable";
 import type { WorkspaceAddLink } from "../../../session/src/workspace-add-link";
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { RAIL_MENU_ITEM } from "./rail-menu";
 import type { PickerOrg, PickerRow, WorkspacePicker } from "../../../session/src/workspace-picker";
 

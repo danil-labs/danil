@@ -11,7 +11,7 @@ import {
   Show,
 } from "solid-js";
 import { copyText } from "../../host/src/clipboard";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "./lib/i18n";
 import { imagenLocal } from "./lib/chat/links";
 import { cn } from "./lib/utils";
 import { Button } from "./Button";

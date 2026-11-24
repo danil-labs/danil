@@ -1,5 +1,5 @@
 
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type Frase } from "../../../../ui/src/lib/prose.ts";
 import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
 import { deliver, listen } from "../../../../host/src/serviceEvents.ts";

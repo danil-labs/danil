@@ -1,6 +1,6 @@
 import { commandSummary } from "./chat/command.ts";
 import { readableToolName } from "./chat/tools.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "./i18n.ts";
 import { nombreDe, origenDe, type Origen, type Paso } from "./steps-model.ts";
 import type { Fila } from "./steps-group.ts";
 

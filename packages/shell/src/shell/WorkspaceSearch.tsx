@@ -1,4 +1,4 @@
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { Input } from "../../../ui/src/Input";
 
 /** Con más filas que estas, una lista de workspaces ofrece buscar. */

@@ -3,7 +3,7 @@ import { memoryDirs, parseMemoryEntry } from "../model/memory.ts";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { FailureNote, type Failure } from "../../../../ui/src/Failure";
-import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { manifiesto, t } from "../../../../ui/src/lib/i18n";
 import type { MemoriaScope } from "../../../../ui/src/lib/model";
 import { type MemoriaDeCuenta, memoryHistory, type MemoryVersion, readMemoryFile } from "../queries/memory-account";
 

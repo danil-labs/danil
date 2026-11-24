@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import { connected } from "../../../../session/src/engineConnection.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { CabeceraDelAlta } from "../components/Phases";
 import { Escenario, TituloCambiante } from "../components/Stage";
 import type { ControlesDeVentanaDelShell } from "../model/shell-port";

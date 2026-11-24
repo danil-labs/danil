@@ -1,4 +1,4 @@
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { type HandlerList } from "../../../ui/src/lib/model";
 import { type AgentProfile, type HandlerStatus } from "../../../ui/src/lib/model.ts";
 import { type SenderTask } from "../../../ui/src/lib/recipients";

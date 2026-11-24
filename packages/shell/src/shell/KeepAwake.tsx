@@ -2,7 +2,7 @@ import { listen } from "../../../host/src/serviceEvents.ts";
 import Coffee from "lucide-solid/icons/coffee";
 import { createSignal, For, onCleanup, Show } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { cn } from "../../../ui/src/lib/utils";
 import type { SignalTone } from "../../../ui/src/SignalDot";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";

@@ -1,6 +1,6 @@
 import { createEffect, createSignal, type JSX, on, onCleanup, onMount } from "solid-js";
 import { connected } from "../../../../session/src/engineConnection.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { anotarFalta, SIN_ESPACIO, textoSinEspacio } from "../../../../ui/src/lib/no-space";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { asFailure, prosaDe } from "../../../../ui/src/Failure";

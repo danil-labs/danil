@@ -1,5 +1,5 @@
 import { isSubtask, type LauncherRow } from "./tasks/flat.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "./i18n.ts";
 
 /**
  * Los espacios de la ventana: espejo de `workspace/spaces.rs`. La

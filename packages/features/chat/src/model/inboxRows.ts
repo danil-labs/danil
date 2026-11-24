@@ -1,5 +1,5 @@
 // Con extensión: se carga también desde `node --test` (ver `failures.ts`).
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
 
 /** Saltos que encadena un linaje de despertares (`orchestration::MAX_WAKE_HOPS`). */
 export const TOPE_DE_SALTOS = 3;

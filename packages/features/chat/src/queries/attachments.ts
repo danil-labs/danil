@@ -1,6 +1,6 @@
 
 import { lista } from "../../../../ui/src/lib/format";
-import { aplicarLenguaDeWorkspace, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { aplicarLenguaDeWorkspace, t } from "../../../../ui/src/lib/i18n";
 import { type Source } from "../../../../ui/src/lib/model";
 import { readLayout } from "../../../../ui/src/lib/panels";
 import { type Frase } from "../../../../ui/src/lib/prose.ts";

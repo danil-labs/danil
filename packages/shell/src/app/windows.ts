@@ -1,4 +1,4 @@
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { panelReadingOrder, sameSite, type PanelSite as SitioDePanel } from "../../../ui/src/lib/panels";
 import { type Layout, type PanelGroup, type Side } from "../../../ui/src/lib/panels-types.ts";
 import { destinoDePestana, type NavegacionDePestanas } from "../../../ui/src/lib/shortcuts";

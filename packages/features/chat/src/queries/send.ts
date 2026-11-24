@@ -1,5 +1,5 @@
 
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type Agent, type Source } from "../../../../ui/src/lib/model.ts";
 import { type CatalogosDeModelos } from "../../../../ui/src/lib/models.ts";
 import { esProvisional, tituloProvisional } from "../../../../ui/src/lib/taskDraft";
@@ -51,12 +51,14 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
   refreshSessions: (proyectos: string[]) => Promise<void>; retirarNaciendo: (id: string) => { project: string; row: SessionRow; }[]; sessionId: Accessor<string | null>;
   setArrancando: ReturnType<typeof createThreadStream>["setArrancando"]; setError: Setter<string | null>; setHablandoCon: Setter<{ project: string; name: string; } | null>;
   setSessionId: Setter<string | null>; settleTurn: ReturnType<typeof createAttachmentsMount>["settleTurn"]; sourceIds: Accessor<string[]>;
-  taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; taskSources: Accessor<Source[] | null>; threads: ReturnType<typeof createThreadsStore>;
+  taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; taskSources: Accessor<Source[] | null>;
+  taskSpaceCreate?: (requested: string | null | undefined) => { engineSpace: string | null; record: (taskId: string) => void };
+  threads: ReturnType<typeof createThreadsStore>;
   traspasos: Accessor<Readonly<Record<string, HandoverState>>>; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 4892–5203, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createSend(deps: SendDeps) {
-  const { adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, threads, traspasos, workspaceActivo, workspaceContext } = deps;
+  const { adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, taskSpaceCreate, threads, traspasos, workspaceActivo, workspaceContext } = deps;
   const carryModule: SendDeps["carryModule"] = (...a: Parameters<SendDeps["carryModule"]>) => deps.carryModule(...a);
   const olvidarPestana: SendDeps["olvidarPestana"] = (...a: Parameters<SendDeps["olvidarPestana"]>) => deps.olvidarPestana(...a);
   /**
@@ -177,6 +179,9 @@ export function createSend(deps: SendDeps) {
         const selected = catalogos()[m.provider]?.models.find((model) => model.id === m.model);
         if (!selected || selected.gratis === true) throw new Error(t("surfaces.free_off"));
       }
+      const spacePlan = !abierta && taskSpaceCreate
+        ? taskSpaceCreate(m.space)
+        : { engineSpace: m.space ?? null, record: () => {} };
       const mandarTurno = () => invoke<string>("send_message", {
         provider: m.provider,
         project: proyecto,
@@ -219,8 +224,9 @@ export function createSend(deps: SendDeps) {
         hops: m.hops ?? null,
         fromTask: m.from_task ?? null,
         // El escritorio que la persona tenía delante al escribirlo, sellado en el
-        // mensaje; lo que llega de otro canal no trae ninguno.
-        space: m.space,
+        // mensaje; con spaces en workspaces el motor usa su espacio por defecto y
+        // el mapeo del usuario se graba inmediatamente al volver el id.
+        space: spacePlan.engineSpace,
         clientMessageId,
       }, opciones);
       // El consentimiento del traspaso va justo antes del turno: el motor lo
@@ -255,6 +261,7 @@ export function createSend(deps: SendDeps) {
         },
       });
       const id = traspaso.answer;
+      if (!abierta) spacePlan.record(id);
       if (generation === workspaceContext.generation()) handoff.observe({ kind: "accepted", scope: conversationScope(id, proyecto) });
       threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]);
       // El gesto quedó consumido: se escribió el consentimiento o el mensaje ya

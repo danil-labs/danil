@@ -11,6 +11,10 @@
     "other": "Its {count} tasks are archived and their work trees removed. Branches and their PRs stay as they are. The space cannot be recovered. Projects are not deleted."
   },
   "spaces.delete.body_empty": "It has no tasks. It leaves the bar and cannot be recovered. Projects are not deleted.",
+  "spaces.delete.body_ungrouped": {
+    "one": "Its task moves back to “{defaultSpace}” untouched. The space leaves your bar. Projects are not deleted.",
+    "other": "Its {count} tasks move back to “{defaultSpace}” untouched. The space leaves your bar. Projects are not deleted."
+  },
   "spaces.delete.cancel": "Cancel",
   "spaces.delete.changed_body": "What is marked appeared or changed while you were looking. Check it and confirm again.",
   "spaces.delete.changed_title": "There are new changes since you opened this",
@@ -35,6 +39,11 @@
   "spaces.delete.toast": {
     "one": "“{name}” deleted · 1 task archived",
     "other": "“{name}” deleted · {count} tasks archived"
+  },
+  "spaces.delete.toast_removed": "“{name}” deleted",
+  "spaces.delete.toast_ungrouped": {
+    "one": "“{name}” deleted · 1 task moved to your default space",
+    "other": "“{name}” deleted · {count} tasks moved to your default space"
   },
   "spaces.delete.uncommitted": "Uncommitted changes ({count})",
   "spaces.delete.uncommitted_why": "They are discarded when you delete and can't be recovered. New untracked files too.",

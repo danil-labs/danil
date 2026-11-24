@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
 import { MachineIcon } from "../../../../ui/src/MachineIcon";
 import { machineName, machineWakes } from "../queries/store";

@@ -1,5 +1,5 @@
 import { batch } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
 import type { Superficie } from "../../../../ui/src/lib/surfaces.ts";

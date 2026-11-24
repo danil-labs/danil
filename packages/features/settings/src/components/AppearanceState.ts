@@ -2,7 +2,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { listMachineAgents, setAgentAvatar } from "../queries/engine-agents";
 import { previewFile } from "../queries/engine-workspaces";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { elegirArchivoDeImagen } from "../../../../host/src/pick-image";
 import type { AgentProfile, CatalogoDeAgentes } from "../../../../ui/src/lib/model";
 import { type FondoDeChat } from "../../../../ui/src/lib/chat-background";

@@ -1,6 +1,6 @@
 import { Pressable } from "../../../ui/src/Pressable";
 import { createSignal, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { cn } from "../../../ui/src/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
 import { RAIL_MENU_ITEM } from "./rail-menu";

@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
 import type { HandlerRequests } from "../../../../ui/src/lib/model.ts";
 const [version, setVersion] = createSignal(0);
 const changed = () => setVersion(v => v + 1);

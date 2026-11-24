@@ -1,6 +1,6 @@
 import type { Accessor } from "solid-js";
 import type { SenderTask } from "../../../../ui/src/lib/recipients";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Pressable } from "../../../../ui/src/Pressable";
 
 /** « — Abrir»: el enlace a la tarea que escribió la fila (cola y bandeja). */

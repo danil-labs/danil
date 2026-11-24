@@ -6,7 +6,7 @@ import ImagePlus from "lucide-solid/icons/image-plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { Show } from "solid-js";
 import { SelectorDeModelo } from "../model/ports";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { Input } from "../../../../ui/src/Input";

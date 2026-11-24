@@ -1,6 +1,6 @@
 import { SCREEN_CONTROL_DESKTOP } from "../model/screen.ts";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { screenConnection, type Phase } from "../queries/connection";
 import { screenInput } from "../model/input";

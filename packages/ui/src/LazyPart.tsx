@@ -1,6 +1,6 @@
 import { type Component, createResource, ErrorBoundary, type JSX, Suspense } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "./lib/i18n";
 import { Button } from "./Button";
 
 /**

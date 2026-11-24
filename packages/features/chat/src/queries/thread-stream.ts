@@ -1,6 +1,6 @@
 
 import { lastRoster, rememberRoster } from "../../../../ui/src/lib/handlerRoster.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type MentionSources } from "../../../../ui/src/lib/mentions";
 import { type HandlerDefinition, type HandlerList, type HandlerStatusRow } from "../../../../ui/src/lib/model";
 import { type Project } from "../../../../ui/src/lib/model.ts";

@@ -9,9 +9,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { createEffect, createMemo, createSignal, on } from "solid-js";
 import { type ProjectRepository } from "../model/projectRepositories";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
-import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { leerPref } from "../../../../session/src/prefs";
 import type { Project } from "../../../../ui/src/lib/model";
 import { REMOTE_CLONES, faseDeClon, type AnadirCarpetaProps, type RemoteClone } from "./add-workdir-model";
 

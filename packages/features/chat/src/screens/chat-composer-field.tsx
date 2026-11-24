@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { claseDelTramo, finishEdit, type PendingEdit } from "../../../../ui/src/lib/taskMentions";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Textarea } from "../../../../ui/src/Textarea";

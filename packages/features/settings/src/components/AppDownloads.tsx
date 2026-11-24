@@ -5,7 +5,7 @@
 import Download from "lucide-solid/icons/download";
 import { For } from "solid-js";
 import { downloadsFor, DOWNLOAD_PAGE, type DesktopPlatform } from "../../../../host/src/downloads";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { ENLACE } from "../../../../ui/src/ExternalLink";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
@@ -13,7 +13,7 @@ import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../.
 const platformName = (p: DesktopPlatform) => t(`web.download.platform.${p}`);
 
 export function AppDownloadsSection(props: { userAgent?: string }) {
-  const downloads = () => downloadsFor(props.userAgent ?? (typeof navigator === "undefined" ? "" : navigator.userAgent));
+  const downloads = () => downloadsFor(props.userAgent);
   return (
     <SettingsSection title={t("web.download.title")} data-app-downloads="">
       <For each={downloads()}>

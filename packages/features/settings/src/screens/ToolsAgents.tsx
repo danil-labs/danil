@@ -3,7 +3,7 @@ import { addMcpServers, removeMcpServer } from "../queries/engine-mcp";
 import { Button } from "../../../../ui/src/Button";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { asFailure } from "../../../../ui/src/Failure";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Badge } from "../../../../ui/src/Badge";
 import type Herramientas from "./ToolsView";
 import type { createHerramientas } from "./ToolsState";

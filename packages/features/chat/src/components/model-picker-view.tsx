@@ -4,7 +4,7 @@ import Lock from "lucide-solid/icons/lock";
 import Search from "lucide-solid/icons/search";
 import Star from "lucide-solid/icons/star";
 import { For, Show, lazy } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { left, type Query } from "../../../../ui/src/lib/limits";
 import { modelPresentation, esFavorito } from "../../../../ui/src/lib/models";
 import { prosa } from "../../../../ui/src/lib/prose";

@@ -1,4 +1,4 @@
-import { createPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { createPref } from "../../../session/src/prefs.ts";
 
 /** El ajuste de línea del editor y del diff: una sola preferencia, como en VS Code. */
 const [ajuste, setAjuste] = createPref<boolean>("code.wrap", false);
