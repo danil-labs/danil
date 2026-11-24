@@ -7,7 +7,7 @@ test('Desk mounts tasks and engine attention without querying the messaging sess
   const app = await boot('listo', 'desk-messaging-isolation', {
     ...engine, launcher_state: { phase: 'ready' }, window_ready: null, window_vitals: null,
     list_language_packs: [], list_bundled_language_packs: [],
-    list_accounts: [], list_dependencies: [], tasks_awaiting_quota: [],
+    list_accounts: [], tasks_awaiting_quota: [],
     list_workspace_attention: [{ workspace: 'w', tasks: [{ session: 't1', project: 'p1', state: 'unseen' }] }],
     service_poll: { cursor: 0, runtime: 'fixture', reset: false },
   });

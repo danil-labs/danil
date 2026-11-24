@@ -91,7 +91,7 @@ function WebhookBlock(props: {
                 size="compact"
                 onClick={() => void copy(value())}
               >
-                {copied() ? t("settings.connections.copied") : t("settings.connections.local.copy")}
+                {copied() ? t("settings.connections.copied") : t("settings.connections.copy")}
               </Button>
               <Button variant="ghost" size="compact" onClick={() => setSecret(null)}>
                 {t("settings.connections.webhook.done")}

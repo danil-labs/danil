@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   type CredentialFetch,
@@ -9,9 +8,6 @@ import {
   credentialsListingOf,
   deleteCredential,
   credentialHint,
-  envSecretFolderValid,
-  envSecretNameProblem,
-  envSecretOf,
   sealRecipientsFor,
   isAgentCredential,
   listCredentials,
@@ -157,51 +153,20 @@ test("un kind que el cliente no conoce no tumba la lista y los filtros por kind 
   assert.equal(listing.local_only?.[0]?.kind, "env_secret");
 });
 
-test("el slot de un secreto genérico va y vuelve; la carpeta es opcional", () => {
-  assert.equal(credentialSlot.envSecret(null, "STRIPE_KEY"), "env/*/STRIPE_KEY");
-  assert.equal(credentialSlot.envSecret("web", "DATABASE_URL"), "env/web/DATABASE_URL");
-  assert.deepEqual(envSecretOf("env/*/STRIPE_KEY"), { folder: null, name: "STRIPE_KEY" });
-  assert.deepEqual(envSecretOf("env/web/DATABASE_URL"), { folder: "web", name: "DATABASE_URL" });
-  for (const bad of ["env/*/stripe", "env/STRIPE", "env/a/b/C", "mcp/s/env/TOKEN", "env/*/1A"]) assert.equal(envSecretOf(bad), null, bad);
-});
-
-test("el nombre sigue la gramática de variables y no pisa las reservadas", () => {
-  for (const ok of ["STRIPE_KEY", "_X", "A1"]) assert.equal(envSecretNameProblem(ok), null, ok);
-  assert.equal(envSecretNameProblem(""), "empty");
-  for (const bad of ["stripe", "1A", "A-B", "A B"]) assert.equal(envSecretNameProblem(bad), "grammar", bad);
-  for (const reserved of ["PATH", "HOME", "TERMINUS_TASK", "SELDON_X", "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "CLAUDE_CONFIG_DIR", "CODEX_HOME", "OPENCODE_API_KEY", "LD_PRELOAD", "DYLD_INSERT_LIBRARIES", "GIT_DIR", "NODE_OPTIONS", "GH_TOKEN", "GITHUB_TOKEN", "COMSPEC", "TMP"])
-    assert.equal(envSecretNameProblem(reserved), "reserved", reserved);
-  assert.equal(envSecretNameProblem("GITHUB_APP_ID"), null, "solo GITHUB_TOKEN exacto, no el prefijo");
-});
-
-test("un secreto genérico solo da pista con 16 caracteres o más; las demás claves con 4", () => {
-  assert.equal(credentialHint("env_secret", "short-value-15ch"), "15ch");
-  assert.equal(credentialHint("env_secret", "short-value-15c"), null);
+test("las claves dan pista con 4 caracteres o más", () => {
   assert.equal(credentialHint("mcp_secret", "abcd"), "abcd");
   assert.equal(credentialHint("mcp_secret", "abc"), null);
 });
 
-test("una máquina sin secrets_v1 sale «unsupported», nunca activa, y no recibe copia de un secreto genérico", () => {
+test("las máquinas se ordenan por estado y las credenciales se sellan para todas las destinatarias", () => {
   const listing = credentialsListingOf({
-    credentials: [{ ...CREDENTIAL, kind: "env_secret", slot: "env/*/X_KEY", machines: [{ computer_id: "cmp_old", name: "vieja", state: "unsupported" }, { computer_id: "cmp_mac", name: "Mac", state: "active" }] }],
+    credentials: [{ ...CREDENTIAL, kind: "mcp_secret", slot: "mcp/linear/env/LINEAR_API_KEY", machines: [{ computer_id: "cmp_old", name: "vieja", state: "unsupported" }, { computer_id: "cmp_mac", name: "Mac", state: "active" }] }],
     recipients: [
-      { computer_id: "cmp_mac", public_key: "AAAA", service_features: ["push_stream_v1", "secrets_v1"] },
+      { computer_id: "cmp_mac", public_key: "AAAA", service_features: ["push_stream_v1"] },
       { computer_id: "cmp_old", public_key: "BBBB", service_features: ["push_stream_v1"] },
       { computer_id: "cmp_unknown", public_key: "CCCC" },
     ],
   });
   assert.deepEqual(credentialMachines(listing.credentials[0]!).map((m) => `${m.computer_id}:${m.state}`), ["cmp_mac:active", "cmp_old:unsupported"]);
-  assert.deepEqual(sealRecipientsFor("env_secret", listing.recipients).map((r) => r.computer_id), ["cmp_mac"]);
-  assert.equal(sealRecipientsFor("mcp_secret", listing.recipients).length, 3, "las demás credenciales se sellan para todas");
-});
-
-test("nombres y carpetas como el fixture del motor (seldon-host docs/fixtures/env-secret-names.json)", () => {
-  const fixture = JSON.parse(readFileSync(new URL("./fixtures/env-secret-names.json", import.meta.url), "utf8"));
-  const reason = { empty: "invalid_name", grammar: "invalid_name", reserved: "reserved" };
-  for (const name of fixture.accepted) assert.equal(envSecretNameProblem(name), null, name);
-  for (const r of fixture.rejected) assert.equal(reason[envSecretNameProblem(r.name) ?? "none"], r.reason, r.name.slice(0, 40));
-  for (const f of fixture.folders.accepted) assert.ok(envSecretFolderValid(f), f);
-  for (const f of fixture.folders.rejected) assert.ok(!envSecretFolderValid(f), f);
-  assert.equal(credentialHint("env_secret", "x".repeat(fixture.hint.min_value_chars - 1)), null);
-  assert.equal(credentialHint("env_secret", "x".repeat(fixture.hint.min_value_chars))?.length, fixture.hint.max_chars);
+  assert.equal(sealRecipientsFor("mcp_secret", listing.recipients).length, 3, "las credenciales se sellan para todas");
 });

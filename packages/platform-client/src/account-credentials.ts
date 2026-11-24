@@ -11,7 +11,7 @@ import { bearerCall, errorCodeOf } from "./api.ts";
 /** Un cliente viejo recibe kinds que no conoce tal cual: cada consumidor filtra por `kinds`/`match`. */
 export type CredentialKind = "api_key" | "mcp_secret" | "zotero" | "github" | "subscription" | "mcp_oauth" | "env_secret";
 export type CredentialDelivery = "sealed" | "issued" | "login";
-/** `unsupported`: el motor de esa máquina no anuncia `secrets_v1` y no aplicaría el secreto. */
+/** `unsupported`: el motor de esa máquina no admite este tipo de credencial. */
 export type CredentialMachineState = "active" | "pending" | "removed" | "signed_in" | "unsupported";
 
 /** Una máquina de una credencial (`credential_machines`). */
@@ -52,8 +52,6 @@ export type CredentialRecipient = {
   service_features: string[] | null;
 };
 
-export const SECRETS_FEATURE = "secrets_v1";
-
 /** Una clave de la bóveda de esta máquina que no está en la cuenta (solo el motor la da). */
 export type LocalOnlyCredential = {
   slot: string;
@@ -74,7 +72,7 @@ export type CredentialsListing = {
 
 /** Lo que manda `PUT …/credentials`: crea o rota una credencial sellada. */
 export type CredentialPut = {
-  kind: Extract<CredentialKind, "api_key" | "mcp_secret" | "zotero" | "env_secret">;
+  kind: Extract<CredentialKind, "api_key" | "mcp_secret" | "zotero">;
   provider: string;
   slot: string;
   label: string | null;
@@ -217,7 +215,7 @@ export function listCredentials(source: CredentialSource, workspace: string) {
  * si reintenta, o una nueva por llamada.
  */
 
-/** Crea o rota una credencial sellada (api_key, mcp_secret, zotero, env_secret) con una copia por máquina. */
+/** Crea o rota una credencial sellada (api_key, mcp_secret, zotero) con una copia por máquina. */
 export function putCredential(source: CredentialSource, workspace: string, put: CredentialPut, key: string = crypto.randomUUID()) {
   // El servicio nombra a la máquina `machine_id`; aquí sigue siendo `computer_id`.
   const body = { ...put, copies: put.copies.map((c) => ({ machine_id: c.computer_id, sealed: c.sealed })) };
@@ -249,44 +247,10 @@ export const credentialSlot = {
   goUsageKey: (agent: string, account: string) => `agentes/${agent}:go-usage:${account}`,
   zotero: () => "referencias/zotero-key",
   mcpSecret: (server: string, field: "env" | "headers", name: string) => `mcp/${server}/${field}/${name}`,
-  /** Sin carpeta vale para todo el workspace (`*`); la de la carpeta gana. */
-  envSecret: (folder: string | null, name: string) => `env/${folder ?? "*"}/${name}`,
 };
 
-export const ENV_SECRET_NAME = /^[A-Z_][A-Z0-9_]*$/;
-
-/** Un secreto genérico leído de su slot `env/<carpeta|*>/<NOMBRE>`; null si el slot no es de uno. */
-export type EnvSecretSlot = { folder: string | null; name: string };
-
-export function envSecretOf(slot: string): EnvSecretSlot | null {
-  const m = /^env\/([^/]+)\/([^/]+)$/.exec(slot);
-  if (!m || !ENV_SECRET_FOLDER.test(m[1]!) || !ENV_SECRET_NAME.test(m[2]!)) return null;
-  return { folder: m[1] === "*" ? null : m[1]!, name: m[2]! };
-}
-
-/** Copia de seldon-host `docs/account-credentials.md` § Secretos genéricos; `test/fixtures/env-secret-names.json` es el mismo archivo que prueba el motor. */
-const RESERVED_ENV_PREFIXES = ["DANIL_", "TERMINUS_", "SELDON_", "HARNESS_", "ANTHROPIC_", "OPENAI_", "CLAUDE_", "CODEX_", "OPENCODE_", "GROK_", "AGY_", "XDG_", "LD_", "DYLD_", "GIT_"];
-const RESERVED_ENV = new Set([
-  "PATH", "HOME", "SHELL", "USER", "TMPDIR", "TERM", "NODE_OPTIONS", "GH_TOKEN", "GITHUB_TOKEN", "XAI_API_KEY", "ZCODE_DATA_BASE_DIR",
-  "USERPROFILE", "APPDATA", "LOCALAPPDATA", "SYSTEMROOT", "COMSPEC", "PATHEXT", "TEMP", "TMP", "SYSTEMDRIVE", "WINDIR", "PROGRAMFILES", "PROGRAMDATA", "PSMODULEPATH",
-]);
-const ENV_SECRET_NAME_MAX = 128;
-const ENV_SECRET_FOLDER = /^(\*|[A-Za-z0-9_-]{1,64})$/;
-
-/** Por qué un nombre no sirve para un secreto genérico, o null si sirve. */
-export function envSecretNameProblem(name: string): "empty" | "grammar" | "reserved" | null {
-  if (!name) return "empty";
-  if (!ENV_SECRET_NAME.test(name) || name.length > ENV_SECRET_NAME_MAX) return "grammar";
-  if (RESERVED_ENV.has(name) || RESERVED_ENV_PREFIXES.some((p) => name.startsWith(p))) return "reserved";
-  return null;
-}
-
-/** Si sirve como alcance de un secreto: `*` (todo el workspace) o el id de una carpeta. */
-export const envSecretFolderValid = (folder: string) => ENV_SECRET_FOLDER.test(folder);
-
-/** Los últimos 4 que se enseñan; un secreto genérico corto no da pista (deja poco por adivinar). */
-export function credentialHint(kind: CredentialKind, value: string): string | null {
-  if (kind === "env_secret") return value.length >= 16 ? value.slice(-4) : null;
+/** Los últimos 4 caracteres que se enseñan como pista. */
+export function credentialHint(_kind: CredentialKind, value: string): string | null {
   return value.length >= 4 ? value.slice(-4) : null;
 }
 
@@ -296,9 +260,9 @@ export function credentialMachines(credential: Pick<Credential, "machines">): Cr
   return [...credential.machines].sort((a, b) => rank[a.state] - rank[b.state] || (a.name ?? a.computer_id).localeCompare(b.name ?? b.computer_id));
 }
 
-/** Para quién se sella: un secreto genérico solo para las máquinas cuyo motor anunció `secrets_v1`. */
-export function sealRecipientsFor<R extends Pick<CredentialRecipient, "service_features">>(kind: CredentialKind, recipients: readonly R[]): R[] {
-  return kind === "env_secret" ? recipients.filter((r) => r.service_features?.includes(SECRETS_FEATURE) === true) : [...recipients];
+/** Para quién se sella: todas las máquinas elegibles del workspace. */
+export function sealRecipientsFor<R extends Pick<CredentialRecipient, "service_features">>(_kind: CredentialKind, recipients: readonly R[]): R[] {
+  return [...recipients];
 }
 
 /** Si la credencial es de esa cuenta de agente (`config.agent` / `config.account`). */

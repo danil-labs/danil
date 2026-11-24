@@ -117,7 +117,7 @@ export const pestanasDe = (
     operation: tab("operation", () => t("settings.skills.tab_mcp"), () => <ConnectionsOperation maquinas={maquinas} />),
     plugins: tab("plugins", () => t("settings.tab.plugins"), () => <SettingsPanel><Integrations /></SettingsPanel>),
     memory: tab("memory", () => t("settings.tab.memory"), () => <SettingsPanel><ProveedorDeMemoria /></SettingsPanel>),
-    external: cuenta ? tab("external", () => t("settings.tab.external"), () => <Suspense fallback={null}><Connections workspace={workspace()} /></Suspense>) : undefined,
+    external: cuenta ? tab("external", () => t("settings.tab.external"), () => <Suspense fallback={null}><Connections /></Suspense>) : undefined,
   };
 };
 

@@ -3480,26 +3480,6 @@
     {
       "async": false,
       "channel": null,
-      "kind": "invoke",
-      "name": "list_dependencies",
-      "output": "-> Vec < Dependency >",
-      "parameters": [
-        {
-          "key": "force",
-          "name": "force",
-          "type": "Option < bool >"
-        }
-      ],
-      "path": "deps::list_dependencies",
-      "scope": "workspace",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server"
-    },
-    {
-      "async": false,
-      "channel": null,
       "ids": {
         "workspace": [
           "scope"
@@ -6291,19 +6271,6 @@
     {
       "async": false,
       "channel": null,
-      "kind": "desktop",
-      "name": "service_cancel_update",
-      "output": "-> std :: result :: Result < () , String >",
-      "parameters": [],
-      "path": "cli::service::service_cancel_update",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server"
-    },
-    {
-      "async": false,
-      "channel": null,
       "ids": {
         "workspace": [
           "workspace"
@@ -6340,19 +6307,6 @@
         }
       ],
       "path": "cli::service::service_poll",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server"
-    },
-    {
-      "async": false,
-      "channel": null,
-      "kind": "desktop",
-      "name": "service_prepare_update",
-      "output": "-> std :: result :: Result < () , Value >",
-      "parameters": [],
-      "path": "cli::service::service_prepare_update",
       "audience": "window",
       "authority": "admin",
       "durable": false,
