@@ -88,7 +88,7 @@ export function readOrganizationLogo(context: string, workspace: string, path: s
         }
       }
       const machine = machinePrefix(resolvedPath, machines);
-      const headers: Record<string, string> = { "x-danil-context": context };
+      const headers: Record<string, string> = { "x-danil-context": context, "x-terminus-workspace": workspace };
       if (machine) headers["x-terminus-machine"] = machine;
       try {
         const reply = await callShellEngine<{ data_url: string | null }>(

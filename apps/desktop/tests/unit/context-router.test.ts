@@ -874,3 +874,85 @@ test("leadOf prioritizes online hosting machine over online lazy org VM over off
     router.close();
   }
 });
+
+test("Desk paid-org list_workspaces and preview_file preserve local workspace logo before set_active_workspace and across remote context_root", async () => {
+  const remoteCalls: { machine: string; command: string; workspace: string | null }[] = [];
+  const nativeCalls: { command: string; args: unknown }[] = [];
+  const fleet = new Fleet({
+    self: "mac_local",
+    connect: (machine) => ({
+      state: () => "online",
+      onState: () => () => {},
+      onEvents: () => () => {},
+      subscribe: () => {},
+      start: () => {},
+      close: () => {},
+      async call(_id, command, workspace) {
+        remoteCalls.push({ machine: machine.id, command, workspace });
+        if (command === "list_workspaces") {
+          return {
+            value: {
+              workspaces: [
+                { id: "ws_danil", name: "Danil Workspace", logo: null, context_root: "vm_ctx" },
+                { id: "ws_remote_logo", name: "Remote Logo WS", logo: "/vm/ws_remote_logo/logo.png", context_root: null },
+              ],
+              active: null,
+            },
+            cached: null,
+          };
+        }
+        return { value: { data_url: null }, cached: null };
+      },
+    }),
+  });
+  fleet.setMachines([
+    { id: "vm_cloud", name: "Cloud VM", wakes: true, kind: "organization", organizationId: "org_danil", context: "ctx_danil" },
+  ]);
+  fleet.setListing("vm_cloud", [{ id: "ws_danil", name: "Danil Workspace" }, { id: "ws_remote_logo", name: "Remote Logo WS" }], "ctx_danil");
+
+  const router = createRouter({
+    self: "mac_local",
+    fleet,
+    contextInfo: (context) => (context === "ctx_danil" ? { org: "org_danil", plan: "business" } : null),
+    native: async (command, args) => {
+      nativeCalls.push({ command, args });
+      if (command === "list_workspaces") {
+        return {
+          workspaces: [
+            { id: "ws_danil", name: "Danil Workspace", logo: "/Users/me/ws_danil/logo.png", context_root: null, account: { org: "org_danil" } },
+            { id: "ws_remote_logo", name: "Remote Logo WS", logo: null, context_root: "local_ctx", account: { org: "org_danil" } },
+            { id: "ws_other_org", name: "Other Org WS", logo: "/Users/me/ws_other_org/logo.png", context_root: null, account: { org: "org_other" } },
+          ],
+          active: "ws_danil",
+        };
+      }
+      if (command === "preview_file") {
+        return { data_url: "data:image/png;base64,LOCAL_LOGO" };
+      }
+      return null;
+    },
+  });
+
+  try {
+    // No set_active_workspace has run yet on ctx_danil (mirrors router install at boot / inactive org tiles).
+    const listed = (await router.handle("list_workspaces", {}, contextOptions("ctx_danil"))) as {
+      workspaces: Array<{ id: string; logo?: string | null }>;
+    };
+    const byId = new Map(listed.workspaces.map((w) => [w.id, w]));
+    assert.equal(byId.get("ws_danil")?.logo, "/Users/me/ws_danil/logo.png", "local Mac logo must survive remote VM listing and remote context_root before set_active_workspace");
+    assert.equal(byId.get("ws_remote_logo")?.logo, "vm_cloud~/vm/ws_remote_logo/logo.png", "remote logo must survive when local machine has no logo");
+    assert.equal(byId.has("ws_other_org"), false, "workspaces from another org must remain excluded");
+
+    // preview_file with explicit x-danil-context and x-terminus-workspace must read locally on Mac, not on vm_cloud.
+    const preview = (await router.handle(
+      "preview_file",
+      { workspace: "ws_danil", path: "/Users/me/ws_danil/logo.png", rel: "/Users/me/ws_danil/logo.png" },
+      { headers: { "x-danil-context": "ctx_danil", "x-terminus-workspace": "ws_danil" } },
+    )) as { data_url: string | null };
+    assert.equal(preview.data_url, "data:image/png;base64,LOCAL_LOGO");
+    assert.ok(nativeCalls.some((c) => c.command === "preview_file"), "local workspace logo preview_file must hit native engine");
+    assert.ok(!remoteCalls.some((c) => c.command === "preview_file"), "local workspace logo preview_file must not be sent to cloud VM");
+  } finally {
+    router.close();
+  }
+});
