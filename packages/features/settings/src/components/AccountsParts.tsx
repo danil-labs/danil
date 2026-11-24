@@ -15,13 +15,14 @@ import type { createCuentas } from "./AccountsState";
 import type { createConexionDeCuentas } from "./AccountsConnect";
 
 export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cuentas: ReturnType<typeof createCuentas>, conexion: ReturnType<typeof createConexionDeCuentas>) {
-  const { conexionFallida, lista, tarjetas, enCurso, instalando, fallo, cargando, agentes, machineOf, setEnCurso, setPideCodigo, setPorConfirmar, setAviso, setOfrecerTerminal, agente, estados } = cuentas;
+  const { conexionFallida, lista, agrupadas, enCurso, instalando, fallo, cargando, agentes, machineOf, setEnCurso, setPideCodigo, setPorConfirmar, setAviso, setOfrecerTerminal, agente, estados } = cuentas;
   const { agregando, pidioExterno, faltaExterno, bloqueoAlta, agregar, setPidioExterno, cancelarEspera, segunda } = conexion;
   // PROVISIONAL hasta que se decida Q2: el panel de un alta cuyo login falló también deja el grupo a la vista.
   const falloALaVista = () => conexionFallida() !== null;
   // Las tareas en espera de cupo no lo mantienen: sin cuentas, la persona cambia el proveedor de la tarea.
   createEffect(() => props.onEstado?.({
-    cuentas: lista() === null ? null : tarjetas.length,
+    cuentas: lista() === null ? null : agrupadas().length,
+    cargando: cargando() && lista() === null,
     vivo: agregando() || enCurso() !== null || instalando() !== null || (pidioExterno() && faltaExterno()) || fallo() !== null || falloALaVista(),
     bloqueoAlta: bloqueoAlta(),
     falloDeLectura: lista() === null && !cargando() && fallo() !== null,
@@ -40,7 +41,7 @@ export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cue
     setOfrecerTerminal(false);
   }
 
-  const [abierto, setAbierto] = createSignal(untrack(() => props.desplegado ?? true));
+  const [abierto, setAbierto] = createSignal(untrack(() => props.desplegado ?? false));
   const idCuerpo = createUniqueId();
   const cuentaActiva = () => lista()?.accounts.find((a) => a.id === lista()?.active);
 
@@ -48,13 +49,12 @@ export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cue
     props.titulo === undefined ? (
       <div class="grid min-w-0">
         {cuerpo}
-        {props.children}
       </div>
     ) : (
       <SettingsSection
         title={
           <Pressable
-            class="flex w-full min-w-0 items-center gap-2 rounded-sm bg-transparent p-0 text-left font-[inherit] text-neutral-950 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            class="flex w-full min-w-0 items-center gap-2 rounded-sm bg-transparent p-0 text-left font-[inherit] text-neutral-950 outline-none focus:outline-none focus-visible:outline-none"
             aria-expanded={abierto()}
             aria-controls={idCuerpo}
             onClick={() => setAbierto(!abierto())}
@@ -64,9 +64,6 @@ export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cue
             </span>
             <span class="grid min-w-0 flex-1">
               <span class="truncate">{props.titulo}</span>
-              <Show when={props.subtitulo}>
-                <span class="truncate text-xs font-normal text-neutral-500">{props.subtitulo}</span>
-              </Show>
             </span>
             <span class="flex shrink-0 items-center font-normal">{props.marca}</span>
             {/* Plegada, la cabecera dice con qué cuenta trabaja el proveedor; el conteo se ve siempre. */}
@@ -78,7 +75,7 @@ export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cue
                     <Badge tone="success" class="shrink-0">{t("settings.account_card.active")}</Badge>
                   </>)}
                 </Show>
-                <span class="shrink-0" data-account-count="">{t("settings.accounts.count", { count: tarjetas.length })}</span>
+                <span class="shrink-0" data-account-count="">{t("settings.accounts.count", { count: agrupadas().length })}</span>
               </span>
             </Show>
             <ChevronRight
@@ -95,7 +92,6 @@ export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cue
         {/* Plegada se oculta y no se desmonta: una conexión en curso vive aquí. */}
         <div id={idCuerpo} class={cn("@container min-w-0 pl-6", abierto() ? "grid" : "hidden")} data-provider-group={agente()}>
           {cuerpo}
-          {props.children}
           {accion}
         </div>
       </SettingsSection>

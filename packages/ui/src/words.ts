@@ -306,8 +306,6 @@ const es = {
   "chat.steer.unconfirmed": "No se pudo confirmar la entrega del mensaje al agente. Revisa la conversación antes de reenviarlo.",
   "chat.queue.stop_and_send": "Interrumpir y enviar",
   "chat.failure.retry": "Reintentar",
-  "settings.ai_providers.opencode_detail": "Modelos de pago y Go",
-  "settings.ai_providers.zen_go": "OpenCode",
   "settings.ai_providers.free_detail": "Kilo · Vercel · Reflection",
   "surfaces.label.free": "Router IA gratis",
   "surfaces.free_off": "Los modelos gratuitos no están activados en este workspace",

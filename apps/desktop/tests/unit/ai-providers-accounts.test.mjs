@@ -24,20 +24,30 @@ const cabecera = (s, id) => s.grupo(id).querySelector("button[aria-expanded]");
 const ILEGIBLE = { what: "lectura", detail: "disco ilegible" };
 const sinFallos = (s) => { assert.deepEqual(s.app.failures, []); s.cerrar(); };
 
-test("P20: the header counts the painted cards, not one per machine, open and collapsed", async () => {
+test("P20: the header starts collapsed with active account and painted card count, and keeps the count when expanded", async () => {
   const m = motor();
   // Con la cuenta Danil cada cuenta trae sus máquinas; c1 está en dos.
   const en = (id, ...machines) => cuenta(id, { credential_group: "pro", machines: machines.map((machine, i) => ({ machine, id: i ? `${id}-${machine}` : id, on: true })) });
   m.provs.claude = { cuentas: [en("c1", "m1", "m2"), en("c2", "m1"), en("c3", "m1"), en("c4", "m2")], active: "c1" };
   const s = await montar(fixture, "p20", m, ["claude"]);
   await waitFor(() => tarjetas(s, "claude") === 4, "4 tarjetas");
+  assert.equal(cabecera(s, "claude").getAttribute("aria-expanded"), "false", "plegada al montar");
+  assert.ok(s.cuerpo("claude").classList.contains("hidden"), "el cuerpo inicia oculto");
+  assert.ok(cabecera(s, "claude").textContent.includes("c1@ejemplo.test"), "muestra la cuenta activa plegada");
+  assert.ok(cabecera(s, "claude").textContent.includes("activa"), "muestra el badge activa plegada");
   assert.equal(conteo(s, "claude"), "· 4 cuentas");
   assert.equal(s.g.ultimo("claude").cuentas, 4);
   // Cada celda lleva su tarjeta y lo que cuelga de ella, no hermanos sueltos.
   for (const li of s.grupo("claude").querySelectorAll("[data-account-grid] > li")) assert.ok(li.firstElementChild, "celda vacía");
   cabecera(s, "claude").click();
   await sleep(30);
-  assert.equal(cabecera(s, "claude").getAttribute("aria-expanded"), "false");
+  assert.equal(cabecera(s, "claude").getAttribute("aria-expanded"), "true", "se despliega al hacer clic");
+  assert.ok(!s.cuerpo("claude").classList.contains("hidden"), "el cuerpo se muestra al desplegar");
+  assert.equal(conteo(s, "claude"), "· 4 cuentas", "desplegada también");
+  cabecera(s, "claude").click();
+  await sleep(30);
+  assert.equal(cabecera(s, "claude").getAttribute("aria-expanded"), "false", "vuelve a plegarse");
+  assert.ok(s.cuerpo("claude").classList.contains("hidden"));
   assert.equal(conteo(s, "claude"), "· 4 cuentas", "plegada también");
   sinFallos(s);
 });
@@ -120,7 +130,7 @@ test("P26: the picker's control is the same add: alive before add_account answer
   m.on.add_account = () => pausa.promise;
   const s = await montar(fixture, "p26", m, ["codex"], { sinAgregar: true });
   await waitFor(() => s.g.ultimo("codex")?.cuentas === 0, "0 cuentas");
-  assert.deepEqual(s.g.ultimo("codex"), { cuentas: 0, vivo: false, bloqueoAlta: null, falloDeLectura: false });
+  assert.deepEqual(s.g.ultimo("codex"), { cuentas: 0, cargando: false, vivo: false, bloqueoAlta: null, falloDeLectura: false });
   assert.equal(botones(s.grupo("codex")).filter((b) => b === "+ Agregar cuenta").length, 0, "sinAgregar: sin botón propio");
   s.g.agregar("codex");
   await sleep(0);
@@ -235,5 +245,47 @@ test("P42/P43: one account_limits per account, inactive ones of a provider 200 m
   await sleep(1000);
   assert.equal(m.de("account_limits").length, 7, "plegar, ocultar y reordenar no vuelven a preguntar");
   assert.equal(s.cuerpo("codex"), nodo, "el cuerpo del grupo es el mismo nodo");
+  sinFallos(s);
+});
+
+const esqueletos = (el) => [...(el?.querySelectorAll('[aria-busy="true"]') ?? [])];
+
+test("skeleton clears as soon as list_accounts answers even if tasks_awaiting_quota hangs, and never reappears on background refresh", async () => {
+  const m = motor();
+  m.provs.claude = { cuentas: [cuenta("c1"), cuenta("c2")], active: "c1" };
+  const esperaColgada = diferido();
+  m.on.tasks_awaiting_quota = () => esperaColgada.promise;
+  const s = await montar(fixture, "skeleton-quota-hang", m, ["claude"]);
+  await waitFor(() => tarjetas(s, "claude") === 2, "2 tarjetas pintadas");
+  assert.equal(esqueletos(s.grupo("claude")).length, 0, "sin Skeleton encima de las cuentas ya cargadas");
+  assert.equal(s.g.ultimo("claude")?.cargando, false);
+  // Refresco en segundo plano (activar otra cuenta) mientras list_accounts tarda: tampoco vuelve el Skeleton.
+  const refrescoLento = diferido();
+  m.on.list_accounts = () => refrescoLento.promise;
+  [...celda(s, "claude", "c2@").querySelectorAll("button")].find((b) => b.textContent.trim() === "Usar esta").click();
+  await waitFor(() => m.de("set_active_account", "claude").length === 1, "set_active_account");
+  await sleep(50);
+  assert.equal(esqueletos(s.grupo("claude")).length, 0, "sin Skeleton durante refresco sobre cuentas ya cargadas");
+  refrescoLento.resolve({ provider: "claude", env_var: "", shared_credential: null, secret_note: null, active: "c2", accounts: [cuenta("c1"), cuenta("c2")] });
+  await waitFor(() => !botones(celda(s, "claude", "c2@")).includes("Usar esta"), "c2 activa");
+  assert.equal(esqueletos(s.grupo("claude")).length, 0);
+  sinFallos(s);
+});
+
+test("skeleton clears on list_accounts error and stays gone when check_environment recovers", async () => {
+  const m = motor();
+  m.provs.claude = { cuentas: [], available: false, external: "https://claude.example/install" };
+  let falla = true;
+  m.on.list_accounts = () => (falla ? Promise.reject(ILEGIBLE) : { provider: "claude", env_var: "", shared_credential: null, secret_note: null, active: null, accounts: [] });
+  const s = await montar(fixture, "skeleton-error-recovery", m, ["claude"]);
+  await waitFor(() => s.g.ultimo("claude")?.falloDeLectura, "falloDeLectura");
+  assert.equal(esqueletos(s.grupo("claude")).length, 0, "sin Skeleton cuando list_accounts falla");
+  assert.equal(s.g.ultimo("claude")?.cargando, false);
+  falla = false;
+  const comprobar = await waitFor(() => s.boton("claude", "Ya la instalé · Comprobar"), "botón comprobar");
+  comprobar.click();
+  await waitFor(() => s.g.ultimo("claude")?.cuentas === 0, "relee cuentas tras comprobarCli");
+  assert.equal(esqueletos(s.grupo("claude")).length, 0);
+  assert.equal(s.g.ultimo("claude")?.cargando, false);
   sinFallos(s);
 });

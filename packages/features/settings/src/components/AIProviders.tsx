@@ -91,20 +91,16 @@ export default function AIProviders(props: { superficies: Superficie[]; estado?:
               <p role="status" class="m-0 text-ui text-neutral-500" data-ai-providers="supported">{t("settings.ai_providers.none_installed")}</p>
             </Match>
           </Switch>
-          <Show when={aLaVista().vacio === "sin-cuentas" && pedidos().size === 0}>
+          <Show when={!sinLista() && vista() !== "supported" && aLaVista().vacio === "sin-cuentas" && pedidos().size === 0}>
             <p class="m-0 text-ui text-neutral-500" data-no-accounts="">{t("settings.ai_providers.no_accounts")}</p>
           </Show>
-          <Show when={ids().length > 0 && aLaVista().vacio === "cargando" && pedidos().size === 0}>
+          <Show when={!sinLista() && vista() !== "supported" && ids().length > 0 && aLaVista().vacio === "cargando" && pedidos().size === 0}>
             <Skeleton filas={2} class="h-12" />
           </Show>
           <For each={ids()}>
             {(id) => (
               <div onFocusIn={() => (focoEn = id)} onFocusOut={(e) => e.relatedTarget && (focoEn = null)} class={seVe(id) ? "grid min-w-0" : "hidden"} data-provider-slot={id}>
-                <Accounts agente={id} titulo={nombre(id)} marca={<Show when={porId().get(id)?.[0]}>{(s) => <Marca superficie={s()} />}</Show>} sinAgregar onEstado={(e) => avisar(id, e)} onControl={(c) => controles.set(id, c)} maquinas={props.maquinas}>
-                  <For each={porId().get(id)?.slice(1).map((s) => s.id) ?? []}>
-                    {(sid) => <Show when={porId().get(id)?.find((s) => s.id === sid)}>{(s) => <Accounts agente={s().provider} nombre={rotuloDeSuperficie(s())} marca={<Marca superficie={s()} />} sinAgregar maquinas={props.maquinas} />}</Show>}
-                  </For>
-                </Accounts>
+                <Accounts agente={id} titulo={nombre(id)} desplegado={false} marca={<Show when={porId().get(id)?.[0]}>{(s) => <Marca superficie={s()} />}</Show>} sinAgregar onEstado={(e) => avisar(id, e)} onControl={(c) => controles.set(id, c)} maquinas={props.maquinas} />
               </div>
             )}
           </For>
