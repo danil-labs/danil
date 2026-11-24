@@ -10,7 +10,7 @@ import { t } from "../../../apps/desktop/src/lib/i18n";
 import { flechaDeLista } from "../../../apps/desktop/src/lib/shortcuts";
 import { Back, Next } from "./icons";
 import { Button } from "./Button";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";

@@ -1,6 +1,6 @@
 import { type JSX, Show, Suspense } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { prosa } from "../../../../../apps/desktop/src/lib/prose";
+import { prosa } from "../../../../ui/src/lib/prose";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote } from "../../../../ui/src/Failure";
 import { Skeleton } from "../../../../ui/src/Skeleton";

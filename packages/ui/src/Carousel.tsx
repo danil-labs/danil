@@ -13,7 +13,7 @@ import createEmblaCarousel from "embla-carousel-solid";
 import type { CreateEmblaCarouselType } from "embla-carousel-solid";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import { Button } from "./Button";
 
 type CarouselApi = CreateEmblaCarouselType[1];

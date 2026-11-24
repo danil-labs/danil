@@ -5,7 +5,7 @@ import {
   type ValidComponent,
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "./Tooltip";
 
 type SidebarState = "expanded" | "collapsed";

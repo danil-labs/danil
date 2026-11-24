@@ -4,7 +4,7 @@ import { crearWorkspace, listarMaquinasDelAlta } from "../queries/onboarding-sto
 import { Pantalla } from "../components/Screen";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
 import { Input } from "../../../../ui/src/Input";
 import { OnboardingAccounts } from "../../../../../apps/desktop/src/web/OnboardingAccounts";

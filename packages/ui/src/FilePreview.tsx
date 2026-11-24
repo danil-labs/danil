@@ -6,7 +6,7 @@ import FileSpreadsheet from "lucide-solid/icons/file-spreadsheet";
 import Presentation from "lucide-solid/icons/presentation";
 import FileCode from "lucide-solid/icons/file-code";
 import { t } from "../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import X from "lucide-solid/icons/x";
 import Navegador from "lucide-solid/icons/external-link";
 import PanelRight from "lucide-solid/icons/panel-right";

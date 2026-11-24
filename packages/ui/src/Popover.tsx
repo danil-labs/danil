@@ -1,6 +1,6 @@
 import { Popover as Kobalte } from "@kobalte/core/popover";
 import { type ComponentProps, splitProps } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import { insideDialog } from "./layer";
 import { withPointerFocus } from "./pointer-focus";
 

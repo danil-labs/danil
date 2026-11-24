@@ -9,7 +9,7 @@ import SquareTerminal from "lucide-solid/icons/square-terminal";
 import X from "lucide-solid/icons/x";
 import { createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import type { Agent } from "../../../../../apps/desktop/src/lib/model";
 import { Button } from "../../../../ui/src/Button";
 import { Textarea } from "../../../../ui/src/Textarea";

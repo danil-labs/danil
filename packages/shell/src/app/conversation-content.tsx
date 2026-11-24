@@ -9,7 +9,7 @@ import { type Superficie } from "../../../../apps/desktop/src/lib/surfaces.ts";
 import { fileTabId, type ArtifactTab, type FileTab, type ScreenTab, type SiteTab } from "../../../../apps/desktop/src/lib/tabs";
 import { type ContentTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import VisorDeArtefacto from "../../../features/artifacts/src/screens/ArtifactViewer";
 import { type PermissionRequest } from "../../../features/chat/src/screens/Chat.tsx";
 import { taskFilesWidth } from "../../../features/code/src/screens/TaskFilesRow";

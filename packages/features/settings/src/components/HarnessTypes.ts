@@ -1,4 +1,4 @@
-import { type Frase } from "../../../../../apps/desktop/src/lib/prose";
+import { type Frase } from "../../../../ui/src/lib/prose";
 import { type Failure } from "../../../../ui/src/Failure";
 
 export type RemoteWorkspace = { id: string; name: string };

@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { Etapa } from "../../../../ui/src/lib/session-row.ts"; export type { Etapa };
 

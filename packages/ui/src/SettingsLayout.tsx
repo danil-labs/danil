@@ -1,5 +1,5 @@
 import { Show, children, splitProps, type JSX } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 /**
  * El cuerpo de un destino de Configuración: sus secciones, una bajo otra.

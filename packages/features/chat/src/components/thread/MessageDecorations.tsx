@@ -1,7 +1,7 @@
 import Check from "lucide-solid/icons/check";
 import Copy from "lucide-solid/icons/copy";
 import { For, Show } from "solid-js";
-import { df } from "../../../../../../apps/desktop/src/lib/format";
+import { df } from "../../../../../ui/src/lib/format";
 import { t } from "../../../../../../apps/desktop/src/lib/i18n";
 import type { AgentModels, Source } from "../../../../../../apps/desktop/src/lib/model";
 import { modelBrand, nombreDeModelo } from "../../../../../../apps/desktop/src/lib/models";

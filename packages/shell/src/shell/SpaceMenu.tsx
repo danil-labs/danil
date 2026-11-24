@@ -7,7 +7,7 @@ import { createSignal, Match, Show, Switch } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import type { Project } from "../../../../apps/desktop/src/lib/model";
 import { type Space, spaceName } from "../../../../apps/desktop/src/lib/spaces";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { Button } from "../../../ui/src/Button";
 import { Input } from "../../../ui/src/Input";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
