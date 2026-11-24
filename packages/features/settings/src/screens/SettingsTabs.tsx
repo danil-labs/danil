@@ -2,7 +2,6 @@ import Bot from "lucide-solid/icons/bot";
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
 import CreditCard from "lucide-solid/icons/credit-card";
 import ExternalLink from "lucide-solid/icons/external-link";
-import GitBranch from "lucide-solid/icons/git-branch";
 import Palette from "lucide-solid/icons/palette";
 import Plug from "lucide-solid/icons/plug";
 import Shield from "lucide-solid/icons/shield";
@@ -10,9 +9,10 @@ import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
 import Sparkles from "lucide-solid/icons/sparkles";
 import Wrench from "lucide-solid/icons/wrench";
 import { createResource, type JSX, lazy, Show, Suspense } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { machineAction } from "../../../../host/src/machine-action";
+import { GitMark } from "../../../../ui/src/icons";
 import { type Superficie } from "../../../../ui/src/lib/surfaces";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../../../../ui/src/sidebar";
 import type { MaquinasDeAjustes } from "../model/machines-port";
@@ -61,8 +61,6 @@ export type Entrada = {
 type ContextoDeAgentes = {
   readonly modelos: ModelChoices;
   readonly proyecto: string;
-  /** Los agentes de las tareas abiertas: sus proveedores llegan desplegados. */
-  readonly agentesEnUso: string[];
   onAgentProfile: (project: string, name: string) => void;
   /** Si `list_surfaces` todavía no contesta, contestó o falló. */
   readonly estadoSuperficies: SurfacesState;
@@ -123,7 +121,7 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   account: { name: () => t("settings.entry.account"), icono: () => <CircleUserRound size={15} /> },
   security: { name: () => t("settings.entry.security"), icono: () => <Shield size={15} /> },
   "ai-accounts": { name: () => t("settings.entry.ai_accounts"), icono: () => <Sparkles size={15} /> },
-  "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitBranch size={15} /> },
+  "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitMark size={15} /> },
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
   connections: { name: () => t("settings.nav.connections"), icono: () => <Plug size={15} /> },
   billing: { name: () => t("settings.entry.billing"), icono: () => <CreditCard size={15} /> },

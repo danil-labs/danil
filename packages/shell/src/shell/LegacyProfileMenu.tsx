@@ -1,7 +1,7 @@
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import UserRound from "lucide-solid/icons/user-round";
 import { createSignal, lazy, Show, Suspense, untrack } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
 import { canRedeemPromo } from "../../../session/src/promo-role";
 import { type Apariencia, apariencia } from "../../../ui/src/lib/theme";

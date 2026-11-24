@@ -1,7 +1,7 @@
 import type { Accessor, Setter } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
 import { carpetasDelEscritorio, type Space } from "../../../../ui/src/lib/spaces.ts";
 import { artifactTabId, browserTabId, fileTabId, siteTabId, type ArtifactTab, type SiteTab } from "../../../../ui/src/lib/tabs.ts";
 import type { ArbolEnTarea, Project, Source } from "../../../../ui/src/lib/model.ts";

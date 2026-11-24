@@ -1,7 +1,7 @@
 import type { InvokeOptions } from "@tauri-apps/api/core";
 import { errorCode } from "../../../../ui/src/lib/errorCode.ts";
 import { invoke } from "../../../../engine-client/src/client";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { detalleDe, prosaDe } from "../../../../ui/src/Failure";
 
 export type DeleteMember = {

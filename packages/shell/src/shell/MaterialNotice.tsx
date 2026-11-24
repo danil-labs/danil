@@ -3,7 +3,7 @@ import { invoke } from "../../../engine-client/src/client.ts";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
 import type { Source } from "../../../ui/src/lib/model";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { prosaDe } from "../../../ui/src/Failure";
 
 /**

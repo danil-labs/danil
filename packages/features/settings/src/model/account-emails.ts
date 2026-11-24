@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
 
 /**
  * Los correos de la persona en su cuenta de Danil: varios, uno principal, cada

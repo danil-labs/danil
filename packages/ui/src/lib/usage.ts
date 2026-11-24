@@ -3,7 +3,7 @@
  * dos lados: cuando cambie la struct de Rust, cambia esto.
  */
 
-import { t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "./i18n.ts";
 
 /**
  * Desglose de un turno.

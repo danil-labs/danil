@@ -1,7 +1,7 @@
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { onCleanup, onMount } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { borrarPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { t } from "../../../../ui/src/lib/i18n";
+import { borrarPref, leerPref } from "../../../../session/src/prefs";
 import { explicar } from "./connect-store";
 import {
   cancelBrowserLogin,

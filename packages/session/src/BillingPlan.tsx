@@ -1,5 +1,5 @@
 import { createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "../../ui/src/lib/i18n";
 import { Button } from "../../ui/src/Button";
 import { BUSINESS_SALES_EMAIL } from "../../features/settings/src/model/sales-contact";
 import { SettingsPanel, SettingsRow, SettingsSection } from "../../features/settings/src/index";

@@ -1,9 +1,9 @@
 import { handlerMutation, handlerOperationRunning, pendingHandlerOperation, resumeHandlerOperation, staleReason } from "../queries/handlerOperations";
-import "../../../../../apps/desktop/src/locales/handlerPhrases";
-import "../../../../../apps/desktop/src/locales/failurePhrases";
+import "../../../../ui/src/locales/handlerPhrases";
+import "../../../../ui/src/locales/failurePhrases";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import { handlerAction } from "../queries/handler-action";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { HandlerApproval, HandlerMemory, HandlerRelease, HandlerRequests } from "../../../../ui/src/lib/model";
 import { detalleDe } from "../../../../ui/src/lib/failure";
 import { Button } from "../../../../ui/src/Button";

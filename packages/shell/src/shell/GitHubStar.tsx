@@ -1,8 +1,8 @@
 import X from "lucide-solid/icons/x";
 import { Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { createPref } from "../../../../apps/desktop/src/lib/prefs";
+import { createPref } from "../../../session/src/prefs";
 import { Button } from "../../../ui/src/Button";
 import { GitHubMark } from "../../../ui/src/icons";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../ui/src/Tooltip";

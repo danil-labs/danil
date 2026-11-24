@@ -1,6 +1,6 @@
 import Plus from "lucide-solid/icons/plus";
 import { createResource, createSignal, For, Match, Show, Switch } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { Skeleton } from "../../../../ui/src/Skeleton";

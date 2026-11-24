@@ -1,7 +1,7 @@
 import { treeCreateFile, treeCreateFolder, treeDelete, treeRename } from "../queries";
 import { machineOf } from "../../../../host/src/machine";
 import { createSignal, onCleanup, onMount } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
 import { avisarDeLosArboles } from "./refresh";
 import { conVistaTypst, esTypst, seguirPluginTypst } from "./typst";

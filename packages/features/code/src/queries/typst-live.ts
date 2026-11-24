@@ -1,8 +1,8 @@
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createSignal } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { createPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { createPref } from "../../../../session/src/prefs";
 import { capas, cerrarCapa, claveDe } from "./typst-layer";
 
 /** `environment/typst.rs` · `Diagnostico`. */

@@ -1,7 +1,7 @@
 import FolderOpen from "lucide-solid/icons/folder-open";
 import Link from "lucide-solid/icons/link";
 import Search from "lucide-solid/icons/search";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { enfocar } from "../../../../ui/src/lib/focus";
 import { Pressable } from "../../../../ui/src/Pressable";
 import type { createAlcance } from "./scope-state";

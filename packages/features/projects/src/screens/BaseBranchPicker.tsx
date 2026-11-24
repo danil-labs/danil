@@ -9,7 +9,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { cn } from "../../../../ui/src/lib/utils";
-import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { manifiesto, t } from "../../../../ui/src/lib/i18n";
 import { Pressable } from "../../../../ui/src/Pressable";
 
 type Branch = {

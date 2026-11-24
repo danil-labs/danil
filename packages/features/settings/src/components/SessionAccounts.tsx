@@ -1,7 +1,7 @@
 import { createResource, createSignal, Show } from "solid-js";
 import { createAccountAddAction } from "../model/account-add";
 import { type GroupAccount, type GroupSend, readGroupBalance } from "../../../../session/src/group-account";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { KeyedList } from "../../../../ui/src/KeyedList";

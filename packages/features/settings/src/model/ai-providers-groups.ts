@@ -22,6 +22,8 @@ export type BloqueoAlta =
 export type EstadoDeProveedor = {
   /** `null`: todavía no contesta, o `list_accounts` falló. No es 0. */
   cuentas: number | null;
+  /** `true` mientras la primera lectura de `list_accounts` sigue en curso. */
+  cargando?: boolean;
   /** Algo que la persona tiene que ver aunque no haya cuentas (alta, login, fallo, espera…). */
   vivo: boolean;
   bloqueoAlta: BloqueoAlta;
@@ -31,10 +33,10 @@ export type EstadoDeProveedor = {
 
 export type EstadosPorProveedor = Readonly<Record<string, EstadoDeProveedor | undefined>>;
 
-/** Las superficies del mismo proveedor comparten grupo; gratuitos y Free Router quedan fuera. Orden de `list_surfaces`. */
+/** Las superficies del mismo proveedor comparten grupo; gratuitos, Danil Credits y Free Router quedan fuera. Orden de `list_surfaces`. */
 export function grupos(superficies: readonly Superficie[]): Superficie[][] {
   const vistos = new Map<string, Superficie[]>();
-  for (const s of superficies.filter((x) => x.catalogo !== "gratuitos" && !isFreeRouterAgent(x.provider))) {
+  for (const s of superficies.filter((x) => x.catalogo !== "gratuitos" && x.id !== "danil-credits" && !isFreeRouterAgent(x.provider))) {
     const grupo = vistos.get(s.provider);
     if (grupo) grupo.push(s);
     else vistos.set(s.provider, [s]);
@@ -54,6 +56,9 @@ export const idsDeGrupos = (superficies: readonly Superficie[]): string[] => gru
 export function visible(e: EstadoDeProveedor): boolean {
   return (e.cuentas !== null && e.cuentas > 0) || e.vivo || (e.cuentas === null && e.falloDeLectura);
 }
+
+const estaCargando = (e: EstadoDeProveedor | undefined): boolean =>
+  !e || (e.cuentas === null && !e.falloDeLectura && e.cargando !== false);
 
 /** Verdadero solo si **todos** contestaron 0 y nada está vivo. Sin proveedores, falso. */
 export function sinCuentas(estados: EstadosPorProveedor, ids: readonly string[]): boolean {
@@ -78,7 +83,8 @@ export function visibles(superficies: readonly Superficie[], estados: EstadosPor
     return !!e && visible(e);
   });
   if (vistos.length) return { ids: vistos, vacio: null };
-  return { ids: vistos, vacio: sinCuentas(estados, ids) ? "sin-cuentas" : "cargando" };
+  if (sinCuentas(estados, ids)) return { ids: vistos, vacio: "sin-cuentas" };
+  return { ids: vistos, vacio: ids.some((id) => estaCargando(estados[id])) ? "cargando" : null };
 }
 
 /**

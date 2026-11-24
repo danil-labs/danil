@@ -193,6 +193,7 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
             | ("GET", "/v1/workspaces/preferences")
             | ("PUT", "/v1/workspaces/preferences")
             | ("GET", "/v1/machines")
+            | ("GET", "/v1/connections")
     );
     if fixed {
         return true;
@@ -200,9 +201,13 @@ pub(crate) fn allowed(method: &str, path: &str) -> bool {
     let parts: Vec<&str> = path.split('/').collect();
     match (method, parts.as_slice()) {
         ("GET", ["", "v1", "machines", id]) => opaque_id(id),
+        // Conexiones externas MCP N1 (`platform/mcp-n1-v1`, política `person_only`).
+        ("GET" | "PATCH" | "DELETE", ["", "v1", "connections", id]) => opaque_id(id),
+        ("GET", ["", "v1", "connections", id, "audit"]) => opaque_id(id),
         ("POST", ["", "v1", "machines", id, "start" | "tickets"]) => opaque_id(id),
         ("GET", ["", "v1", "operations", id]) => opaque_id(id),
         ("PUT" | "DELETE", ["", "v1", "workspaces", "preferences", "added", id]) => opaque_id(id),
+        ("GET" | "POST", ["", "v1", "workspaces", id, "spaces"]) => opaque_id(id),
         // Traspaso a otra organización (plan de cuentas § 8): se pide con el contexto de origen y
         // se acepta con el del destino.
         ("POST", ["", "v1", "workspaces", id, "transfers"]) => opaque_id(id),
@@ -361,6 +366,18 @@ pub(super) fn request_context(
             Some(b) => r.send_json(b.clone()),
             None => r.send_empty(),
         }
+    } else if method == "PATCH" {
+        let mut r = agent.patch(url).header("Accept", "application/json");
+        if let Some(context) = context {
+            r = r.header("X-Danil-Session", context);
+        }
+        if !key.is_empty() {
+            r = r.header("Idempotency-Key", key);
+        }
+        if let Some(a) = &auth {
+            r = r.header("Authorization", a);
+        }
+        r.send_json(body.cloned().unwrap_or_else(|| json!({})))
     } else {
         let mut r = agent.post(url).header("Accept", "application/json");
         if let Some(context) = context {

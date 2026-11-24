@@ -1,4 +1,4 @@
-import { t } from "../../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../../ui/src/lib/i18n";
 import { prosa } from "../../../../../ui/src/lib/prose";
 import { type CambioPorCupo, prosaDelCambioPorCupo } from "../../model/failures";
 

@@ -1,5 +1,5 @@
 import { Match, Show } from "solid-js";
-import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { manifiesto, t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import Ellipsis from "lucide-solid/icons/ellipsis";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../../ui/src/DropdownMenu";

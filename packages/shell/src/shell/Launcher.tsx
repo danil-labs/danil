@@ -1,7 +1,7 @@
 import { listen } from "../../../host/src/serviceEvents.ts";
 import { createEffect, For, type JSX, Match, onCleanup, onMount, Show, Switch, createSignal } from "solid-js";
 import { markConnected } from "../../../session/src/engineConnection.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { cn } from "../../../ui/src/lib/utils";
 import {

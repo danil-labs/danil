@@ -4,7 +4,7 @@ import { machineOf } from "../../../../host/src/machine";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { peso } from "../../../../ui/src/lib/format";
 import { avisarDeLosArboles } from "../queries/refresh";
 

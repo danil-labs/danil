@@ -4,7 +4,7 @@ import Copy from "lucide-solid/icons/copy";
 import ExternalLink from "lucide-solid/icons/external-link";
 import { Show } from "solid-js";
 import { enfocar } from "../../../../ui/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { cancelLogin, discardAccount } from "../queries/engine-accounts";
 import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";
@@ -21,7 +21,7 @@ import type { createAccionesDeCuentas } from "./AccountsActions";
 import type { createPartesDeCuentas } from "./AccountsParts";
 
 export function createDialogosDeCuentas(cuentas: ReturnType<typeof createCuentas>, conexion: ReturnType<typeof createConexionDeCuentas>, acciones: ReturnType<typeof createAccionesDeCuentas>, partes: ReturnType<typeof createPartesDeCuentas>) {
-  const { enCurso, instalando, url, pideCodigo, porConfirmar, enlaceCopiado, copiaFallida, codigo, setCodigo, salida, ofrecerTerminal, machineOf, agente } = cuentas;
+  const { enCurso, instalando, url, pideCodigo, porConfirmar, enlaceCopiado, copiaFallida, codigo, setCodigo, aviso, salida, ofrecerTerminal, machineOf, agente } = cuentas;
   const { etiqueta, acto, terminalLocal, conectar, pidiendoClave, setPidiendoClave, setClave, refrescar, claveDe, clave, guardarClave, guardandoClave } = conexion;
   const { copiarEnlace, enviarCodigo } = acciones;
   const { cancelarConexion } = partes;
@@ -105,6 +105,9 @@ export function createDialogosDeCuentas(cuentas: ReturnType<typeof createCuentas
 
               <Show when={pideCodigo()}>
                 <Paso numero={url() ? 2 : 1} titulo={t("settings.accounts.step_code")}>
+                  <Show when={aviso()}>
+                    {(n) => <p class="m-0 text-xs text-neutral-500" data-login-notice="">{n()}</p>}
+                  </Show>
                   <LoginCodeForm value={codigo()} onInput={setCodigo} onSubmit={() => void enviarCodigo()} />
                 </Paso>
               </Show>

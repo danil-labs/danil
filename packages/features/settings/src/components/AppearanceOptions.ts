@@ -2,7 +2,7 @@ import Monitor from "lucide-solid/icons/monitor";
 import Moon from "lucide-solid/icons/moon";
 import Sun from "lucide-solid/icons/sun";
 import { type Component } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { AgentProfile, AgenteDeMaquina } from "../../../../ui/src/lib/model";
 import { FONDOS, type FondoDeChat } from "../../../../ui/src/lib/chat-background";
 import { type Apariencia, type DarkStyle, type LightStyle } from "../../../../ui/src/lib/theme";

@@ -11,7 +11,7 @@ import { TeclaDeAtajo } from "../../../../ui/src/Shortcut";
 import { ariaDeAtajo } from "../../../../ui/src/lib/shortcuts";
 import { cn } from "../../../../ui/src/lib/utils";
 import { enfocar, enfocarSiNadieEscribe } from "../../../../ui/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import BloqueDeInterrupcion from "./InterruptionBlock";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { editable, type PreguntasProps } from "./questions-types";

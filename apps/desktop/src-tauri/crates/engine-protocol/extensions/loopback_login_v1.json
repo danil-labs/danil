@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "name": "loopback_login",
+  "description": "Puente de callback OAuth por loopback para logins remotos (decisión 2026-11-18-login-remoto-por-loopback.md): el motor remoto emite loopback-login {login_id, origin, port, path, expires_at} sin secretos; Desk consulta loopback_login_pending {} -> [{login_id, origin, port, path, state, expires_at}], escucha 127.0.0.1:<port> validando GET + path + state y entrega el target con loopback_login_deliver {login_id, target}. Fuera del hash de compatibilidad (status.contract).",
+  "features": [
+    "loopback_login_v1"
+  ],
+  "events": [
+    "loopback-login"
+  ],
+  "commands": [
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "loopback_login_pending",
+      "output": "-> Result < Vec < LoopbackLoginPending > , String >",
+      "parameters": [],
+      "path": "accounts::loopback_login_pending",
+      "relay": true,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    },
+    {
+      "async": false,
+      "channel": null,
+      "kind": "invoke",
+      "name": "loopback_login_deliver",
+      "output": "-> Result < () , String >",
+      "parameters": [
+        {
+          "key": "login_id",
+          "name": "login_id",
+          "type": "String"
+        },
+        {
+          "key": "target",
+          "name": "target",
+          "type": "String"
+        }
+      ],
+      "path": "accounts::loopback_login_deliver",
+      "relay": true,
+      "audience": "window",
+      "authority": "admin",
+      "durable": false,
+      "enforcement": "server"
+    }
+  ]
+}

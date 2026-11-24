@@ -1,5 +1,5 @@
 import { createMemo, createResource, createSignal, For, type JSX, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { Select } from "../../../../ui/src/Select";

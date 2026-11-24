@@ -1,5 +1,5 @@
 import type { ModoDePermiso } from "../../../../ui/src/lib/model";
-import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
+import { escribirPref, leerPref } from "../../../../session/src/prefs.ts";
 
 /**
  * El modo siguiente del ciclo de `shift+tab`, saltándose los que este agente no

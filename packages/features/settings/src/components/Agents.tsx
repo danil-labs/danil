@@ -1,7 +1,7 @@
 import Plus from "lucide-solid/icons/plus";
 import { createSignal, For, type JSX, onCleanup, onMount, Show } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { deleteAgent, listMachineAgents } from "../queries/engine-agents";
 import type { AgenteDeMaquina, CatalogoDeAgentes } from "../../../../ui/src/lib/model";
 import { Badge } from "../../../../ui/src/Badge";

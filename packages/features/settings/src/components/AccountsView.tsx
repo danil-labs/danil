@@ -1,5 +1,5 @@
 import { type JSX, Show, Suspense } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { prosa } from "../../../../ui/src/lib/prose";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote } from "../../../../ui/src/Failure";
@@ -32,14 +32,10 @@ export default function Accounts(props: {
   soloGratuitos?: boolean;
   /** Con título, las filas van en su propia sección y «Agregar cuenta» a su derecha. */
   titulo?: string;
-  /** La línea debajo del título. */
-  subtitulo?: string;
   /** El nombre de la fila cuando no hay cuentas, o el de la activación. */
   nombre?: string;
   /** Lo que le falta a la superficie, junto al título o al nombre. */
   marca?: JSX.Element;
-  /** Las filas de las otras superficies del mismo proveedor, al final de la sección. */
-  children?: JSX.Element;
   /** Con título, si la sección llega desplegada. Se lee al montar. */
   desplegado?: boolean;
   /** Para la pantalla (`ai-providers-groups.ts`): lo que decide si el grupo se ve, el mismo `agregar()` del botón para su selector, y sin botón propio. */
@@ -156,7 +152,7 @@ export default function Accounts(props: {
         )}
       </Show>
 
-      <Show when={cargando()}>
+      <Show when={cargando() && lista() === null}>
         <SettingsBlock>
           <Skeleton filas={2} />
         </SettingsBlock>

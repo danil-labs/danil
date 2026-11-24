@@ -1,7 +1,7 @@
 import Lock from "lucide-solid/icons/lock";
 import Sparkles from "lucide-solid/icons/sparkles";
 import { For, Show, createEffect, on, type JSX } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { HandlerStatus } from "../../../../ui/src/lib/model";
 import { cn } from "../../../../ui/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";

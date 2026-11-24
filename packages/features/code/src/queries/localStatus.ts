@@ -5,7 +5,7 @@
  * enseña lo último que el árbol publicó.
  */
 import { createSignal } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { EstadoLocal, MarcaLocal } from "../model/tree";
 
 const [porArbol, setPorArbol] = createSignal<ReadonlyMap<string, ReadonlyMap<string, EstadoLocal>>>(

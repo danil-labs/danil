@@ -1,5 +1,5 @@
 import { For, Match, Show } from "solid-js";
-import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { manifiesto, t } from "../../../../ui/src/lib/i18n";
 import { prosa } from "../../../../ui/src/lib/prose";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";

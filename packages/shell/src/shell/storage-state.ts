@@ -1,7 +1,7 @@
 import type { EngineUpdate, MachineTaskUsage, Startup } from "../../../engine-client/src/index.ts";
 import { createEffect, createMemo, createSignal, on, onCleanup, untrack } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { conservar } from "../../../session/src/sessionRefresh";
 import { errorCode } from "../../../ui/src/lib/errorCode.ts";
 import { listen } from "../../../host/src/serviceEvents.ts";

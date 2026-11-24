@@ -1,6 +1,6 @@
 import { canonicalAgentId, OPENCODE } from "../../../../ui/src/lib/tasks/index.ts";
 import { type JSX } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { revocada } from "../../../../ui/src/lib/limits";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import AccountCard from "../screens/AccountCard";

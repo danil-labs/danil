@@ -1,7 +1,7 @@
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import { batch, createSignal, For, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { SignalDot } from "../../../../ui/src/SignalDot";

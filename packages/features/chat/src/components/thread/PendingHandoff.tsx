@@ -1,7 +1,7 @@
 import { type Component, type ComponentProps, type JSX, type ParentProps, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import type { HandoffPresentation } from "../../../../../ui/src/lib/handoff.ts";
-import { t } from "../../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../../ui/src/lib/i18n";
 import Adjuntos from "../Attachments";
 
 export function handoffStatus(handoff: NonNullable<HandoffPresentation>): string {

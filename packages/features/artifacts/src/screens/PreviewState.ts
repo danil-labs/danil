@@ -3,7 +3,7 @@ import { useFileMachine } from "../../../../ui/src/fileMachine";
 import { formaDe } from "../model/sandbox";
 import { historiaDe, publicacionesDe, type History, type Publicacion, type VersionRef } from "../queries";
 import { type Failure, detalleDe } from "../../../../ui/src/Failure";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type PreviewPane from "./Preview";
 
 export function createPreviewState(props: Parameters<typeof PreviewPane>[0]) {

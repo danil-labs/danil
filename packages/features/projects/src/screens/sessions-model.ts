@@ -1,5 +1,5 @@
 import { df } from "../../../../ui/src/lib/format";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { Etapa } from "./TaskStage";
 
 export function readableSessionTitle(title: string): string {

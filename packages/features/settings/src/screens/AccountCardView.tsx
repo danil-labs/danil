@@ -5,7 +5,7 @@ import { ProgressBar } from "../../../../ui/src/ProgressBar";
 import { type Query, type Read, cuandoVuelve, haceCuanto, left, legible, revocada, tono } from "../../../../ui/src/lib/limits";
 import { cn } from "../../../../ui/src/lib/utils";
 import { prosa } from "../../../../ui/src/lib/prose";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Spinner, RefreshSpinner } from "../../../../ui/src/Spinner";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { createNow } from "../../../../ui/src/lib/sharedClock";

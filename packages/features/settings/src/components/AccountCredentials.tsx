@@ -5,10 +5,10 @@
  *
  * Trozo perezoso: lo cargan Cuentas, MCP y Referencias al abrirse.
  */
-import "../../../../../apps/desktop/src/locales/danilPhrases";
+import "../../../../ui/src/locales/danilPhrases";
 import type { Credential, CredentialKind, CredentialMachine } from "../../../../platform-client/src/account-credentials.ts";
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
-import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { manifiesto, t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { prosa } from "../../../../ui/src/lib/prose";
 import { Badge } from "../../../../ui/src/Badge";

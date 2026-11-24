@@ -2,8 +2,8 @@ import Columns2 from "lucide-solid/icons/columns-2";
 import Rows2 from "lucide-solid/icons/rows-2";
 import type { JSX } from "solid-js";
 import { cn } from "../../../../ui/src/lib/utils";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { createPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { t } from "../../../../ui/src/lib/i18n";
+import { createPref } from "../../../../session/src/prefs";
 import { Button } from "../../../../ui/src/Button";
 
 type Disposicion = "unified" | "split";

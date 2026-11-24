@@ -1,8 +1,8 @@
-import "../../../../apps/desktop/src/locales/danilPhrases";
+import "../../../ui/src/locales/danilPhrases";
 import Check from "lucide-solid/icons/check";
 import CircleAlert from "lucide-solid/icons/circle-alert";
 import { createEffect, createResource, createSignal, Show } from "solid-js";
-import { manifiesto, t } from "../../../../apps/desktop/src/lib/i18n";
+import { manifiesto, t } from "../../../ui/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
 import { Button } from "../../../ui/src/Button";
 import { Toast, ToastPortal } from "../../../ui/src/Toast";

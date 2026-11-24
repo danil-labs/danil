@@ -1,5 +1,5 @@
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { callMcpAppTool, closeMcpApp } from "../queries";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";

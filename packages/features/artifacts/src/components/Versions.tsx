@@ -11,7 +11,7 @@ import {
   type Publicacion,
   type VersionRef,
 } from "../queries/history";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 
 /**
  * La cadena de versiones de un artefacto, y cuál se está mirando.

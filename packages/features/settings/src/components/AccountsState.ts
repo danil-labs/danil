@@ -62,6 +62,7 @@ export function createCuentas(props: Parameters<typeof Accounts>[0]) {
   const [porConfirmar, setPorConfirmar] = createSignal<string | null>(null);
   const [pideCodigo, setPideCodigo] = createSignal(false);
   const [codigo, setCodigo] = createSignal("");
+  const [aviso, setAviso] = createSignal<string | null>(null);
   const [salida, setSalida] = createSignal<string[]>([]);
 
   // Una conexión que terminó mal. No se cierra el panel al fallar: ahí está
@@ -77,8 +78,8 @@ export function createCuentas(props: Parameters<typeof Accounts>[0]) {
     setEstados, setSinComprobar, setPorQuitar, enCurso, setUrl, setPorConfirmar, setPideCodigo, setEnCurso,
     setSalida, setConexionFallida, setConectadaVez, setOfrecerTerminal, setComprobando, fallo,
     olvidarEnlaceCopiado, setCopiaFallida, setCodigo, copiarLaUrl, codigo, setRepuestas, setEsperando,
-    setReponiendo, conexionFallida, tarjetas, instalando, cargando, estados, esperando, reponiendo,
+    setReponiendo, conexionFallida, agrupadas, tarjetas, instalando, cargando, estados, esperando, reponiendo,
     repuestas, comprobando, sinComprobar, conectadaVez, porQuitar, url, pideCodigo, porConfirmar,
-    enlaceCopiado, copiaFallida, salida, ofrecerTerminal,
+    enlaceCopiado, copiaFallida, aviso, setAviso, salida, ofrecerTerminal,
   };
 }

@@ -4,7 +4,7 @@ import { Markdown } from "../../../../ui/src/Markdown";
 import Documento from "../../../../ui/src/Document";
 import { formaDe } from "../../../../ui/src/lib/sandbox";
 import { cn } from "../../../../ui/src/lib/utils";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { setMoviendoHueco } from "../../../../ui/src/lib/sites";
 import { sangriaDe } from "../model/indent";
 import { IconoDeArchivo } from "../../../../ui/src/FileIcon";

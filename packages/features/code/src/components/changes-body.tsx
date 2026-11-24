@@ -1,6 +1,6 @@
 import { For, Show, createMemo, type JSX } from "solid-js";
 import { cn } from "../../../../ui/src/lib/utils";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { ajuste } from "../../../../ui/src/lib/wrap";
 import { filasDosPaneles, marcarLineas, saltoEntre, type ArchivoDiff, type Fila, type Hunk, type Tramo } from "../model/diff";
 import { disposicion } from "./changes-layout";

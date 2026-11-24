@@ -1,11 +1,11 @@
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import { Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import Harness from "./Harness";
 import Herramientas from "../screens/Tools";
-import "../../../../../apps/desktop/src/locales/settingsPhrases";
+import "../../../../ui/src/locales/settingsPhrases";
 
 /** Conexiones › MCP: las herramientas que usan los agentes que trabajan en tus proyectos. */
 export default function ConnectionsOperation(props: { maquinas: MaquinasDeAjustes }) {

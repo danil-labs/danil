@@ -1,7 +1,7 @@
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import { Show, Suspense } from "solid-js";
 import { FailureNote } from "../../../../ui/src/Failure";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { GovernedNotice } from "../../../../ui/src/Governed";
 import { createHerramientas } from "./ToolsState";
 import { createListaDeHerramientas } from "./ToolsList";

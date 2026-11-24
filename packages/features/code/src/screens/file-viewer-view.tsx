@@ -9,7 +9,7 @@ import { Button } from "../../../../ui/src/Button";
 import { FailureNote } from "../../../../ui/src/Failure";
 import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { ariaDeAtajo, textoDeAtajo } from "../../../../ui/src/lib/shortcuts";
 import { comoDiff } from "../model/diff";
 import { CuerpoDeArchivo, SelectorDeDisposicion } from "../components/Changes";

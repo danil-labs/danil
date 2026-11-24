@@ -2,7 +2,7 @@ import CornerDownRight from "lucide-solid/icons/corner-down-right";
 import Square from "lucide-solid/icons/square";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { formatearDuracion } from "../../../../ui/src/lib/steps";
 import { cn } from "../../../../ui/src/lib/utils";
 import { AnsiText } from "../../../../ui/src/AnsiText";

@@ -2,7 +2,7 @@ import { listen } from "../../../../host/src/serviceEvents.ts";
 import Copy from "lucide-solid/icons/copy";
 import { createEffect, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import {
   getTelegramStatus,
   getKeepAwakeStatus,

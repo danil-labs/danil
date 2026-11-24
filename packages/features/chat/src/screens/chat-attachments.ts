@@ -1,5 +1,6 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { base64De, copyText, imagenPegada } from "../../../../host/src/clipboard";
+import { dragDropInPoints } from "../../../../host/src/native";
 import { capabilities } from "../../../../host/src/platform";
 import { asFailure, prosaDe } from "../../../../ui/src/Failure";
 import type { createChatComposerState } from "./chat-composer-state";
@@ -52,7 +53,7 @@ export function createChatAttachments(props: ChatProps, deps: ChatAttachmentsDep
     let disposed = false;
     // Con la pantalla partida cada conversación es su propia zona: el archivo va a la
     // que está bajo el puntero. macOS manda puntos y el resto píxeles físicos.
-    const enPuntos = navigator.userAgent.includes("Macintosh");
+    const enPuntos = dragDropInPoints();
     let escala = 1;
     const medirEscala = () =>
       void getCurrentWindow()

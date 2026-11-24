@@ -1,7 +1,7 @@
 import GitBranch from "lucide-solid/icons/git-branch";
 import MessageCircle from "lucide-solid/icons/message-circle";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { readableSessionTitle, type SessionRow, threadTitle } from "./Sessions";
 import { type GitStatus, effectiveTaskGit, watchSessionGit } from "../queries/taskGit";
 import { Pressable } from "../../../../ui/src/Pressable";

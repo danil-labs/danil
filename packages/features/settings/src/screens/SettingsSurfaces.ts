@@ -32,16 +32,33 @@ export function createSuperficiesDeAjustes(
    * fijo (el de `agents::AGENTS`), así que dos respuestas iguales se serializan
    * igual.
    */
+  let cargaId = 0;
+  let vivo = true;
+  onCleanup(() => {
+    vivo = false;
+    cargaId++;
+  });
   const cargarSuperficies = () => {
+    const id = ++cargaId;
     void listSurfaces<Superficie[]>()
-      .then((s) => {
+      .then((raw) => {
+        if (!vivo || id !== cargaId) return;
+        const s = Array.isArray(raw) ? raw : [];
         setSuperficies((antes) =>
           JSON.stringify(antes) === JSON.stringify(s) ? antes : s,
         );
         setEstadoSuperficies({ k: "ready" });
       })
       // Lo que ya se veía se queda; sin nada, el panel dice por qué (una VM encendiéndose, por ejemplo).
-      .catch((e) => setEstadoSuperficies({ k: "failed", f: asFailure(e) }));
+      .catch((e) => {
+        if (!vivo || id !== cargaId) return;
+        setEstadoSuperficies({ k: "failed", f: asFailure(e) });
+      });
+  };
+  const reiniciarSuperficies = () => {
+    setSuperficies([]);
+    setEstadoSuperficies({ k: "loading" });
+    cargarSuperficies();
   };
   onMount(cargarSuperficies);
 
@@ -70,11 +87,11 @@ export function createSuperficiesDeAjustes(
     // Una máquina de la cuenta se encendió o trajo otra rebanada: su lista puede haber llegado.
     window.addEventListener("harness:machine-slices", cargarSuperficies);
     // Cambiar de workspace desde Configuración actualiza las superficies del nuevo workspace.
-    window.addEventListener("harness:workspace", cargarSuperficies);
+    window.addEventListener("harness:workspace", reiniciarSuperficies);
     onCleanup(() => {
       window.removeEventListener("harness:consentimiento", cargarSuperficies);
       window.removeEventListener("harness:machine-slices", cargarSuperficies);
-      window.removeEventListener("harness:workspace", cargarSuperficies);
+      window.removeEventListener("harness:workspace", reiniciarSuperficies);
       void cambios.then((f) => f());
       void cuenta.then((f) => f());
     });
@@ -85,9 +102,6 @@ export function createSuperficiesDeAjustes(
     },
     get proyecto() {
       return props.proyecto ?? "";
-    },
-    get agentesEnUso() {
-      return props.agentesEnUso ?? [];
     },
     onAgentProfile: (project, name) => props.onAgentProfile?.(project, name),
     get estadoSuperficies() {

@@ -7,13 +7,15 @@
  * `GET /v1/capabilities` (Desk compilado no se recompila por cambios del servidor).
  * El canal de datos no pasa por aquí: va directo al relay con el ticket, solo a un origen exacto (`DEFAULT_RELAY_ORIGINS`).
  */
-import { type Computer, type Fetch, listComputers, sessionProbe, startComputer, startedOf } from "../../../../platform-client/src/api.ts";
+import { type Computer, type Fetch, isRetiredComputersEndpoint, listComputers, sessionProbe, startComputer, startedOf } from "../../../../platform-client/src/api.ts";
 import { type CapabilityList, announces, capabilityList, mayCall } from "../../../../platform-client/src/capabilities.ts";
-export { listComputers, sessionProbe, startComputer, startedOf };
+export { isRetiredComputersEndpoint, listComputers, sessionProbe, startComputer, startedOf };
+export { readContextSpaces } from "../../../../platform-client/src/workspace-spaces.ts";
 import { machineToComputer, machinesClient, wokeOf as platformWokeOf } from "../../../../platform-client/src/machines.ts";
 import type { MachinesAnswer } from "../../../../platform-client/src/machines-config.ts";
 
 import { cancelEdgeWrites as platformCancelEdgeWrites, edgeUntil, type EdgeMethod, type EdgeReply as NativeReply, type Patience } from "../../../../platform-client/src/client.ts";
+import { isNotAvailableStatus } from "../../../../platform-client/src/index.ts";
 import { capabilitiesUrl } from "../../../../platform-client/src/machines.ts";
 import { invoke as defaultInvoke } from "../../../../engine-client/src/client.ts";
 import { machinesQuery } from "./machines-query.ts";
@@ -81,7 +83,7 @@ export function createCloudMachines(invoke: Invoke = defaultInvoke, onProblem?: 
     try {
       const response = await fetch(capabilitiesUrl(endpoint));
       if (response.status === 401 || response.status === 403) return "denied";
-      if (response.status === 404 || response.status === 501) return null;
+      if (isNotAvailableStatus(response.status)) return null;
       if (response.status !== 200) return undefined;
       return capabilityList(await response.json()) ?? undefined;
     } catch {

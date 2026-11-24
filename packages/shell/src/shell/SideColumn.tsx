@@ -1,5 +1,5 @@
 import { Show, type JSX } from "solid-js";
-import { createPref } from "../../../../apps/desktop/src/lib/prefs";
+import { createPref } from "../../../session/src/prefs";
 import { cn } from "../../../ui/src/lib/utils";
 
 /** De qué lado de la conversación vive la columna. */

@@ -1,5 +1,5 @@
 import { createEffect, createSignal, on, onCleanup, untrack } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { nombreDeLenguaje } from "../model/languages";
 import { direccionDePagina } from "../components/PagePreview";
 import {

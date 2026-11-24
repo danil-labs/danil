@@ -2,7 +2,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import Eye from "lucide-solid/icons/eye";
 import Plus from "lucide-solid/icons/plus";
 import { For, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import { Panel } from "../../../../ui/src/Panel";

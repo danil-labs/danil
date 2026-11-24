@@ -7,7 +7,7 @@ import FilePlus from "lucide-solid/icons/file-plus";
 import Folder from "lucide-solid/icons/folder";
 import FolderOpen from "lucide-solid/icons/folder-open";
 import { createEffect, For, type JSX, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
 import { FailureNote } from "../../../../ui/src/Failure";
 import { IconoDeArchivo } from "../../../../ui/src/FileIcon";

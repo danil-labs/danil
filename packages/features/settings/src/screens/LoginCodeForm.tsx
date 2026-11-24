@@ -1,8 +1,8 @@
 import { enfocar } from "../../../../ui/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
-import "../../../../../apps/desktop/src/locales/settingsPhrases";
+import "../../../../ui/src/locales/settingsPhrases";
 
 export function LoginCodeForm(props: { value: string; onInput: (value: string) => void; onSubmit: () => void }) {
   return (

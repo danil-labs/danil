@@ -3,7 +3,7 @@ import { invoke } from "../../../engine-client/src/client.ts";
 import { machineOf } from "../../../features/machines/src/queries/store";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 
 type Resumen = { files: unknown[]; folder_updated: boolean };
 

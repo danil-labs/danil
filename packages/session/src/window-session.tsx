@@ -2,7 +2,7 @@ import { parseWorkspaceAddLink } from "./workspace-add-link";
 import { createRoot, createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 import { forgetMachineNames } from './known-machine-names';
-import { aplicarLengua, t } from '../../../apps/desktop/src/lib/i18n';
+import { aplicarLengua, t } from '../../ui/src/lib/i18n';
 import { setShellCacheScope } from './shellCache';
 import { seguirElTema } from '../../ui/src/lib/theme';
 import { Button } from '../../ui/src/Button';

@@ -3,7 +3,7 @@ import PanelLeftClose from "lucide-solid/icons/panel-left-close";
 import PanelLeftOpen from "lucide-solid/icons/panel-left-open";
 import Search from "lucide-solid/icons/search";
 import { lazy, Show, Suspense, type JSX } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";
 import { BotonConAtajo } from "../../../ui/src/Shortcut";
 import GitHubStar from "./GitHubStar";

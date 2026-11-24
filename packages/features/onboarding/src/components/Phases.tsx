@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 import Check from "lucide-solid/icons/check";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
 import {
   createFullscreen,

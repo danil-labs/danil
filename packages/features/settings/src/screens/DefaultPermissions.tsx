@@ -2,7 +2,7 @@ import { Show, createSignal, onMount } from "solid-js";
 import { listWorkspaces, setWorkspacePermissionMode } from "../queries/engine-workspaces";
 import { Select } from "../../../../ui/src/Select";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { Startup, Workspace } from "../queries/workspaces-store";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 

@@ -2,7 +2,7 @@ import { getRadiantIdentity, listRadiantWorkspaces, radiantCancelLogin, radiantL
 import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { destinoAbrible } from "../../../../ui/src/lib/chat/links";
 import { prosa } from "../../../../ui/src/lib/prose";
 import { cn } from "../../../../ui/src/lib/utils";

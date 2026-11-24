@@ -11,7 +11,7 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import { For, Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { seguirHueco, type Hueco } from "../../../../ui/src/lib/sites";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";

@@ -1,7 +1,7 @@
 import Bug from "lucide-solid/icons/bug";
 import LogOut from "lucide-solid/icons/log-out";
 import { type Accessor, For, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { capabilities } from "../../../host/src/platform";
 import { type Apariencia, elegirApariencia } from "../../../ui/src/lib/theme";

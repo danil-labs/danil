@@ -1,6 +1,7 @@
 import { onCleanup } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
+import { cancelLoopbackForAccount } from "../../../../engine-client/src/loopbackLogin.ts";
 import { freeModelScope } from "../../../../session/src/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
 import { listen } from "../../../../host/src/serviceEvents.ts";
@@ -37,6 +38,7 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
       const e = entrada;
       if (!e || e.cuenta !== cuenta || pasos[id]?.k !== "entrando") return;
       entrada = null;
+      cancelLoopbackForAccount(cuenta);
       void invoke("cancel_login", { id: cuenta }).catch(() => {});
       void invoke("discard_account", { provider: e.agente, id: cuenta }).catch(() => {});
       setErrores(id, t("onboarding.ai.login_timeout"));
@@ -190,6 +192,7 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     if (p?.k === "entrando") {
       const e = entrada;
       entrada = null;
+      cancelLoopbackForAccount(p.cuenta);
       await invoke("cancel_login", { id: p.cuenta }).catch(() => {});
       if (e) await invoke("discard_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
     }
@@ -265,6 +268,7 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     for (const l of [alCuenta, alAvance, alAgentes, alInstalar]) void l.then((f) => f());
     const e = entrada;
     if (e) {
+      cancelLoopbackForAccount(e.cuenta);
       void invoke("cancel_login", { id: e.cuenta }).catch(() => {});
       void invoke("discard_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
     }

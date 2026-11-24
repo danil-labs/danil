@@ -6,7 +6,7 @@ import { carpetasDelEscritorio, escritorioDeFila, type Space } from "../../../..
 import { appendToStoredStrip, deleteStoredStrip, migrateLegacyStrip, spacesWithStoredStrip, storedStrip, isTaskTab, type Tab, type TaskTab } from "../../../../ui/src/lib/tabs.ts";
 import { deleteLayout, readLayout, spacesWithLayout } from "../../../../ui/src/lib/panels.ts";
 import { claveDeBorrador, esProvisional } from "../../../../ui/src/lib/taskDraft.ts";
-import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
+import { escribirPref, leerPref } from "../../../../session/src/prefs.ts";
 import { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";
 import type { ModoDePermiso, Project, Source } from "../../../../ui/src/lib/model.ts";
 import type { createComposerStore, createDraftsStore, createThreadsStore, Machine, PanelsStore, Session, TabsStore } from "../../../../ui/src/lib/project-block-types.ts";
@@ -195,24 +195,25 @@ export function createDeskStrip(deps: DeskStripDeps) {
     }
   }
 
+  let settledWorkspace: string | null = null;
+
   /** Qué escritorio abre este workspace: el último que se usó si sigue vivo, o la primera. */
   function asentarEscritorio(ws: string, lista: Space[] | null): string | null {
-    if (!lista || lista.length === 0) {
-      batch(() => {
-        setSpaces([]);
+    return batch(() => {
+      settledWorkspace = ws;
+      setSpaces(lista ?? []);
+      const actuales = spaces();
+      if (actuales.length === 0) {
         setEscritorio(null);
-      });
-      return null;
-    }
-    migrateLegacyStrip(ws, lista[0].id);
-    const guardado = leerPref<string | null>(`space.${ws}`, null);
-    const desk = guardado && lista.some((i) => i.id === guardado) ? guardado : lista[0].id;
-    podarTirasMuertas(ws, lista);
-    batch(() => {
-      setSpaces(lista);
+        return null;
+      }
+      migrateLegacyStrip(ws, actuales[0].id);
+      const guardado = leerPref<string | null>(`space.${ws}`, null);
+      const desk = guardado && actuales.some((i) => i.id === guardado) ? guardado : actuales[0].id;
+      podarTirasMuertas(ws, actuales);
       setEscritorio(desk);
+      return desk;
     });
-    return desk;
   }
 
   async function reloadSpaces() {
@@ -222,12 +223,31 @@ export function createDeskStrip(deps: DeskStripDeps) {
       const lista = await invoke<Space[]>("list_spaces");
       if (ws !== workspaceActivo() || escritorio() === null) return;
       setSpaces(lista);
-      if (!lista.some((i) => i.id === escritorio()) && lista[0]) cambiarEscritorio(lista[0].id);
-      podarTirasMuertas(ws, lista);
+      const actuales = spaces();
+      if (!actuales.some((i) => i.id === escritorio()) && actuales[0]) cambiarEscritorio(actuales[0].id);
+      podarTirasMuertas(ws, actuales);
     } catch {
       // La lista de antes sigue sirviendo hasta el siguiente aviso.
     }
   }
+
+  // Cuando el catálogo de spaces llega después del arranque o cambia en otro dispositivo,
+  // reasentamos el escritorio activo si desapareció o aún no había ninguno elegido.
+  createEffect(
+    on([workspaceActivo, spaces], ([ws, actuales]) => {
+      if (!ws) {
+        settledWorkspace = null;
+        return;
+      }
+      if (ws !== settledWorkspace || actuales.length === 0) return;
+      const desk = escritorio();
+      if (desk !== null && actuales.some((i) => i.id === desk)) return;
+      migrateLegacyStrip(ws, actuales[0].id);
+      const guardado = leerPref<string | null>(`space.${ws}`, null);
+      const next = guardado && actuales.some((i) => i.id === guardado) ? guardado : actuales[0].id;
+      cambiarEscritorio(next);
+    }),
+  );
 
   /** Lo más urgente de las tareas de un escritorio; con `sinResolver`, también las que se pintan en todos. */
   const senalDe = (desk: string, sinResolver = false) =>

@@ -1,7 +1,7 @@
 import { Pressable } from "../../../ui/src/Pressable";
 import Check from "lucide-solid/icons/check";
 import { For } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { openNativeExternal } from "../../../host/src/native-workspace-add-link";
 import { capabilities } from "../../../host/src/platform";
 import { cn } from "../../../ui/src/lib/utils";

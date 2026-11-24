@@ -5,7 +5,7 @@ import CirclePause from "lucide-solid/icons/circle-pause";
 import ShieldQuestion from "lucide-solid/icons/shield-question";
 import { SignalDot, taskSignalTone } from "../../../../ui/src/SignalDot";
 import { Match, Show, Switch } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Spinner, DashedRing } from "../../../../ui/src/Spinner";
 import { cn } from "../../../../ui/src/lib/utils";
 import { type TaskActivity, markedState, taskPriority } from "../../../../ui/src/index";

@@ -74,6 +74,8 @@
     "packages/ui/src/lib/project-block-types.ts": ["types"],          // HandoverState, createThreadsCore: provider-handover, question-card-r0
     "packages/ui/src/lib/sourceOrigin.ts": ["exports"],               // proveedorDe: models.test.ts
     "packages/engine-client/src/client.ts": ["exports"],              // canRepeat, neverRan, retrying, WAITS, untilConnected: invoke-retry, early-startup
+    "packages/engine-client/src/loopbackLogin.ts": ["exports"],       // loopbackLoginPending, loopbackLoginDeliver (#1175)
+    "packages/features/projects/src/queries/space-ops.ts": ["types"], // SpaceOpsCatalog (#1173)
     "packages/engine-client/src/retries.ts": ["exports"],             // WAITS, neverRan: invoke-retry.test.ts
     "packages/features/chat/src/components/TaskChatPresentation.tsx": ["exports"], // TaskUserBubble: helpers/activity-header.tsx
     "packages/features/chat/src/model/failures.ts": ["exports"],      // gestoDelFallo: turn-failure.test.ts
@@ -94,7 +96,8 @@
     "packages/features/machines/src/queries/engine-workspaces.ts": ["exports", "types"], // LIGHT_STATE_MACHINES_FEATURE, RailWorkspace: engine-workspaces.test.ts / #1136
     "apps/desktop/src/lib/{activityObservation,projectNames,promo-role,sales-contact,scrollbars,sharedLazy,terminal-themes,turnActivity}.ts": ["files"], // reexportaciones de F4.4 lote 3
     "apps/desktop/src/lib/{panels-grid,panels-split,panels-storage,panels-store,panels-types,tabs-close,tabs-files,tabs-storage,tabs-store,tabs-types}.ts": ["files"], // reexportaciones de F4.4 lote 8a
-    "apps/desktop/src/lib/{context-snapshot,folderKinds,gitHosts,governance,group-promo-reply,native-workspace-add-link,navigation-order,pointer-drag,project-block-types,serviceEvents,settled-contexts,space-navigation-order,steps-group,steps-label,steps-model,workspace-view-scope,wrap,zoom}.ts": ["files"], // reexportaciones de F4.4 lotes 5 y 8b
+    "apps/desktop/src/lib/{context-snapshot,folderKinds,gitHosts,governance,group-promo-reply,native-workspace-add-link,navigation-order,pointer-drag,preferenceKeys,project-block-types,serviceEvents,settled-contexts,space-navigation-order,steps-group,steps-label,steps-model,workspace-add-link,workspace-view-scope,wrap,zoom}.ts": ["files"], // reexportaciones de F4.4 lotes 5, 8b y 9
+    "apps/desktop/src/locales/{danilPhrases,failurePhrases,handlerPhrases,handoverPhrases,packs,settingsPhrases,workPhrases}.ts": ["files"], // reexportaciones de F4.4 lote 9
     "apps/desktop/src/web/{group-promo,ipc,OnboardingAccounts,open-workspace-url,platform-workspaces,ReauthNote,SyncNote,UpdateNotice,web-rail-catalog,window-browser,window}.{ts,tsx}": ["files"], // reexportaciones de F4.4 lotes 1 y 7
     "packages/features/machines/src/queries/router.ts": ["exports"],  // unconfirmedOpen: machine-router.test.ts
     "packages/features/machines/src/queries/session-cloud.ts": ["exports"], // mergeContextMachines: connected-status, session-machines
@@ -104,7 +107,9 @@
     "packages/features/settings/src/components/Accounts.tsx": ["exports"], // ESPERA_ANTES_DE_LA_TERMINAL_MS: helpers/ai-providers-accounts.tsx
     "packages/features/settings/src/components/AppDownloads.tsx": ["exports"], // default: #1151 Maintenance.tsx usa el export nombrado AppDownloads
     "packages/features/settings/src/model/ai-providers-groups.ts": ["exports"], // idsDeGrupos, sinCuentas: ai-providers-groups.test.ts
+    "packages/features/settings/src/model/settings-workspaces.ts": ["types"], // EngineWorkspaceLike, OtherAccountLike: settings-workspaces.test.ts / #1155
     "packages/features/settings/src/queries/free-router-platform.ts": ["exports"], // supportsPlatformFreeRouter: free-router-platform.test.ts
+    "packages/features/settings/src/queries/workspaces-store.ts": ["exports"], // anunciarMudanza: #1155
     "packages/host/src/downloads.ts": ["exports"],                    // DESKTOP_DOWNLOADS, platformOf: account-welcome.test.ts
     "packages/platform-client/src/client.ts": ["exports"],            // nextDelay: edge-client.test.ts
     "packages/platform-client/src/identity.ts": ["exports"],          // selectOrganization: edge-client.test.ts

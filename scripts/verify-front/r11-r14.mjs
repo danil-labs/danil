@@ -4,7 +4,7 @@ const inFeature = (f) => featureOf(f.path) !== null;
 
 /** R11: un solo cliente y una sola sesión por app; los hooks no aceptan otro cliente ni otra sesión. */
 export function r11(files) {
-  return scan(files, inFeature, /\b(client|session|sessionSource)\?\s*:/,
+  return scan(files, inFeature, /\b(?:(client|sessionSource)\?\s*:|session\?\s*:(?!\s*string\b))/,
     "R11: opción client?/session? en una feature; el cliente sale de usePlatform() y la sesión de useSession()");
 }
 
