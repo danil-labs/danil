@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 import { splitMentions } from "../../../apps/desktop/src/lib/mentions";
 import { capabilities } from "../../host/src/platform";
 import { mentionedSession, type MentionTarget, type TaskMention } from "../../../apps/desktop/src/lib/taskMentions";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import { Pressable } from "./Pressable";
 
 /**

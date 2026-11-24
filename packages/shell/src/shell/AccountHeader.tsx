@@ -2,7 +2,7 @@ import { createSignal, type JSX, Show } from "solid-js";
 import type { GroupAccount, GroupSend } from "../../../../apps/desktop/src/lib/group-account";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { TITULO_DE_GRUPO } from "../../../ui/src/ContextMenu";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../../ui/src/Popover";
 import { SignalDot } from "../../../ui/src/SignalDot";

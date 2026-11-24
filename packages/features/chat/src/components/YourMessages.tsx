@@ -2,8 +2,8 @@ import { createEffect, createSignal, For, on, onCleanup, Show, type JSX } from "
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Popover, PopoverContent } from "../../../../ui/src/Popover";
 import { RETARDO_TOOLTIP } from "../../../../ui/src/Tooltip";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { modelBrand } from "../../../../ui/src/lib/models";
+import { cn } from "../../../../ui/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import type { HandlerStatus } from "../../../../ui/src/lib/model";
 import { Pressable } from "../../../../ui/src/Pressable";

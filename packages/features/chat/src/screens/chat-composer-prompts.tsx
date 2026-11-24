@@ -1,7 +1,7 @@
 import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { searchTasks } from "../../../../../apps/desktop/src/lib/taskMentions";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { MarcaFuente } from "../../../../ui/src/sources";
 import BloqueDeInterrupcion from "../components/InterruptionBlock";

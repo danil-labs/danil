@@ -2,8 +2,8 @@
  * Tipos de las cuentas de agente que cruzan la frontera con el motor y su
  * presentación. Compartidos entre Configuración, el alta y el shell.
  */
-import type { Frase } from "../../../../apps/desktop/src/lib/prose";
 import type { Query, Read } from "./limits";
+import type { Frase } from "./prose";
 import type { Failure } from "../Failure";
 
 export type Account = {

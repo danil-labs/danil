@@ -1,6 +1,6 @@
 import { Index, type JSX } from "solid-js";
 import { dividerSpan, gridTracks } from "../../../ui/src/lib/panels";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 
 /**
  * El espacio principal como una **cuadrícula de ventanas** (`lib/panels.ts`),

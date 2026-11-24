@@ -3,7 +3,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createEffect, createSignal, createUniqueId, type JSX, on, onMount, Show, untrack } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cancelLogin } from "../queries/engine-accounts";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { MarcaAgente } from "../../../../ui/src/icons";

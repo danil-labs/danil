@@ -4,7 +4,7 @@ import { immediateWindow } from "@terminus/computers";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { left, legible, tono } from "../../../ui/src/lib/limits";
 import { sharedLazy } from "../../../ui/src/lib/sharedLazy";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { capabilities } from "../../../host/src/platform";
 import { HEADER_HEIGHT } from "../../../host/src/window";
 import { Button } from "../../../ui/src/Button";

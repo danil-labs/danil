@@ -3,7 +3,7 @@ import { Dynamic } from "solid-js/web";
 import { tareaEnVuelo } from "../../../../ui/src/lib/drag";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import FolderChip from "./FolderChip";
 import { gitAppearance, RailPull, sessionGitDescription } from "../components/SessionGit";

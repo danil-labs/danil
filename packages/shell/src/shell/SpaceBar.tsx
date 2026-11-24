@@ -4,7 +4,7 @@ import { enfocarYSeleccionar } from "../../../ui/src/lib/focus";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { type Space, spaceName } from "../../../../apps/desktop/src/lib/spaces";
 import type { Project } from "../../../ui/src/lib/model";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { createNavigationReorder } from "../../../../apps/desktop/src/lib/navigation-order";
 import { Button } from "../../../ui/src/Button";
 import {

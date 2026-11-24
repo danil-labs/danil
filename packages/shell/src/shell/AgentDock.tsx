@@ -6,7 +6,7 @@ import SquarePen from "lucide-solid/icons/square-pen";
 import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import type { AgentProfile } from "../../../ui/src/lib/model";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../../../ui/src/ContextMenu";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import { displayName } from "../../../features/projects/src/queries/profiles";

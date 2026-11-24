@@ -1,7 +1,7 @@
 import { type JSX, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type Project } from "../../../../ui/src/lib/model";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { ITEM_DE_MENU } from "../../../../ui/src/Popover";
 import { Pressable } from "../../../../ui/src/Pressable";
 

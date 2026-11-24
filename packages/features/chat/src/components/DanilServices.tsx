@@ -2,7 +2,7 @@ import Check from "lucide-solid/icons/check";
 import type { RouterOfferState } from "../../../../ui/src/lib/tasks/index.ts";
 import { For, Show, type JSX } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { Pressable } from "../../../../ui/src/Pressable";

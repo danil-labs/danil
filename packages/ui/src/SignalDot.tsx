@@ -1,5 +1,5 @@
 import { type SignalTone, taskSignalTone } from "./taskState";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 export { type SignalTone, taskSignalTone };
 

@@ -7,7 +7,7 @@ import ZoomIn from "lucide-solid/icons/zoom-in";
 import ZoomOut from "lucide-solid/icons/zoom-out";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { IconButton } from "../../../../ui/src/IconButton";
 import { clampZoom, ZOOM_STEP } from "../../../../ui/src/lib/zoom";
 

@@ -1,7 +1,7 @@
 import { createMemo } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { peso } from "../../../../apps/desktop/src/lib/format";
+import { peso } from "../../../ui/src/lib/format";
 import { conservar } from "../../../session/src/sessionRefresh";
 import { prosaDe } from "../../../ui/src/Failure";
 import type { Grupo, Liberado, Machine, TareaConPeso, Target } from "./storage-model";

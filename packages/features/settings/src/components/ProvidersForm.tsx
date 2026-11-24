@@ -1,6 +1,6 @@
 import { For, Match, Show } from "solid-js";
 import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
-import { prosa } from "../../../../../apps/desktop/src/lib/prose";
+import { prosa } from "../../../../ui/src/lib/prose";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { SettingsBlock, SettingsRow } from "../../../../ui/src/SettingsLayout";

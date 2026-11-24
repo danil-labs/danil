@@ -1,6 +1,6 @@
 import Trash2 from "lucide-solid/icons/trash-2";
 import { For, Match, Show, Switch } from "solid-js";
-import { df } from "../../../../../apps/desktop/src/lib/format";
+import { df } from "../../../../ui/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { Source } from "../../../../ui/src/lib/model";
 import { Badge } from "../../../../ui/src/Badge";

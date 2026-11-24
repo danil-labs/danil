@@ -6,7 +6,7 @@ import { type DragPoint } from "../../../ui/src/lib/pointer-drag.ts";
 import { moviendoHueco } from "../../../ui/src/lib/sites";
 import {    type TaskTab } from "../../../ui/src/lib/tabs-types.ts";
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../ui/src/lib/taskFiles.ts";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import SearchPanel from "../../../features/chat/src/components/SearchPanel";
 import {  DelegatedPanel, type DelegatedPanelModel } from "../../../features/projects/src/screens/DelegatedTasks";
 import { type SearchSurface } from "../../../features/chat/src/screens/ThreadSearch.tsx";

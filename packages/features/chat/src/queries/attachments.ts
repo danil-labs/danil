@@ -1,9 +1,9 @@
 
-import { lista } from "../../../../../apps/desktop/src/lib/format";
+import { lista } from "../../../../ui/src/lib/format";
 import { aplicarLenguaDeWorkspace, t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type Source } from "../../../../ui/src/lib/model";
 import { readLayout } from "../../../../ui/src/lib/panels";
-import { type Frase } from "../../../../../apps/desktop/src/lib/prose.ts";
+import { type Frase } from "../../../../ui/src/lib/prose.ts";
 import { NotMovable, attachmentsOn } from "../../../../../apps/desktop/src/lib/remoteAttachments";
 import { shellCacheMatches } from "../../../../../apps/desktop/src/lib/shellCache";
 import { type ShellSnapshot } from "../../../../../apps/desktop/src/lib/shellCache.ts";

@@ -1,5 +1,5 @@
 import { createEffect, createSignal, type JSX, on, onCleanup, onMount } from "solid-js";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import {
   createFullscreen,
   HEADER_HEIGHT,

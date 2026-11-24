@@ -1,7 +1,7 @@
 import { Show, type JSX } from "solid-js";
 import { Badge } from "../../../../ui/src/Badge";
 import { type Query } from "../../../../ui/src/lib/limits";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { accountPresentation } from "../../../../ui/src/lib/accounts.ts";
 
 export { accountPresentation };

@@ -10,7 +10,7 @@ import { type Credential, type CredentialKind, type CredentialMachine, credentia
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
-import { prosa } from "../../../../../apps/desktop/src/lib/prose";
+import { prosa } from "../../../../ui/src/lib/prose";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { type Failure, FailureNote } from "../../../../ui/src/Failure";

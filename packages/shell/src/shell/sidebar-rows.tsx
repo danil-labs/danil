@@ -6,7 +6,7 @@ import { destinoEnVuelo } from "../../../ui/src/lib/drag";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import type { Project } from "../../../ui/src/lib/model";
 import { sharedLazy } from "../../../ui/src/lib/sharedLazy";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { type ClonEnCurso, faseDeClon } from "../../../features/projects/src/screens/AddWorkdir";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import type { ModelChoices } from "../../../features/projects/src/screens/NewAgent";

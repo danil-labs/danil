@@ -2,7 +2,7 @@ import { Show, createContext, createSignal, onMount, useContext, type JSX } from
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 
 /** Saltar el resto del alta y entrar a la app; solo lo provee el primer arranque. */
 const SaltarAlta = createContext<(() => Promise<void>) | undefined>();

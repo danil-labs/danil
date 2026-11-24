@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { Button } from "../../../../ui/src/Button";
 import { Toggle } from "../../../../ui/src/Toggle";
 import { copyText } from "../../../../host/src/clipboard";
-import { df, elapsed, peso } from "../../../../../apps/desktop/src/lib/format";
+import { df, elapsed, peso } from "../../../../ui/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type CarryCheck, bytesPerSecond, createsProject, engine, ignoredAllowed, jobFor, partSize, trustKey } from "../queries/carry";
 import { machineName } from "../queries/store";

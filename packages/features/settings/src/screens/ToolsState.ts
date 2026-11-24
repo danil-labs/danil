@@ -2,7 +2,7 @@ import { createSignal, onCleanup, onMount } from "solid-js";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { checkMcp, connectKnownMcp, disconnectKnownMcp, listKnownMcp, listMcpProviders, listMcpServers, mcpLogin, mcpLogout } from "../queries/engine-mcp";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
-import { prosa, type Frase } from "../../../../../apps/desktop/src/lib/prose";
+import { prosa, type Frase } from "../../../../ui/src/lib/prose";
 import { lockedBy } from "../../../../../apps/desktop/src/lib/governance";
 import { type Conocido, type Puesto, type AgenteMcp, MOTOR, sinSecretos, autorizaElMotor } from "./ToolsModel";
 import type Herramientas from "./ToolsView";

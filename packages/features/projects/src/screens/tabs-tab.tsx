@@ -6,7 +6,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { AgentProfile } from "../../../../ui/src/lib/model";
 import { ariaDeAtajo, textoDeAtajo } from "../../../../../apps/desktop/src/lib/shortcuts";
 import { isTaskTab, type Tab } from "../../../../ui/src/lib/tabs";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { WithMentions } from "../../../../ui/src/WithMentions";
 import { IconoDeArchivo } from "../../../../ui/src/FileIcon";

@@ -2,7 +2,7 @@ import { Show, createEffect, createSignal, onCleanup } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { ASTRO_BODIES, ASTRO_SHAPES, astroBody, type AstroBody, type AstroNode } from "../../../../ui/src/index";
 import type { HandlerStatus } from "../../../../ui/src/lib/model";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { generacionDeAvatar, urlDeAvatar } from "../queries";
 
 const CHARACTER_BODIES = ["character-ventas", "character-direccion", "character-diseno", "character-finanzas", "character-rh"] as const;

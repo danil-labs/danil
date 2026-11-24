@@ -1,6 +1,6 @@
 import { DropdownMenu as Kobalte } from "@kobalte/core/dropdown-menu";
 import { splitProps, type ComponentProps } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import { PANEL_DE_MENU, RENGLON_DE_MENU, SEPARADOR_DE_MENU, TITULO_DE_GRUPO } from "./ContextMenu";
 
 /**

@@ -8,7 +8,7 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import type { Project } from "../../../ui/src/lib/model";
 import { type Space, type SpaceRef, spaceName } from "../../../../apps/desktop/src/lib/spaces";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
 import { asFailure, FailureNote } from "../../../ui/src/Failure";
 import { Input } from "../../../ui/src/Input";

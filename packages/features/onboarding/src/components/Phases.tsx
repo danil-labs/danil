@@ -1,7 +1,7 @@
 import { For, Show } from "solid-js";
 import Check from "lucide-solid/icons/check";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import {
   createFullscreen,
   HEADER_HEIGHT,
