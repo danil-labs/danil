@@ -354,3 +354,158 @@ test("shared workspace catalog orders spaces, unwraps remote task spaces, and en
   assert.equal((nativeCalls.find(call => call.command === "send_message")?.args as { space: string }).space, "cloud_s1");
   router.close();
 });
+
+test("Web ensures a catalog space on a cloud VM even before engine features are reported", async () => {
+  const calls: { command: string; args: unknown; workspace: string | null }[] = [];
+  const catalog = {
+    version: 1,
+    spaces: [
+      { id: "mac_s1", name: "Producto", folders: [] },
+      { id: "cloud_s1", name: "Nube", folders: [] },
+    ],
+    order: ["mac_s1", "cloud_s1"],
+  };
+  const fleet = new Fleet({
+    self: null,
+    connect() {
+      return {
+        state: () => "online", start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {},
+        async call(_id, command, workspace, _folder, args) {
+          calls.push({ command, workspace, args });
+          if (command === "list_spaces") return { value: [{ id: "cloud_s1", name: null, folders: [], created_at: 1, updated_at: 1, account: false }], cached: null };
+          if (command === "ensure_workspace_space") return { value: { id: "mac_s1", name: "Producto" }, cached: null };
+          if (command === "send_message") return { value: "task-cloud", cached: null };
+          return { value: null, cached: null };
+        },
+      } satisfies Link;
+    },
+  });
+  fleet.setMachines([{
+    id: "vm", name: "Cloud", wakes: true, kind: "organization", organizationId: "org", context: "a",
+    linked: new Set(["same"]),
+  }]);
+  fleet.setListing("vm", [{ id: "same", name: "Shared" }], "a");
+  const router = createRouter({
+    self: null,
+    native: null,
+    fleet,
+    contextInfo: context => context === "a" ? { org: "org", plan: "teams" } : null,
+    readContextSpaces: async (context, organization, workspace) =>
+      context === "a" && organization === "org" && workspace === "same" ? catalog : null,
+  });
+  await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+  await router.handle("list_spaces");
+  assert.equal(await router.handle("send_message", { text: "Hola", space: "mac_s1" }, contextOptions("a", "vm")), "vm~task-cloud");
+  assert.deepEqual(calls.find(call => call.command === "ensure_workspace_space"), {
+    command: "ensure_workspace_space",
+    workspace: "same",
+    args: { id: "mac_s1", name: "Producto" },
+  });
+  assert.equal((calls.find(call => call.command === "send_message")?.args as { space: unknown }).space, "mac_s1");
+  router.close();
+});
+
+test("Web falls back to the VM default space when creating a task in a catalog space on an older VM, without rewriting moves", async () => {
+  for (const mode of ["no_feature", "unknown_command"] as const) {
+    const calls: { command: string; args: unknown; workspace: string | null }[] = [];
+    const catalog = {
+      version: 1,
+      spaces: [
+        { id: "mac_s1", name: "Producto", folders: [] },
+        { id: "cloud_s1", name: "Nube", folders: [] },
+      ],
+      order: ["mac_s1", "cloud_s1"],
+    };
+    const fleet = new Fleet({
+      self: null,
+      connect() {
+        return {
+          state: () => "online", start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {},
+          async call(_id, command, workspace, _folder, args) {
+            calls.push({ command, workspace, args });
+            if (command === "list_spaces") return { value: [{ id: "cloud_s1", name: null, folders: [], created_at: 1, updated_at: 1, account: false }], cached: null };
+            if (command === "ensure_workspace_space") {
+              throw { code: "command_failed", detail: { what: { clave: "shell.service.command" }, detail: "ensure_workspace_space" } };
+            }
+            if (command === "send_message") {
+              if ((args as { space?: unknown }).space === "mac_s1") {
+                throw { code: "command_failed", detail: { what: { clave: "spaces.error.missing" }, detail: "mac_s1" } };
+              }
+              return { value: "task-cloud", cached: null };
+            }
+            if (command === "move_task_to_space") {
+              if ((args as { space?: unknown }).space === "mac_s1") {
+                throw { code: "command_failed", detail: { what: { clave: "spaces.error.missing" }, detail: "mac_s1" } };
+              }
+              return { value: null, cached: null };
+            }
+            return { value: null, cached: null };
+          },
+        } satisfies Link;
+      },
+    });
+    fleet.setMachines([{
+      id: "vm", name: "Cloud", wakes: true, kind: "organization", organizationId: "org", context: "a",
+      linked: new Set(["same"]),
+      ...(mode === "no_feature" ? { features: [] } : {}),
+    }]);
+    fleet.setListing("vm", [{ id: "same", name: "Shared" }], "a");
+    const router = createRouter({
+      self: null,
+      native: null,
+      fleet,
+      contextInfo: context => context === "a" ? { org: "org", plan: "teams" } : null,
+      readContextSpaces: async (context, organization, workspace) =>
+        context === "a" && organization === "org" && workspace === "same" ? catalog : null,
+    });
+    await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    await router.handle("list_spaces");
+    assert.equal(await router.handle("send_message", { text: "Hola", space: "mac_s1" }, contextOptions("a", "vm")), "vm~task-cloud");
+    assert.equal((calls.find(call => call.command === "send_message")?.args as { space: unknown }).space, null);
+    await assert.rejects(router.handle("move_task_to_space", { id: "vm~task-cloud", space: "mac_s1" }, contextOptions("a", "vm")));
+    assert.equal((calls.find(call => call.command === "move_task_to_space")?.args as { space: unknown }).space, "mac_s1");
+    router.close();
+  }
+});
+
+test("Web retries task creation once with space null when a cold VM rejects with spaces.error.missing", async () => {
+  const sentSpaces: unknown[] = [];
+  const fleet = new Fleet({
+    self: null,
+    connect() {
+      return {
+        state: () => "online", start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {},
+        async call(_id, command, _workspace, _folder, args) {
+          if (command === "send_message") {
+            const space = (args as { space?: unknown }).space;
+            sentSpaces.push(space);
+            if (space === "mac_s1") {
+              throw { code: "command_failed", detail: { what: { clave: "spaces.error.missing" }, detail: "mac_s1" } };
+            }
+            return { value: "task-cold", cached: null };
+          }
+          if (command === "move_task_to_space") {
+            throw { code: "command_failed", detail: { what: { clave: "spaces.error.missing" }, detail: "mac_s1" } };
+          }
+          return { value: null, cached: null };
+        },
+      } satisfies Link;
+    },
+  });
+  fleet.setMachines([{
+    id: "vm", name: "Cloud", wakes: true, kind: "organization", organizationId: "org", context: "a",
+    linked: new Set(["same"]), features: [],
+  }]);
+  fleet.setListing("vm", [{ id: "same", name: "Shared" }], "a");
+  const router = createRouter({
+    self: null,
+    native: null,
+    fleet,
+    contextInfo: context => context === "a" ? { org: "org", plan: "teams" } : null,
+  });
+  await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+  assert.equal(await router.handle("send_message", { text: "Cold", space: "mac_s1" }, contextOptions("a", "vm")), "vm~task-cold");
+  assert.deepEqual(sentSpaces, ["mac_s1", null]);
+  await assert.rejects(router.handle("move_task_to_space", { id: "vm~task-cold", space: "mac_s1" }, contextOptions("a", "vm")));
+  router.close();
+});

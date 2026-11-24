@@ -21,6 +21,7 @@ import { callWorkspace } from "../model/links.ts";
 import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "../model/fleet/index.ts";
 import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { setMachineRoute as engineSetMachineRoute } from "../../../../engine-client/src/client.ts";
+import { isUnknownCommand } from "../../../../engine-client/src/support.ts";
 
 export const setMachineRoute = (route: Parameters<typeof engineSetMachineRoute>[0]) => engineSetMachineRoute(route);
 import { readActiveTurns } from "./active-turns-read.ts";
@@ -578,7 +579,7 @@ function createRouterCore(config: RouterConfig) {
       return fleet.call({ machine, workspace: command === "list_workspaces" ? null : workspace, command, args });
     }
     if (CREATE.has(command) && workspace && fleet.inRegistry(workspace) && !fleet.membersOf(workspace).includes(machine)) await materialize(machine, workspace);
-    if (WITH_SPACE.has(command)) args = await withSharedSpace(machine, workspace, args);
+    if (WITH_SPACE.has(command)) args = await withSharedSpace(machine, workspace, args, command);
     if (command === "load_history") {
       const session = await remoteCall(machine, "load_session", {
         project: args.project, id: args.id,
@@ -592,7 +593,17 @@ function createRouterCore(config: RouterConfig) {
     // Apagada no hay turnos ni árbol que revisar: archivar sigue y se aplaza.
     if (command === "task_blockers" && fleet.power(machine) === "off") return { unsaved: [], not_finished: false };
     if (classOf(command) !== "read") {
-      const value = await fleet.call(envelope);
+      let value: unknown;
+      try {
+        value = await fleet.call(envelope);
+      } catch (error) {
+        const creating = CREATE.has(command) || command === "create_empty_session";
+        if (creating && typeof args.space === "string" && args.space && isMissingSpaceError(error)) {
+          value = await fleet.call({ ...envelope, args: { ...args, space: null } });
+        } else {
+          throw error;
+        }
+      }
       // Con la máquina apagada el relay la guardó y su copia ya la refleja: la lista se relee de allá.
       if (isDeferrable(command)) deferredChanged(machine);
       return value;
@@ -610,40 +621,74 @@ function createRouterCore(config: RouterConfig) {
     notify("list_spaces");
   }
 
+  function machineSpaceIds(machine: string, workspace: string | null): Set<string> | null {
+    if (!workspace) return null;
+    const slice = fleet.peek({ machine, workspace, command: "list_spaces", args: {} });
+    if (!slice?.has || !Array.isArray(slice.value)) return null;
+    const ids = new Set<string>();
+    for (const row of slice.value) {
+      if (row && typeof row === "object" && typeof (row as { id?: unknown }).id === "string") {
+        ids.add((row as { id: string }).id);
+      }
+    }
+    return ids;
+  }
+
+  function isMissingSpaceError(error: unknown): boolean {
+    if (!(error instanceof FleetError)) return false;
+    if (error.code === "spaces.error.missing") return true;
+    if (error.code !== "command_failed" && error.code !== "operation_failed") return false;
+    const detail = error.detail;
+    if (detail === "spaces.error.missing") return true;
+    if (!detail || typeof detail !== "object") return false;
+    const what = (detail as { what?: unknown }).what;
+    return what === "spaces.error.missing" || (!!what && typeof what === "object" && (what as { clave?: unknown }).clave === "spaces.error.missing");
+  }
+
   /**
    * Lo nuevo en otra máquina nace en el space de la ventana: uno que aún no es
    * de la cuenta se comparte antes (`share_space`) en la máquina que lo guarda
    * (esta computadora, o en la web la de su prefijo), y allá se crea con el mismo
    * id. El destino valida el id y devuelve el error de espacio si no lo tiene.
    */
-  async function withSharedSpace(machine: string, workspace: string | null, args: Args): Promise<Args> {
+  async function withSharedSpace(machine: string, workspace: string | null, args: Args, command: string): Promise<Args> {
     const space = args.space;
     if (typeof space !== "string" || !space) return args;
     const own = unwrap(space, fleet.remotes());
     const id = own?.id ?? space;
-    if (!own || own.machine !== machine) {
-      const read = config.readWorkspaceSpaces;
-      const features = fleet.info(machine)?.features;
-      if (workspace && read && features?.includes("workspace_space_catalog_v1")) {
-        const catalog = await read(workspace).catch(() => null);
-        const entry = catalog?.spaces.find(item => item.id === id);
-        if (entry) {
+    if (own?.machine === machine) return args;
+    const known = machineSpaceIds(machine, workspace);
+    if (known?.has(id)) return fleet.isShared(id) ? (own ? { ...args, space: id } : args) : { ...args, space: wrap(machine, id) };
+    const isCreate = CREATE.has(command) || command === "create_empty_session";
+    const read = config.readWorkspaceSpaces;
+    const features = fleet.info(machine)?.features;
+    if (workspace && read && (features === undefined || features.includes("workspace_space_catalog_v1"))) {
+      const catalog = await read(workspace).catch(() => null);
+      const entry = catalog?.spaces.find(item => item.id === id);
+      if (entry) {
+        try {
           await fleet.call({ machine, workspace, command: "ensure_workspace_space", args: { id, name: entry.name } });
           fleet.markShared(id);
+          lastRead.delete(JSON.stringify([machine, "list_spaces", workspace, {}]));
           return { ...args, space: id };
+        } catch (error) {
+          if (!isUnknownCommand(error)) throw error;
         }
       }
     }
-    if (fleet.isShared(id)) return own ? { ...args, space: id } : args;
-    if (own?.machine === machine) return args;
+    const missingOnMachine = isCreate && known !== null && !known.has(id);
+    if (fleet.isShared(id)) {
+      if (missingOnMachine) return { ...args, space: null };
+      return own ? { ...args, space: id } : args;
+    }
     try {
       if (own) await fleet.call({ machine: own.machine, workspace, command: "share_space", args: { id } });
       else if (local && (!scopedLocal || hasHere(workspace))) await native("share_space", { id });
-      else return { ...args, space: wrap(machine, id) };
+      else return missingOnMachine ? { ...args, space: null } : { ...args, space: wrap(machine, id) };
       fleet.markShared(id);
-      return { ...args, space: id };
+      return missingOnMachine ? { ...args, space: null } : { ...args, space: id };
     } catch {
-      return { ...args, space: wrap(machine, id) };
+      return missingOnMachine ? { ...args, space: null } : { ...args, space: wrap(machine, id) };
     }
   }
 

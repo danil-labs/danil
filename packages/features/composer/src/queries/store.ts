@@ -124,6 +124,7 @@ export function createComposerStore(deps: {
       const agentes = new Set(
         s.filter((x) => x.usable || x.provider === agent()).map((x) => x.provider),
       );
+      if (untrack(agents).length === 0) void refreshProviders();
       await Promise.all([...agentes].map((a) => cargarModelos(a, !inicial)));
     } catch {
       if (disposed || revision !== composerRevision) return;
@@ -178,8 +179,21 @@ export function createComposerStore(deps: {
   }
   async function refreshProviders() {
     if (disposed) return;
-    try { const rows = await invoke<Agent[]>("list_providers"); if (!disposed) setAgents(rows); }
-    catch { /* A transient provider probe keeps the last known installation list. */ }
+    const revision = composerRevision;
+    const workspace = workspaceActivo();
+    const routed = options();
+    try {
+      const rows = await invoke<Agent[]>("list_providers", {}, routed);
+      if (!disposed && revision === composerRevision) setAgents(rows);
+      return;
+    } catch {
+      if (disposed || revision !== composerRevision || !routed.headers["x-terminus-machine"]) return;
+    }
+    try {
+      const headers: Record<string, string> = workspace ? { "x-terminus-workspace": workspace } : {};
+      const rows = await invoke<Agent[]>("list_providers", {}, { headers });
+      if (!disposed && revision === composerRevision) setAgents(rows);
+    } catch { /* A transient provider probe keeps the last known installation list. */ }
   }
   function installEffects() {
     if (installed || disposed) return;
@@ -192,10 +206,16 @@ export function createComposerStore(deps: {
       setCatalogos({});
       setSuperficies(null);
     });
-    if (connected() && workspaceActivo()) void cargarSuperficies(false);
+    if (connected() && workspaceActivo()) {
+      void cargarSuperficies(false);
+      void refreshProviders();
+    }
   }, { defer: true }));
   createEffect(on(deps.scope.machineOn, (encendida, antes) => {
-    if (encendida && antes === false && connected() && workspaceActivo()) void cargarSuperficies(false);
+    if (encendida && antes !== true && connected() && workspaceActivo()) {
+      void cargarSuperficies(false);
+      void refreshProviders();
+    }
   }, { defer: true }));
 
   createEffect(on(agent, (a) => void cargarModelos(a)));

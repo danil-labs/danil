@@ -121,11 +121,13 @@ export function createUsage(props: {
       onCleanup(() => {
         alive = false;
       });
+      const workspace = props.workspace();
+      const accountOptions = workspace ? { headers: { "x-terminus-workspace": workspace } } : undefined;
       void (async () => {
         const rowCount = await Promise.all(
           ids.split(",").map(async (id): Promise<AccountsByAgent | null> => {
             try {
-              const l = await invoke<AccountList>("list_accounts", { provider: id });
+              const l = await invoke<AccountList>("list_accounts", { provider: id }, accountOptions);
               return {
                 agent: id,
                 label: accountLabel(id),
