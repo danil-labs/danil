@@ -1,10 +1,10 @@
 import { createSignal, onMount } from "solid-js";
 import { render } from "solid-js/web";
-import ChatVisual from "../../src/features/chat/ChatVisual";
-import { createVisualBudget } from "../../src/features/chat/visualBudget";
-import { seguirElFondo } from "../../src/features/chat/paste";
+import ChatVisual from "../../../../packages/features/chat/src/components/ChatVisual";
+import { createVisualBudget } from "../../../../packages/features/chat/src/model/visualBudget";
+import { seguirElFondo } from "../../../../packages/features/chat/src/model/paste";
 import metrics from "./fixtures/inline-visual-metrics.html?raw";
-import "../../src/styles/global.css";
+import "../../../../packages/ui/src/styles/global.css";
 
 const samples: { height: number; scroll: number }[] = [];
 let reads = 0;

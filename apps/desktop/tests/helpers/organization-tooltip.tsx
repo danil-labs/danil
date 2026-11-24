@@ -2,9 +2,9 @@ import "../../src/locales/catalogs";
 import "../../src/web/phrases";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { OrganizationWorkspaceTooltip } from "../../src/features/shell/OrganizationWorkspaceTooltip";
-import { watchOrganizationCredits } from "../../src/features/shell/organization-credits-watch";
-import { TooltipRoot, TooltipTrigger, TooltipContent } from "../../src/ui/Tooltip";
+import { OrganizationWorkspaceTooltip } from "../../../../packages/shell/src/shell/OrganizationWorkspaceTooltip";
+import { watchOrganizationCredits } from "../../../../packages/shell/src/shell/organization-credits-watch";
+import { TooltipRoot, TooltipTrigger, TooltipContent } from "../../../../packages/ui/src/Tooltip";
 
 export function mountOrganizationTooltip(root: HTMLElement) {
   let reads = 0; let unavailable = false;
