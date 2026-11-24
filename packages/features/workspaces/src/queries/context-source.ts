@@ -68,7 +68,7 @@ export function createContextSource(deps: Deps) {
   // se guarda en la sesión ni se acumula: manda el último turno registrado.
   createEffect(
     on([sessionId, project], ([id, p]) => {
-      if (!id || !p) {
+      if (!id) {
         setVentana(null);
         return;
       }

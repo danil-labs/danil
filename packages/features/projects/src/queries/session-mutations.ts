@@ -12,11 +12,11 @@ import type { Etapa } from "../screens/TaskStage.tsx";
 import { createSessionMutationOpen } from "./session-mutations-open.ts";
 import type { DeleteTarget } from "./deleteTask.ts";
 
-export type SessionMutationsDeps = { abrirBorradorDeAgente: (enProyecto: string, name: string) => void; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activarPestana: (p: Tab) => Promise<void>; activeSpace: Accessor<Space | null>; arbolesDe: (project: string, session: string) => Promise<ArbolEnTarea[]>; archivosDeTarea: TaskFilesStore; capabilities: () => Capabilities; cerrarPestana: (id: string) => void; claveAbierta: () => string; contiene: (carpeta: string, absoluta: string) => boolean; contextConfirmed: Accessor<boolean>; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; draftBases: Accessor<Record<string, string>>; draftOptions: () => { headers: { "x-terminus-machine": string } } | undefined; drafts: DraftsStore; esDeCodigo: (kind: string) => boolean; filaDe: (id: string) => SessionRow | undefined; folder: Accessor<string | null>; irAlBlanco: (enProyecto?: string) => void; machineName: (id: string, local?: boolean) => string; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; machines: Accessor<Machine[]>; maquinaDeLaVentana: () => string; nuevaSesion: (enProyecto?: string) => void; olvidarPestana: (session: string) => void; opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: Record<string, string> }; paneles: PanelsStore; pestanas: TabsStore; project: Accessor<string>; projectCatalog: { changed: () => Promise<unknown> }; projectList: Accessor<Project[]>; proyectoAbierto: Accessor<string | null>; readRevision: Accessor<number>; refreshSessions: (proyectos: string[]) => Promise<void>; senderTaskId: (machine: string, task: string) => string; sesiones: Accessor<Record<string, SessionRow[]>>; sessionId: Accessor<string | null>; setError: Setter<string | null>; setProject: Setter<string>; setProyectoAbierto: Setter<string | null>; setRetoques: Setter<Record<string, { cambio: Partial<SessionRow>; n: number }>>; setRunOn: (workspace: string | null, id: string | null) => void; setTaskSources: Setter<Source[] | null>; setTaskSourcesError: Setter<string | null>; soltarHilo: (session: string) => void; sources: Accessor<Source[]>; threads: ThreadsStore; ubicar: (arboles: readonly ArbolEnTarea[], absoluta: string) => { arbol: ArbolEnTarea; rel: string } | null; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceStore; };
+export type SessionMutationsDeps = { abrirBorradorDeAgente: (enProyecto: string, name: string) => void; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activarPestana: (p: Tab) => Promise<void>; activeSpace: Accessor<Space | null>; arbolesDe: (project: string, session: string) => Promise<ArbolEnTarea[]>; archivosDeTarea: TaskFilesStore; capabilities: () => Capabilities; cerrarPestana: (id: string) => void; claveAbierta: () => string; contiene: (carpeta: string, absoluta: string) => boolean; contextConfirmed: Accessor<boolean>; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; draftBases: Accessor<Record<string, string>>; draftOptions: () => { headers: { "x-terminus-machine": string } } | undefined; drafts: DraftsStore; esDeCodigo: (kind: string) => boolean; filaDe: (id: string) => SessionRow | undefined; folder: Accessor<string | null>; irAlBlanco: (enProyecto?: string) => void; machineName: (id: string, local?: boolean) => string; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; machines: Accessor<Machine[]>; maquinaDeLaVentana: () => string; nuevaSesion: (enProyecto?: string) => void; olvidarPestana: (session: string) => void; opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: Record<string, string> }; paneles: PanelsStore; pestanas: TabsStore; project: Accessor<string>; projectCatalog: { changed: () => Promise<unknown> }; projectList: Accessor<Project[]>; proyectoAbierto: Accessor<string | null>; readRevision: Accessor<number>; refreshSessions: (proyectos: string[]) => Promise<void>; retirarNaciendo?: (id: string) => void; senderTaskId: (machine: string, task: string) => string; sesiones: Accessor<Record<string, SessionRow[]>>; sessionId: Accessor<string | null>; setError: Setter<string | null>; setProject: Setter<string>; setProyectoAbierto: Setter<string | null>; setRetoques: Setter<Record<string, { cambio: Partial<SessionRow>; n: number }>>; setRunOn: (workspace: string | null, id: string | null) => void; setSesiones?: Setter<Record<string, SessionRow[]>>; setTaskSources: Setter<Source[] | null>; setTaskSourcesError: Setter<string | null>; soltarHilo: (session: string) => void; sources: Accessor<Source[]>; threads: ThreadsStore; ubicar: (arboles: readonly ArbolEnTarea[], absoluta: string) => { arbol: ArbolEnTarea; rel: string } | null; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceStore; };
 
 export function createSessionMutations(deps: SessionMutationsDeps) {
   const maquinaDeLaVentana = () => deps.maquinaDeLaVentana();
-  const { abrirBorradorDeAgente, abrirSesion, activarPestana, activeSpace, arbolesDe, archivosDeTarea, capabilities, cerrarPestana, claveAbierta, contiene, contextConfirmed, deLaTarea, draftBases, draftOptions, drafts, esDeCodigo, filaDe, folder, irAlBlanco, machineName, machineOf, machines, nuevaSesion, olvidarPestana, opcionesDeLaTarea, paneles, pestanas, project, projectCatalog, projectList, proyectoAbierto, readRevision, refreshSessions, senderTaskId, sesiones, sessionId, setError, setProject, setProyectoAbierto, setRetoques, setRunOn, setTaskSources, setTaskSourcesError, soltarHilo, sources, threads, ubicar, workspaceActivo, workspaceContext, } = deps;
+  const { abrirBorradorDeAgente, abrirSesion, activarPestana, activeSpace, arbolesDe, archivosDeTarea, capabilities, cerrarPestana, claveAbierta, contiene, contextConfirmed, deLaTarea, draftBases, draftOptions, drafts, esDeCodigo, filaDe, folder, irAlBlanco, machineName, machineOf, machines, nuevaSesion, olvidarPestana, opcionesDeLaTarea, paneles, pestanas, project, projectCatalog, projectList, proyectoAbierto, readRevision, refreshSessions, retirarNaciendo, senderTaskId, sesiones, sessionId, setError, setProject, setProyectoAbierto, setRetoques, setRunOn, setSesiones, setTaskSources, setTaskSourcesError, soltarHilo, sources, threads, ubicar, workspaceActivo, workspaceContext, } = deps;
 
   let ultimoRetoque = 0;
   const [deleteTarget, setDeleteTarget] = createSignal<DeleteTarget | null>(null);
@@ -43,6 +43,8 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
   function deletedTaskMembers(members: { project: string; id: string }[]) {
     const view = proyectoAbierto();
     const ids = members.map(member => member.id);
+    const idSet = new Set(ids);
+    const projects = [...new Set(members.map(member => member.project))];
     const activeRemoved = ids.includes(sessionId() ?? "");
     const tabIds = pestanas.open().filter(tab => ids.includes(tab.id) || ids.includes(tab.session)).map(tab => tab.id);
     const neighbor = pestanas.closeMany(tabIds);
@@ -52,12 +54,27 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
       drafts.drop(id);
       olvidarPestana(id);
       archivosDeTarea.forget(id);
+      retirarNaciendo?.(id);
     }
+    setSesiones?.((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        const rows = next[key];
+        if (!rows?.length) continue;
+        const filtered = rows.filter((row) => !idSet.has(row.id));
+        if (filtered.length !== rows.length) {
+          next[key] = filtered;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
     if (activeRemoved) {
       if (!view && neighbor) void activarPestana(neighbor);
       else { irAlBlanco(); setProyectoAbierto(view); }
     }
-    void refreshSessions([...new Set(members.map(member => member.project))]);
+    void refreshSessions(projects);
   }
 
   function dirtyTaskFiles(id: string): string[] {

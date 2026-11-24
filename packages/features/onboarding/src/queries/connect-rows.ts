@@ -34,7 +34,7 @@ export type Paso =
   | { k: "sesion"; identidad: string }
   | { k: "instalada" }
   | { k: "descargando"; hecho: number; total: number }
-  | { k: "entrando"; cuenta: string; url?: string; codigo?: string; pideCodigo?: boolean }
+  | { k: "entrando"; cuenta: string; url?: string; codigo?: string; pideCodigo?: boolean; enviandoCodigo?: boolean; codigoEnviado?: boolean; errorCodigo?: string | null }
   | { k: "clave" }
   | { k: "comprobando" }
   | { k: "conectada"; cuenta: string; id: string | null }

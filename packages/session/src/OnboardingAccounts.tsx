@@ -2,17 +2,18 @@ import { isFreeRouterAgent, isRetiredAgent } from "../../ui/src/lib/tasks/agents
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { nombreDeAgente } from "../../features/onboarding/src/queries/onboarding-store";
 import { Pantalla } from "../../features/onboarding/src/components/Screen";
-import { accountKeyUrl } from "../../ui/src/lib/account-auth.ts";
+import { accountKeyUrl, isLoopbackNotice, needsManualCallbackCode } from "../../ui/src/lib/account-auth.ts";
 import type { AccountList, AgentOpt, LoginEvent } from "../../features/settings/src/queries/accounts-store";
-import { LoginCodeForm } from "../../features/settings/src/screens/LoginCodeForm";
+import { LoginCodeForm, LoginUrlActions } from "../../features/settings/src/screens/LoginCodeForm";
 import { t } from "../../ui/src/lib/i18n";
 import { invoke } from "../../engine-client/src/client.ts";
 import { listen } from "../../host/src/serviceEvents";
 import { Badge } from "../../ui/src/Badge";
 import { Button } from "../../ui/src/Button";
-import { asFailure, FailureNote } from "../../ui/src/Failure";
+import { asFailure, FailureNote, prosaDe } from "../../ui/src/Failure";
 import { Input } from "../../ui/src/Input";
 import { MarcaAgente } from "../../ui/src/icons";
+import { Spinner } from "../../ui/src/Spinner";
 
 /** Free Router rows and providers with an app of their own are never offered on a managed computer. */
 const offered = (a: AgentOpt) => a.available && !a.sin_cuenta && !a.external_install_url && !isFreeRouterAgent(a.id) && !isRetiredAgent(a.id);
@@ -66,7 +67,7 @@ export function OnboardingAccounts(props: { workspace: string; onDone: () => voi
 type Phase =
   | { t: "idle" }
   | { t: "starting" }
-  | { t: "browser"; url: string | null; code: string | null; notice: string | null; asks: boolean }
+  | { t: "browser"; url: string | null; code: string | null; notice: string | null; asks: boolean; submitting?: boolean; submitted?: boolean; codeError?: string | null }
   | { t: "key"; id: string };
 
 function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) => void; register: (stop: () => void) => void }) {
@@ -136,13 +137,16 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
 
   async function sendCode() {
     const id = running();
-    if (!id || !typed().trim()) return;
+    const valor = typed().trim();
+    const cur = phase();
+    if (!id || !valor || (cur.t === "browser" && cur.submitting)) return;
+    setPhase((p) => (p.t === "browser" ? { ...p, submitting: true, codeError: null } : p));
     try {
-      await invoke("submit_login_code", { id, code: typed().trim() });
+      await invoke("submit_login_code", { id, code: valor });
       setTyped("");
-      setPhase((p) => (p.t === "browser" ? { ...p, asks: false } : p));
+      setPhase((p) => (p.t === "browser" ? { ...p, asks: false, submitting: false, submitted: true, codeError: null } : p));
     } catch (e) {
-      setFailure(e);
+      setPhase((p) => (p.t === "browser" ? { ...p, submitting: false, submitted: false, codeError: prosaDe(e) || t("settings.accounts.error.code") } : p));
     }
   }
 
@@ -170,14 +174,20 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
         return p.t === "browser" ? p : { t: "browser", url: null, code: null, notice: null, asks: false };
       };
       if (kind === "url") {
-        setPhase({ ...shown(), url: text });
+        const prev = shown();
+        const manual = prev.asks || needsManualCallbackCode(text);
+        const notice = prev.notice && manual && isLoopbackNotice(prev.notice) ? null : prev.notice;
+        setPhase({ ...prev, url: text, asks: manual, notice, submitted: false, codeError: null });
         // A headless computer has no browser: the page opens in a new tab of this one.
         invoke("open_external", { target: text }).catch(() => {});
       } else if (kind === "confirm") setPhase({ ...shown(), code: text });
-      else if (kind === "code") setPhase({ ...shown(), asks: true });
+      else if (kind === "code") setPhase({ ...shown(), asks: true, submitted: false, codeError: null });
       else if (kind === "notice") {
         const msg = text.trim();
-        if (msg && !/^https?:\/\//.test(msg)) setPhase({ ...shown(), notice: msg });
+        const prev = shown();
+        if (msg && !/^https?:\/\//.test(msg) && !(needsManualCallbackCode(prev.url) && isLoopbackNotice(msg))) {
+          setPhase({ ...prev, notice: msg });
+        }
       } else if (kind === "done") {
         reset();
         if (text) {
@@ -232,14 +242,7 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
           {(p) => (
             <div class="grid gap-2 text-sm">
               <Show when={p().url} fallback={<p role="status" class="m-0 text-xs text-neutral-500">{t("web.onboarding.accounts.starting")}</p>}>
-                {(url) => (
-                  <p class="m-0 text-neutral-500">
-                    {t("web.onboarding.accounts.opened")}{" "}
-                    <a class="text-primary underline" href={url()} target="_blank" rel="noopener noreferrer" data-login-url="">
-                      {t("web.onboarding.accounts.open")}
-                    </a>
-                  </p>
-                )}
+                {(url) => <LoginUrlActions url={url()} openLabel={t("web.onboarding.accounts.open")} />}
               </Show>
               <Show when={p().code}>
                 {(code) => (
@@ -252,7 +255,25 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
                 {(notice) => <p class="m-0 text-xs text-neutral-500" data-login-notice="">{notice()}</p>}
               </Show>
               <Show when={p().asks}>
-                <LoginCodeForm value={typed()} onInput={setTyped} onSubmit={() => void sendCode()} />
+                <div class="grid gap-1.5">
+                  <p class="m-0 text-xs font-medium text-neutral-700">{t("settings.accounts.step_code")}</p>
+                  <LoginCodeForm
+                    value={typed()}
+                    onInput={(v) => {
+                      setTyped(v);
+                      setPhase((cur) => (cur.t === "browser" && cur.codeError ? { ...cur, codeError: null } : cur));
+                    }}
+                    onSubmit={() => void sendCode()}
+                    submitting={p().submitting}
+                    error={p().codeError}
+                  />
+                </div>
+              </Show>
+              <Show when={!p().asks && p().submitted}>
+                <p role="status" data-login-code-sent="" class="m-0 flex items-center gap-1.5 text-xs text-neutral-500">
+                  <Spinner size={12} />
+                  {t("settings.accounts.verifying_code")}
+                </p>
               </Show>
             </div>
           )}

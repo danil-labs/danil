@@ -6,6 +6,7 @@ import { freeModelScope } from "../../../../session/src/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { accountPresentation } from "../../../../ui/src/lib/accounts.ts";
+import { isLoopbackNotice, needsManualCallbackCode } from "../../../../ui/src/lib/account-auth.ts";
 import type { AccountList, AccountStatus, AgentOpt, LoginEvent } from "../../../../ui/src/lib/accounts.ts";
 import { explicar } from "./connect-rows";
 import type { CargaDeConexiones } from "./connect-load";
@@ -158,14 +159,21 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
 
   async function enviarCodigo(id: string, codigo: string) {
     const p = pasos[id];
-    if (p?.k !== "entrando" || !codigo.trim()) return;
+    const valor = codigo.trim();
+    if (p?.k !== "entrando" || !valor || p.enviandoCodigo) return;
     setErrores(id, null);
-    poner(id, { ...p, pideCodigo: false });
+    poner(id, { ...p, enviandoCodigo: true, errorCodigo: null });
     try {
-      await callEngine("submit_login_code", { id: p.cuenta, code: codigo.trim() });
+      await callEngine("submit_login_code", { id: p.cuenta, code: valor });
+      const actual = pasos[id];
+      if (actual?.k === "entrando" && actual.cuenta === p.cuenta) {
+        poner(id, { ...actual, pideCodigo: false, enviandoCodigo: false, codigoEnviado: true, errorCodigo: null });
+      }
     } catch (e) {
-      setErrores(id, explicar(e));
-      poner(id, { ...p, pideCodigo: true });
+      const actual = pasos[id];
+      if (actual?.k === "entrando" && actual.cuenta === p.cuenta) {
+        poner(id, { ...actual, pideCodigo: true, enviandoCodigo: false, codigoEnviado: false, errorCodigo: explicar(e) });
+      }
     }
   }
 
@@ -233,12 +241,22 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     if (!e || ev.payload.account !== e.cuenta || p?.k !== "entrando") return;
     const { kind, text } = ev.payload;
     if (kind === "url") {
+      const manual = needsManualCallbackCode(text);
       vigilarEntrada(e.fila, e.cuenta);
-      poner(e.fila, { ...p, url: text });
+      poner(e.fila, {
+        ...p,
+        url: text,
+        pideCodigo: p.pideCodigo || manual,
+        codigoEnviado: false,
+        errorCodigo: null,
+      });
+      if (manual) setSalidas(e.fila, (s) => (s ?? []).filter((line) => !isLoopbackNotice(line)));
       callEngine("open_external", { target: text }).catch(() => {});
-    } else if (kind === "notice") setSalidas(e.fila, (s) => [...(s ?? []), text]);
-    else if (kind === "confirm") poner(e.fila, { ...p, codigo: text });
-    else if (kind === "code") poner(e.fila, { ...p, pideCodigo: true });
+    } else if (kind === "notice") {
+      if ((p.pideCodigo || needsManualCallbackCode(p.url)) && isLoopbackNotice(text)) return;
+      setSalidas(e.fila, (s) => [...(s ?? []), text]);
+    } else if (kind === "confirm") poner(e.fila, { ...p, codigo: text });
+    else if (kind === "code") poner(e.fila, { ...p, pideCodigo: true, codigoEnviado: false, errorCodigo: null });
     else if (kind === "done") void terminarEntrada(text);
   });
   const alInstalar = listen<AvanceDeInstalacion>("install", (ev) => {

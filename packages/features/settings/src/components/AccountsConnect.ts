@@ -13,7 +13,7 @@ import { ESPERA_ANTES_DE_LA_TERMINAL_MS, normalizarListaDeCuentas, segundaCuenta
 import type { createCuentas } from "./AccountsState";
 
 export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas>) {
-  const { agentes, agente, machineOf, setAgentes, setFallo, setInstalando, lista, cargando, setCargando, setLista, enCurso, setComprobando, setEstados, setSinComprobar, fallo, setEnCurso, setUrl, olvidarEnlaceCopiado, setCopiaFallida, setPorConfirmar, setPideCodigo, setCodigo, setAviso, setSalida, setConexionFallida, setOfrecerTerminal, setEsperando } = cuentas;
+  const { agentes, agente, machineOf, setAgentes, setFallo, setInstalando, lista, cargando, setCargando, setLista, enCurso, setComprobando, setEstados, setSinComprobar, fallo, setEnCurso, setUrl, olvidarEnlaceCopiado, setCopiaFallida, setPorConfirmar, setPideCodigo, setCodigo, setEnviandoCodigo, setCodigoEnviado, setErrorCodigo, setAviso, setSalida, setConexionFallida, setOfrecerTerminal, setEsperando } = cuentas;
   /**
    * `espera` y `recienCreada` son variables: nadie pinta sus valores, y una
    * señal añadiría dependencias reactivas sin consumidores. `espera` conserva
@@ -328,6 +328,9 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
     setPorConfirmar(null);
     setPideCodigo(false);
     setCodigo("");
+    setEnviandoCodigo(false);
+    setCodigoEnviado(false);
+    setErrorCodigo(null);
     setAviso(null);
     setSalida([]);
     setConexionFallida(null);

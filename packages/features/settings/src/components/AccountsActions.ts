@@ -3,13 +3,14 @@ import { t } from "../../../../ui/src/lib/i18n";
 import { listProviders, removeAccount, renameAccount, resumeAwaitingQuota, setActiveAccount, submitLoginCode } from "../queries/engine-accounts";
 import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../host/src/serviceEvents.ts";
-import { detalleDe } from "../../../../ui/src/Failure";
+import { detalleDe, prosaDe } from "../../../../ui/src/Failure";
+import { isLoopbackNotice, needsManualCallbackCode } from "../../../../ui/src/lib/account-auth.ts";
 import { type AgentOpt, type LoginEvent } from "../queries/accounts-store";
 import type { createCuentas } from "./AccountsState";
 import type { createConexionDeCuentas } from "./AccountsConnect";
 
 export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas>, conexion: ReturnType<typeof createConexionDeCuentas>) {
-  const { agente, setEstados, setSinComprobar, setPorQuitar, setLista, lista, enCurso, setUrl, setPorConfirmar, setPideCodigo, setEnCurso, setAviso, setSalida, setConexionFallida, setAgentes, setConectadaVez, setOfrecerTerminal, setCopiaFallida, copiarLaUrl, codigo, machineOf, setCodigo, setFallo, setRepuestas, setReponiendo } = cuentas;
+  const { agente, setEstados, setSinComprobar, setPorQuitar, setLista, lista, enCurso, url, setUrl, setPorConfirmar, setPideCodigo, setEnCurso, aviso, setAviso, setSalida, setConexionFallida, setAgentes, setConectadaVez, setOfrecerTerminal, setCopiaFallida, copiarLaUrl, codigo, enviandoCodigo, setEnviandoCodigo, setCodigoEnviado, setErrorCodigo, machineOf, setCodigo, setFallo, setRepuestas, setReponiendo } = cuentas;
   const { comprobadas, refrescar, comprobar, cancelarEspera, descartarSiVacia, mirarEspera } = conexion;
   // Cambiar de agente reinicia lo que era de la lista anterior. Con `on(...)`:
   // el cuerpo lee más señales de las que deben dispararlo.
@@ -104,6 +105,14 @@ export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas
       if (kind === "url") {
         cancelarEspera();
         setUrl(text);
+        if (needsManualCallbackCode(text)) {
+          setPideCodigo(true);
+          setCodigoEnviado(false);
+          setErrorCodigo(null);
+          const actual = aviso();
+          if (actual && isLoopbackNotice(actual)) setAviso(null);
+          setSalida((s) => s.filter((line) => !isLoopbackNotice(line)));
+        }
         // El navegador de la persona ya tiene su sesión; el webview no.
         openExternal({ target: text }).catch(() => {});
         return;
@@ -116,12 +125,17 @@ export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas
       if (kind === "code") {
         cancelarEspera();
         setPideCodigo(true);
+        setCodigoEnviado(false);
+        setErrorCodigo(null);
         return;
       }
       if (kind === "done") {
         cancelarEspera();
         setEnCurso(null);
         setPideCodigo(false);
+        setEnviandoCodigo(false);
+        setCodigoEnviado(false);
+        setErrorCodigo(null);
         setPorConfirmar(null);
         setAviso(null);
         if (text) {
@@ -156,7 +170,10 @@ export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas
         setOfrecerTerminal(false);
       }
       const msg = text.trim();
-      if (kind === "notice" && msg && !/^https?:\/\//.test(msg)) setAviso(msg);
+      if (kind === "notice" && needsManualCallbackCode(url()) && isLoopbackNotice(msg)) return;
+      if (kind === "notice" && msg && !/^https?:\/\//.test(msg)) {
+        setAviso(msg);
+      }
       setSalida((s) => [...s, text].slice(-12));
     });
 
@@ -200,16 +217,19 @@ export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas
 
   async function enviarCodigo() {
     const id = enCurso();
-    if (!id || !codigo().trim()) return;
+    const valor = codigo().trim();
+    if (!id || !valor || enviandoCodigo()) return;
+    setEnviandoCodigo(true);
+    setErrorCodigo(null);
     try {
-      await submitLoginCode({ id, code: codigo() }, machineOf(id));
+      await submitLoginCode({ id, code: valor }, machineOf(id));
       setPideCodigo(false);
       setCodigo("");
+      setCodigoEnviado(true);
     } catch (e) {
-      setFallo({
-        what: t("settings.accounts.error.code"),
-        detail: detalleDe(e),
-      });
+      setErrorCodigo(prosaDe(e) || detalleDe(e) || t("settings.accounts.error.code"));
+    } finally {
+      setEnviandoCodigo(false);
     }
   }
 

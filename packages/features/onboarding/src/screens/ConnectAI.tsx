@@ -64,17 +64,19 @@ export function PanelDeIA(props: { c: Conexiones }) {
       </Show>
       <Show when={props.c.filas().find((f) => props.c.pasos[f.id]?.k === "entrando")}>
         {(f) => {
-          const p = () => props.c.pasos[f().id];
-          const de = <K extends "url" | "codigo">(k: K) => {
-            const x = p();
-            return x?.k === "entrando" ? (x[k] ?? null) : null;
+          const p = () => {
+            const x = props.c.pasos[f().id];
+            return x?.k === "entrando" ? x : null;
           };
           return (
             <DialogoDeConexion
               etiqueta={nombreDeFila(f())}
-              url={de("url")}
-              porConfirmar={de("codigo")}
-              pideCodigo={p()?.k === "entrando" && Boolean((p() as { pideCodigo?: boolean }).pideCodigo)}
+              url={p()?.url ?? null}
+              porConfirmar={p()?.codigo ?? null}
+              pideCodigo={Boolean(p()?.pideCodigo)}
+              enviandoCodigo={Boolean(p()?.enviandoCodigo)}
+              codigoEnviado={Boolean(p()?.codigoEnviado)}
+              errorCodigo={p()?.errorCodigo ?? null}
               salida={props.c.salidas[f().id] ?? []}
               onCancelar={() => void props.c.cancelar(f().id)}
               onCodigo={(codigo) => void props.c.enviarCodigo(f().id, codigo)}

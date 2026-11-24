@@ -29,6 +29,9 @@ export type PuertosDelAlta = {
     url: string | null;
     porConfirmar: string | null;
     pideCodigo: boolean;
+    enviandoCodigo?: boolean;
+    codigoEnviado?: boolean;
+    errorCodigo?: string | null;
     salida: string[];
     onCancelar: () => void;
     onCodigo: (codigo: string) => void;

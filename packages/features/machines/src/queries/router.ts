@@ -38,6 +38,9 @@ export { unconfirmedOpen } from "../model/unconfirmedOpen.ts";
 
 export type { RouterConfig } from "../model/router-config.ts";
 
+/** Escrituras que cambian las tareas de otra máquina: invalidan su lectura en caché. */
+const SESSION_WRITE = new Set(["task_lifecycle_apply", "send_message", "create_empty_session", "move_session", "delete_session"]);
+
 function createRouterCore(config: RouterConfig) {
   const { self, fleet } = config;
   const rawNative: Invoke = config.native ?? (() => Promise.reject(new FleetError("unknown_machine", null)));
@@ -131,6 +134,7 @@ function createRouterCore(config: RouterConfig) {
 
   /** La rebanada de otra máquina desde su copia en el motor de aquí; `null` si no la hay. */
   async function copySlice(envelope: Envelope): Promise<Slice | null> {
+    if (envelope.command === "list_live_sessions" && freshSessions.has(freshSessionKey(envelope.machine, envelope.workspace)) && fleet.power(envelope.machine) === "on") return null;
     const resource = INDEXED[envelope.command];
     if (!resource || !envelope.workspace || !announces(LIGHT_COPIES)) return null;
     const rows = await indexed(envelope.workspace, envelope.machine, resource);
@@ -155,6 +159,9 @@ function createRouterCore(config: RouterConfig) {
   const lastRead = new Map<string, number>();
   // Cambiar `open` no borra las filas ya vistas mientras llega la nueva lectura.
   const sessionReads = new Map<string, Envelope>();
+  // Máquinas con escritura reciente de tareas: su siguiente `list_live_sessions` pide estado fresco.
+  const freshSessions = new Set<string>();
+  const freshSessionKey = (machine: string, workspace: string | null) => `${machine}\0${workspace ?? ""}`;
   // Las lecturas con pestañas nuevas que su máquina no contestó a tiempo: la siguiente no vuelve a esperar.
   const unanswered = new Set<string>();
   let pending = new Set<SliceChange>();
@@ -350,7 +357,9 @@ function createRouterCore(config: RouterConfig) {
         if (differs(before, slice)) notify(envelope.command);
       },
       () => {},
-    );
+    ).finally(() => {
+      if (envelope.command === "list_live_sessions") freshSessions.delete(freshSessionKey(envelope.machine, envelope.workspace));
+    });
   }
 
   /**
@@ -389,7 +398,11 @@ function createRouterCore(config: RouterConfig) {
 
   /** La primera máquina con datos libera la lista; las pendientes conservan su última rebanada y avisan al contestar. */
   async function gatherAvailable(envelopes: Envelope[], settles: boolean): Promise<Slice[]> {
-    const slices = envelopes.map(previousSlice);
+    const slices = envelopes.map((envelope) =>
+      envelope.command === "list_live_sessions" && freshSessions.has(freshSessionKey(envelope.machine, envelope.workspace)) && fleet.power(envelope.machine) === "on"
+        ? null
+        : previousSlice(envelope),
+    );
     let returned = false;
     let finish!: () => void;
     const available = new Promise<void>(resolve => { finish = resolve; });
@@ -399,6 +412,7 @@ function createRouterCore(config: RouterConfig) {
     const live = envelopes.map(async (envelope, i) => {
       const before = slices[i];
       const slice = await fleet.read(envelope);
+      if (envelope.command === "list_live_sessions") freshSessions.delete(freshSessionKey(envelope.machine, envelope.workspace));
       slices[i] = slice;
       if (envelope.command === "list_live_sessions" && slice.has) sessionReads.set(JSON.stringify([envelope.machine, envelope.workspace, envelope.args?.project]), envelope);
       if (returned) {
@@ -605,12 +619,24 @@ function createRouterCore(config: RouterConfig) {
       }
       // Con la máquina apagada el relay la guardó y su copia ya la refleja: la lista se relee de allá.
       if (isDeferrable(command)) deferredChanged(machine);
+      if (SESSION_WRITE.has(command)) sessionsChanged(machine, workspace);
       return value;
     }
     const slice = await fleet.read(envelope);
     if (!slice.has) throw noAnswer([slice], workspace);
     rememberSources(command, machine, workspace, slice.value);
     return fleet.encode(machine, command === "list_session_git" ? gitSlice(slice).value : slice.value, command);
+  }
+
+  /** Una escritura remota de tareas invalida las lecturas y copias locales de esa máquina. */
+  function sessionsChanged(machine: string, workspace: string | null) {
+    for (const id of [...lastRead.keys()]) if (id.startsWith(`[${JSON.stringify(machine)},`)) lastRead.delete(id);
+    if (workspace) {
+      const known = index.get(indexKey(workspace, machine, "tasks"));
+      if (known) known.stale = true;
+    }
+    if (fleet.power(machine) === "on") freshSessions.add(freshSessionKey(machine, workspace));
+    notify("list_live_sessions");
   }
 
   /** Cambió la cola de aplazadas de `machine`: sus lecturas salen otra vez al relay ya, sin esperar el respiro. */
@@ -1026,6 +1052,7 @@ function createRouterCore(config: RouterConfig) {
     forget(machine: string) {
       attention.forget(machine);
       for (const [key, envelope] of sessionReads) if (envelope.machine === machine) sessionReads.delete(key);
+      for (const key of freshSessions) if (key.startsWith(`${machine}\0`)) freshSessions.delete(key);
     },
     /** El registro de la cuenta cambió (un workspace recién vinculado): la próxima lista lo vuelve a leer. */
     registryChanged() {
@@ -1033,6 +1060,7 @@ function createRouterCore(config: RouterConfig) {
     },
     close() {
       sessionReads.clear();
+      freshSessions.clear();
       clearTimeout(notifyTimer);
       webEvents.close();
       fleet.close();
