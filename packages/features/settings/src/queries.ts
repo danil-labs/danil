@@ -9,7 +9,7 @@ export * from "./queries/free-router-desk";
 export * from "./queries/free-router-platform";
 export * from "./queries/free-router-session";
 export * from "./queries/workspaces-store";
-export { accountStatus, addAccount as addProviderAccount, cancelLogin, discardAccount, installProvider, listAccounts, listProviders, loginAccount, removeAccount, resumeAwaitingQuota, setActiveAccount, setApiKey, setMemoryProvider, submitLoginCode, tasksAwaitingQuota } from "./queries/engine-accounts";
+export { accountStatus, addAccount as addProviderAccount, cancelLogin, discardAccount, installProvider, listAccounts, listProviders, loginAccount, removeAccount, resumeAwaitingQuota, setActiveAccount, setApiKey, submitLoginCode, tasksAwaitingQuota } from "./queries/engine-accounts";
 export * from "./queries/engine-agents";
 export * from "./queries/engine-connections";
 export * from "./queries/engine-consent";
