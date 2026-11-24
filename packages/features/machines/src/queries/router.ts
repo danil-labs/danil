@@ -366,7 +366,9 @@ function createRouterCore(config: RouterConfig) {
   }
 
   const differs = (a: Slice | null, b: Slice, command?: string) => {
-    if (!a || a.status !== b.status || a.has !== b.has) return true;
+    if (!a || a.has !== b.has) return true;
+    const statusChanged = a.status !== b.status && !(command === "list_live_sessions" && a.status === "cached" && b.status === "ok");
+    if (statusChanged) return true;
     const va = command && LISTING.has(command) ? stableSliceValue(a.value) : a.value;
     const vb = command && LISTING.has(command) ? stableSliceValue(b.value) : b.value;
     return JSON.stringify(va) !== JSON.stringify(vb);
@@ -374,12 +376,15 @@ function createRouterCore(config: RouterConfig) {
 
   /** Pregunta otra vez a `envelope.machine` si hace rato que no; si su rebanada cambió, la ventana relee. */
   function refresh(envelope: Envelope, before: Slice | null) {
-    const id = JSON.stringify([envelope.machine, envelope.command, envelope.workspace, envelope.args]);
+    const id = JSON.stringify([envelope.machine, envelope.command, envelope.workspace, fleet.argsFor(envelope.machine, envelope.args ?? {})]);
     const last = lastRead.get(id) ?? 0;
     if (Date.now() - last < REFRESH_GAP) return;
     lastRead.set(id, Date.now());
     void fleet.read(envelope).then(
       (slice) => {
+        if (envelope.command === "list_live_sessions" && slice.has) {
+          sessionReads.set(JSON.stringify([envelope.machine, envelope.workspace, envelope.args?.project]), envelope);
+        }
         if (differs(before, slice, envelope.command)) notify(envelope.command);
       },
       () => {},
@@ -512,7 +517,11 @@ function createRouterCore(config: RouterConfig) {
         return slice;
       }
       unanswered.add(key);
-      if (!slice) void live.then(late => { if (late.has && differs(before, late)) notify(envelope.command); }, () => {});
+      if (!slice) void live.then(late => {
+        if (!late.has) return;
+        sessionReads.set(JSON.stringify([envelope.machine, envelope.workspace, envelope.args?.project]), envelope);
+        if (differs(before, late, envelope.command)) notify(envelope.command);
+      }, () => {});
     }
     unconfirmed.push(...unknown);
     return before;

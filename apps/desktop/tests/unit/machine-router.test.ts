@@ -1048,3 +1048,31 @@ test("regression: on the web a workspace of the personal machine is created ther
   assert.equal(router.createsOn("mine")?.machine, "cmp_vm", "the composer proposes the machine that has it");
   assert.equal(router.createsOn("ws_acme")?.machine, "cmp_org", "and the organization's workspace goes to its server");
 });
+
+test("local open tab changes keep remote list_live_sessions throttled and identical cached->ok refreshes do not re-notify", async () => {
+  const vm = fakeLink({ list_live_sessions: [row("r1")] });
+  const { router, fleet, changes } = setup({ cmp_vm: vm });
+  await router.handle("list_workspaces");
+  await fleet.read({ machine: "cmp_vm", workspace: "w", command: "list_live_sessions", args: { project: "p1", open: [] } });
+  const callsAfterWarmup = vm.calls.filter((c) => c.command === "list_live_sessions").length;
+
+  await router.handle("list_live_sessions", { project: "p1", open: ["local_a"] });
+  await sleep(20);
+  const callsAfterFirst = vm.calls.filter((c) => c.command === "list_live_sessions").length;
+  assert.equal(callsAfterFirst, callsAfterWarmup + 1, "first background refresh runs once");
+
+  // Changing only local open tabs keeps the same remote argsFor(cmp_vm) -> stays within REFRESH_GAP.
+  await router.handle("list_live_sessions", { project: "p1", open: ["local_b"] });
+  await router.handle("list_live_sessions", { project: "p1", open: ["local_c"] });
+  await sleep(20);
+  assert.equal(vm.calls.filter((c) => c.command === "list_live_sessions").length, callsAfterFirst, "local tab changes do not bypass REFRESH_GAP");
+
+  // Switching to a known remote open tab misses peek (returns cached previous slice) and refreshes behind;
+  // identical rows coming back as status ok must not notify sessions again.
+  changes.length = 0;
+  await router.handle("list_live_sessions", { project: "p1", open: ["cmp_vm~r1"] });
+  await sleep(250);
+  assert.ok(!changes.flat().includes("sessions"), "identical cached->ok remote slice does not trigger a full session refresh");
+  router.close();
+});
+
