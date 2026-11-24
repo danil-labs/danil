@@ -4,7 +4,8 @@ import type { WorkspaceAddLink } from "../../../session/src/workspace-add-link.t
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { bridgePersonSession } from "../../../session/src/person-session.ts";
-import { capabilities } from "../../../host/src/platform.ts";
+import { capabilities, setCapabilities } from "../../../host/src/platform.ts";
+import { deskEdgeWorkspaceAssets } from "../../../session/src/workspace-assets.ts";
 import { escribirPref, leerPref } from "../../../session/src/prefs.ts";
 import { listen } from "../../../host/src/serviceEvents.ts";
 import { createAccountRequests } from "./account-requests.ts";
@@ -186,6 +187,9 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") returned(); });
   }
   if (capabilities().nativeWindow) {
+    if (!capabilities().accountAssets) {
+      setCapabilities({ ...capabilities(), accountAssets: deskEdgeWorkspaceAssets(sessions.send) });
+    }
     // Las peticiones de la CLI (`account.request`); al arrancar se drenan las que llegaron antes.
     void sessions.refresh().then(() => requests.pump());
     void listen("danil-connect", () => { void adoption.retry(); }).catch(() => {});

@@ -222,11 +222,14 @@ export function registryRow(w: AccountWorkspace): Row {
 function mergeWorkspaces(ctx: MergeContext, parts: Slice[]): unknown {
   const lists = parts.filter((s) => isRow(s.value) && Array.isArray((s.value as Row).workspaces));
   if (!lists.length && !ctx.registry?.length) return parts[0]?.value;
-  const rows = new Map<string, { row: Row; owner: string | null; machines: Set<string> }>();
+  const rows = new Map<string, { row: Row; owner: string | null; logo: { path: string; owner: string } | null; machines: Set<string> }>();
+  const logoOf = (w: Row, machine: string) => (typeof w.logo === "string" && w.logo.trim() ? { path: w.logo, owner: machine } : null);
   for (const s of lists)
     for (const w of (s.value as Row).workspaces as Row[]) {
       if (typeof w?.id !== "string") continue;
-      const seen = rows.get(w.id) ?? { row: { ...w, context_machine: text(w.context_root) ? s.machine : null }, owner: s.machine, machines: new Set<string>() };
+      const candidateLogo = logoOf(w, s.machine);
+      const seen = rows.get(w.id) ?? { row: { ...w, context_machine: text(w.context_root) ? s.machine : null }, owner: s.machine, logo: candidateLogo, machines: new Set<string>() };
+      if (!seen.logo && candidateLogo) seen.logo = candidateLogo;
       // La raíz es local a cada máquina; basta que una tenga contexto para el aviso del workspace.
       if (!text(seen.row.context_root) && text(w.context_root)) {
         seen.row = { ...w, context_machine: s.machine };
@@ -240,17 +243,19 @@ function mergeWorkspaces(ctx: MergeContext, parts: Slice[]): unknown {
     if (context) {
       seen.row = { ...context.row, context_machine: context.machine };
       seen.owner = context.machine;
+      if (!seen.logo) seen.logo = logoOf(context.row, context.machine);
     }
   }
   const known = new Set(ctx.order);
   for (const w of ctx.registry ?? []) {
-    const seen = rows.get(w.id) ?? { row: registryRow(w), owner: null, machines: new Set<string>() };
+    const seen = rows.get(w.id) ?? { row: registryRow(w), owner: null, logo: null, machines: new Set<string>() };
     for (const c of w.computers) if (known.has(c)) seen.machines.add(c);
     rows.set(w.id, seen);
   }
-  const fileOf = (row: Row, owner: string | null) => (owner && owner !== ctx.self && typeof row.logo === "string" && isPath(row.logo) ? { logo: wrap(owner, row.logo) } : {});
+  const fileOf = (logo: { path: string; owner: string } | null) =>
+    logo ? { logo: logo.owner !== ctx.self && isPath(logo.path) ? wrap(logo.owner, logo.path) : logo.path } : {};
   const order = (m: string) => position(ctx, m);
-  const workspaces = [...rows].map(([id, { row, owner, machines }]) => ({ ...row, ...fileOf(row, owner), id, machines: [...machines].sort((a, b) => order(a) - order(b)) }));
+  const workspaces = [...rows].map(([id, { row, logo, machines }]) => ({ ...row, ...fileOf(logo), id, machines: [...machines].sort((a, b) => order(a) - order(b)) }));
   const lead = lists[0];
   const live = lists.map((s) => (s.value as Row).active).find((a): a is string => typeof a === "string" && rows.has(a)) ?? null;
   const base = lead ? (encode(ctx, lead.machine, lead.value) as Row) : { migrations: [] };

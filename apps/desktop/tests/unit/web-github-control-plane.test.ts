@@ -54,7 +54,9 @@ test("webEdgeGithubAccount routes github_account_* commands over EdgeTransport w
 
   const auth = await web.handle("github_account_authorize", { scope: "ws_1" }) as { url: string };
   assert.equal(auth.url, "https://github.com/login/oauth/authorize");
-  assert.ok(calls.find((c) => c.path === "workspaces/ws_1/github/authorize")?.body?.includes("https://beta.danil.ai/terminus/"));
+  const authCall = calls.find((c) => c.path === "workspaces/ws_1/github/authorize");
+  const authBody = JSON.parse(authCall?.body ?? "{}") as { return_to?: string };
+  assert.equal(authBody.return_to, "https://beta.danil.ai/terminus/");
 
   const session = await web.handle("danil_session_status") as { state: string };
   assert.equal(session.state, "connected");

@@ -83,7 +83,11 @@ export function surfaceOf(
   const own = all.filter((s) => s.provider === agent || canonicalAgentId(s.provider, model) === canonicalAgentId(agent, model));
   if (own.length === 0) return undefined;
 
-  const chosen = catalog.find((m) => m.id === model);
+  const chosen =
+    catalog.find((m) => m.id === model) ??
+    (model
+      ? { id: model, gratis: model === "danil-free/reflection/beam-free" ? true : undefined }
+      : undefined);
   const serves = (s: Surface) => !chosen || surfaceHas(s, chosen);
 
   const previous = own.find((s) => s.id === current);
