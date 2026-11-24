@@ -19,3 +19,9 @@ export { COMMAND_NOT_HERE, COMMAND_UNSUPPORTED, CommandSupport, type Support, is
 export { type ChatBackground, type ChatBackgroundChange, type ChatBackgroundView, type ChatVeil, DEFAULT_CHAT_VEIL, chatBackgroundImageUrl, chatBackgroundView } from "./background.ts";
 export { isSingle as isSingleAttention, mergeAttention } from "./attention.ts";
 export type { Activity, ActivityEvent, ActivityLog, ActivityRow, ActivityState, ActivityStep } from "./activity.ts";
+export type {
+  LoopbackBridgeDeps,
+  LoopbackLoginEvent,
+  LoopbackLoginOrigin,
+  LoopbackLoginPending,
+} from "./loopbackLogin.ts";

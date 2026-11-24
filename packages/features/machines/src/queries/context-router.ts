@@ -62,7 +62,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
         localWorkspace: !free && config.native ? workspace => localWorkspaces.get(workspace) === info.org : undefined,
         readWorkspaceSpaces: config.readContextSpaces && (workspace => config.readContextSpaces!(context, info.org, workspace)),
         deliverRemote: config.native !== null,
-        deliver: events => config.deliver?.(events.filter(event => event.name === "attention" || activeContext === context).map(event => event.name === "attention" ? { ...event, payload: attention.project(event.payload, context) } : event)),
+        deliver: events => config.deliver?.(events.filter(event => event.name === "attention" || activeContext === context).map(event => event.name === "attention" ? { ...event, payload: attention.project(event.payload, context) } : event.name === "loopback-login" && event.payload && typeof event.payload === "object" ? { ...event, payload: { ...(event.payload as Record<string, unknown>), context } } : event)),
         registry: undefined, engineWorkspaces: undefined,
       });
       contexts.set(context, router); placement.set(context, fingerprint);

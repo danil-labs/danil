@@ -1,5 +1,6 @@
 import type { InvokeArgs, InvokeOptions } from "@tauri-apps/api/core";
 import { invoke } from "../../../../engine-client/src/client.ts";
+import { cancelLoopbackForAccount } from "../../../../engine-client/src/loopbackLogin.ts";
 
 export function accountStatus<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
   return invoke<res>("account_status", args, options);
@@ -10,6 +11,8 @@ export function addAccount<res = unknown>(args?: InvokeArgs, options?: InvokeOpt
 }
 
 export function cancelLogin<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
+  const id = (args as { id?: unknown } | undefined)?.id;
+  if (typeof id === "string") cancelLoopbackForAccount(id);
   return invoke<res>("cancel_login", args, options);
 }
 

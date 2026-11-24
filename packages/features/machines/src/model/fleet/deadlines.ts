@@ -43,4 +43,6 @@ export const PASSIVE: ReadonlySet<string> = new Set([
   "guest_children", "guest_channels", "guest_events",
   // El disco de la máquina: medirlo o limpiarlo nunca la enciende.
   "list_storage", "reclaim_storage", "empty_build_cache", "collect_orphans",
+  // El puente de loopback solo opera sobre un login activo en una máquina ya encendida.
+  "loopback_login_pending", "loopback_login_deliver",
 ]);

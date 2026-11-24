@@ -21,7 +21,7 @@ import type { createAccionesDeCuentas } from "./AccountsActions";
 import type { createPartesDeCuentas } from "./AccountsParts";
 
 export function createDialogosDeCuentas(cuentas: ReturnType<typeof createCuentas>, conexion: ReturnType<typeof createConexionDeCuentas>, acciones: ReturnType<typeof createAccionesDeCuentas>, partes: ReturnType<typeof createPartesDeCuentas>) {
-  const { enCurso, instalando, url, pideCodigo, porConfirmar, enlaceCopiado, copiaFallida, codigo, setCodigo, salida, ofrecerTerminal, machineOf, agente } = cuentas;
+  const { enCurso, instalando, url, pideCodigo, porConfirmar, enlaceCopiado, copiaFallida, codigo, setCodigo, aviso, salida, ofrecerTerminal, machineOf, agente } = cuentas;
   const { etiqueta, acto, terminalLocal, conectar, pidiendoClave, setPidiendoClave, setClave, refrescar, claveDe, clave, guardarClave, guardandoClave } = conexion;
   const { copiarEnlace, enviarCodigo } = acciones;
   const { cancelarConexion } = partes;
@@ -105,6 +105,9 @@ export function createDialogosDeCuentas(cuentas: ReturnType<typeof createCuentas
 
               <Show when={pideCodigo()}>
                 <Paso numero={url() ? 2 : 1} titulo={t("settings.accounts.step_code")}>
+                  <Show when={aviso()}>
+                    {(n) => <p class="m-0 text-xs text-neutral-500" data-login-notice="">{n()}</p>}
+                  </Show>
                   <LoginCodeForm value={codigo()} onInput={setCodigo} onSubmit={() => void enviarCodigo()} />
                 </Paso>
               </Show>

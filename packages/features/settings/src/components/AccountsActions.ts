@@ -9,7 +9,7 @@ import type { createCuentas } from "./AccountsState";
 import type { createConexionDeCuentas } from "./AccountsConnect";
 
 export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas>, conexion: ReturnType<typeof createConexionDeCuentas>) {
-  const { agente, setEstados, setSinComprobar, setPorQuitar, setLista, lista, enCurso, setUrl, setPorConfirmar, setPideCodigo, setEnCurso, setSalida, setConexionFallida, setAgentes, setConectadaVez, setOfrecerTerminal, setCopiaFallida, copiarLaUrl, codigo, machineOf, setCodigo, setFallo, setRepuestas, setReponiendo } = cuentas;
+  const { agente, setEstados, setSinComprobar, setPorQuitar, setLista, lista, enCurso, setUrl, setPorConfirmar, setPideCodigo, setEnCurso, setAviso, setSalida, setConexionFallida, setAgentes, setConectadaVez, setOfrecerTerminal, setCopiaFallida, copiarLaUrl, codigo, machineOf, setCodigo, setFallo, setRepuestas, setReponiendo } = cuentas;
   const { comprobadas, refrescar, comprobar, cancelarEspera, descartarSiVacia, mirarEspera } = conexion;
   // Cambiar de agente reinicia lo que era de la lista anterior. Con `on(...)`:
   // el cuerpo lee más señales de las que deben dispararlo.
@@ -123,6 +123,7 @@ export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas
         setEnCurso(null);
         setPideCodigo(false);
         setPorConfirmar(null);
+        setAviso(null);
         if (text) {
           setSalida((s) => [...s, text]);
           setConexionFallida({ id: account, texto: text });
@@ -154,6 +155,8 @@ export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas
         cancelarEspera();
         setOfrecerTerminal(false);
       }
+      const msg = text.trim();
+      if (kind === "notice" && msg && !/^https?:\/\//.test(msg)) setAviso(msg);
       setSalida((s) => [...s, text].slice(-12));
     });
 

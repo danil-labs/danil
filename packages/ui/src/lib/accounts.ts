@@ -57,6 +57,8 @@ export type AccountList = {
    * (`CLAUDE.md`).
    */
   shared_credential: string | null;
+  /** Por máquina en listas combinadas: razón de bloqueo solo en las máquinas que ya tienen cuenta y comparten credencial. */
+  shared_credential_by_machine?: Record<string, string>;
   /**
    * Dónde acaba el secreto de este agente, cuando no es el llavero del sistema.
    *
