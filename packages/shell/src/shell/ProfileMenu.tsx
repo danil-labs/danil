@@ -10,17 +10,16 @@ import { noteWebAccountMode, usesGroupAccounts } from "./session-menu-mode";
 import { ProfileThemeAndBug, ProfileWebSignOut } from "./ProfileMenuItems";
 
 const LegacyProfileMenu = lazy(() => import("./LegacyProfileMenu"));
+const OrganizationHarnessLink = lazy(() => import("./OrganizationHarnessLink"));
 
-
-
-
-
-/** Las preferencias del equipo y, en la web, sus controles de navegador. */
+/** Las preferencias del equipo, el Harness de la organización y, en la web, sus controles de navegador. */
 export default function ProfileMenu(props: {
   onAccount: () => void;
   onReportarBug: () => void;
   /** El workspace abierto: también tiene cuadro aunque no esté agregado. */
   open?: string | null;
+  /** El contexto de sesión del workspace abierto, si viene de una cuenta de Danil. */
+  context?: string | null;
 }) {
   const [open, setOpen] = createSignal(false);
   const [tema, setTema] = createSignal<Apariencia>(apariencia());
@@ -43,6 +42,9 @@ export default function ProfileMenu(props: {
       </PopoverAnchor>
       <PopoverContent class="w-72 p-1" aria-label={t("shell.profile.menu")}>
         <ProfileThemeAndBug tema={tema} setTema={setTema} setOpen={setOpen} onReportarBug={props.onReportarBug} />
+        <Suspense fallback={null}>
+          <OrganizationHarnessLink workspace={props.open} context={props.context} onNavigate={() => setOpen(false)} />
+        </Suspense>
         <Show when={capabilities().nativeWindow}><EmptySessionSignOut open={props.open ?? null} onDone={() => setOpen(false)} /></Show>
         <ProfileWebSignOut setOpen={setOpen} />
       </PopoverContent>

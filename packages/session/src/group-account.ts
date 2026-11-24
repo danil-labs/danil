@@ -6,7 +6,7 @@ import { groupPromoReply } from "./group-promo-reply.ts";
 import { normalizePromoCode } from "./promo-rejections.ts";
 import { settledContextIds } from "./settled-contexts.ts";
 
-export type GroupAccount = { context: string; org: string; name: string; plan: string | null; role?: string | null };
+export type GroupAccount = { context: string; org: string; name: string; plan: string | null; role?: string | null; personal?: boolean };
 export type { GroupReply };
 export type GroupSend = (context: string, method: "GET" | "POST", path: string, body?: unknown, key?: string) => Promise<GroupReply>;
 
