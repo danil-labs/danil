@@ -264,8 +264,9 @@ export function Composer({
   const [routerRows, setRouterRows] = useState<FreeModels[] | null>(null);
   const [routerAsking, setRouterAsking] = useState<FreeRouterRow | null>(null);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
-  // El CLI elegido que espera la confirmación del traspaso.
+  // El CLI elegido que espera la confirmación del traspaso (y su modelo si viene de un servicio de Danil).
   const [candidate, setCandidate] = useState<string | null>(null);
+  const [candidateModel, setCandidateModel] = useState<string | null>(null);
   // El último modelo que la persona tocó en la hoja: un esfuerzo solo se guarda con ese.
   const picked = useRef<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -301,8 +302,13 @@ export function Composer({
   // Cambiar de CLI es de una tarea abierta; en una nueva se elige sin confirmar.
   const locked = providerLocked || (Boolean(session) && !canHandoff);
   const providerLabel = (id: string | null) => (id ? providers.find((p) => p.id === id)?.label ?? id : "");
-  const pendingLabel = pendingProvider ? providerLabel(pendingProvider) : null;
-  const candidateLabel = candidate ? providerLabel(candidate) : null;
+  const pendingLabel = pendingProvider
+    ? (isDanilCreditsModel(model) ? t("services.credits") : providerLabel(pendingProvider))
+    : null;
+  const candidateLabel = candidate
+    ? (isDanilCreditsModel(candidateModel) ? t("services.credits") : providerLabel(candidate))
+    : null;
+  const candidateMark = selectedModelMark(candidate, candidateModel);
 
   const [catalogRevision, setCatalogRevision] = useState(0);
   // Abrir no enciende: el estado del Router solo se pregunta a una máquina encendida.
@@ -394,7 +400,7 @@ export function Composer({
   const chosen = models?.models.find((m) => m.id === model) ?? null;
   const selectedSurface = ownSurfaces.find((s) => s.id === surface) ?? (ownSurfaces.length === 1 ? ownSurfaces[0] : undefined);
   const selectedMark = selectedModelMark(current, model, selectedSurface);
-  const selectedProviderLabel = selectedSurface ? surfacePresentation(selectedSurface, { free: t("composer.free_models") }).label : providerLabel(current);
+  const selectedProviderLabel = isDanilCreditsModel(model) ? t("services.credits") : (selectedSurface ? surfacePresentation(selectedSurface, { free: t("composer.free_models"), credits: t("services.credits") }).label : providerLabel(current));
   const serviceLabels = { credits: t("services.label"), router: t("composer.free_models") };
   const modelText = model ? modelLabel(model, serviceLabels, models) : previewLabel(lang, "default_model");
   // El Router y Danil Credits viven en la sección Danil: ni su superficie ni sus modelos se repiten abajo.
@@ -440,8 +446,8 @@ export function Composer({
     if (!provider) return;
     if (provider !== current) {
       if (locked) return;
-      chooseProvider(provider);
-      // El traspaso de una tarea abierta se confirma antes; el modelo se elige después.
+      chooseProvider(provider, id);
+      // El traspaso de una tarea abierta se confirma antes; el modelo elegido se aplica al confirmar.
       if (session && canHandoff && provider !== initialProvider) return;
     }
     if (provider === routerSurface?.provider) setSurface(routerSurface.id);
@@ -609,16 +615,18 @@ export function Composer({
   }
 
   /** Elegir otro CLI en una tarea abierta pide confirmación: la conversación viaja como texto. */
-  function chooseProvider(id: string) {
+  function chooseProvider(id: string, targetModel: string | null = null) {
     if (id === current) return;
     if (session && !canHandoff) return;
     if (session && canHandoff && id !== initialProvider) {
       setCandidate(id);
+      setCandidateModel(targetModel);
       setSheet("handover");
       return;
     }
+    setCandidateModel(null);
     setProvider(id);
-    setModel(null);
+    setModel(targetModel);
     setEffort(null);
     if (session && id === initialProvider) onPendingProvider?.(null);
   }
@@ -627,14 +635,17 @@ export function Composer({
     // La tarea pudo cambiar debajo de la hoja: sin sesión o sin permiso, no se confirma.
     if (!candidate || !session || !canHandoff) {
       setCandidate(null);
+      setCandidateModel(null);
       setSheet(null);
       return;
     }
     setProvider(candidate);
-    setModel(null);
+    setModel(candidateModel);
     setEffort(null);
+    picked.current = candidateModel;
     onPendingProvider?.(candidate);
     setCandidate(null);
+    setCandidateModel(null);
     setSheet(null);
   }
 
@@ -954,18 +965,18 @@ export function Composer({
         }}
       </Sheet>
 
-      <Sheet visible={sheet === "handover"} title={t("composer.handover_title")} onClose={() => { setCandidate(null); setSheet(null); }}>
+      <Sheet visible={sheet === "handover"} title={t("composer.handover_title")} onClose={() => { setCandidate(null); setCandidateModel(null); setSheet(null); }}>
         <View style={styles.handoverBody}>
           <View style={styles.handoverChange}>
             {selectedMark ? <BrandMark id={selectedMark} size={18} color={theme.text} /> : null}
             <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{selectedProviderLabel}</Text>
             <Icon name="chevron-right" size={14} color={theme.textMuted} />
-            <BrandMark id={candidate ?? ""} size={18} color={theme.text} />
+            {candidateMark ? <BrandMark id={candidateMark} size={18} color={theme.text} /> : null}
             <Text style={{ color: theme.text, fontSize: TEXT.ui, fontWeight: "600" }}>{candidateLabel}</Text>
           </View>
           <Text style={{ color: theme.textMuted, fontSize: TEXT.body, lineHeight: 20 }}>{t("composer.handover_description")}</Text>
           <SheetOption testID="handover-confirm" icon="check" label={t("composer.handover_confirm", { provider: candidateLabel ?? "" })} onPress={confirmHandover} />
-          <SheetOption label={t("task.actions.cancel")} onPress={() => { setCandidate(null); setSheet("model"); }} />
+          <SheetOption label={t("task.actions.cancel")} onPress={() => { setCandidate(null); setCandidateModel(null); setSheet("model"); }} />
         </View>
       </Sheet>
     </View>

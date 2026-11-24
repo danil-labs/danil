@@ -188,6 +188,7 @@ export function createHandover(deps: HandoverDeps) {
         clave: claveAbierta(),
         sesion: abierta,
         desde: actual ?? agent(),
+        desdeModelo: traspasos()[abierta]?.model ?? filaDe(abierta)?.model ?? model() ?? null,
         opcion,
       });
       return;
