@@ -8,7 +8,7 @@ export const SETTINGS_ENTRIES = [
   { id: "appearance", group: "you", tabs: ["appearance"] },
   { id: "account", group: "you", tabs: ["cuenta-danil", "emails", "usage", "plan"] },
   { id: "security", group: "you", tabs: ["security"] },
-  { id: "preferences", group: "you", tabs: ["languages", "workspaces"] },
+  { id: "preferences", group: "you", tabs: ["workspaces"] },
   { id: "ai-accounts", group: "you", tabs: ["proveedores-ia"] },
   { id: "source-control", group: "you", tabs: ["fuentes"] },
   { id: "agents-skills", group: "workspace", tabs: ["agentes", "skills"] },
@@ -24,6 +24,7 @@ const MOVED: Record<string, string> = {
   download: "maintenance",
   notify: "general",
   notifications: "general",
+  languages: "general",
 };
 
 export type SettingsEntryId = (typeof SETTINGS_ENTRIES)[number]["id"];

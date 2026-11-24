@@ -1,5 +1,5 @@
 {
-  "contrato": 2,
+  "contrato": 1,
   "aporta": "lengua",
   "gate": "ninguno",
   "codigo": "yua",
@@ -7,9 +7,5 @@
   "version": "0.1.0",
   "formato": "es-MX",
   "direccion": "ltr",
-  "autoria": "Danil — borrador sin revisión de hablante",
-  "salida": {
-    "gate": "contexto-del-agente",
-    "perfil": "salida.json"
-  }
+  "autoria": "Danil — borrador sin revisión de hablante"
 }

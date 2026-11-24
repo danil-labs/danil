@@ -61,8 +61,8 @@ function leer(dir, omitir = new Set()) {
 }
 
 if (!existsSync(PAQUETES)) {
-  console.error(`plugins/languages/ no existe, y tauri.conf.json la empaqueta como recurso del bundle`);
-  process.exit(1);
+  console.log("Sin paquetes de lengua externos en plugins/languages/ (yua ya viaja embebido en src/locales/yua/).");
+  process.exit(0);
 }
 const base = leer(BASE);
 const problemas = [];
@@ -70,8 +70,8 @@ const codigos = readdirSync(PAQUETES).filter(
   (nombre) => !nombre.startsWith(".") && statSync(join(PAQUETES, nombre)).isDirectory(),
 );
 if (codigos.length === 0) {
-  console.error(`plugins/languages/ está vacía, y tauri.conf.json la empaqueta como recurso del bundle`);
-  process.exit(1);
+  console.log("Sin paquetes de lengua externos en plugins/languages/.");
+  process.exit(0);
 }
 
 for (const codigo of codigos) {

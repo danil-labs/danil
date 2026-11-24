@@ -33,9 +33,6 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "resources": {
-      "../plugins/languages": "lenguas"
-    },
     "externalBin": [
       "binaries/danil-engine",
       "binaries/seldon-runtime"

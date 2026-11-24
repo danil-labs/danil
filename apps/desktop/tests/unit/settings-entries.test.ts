@@ -10,6 +10,7 @@ test("old settings ids open the entry and tab that now hold them", () => {
   assert.deepEqual(settingsTarget("cuenta-danil"), { entry: "account", tab: "cuenta-danil" });
   assert.deepEqual(settingsTarget("security"), { entry: "security", tab: null });
   assert.deepEqual(settingsTarget("workspaces"), { entry: "preferences", tab: "workspaces" });
+  assert.deepEqual(settingsTarget("languages"), { entry: "general", tab: null });
   assert.deepEqual(settingsTarget("proveedores-ia"), { entry: "ai-accounts", tab: "proveedores-ia" });
   assert.equal(settingsTarget("machines"), null);
   assert.equal(settingsTarget("entorno"), null);
@@ -63,5 +64,6 @@ test("eleven entries, general first then appearance, security after account, mai
   assert.equal(maintenance?.group, "footer");
   assert.deepEqual(maintenance ? [...maintenance.tabs] : [], ["maintenance"]);
   const tabs = SETTINGS_ENTRIES.flatMap((e) => [...e.tabs]);
+  assert.ok(!tabs.includes("languages"));
   assert.equal(new Set(tabs).size, tabs.length);
 });
