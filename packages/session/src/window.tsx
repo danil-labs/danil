@@ -23,7 +23,7 @@ import { windowContext } from "./window-context";
 import { openWorkspaceUrl } from "./open-workspace-url";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => MachinesQuery; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
+type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => MachinesQuery; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; assets?: Capabilities["accountAssets"]; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
 const Picker = lazy(() => import("../../features/machines/src/screens/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../../features/machines/src/screens/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -185,6 +185,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       return fleet.license(scope.current()?.context);
     },
     accountComputers: { list: async () => { const answer = await scope.client(scope.current()?.context).list(); return answer.kind === "ok" ? { kind: "ok", value: answer.value.map(machineToComputer) } : answer.kind === "unavailable" ? { kind: "error", status: answer.status } : answer; }, onRenamed: () => {}, subscribe: changed => { window.addEventListener("harness:machines", changed); return () => window.removeEventListener("harness:machines", changed); } },
+    accountAssets: base.assets,
     accountCredentials: base.credentials,
     webAccounts: mounted.webAccounts,
     webRailCatalog: base.rail, webPromo: base.promo, groupAccount: base.groupAccount, webReauth: base.reauth,
