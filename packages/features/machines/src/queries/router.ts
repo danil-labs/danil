@@ -847,9 +847,28 @@ function createRouterCore(config: RouterConfig) {
   async function webListing(command: string, args: Args, localSlices: Slice[] = []): Promise<unknown> {
     const envelopes = fleet.machines().map((m) => ({ machine: m.id, workspace: null, command, args }));
     const slices = await gather(envelopes, { settles: !!fleet.getRegistry(), fresh: true });
-    const merged = withOrganizations(fleet.merge(command, [...localSlices, ...slices], null) as { workspaces?: { id?: unknown }[]; active?: unknown } | undefined);
-    unlisted = !merged;
-    if (!merged) throw noAnswer(slices, null);
+    const rawMerged = withOrganizations(fleet.merge(command, [...localSlices, ...slices], null) as { workspaces?: { id?: unknown }[]; active?: unknown } | undefined);
+    const catalog = config.catalogWorkspaces?.() ?? null;
+    const toCatalogRow = (w: { id: string; name: string; org?: string | null }) => ({
+      ...registryRow({ id: w.id, name: w.name, computers: [], projects: [], settings: null, created_at: null }),
+      id: w.id,
+      ...(w.org ? { account: { org: w.org } } : {}),
+    });
+    if (!rawMerged && localSlices.length === 0 && slices.length === 0 && catalog !== null) {
+      unlisted = true;
+      const workspaces = catalog.map(toCatalogRow);
+      const ids = workspaces.map((w) => w.id);
+      if (!active) active = ids[0] ?? null;
+      return { workspaces, active };
+    }
+    unlisted = !rawMerged;
+    if (!rawMerged) throw noAnswer(slices, null);
+    let merged: { workspaces?: { id?: unknown }[]; active?: unknown } = rawMerged;
+    if (catalog?.length) {
+      const existing = new Set((merged.workspaces ?? []).map((w) => w?.id).filter((id): id is string => typeof id === "string"));
+      const extra = catalog.filter((w) => !existing.has(w.id)).map(toCatalogRow);
+      if (extra.length) merged = { ...merged, workspaces: [...(merged.workspaces ?? []), ...extra] };
+    }
     const ids = (merged.workspaces ?? []).map((w) => w?.id).filter((id): id is string => typeof id === "string");
     // Una máquina sin workspaces no deja la página sin ninguno abierto: el primero de la cuenta.
     // El abierto es de la página: que ninguna máquina lo liste no lo cambia por otro (se dice «sin máquina»).

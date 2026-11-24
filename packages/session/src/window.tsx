@@ -5,7 +5,7 @@ import { readContextSpaces } from "../../platform-client/src/workspace-spaces.ts
 import type { MachinesQuery } from "../../features/machines/src/queries/machines-query.ts";
 import { Fleet, memberKey, relayLink, type StorageLike, unwrap } from "../../features/machines/src/model/fleet/index.ts";
 import { createSignal, lazy, Suspense } from "solid-js";
-import { createContextRelayPool, createRemoteGuestManager, isRemoteGuestMachine, machinesListed, mergeByMachineId } from "../../features/machines/src";
+import { createContextRelayPool, createRemoteGuestManager, deriveMachineAvailability, isRemoteGuestMachine, type MachineAvailability, machinesListed, mergeByMachineId } from "../../features/machines/src";
 import { sessionRailState } from "../../shell/src/shell";
 import { createRouter, type SliceChange } from "../../features/machines/src/queries/router";
 import type { AccountProfileSource } from "../../features/settings/src/model/account-profile";
@@ -21,6 +21,7 @@ import { webMachineCall } from "./workspace-runtime";
 import { MACHINE_ACTION } from "../../host/src/machine-action";
 import { windowContext } from "./window-context";
 import { openWorkspaceUrl } from "./open-workspace-url";
+import { activeWorkspaceContext } from "./workspace-context";
 
 declare const __TERMINUS_VERSION__: string;
 type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => MachinesQuery; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
@@ -39,7 +40,9 @@ type Mounted = { storage: StorageLike | null; webAccounts?: WebAccountsSource };
 export function mountWindow(base: Base, mounted: Mounted) {
   let stopped = false;
   let refreshing: Promise<boolean> | undefined;
-  const [missing, setMissing] = createSignal(true);
+  const [settled, setSettled] = createSignal(false);
+  const [serviceError, setServiceError] = createSignal(false);
+  const [permitted, setPermitted] = createSignal(true);
   const [revision, bump] = createSignal(0);
   let listed = new Map<string, Machine>();
   const powers = new Map<string, string>();
@@ -100,14 +103,54 @@ export function mountWindow(base: Base, mounted: Mounted) {
     onSlice: () => bump(n => n + 1),
   });
   const stopListing = fleet.onListing(() => bump(n => n + 1));
+  const contextCatalog = (context: string) => {
+    const rows = base.rail?.workspaces(context);
+    if (!rows) return null;
+    const org = scope.info(context)?.org ?? null;
+    return rows.map((row) => ({ id: row.id, name: row.name, org }));
+  };
+  const allCatalog = () => {
+    if (!base.rail) return null;
+    const groups = scope.groups();
+    if (!groups.length) return null;
+    let resolved = false;
+    const seen = new Set<string>();
+    const out: { id: string; name: string; org: string | null }[] = [];
+    for (const group of groups) {
+      const rows = base.rail.workspaces(group.context);
+      if (!rows) continue;
+      resolved = true;
+      for (const row of rows) {
+        if (seen.has(row.id)) continue;
+        seen.add(row.id);
+        out.push({ id: row.id, name: row.name, org: group.org ?? null });
+      }
+    }
+    return resolved ? out : null;
+  };
   const active = createRouter({ contextInfo: scope.routing, self: null, fleet, native: null, deliver, onSlices: slicesChanged,
     readContextSpaces: readContextSpaces(base.sessions.handle),
+    catalogWorkspaces: allCatalog,
+    contextCatalogWorkspaces: contextCatalog,
     pickedFor: workspace => {
       const picked: Record<string, string> = leerPref("machines.run_on", {});
       return workspace ? picked[workspace] ?? null : null;
     },
   });
   const url = openWorkspaceUrl(active, base.sessions);
+  const availability = (): MachineAvailability => {
+    revision();
+    const context = activeWorkspaceContext() ?? scope.current()?.context ?? base.active.current()?.context ?? undefined;
+    const list = context ? fleet.machines(context) : fleet.machines();
+    return deriveMachineAvailability({
+      permitted: permitted(),
+      settled: settled(),
+      serviceError: serviceError(),
+      machines: list.map((m) => ({ power: fleet.power(m.id, m.context), wakes: m.wakes, child: m.child })),
+      scope: "context",
+    });
+  };
+  const missing = () => availability().kind === "unavailable";
   const status = (id: string, context?: string): MachineStatus => { const power = fleet.power(id, context); return power === "on" ? "online" : power === "off" ? "offline" : power; };
   const machines = () => {
     revision();
@@ -119,18 +162,24 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const any = () => (revision(), fleet.machines().length > 0);
   async function update() {
     if (stopped) return false;
-    if (!base.permits("machines")) { setMissing(true); fleet.setMachines(remoteGuests.syncHosts([])); return false; }
+    if (!base.permits("machines")) { setPermitted(false); setServiceError(false); setSettled(true); fleet.setMachines(remoteGuests.syncHosts([])); return false; }
+    setPermitted(true);
     const inventory = await scope.inventory();
-    if (!inventory) { setMissing(true); fleet.setMachines(remoteGuests.syncHosts([])); bump(n => n + 1); return false; }
+    if (!inventory) { setServiceError(true); setSettled(true); fleet.setMachines(remoteGuests.syncHosts([])); bump(n => n + 1); return false; }
     const { answer, rows } = inventory;
     if (stopped) return false;
     if (answer.kind !== "ok") {
+      const transient = answer.kind === "error" && (answer.status === null || answer.status === 408 || answer.status === 429 || answer.status >= 500);
+      if (transient && settled()) { bump(n => n + 1); return false; }
+      setServiceError(true);
+      setSettled(true);
+      if (!transient) fleet.setMachines(remoteGuests.syncHosts([]));
       bump(n => n + 1);
-      if (answer.kind === "error" && (answer.status === null || answer.status === 408 || answer.status === 429 || answer.status >= 500)) return false;
-      setMissing(true); fleet.setMachines(remoteGuests.syncHosts([])); return false;
+      return false;
     }
     listed = new Map(rows.map(({ machine, group }) => [memberKey(machine.machine_id, group.context), machine]));
-    setMissing(false);
+    setServiceError(false);
+    setSettled(true);
     bump(n => n + 1);
     fleet.setMachines(remoteGuests.syncHosts(rows.map(({ machine, group }) => ({ id: machine.machine_id, name: scope.machineName(machine, group, rows),
       wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: scope.fleetKind(machine, group), hosted: scope.hosted(machine), context: group.context, organizationId: machine.organization_id ?? null,
@@ -155,6 +204,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     ...base.services,
     organizations: base.organizations,
     initialSettings: takeSettingsParam(),
+    machineAvailability: availability,
     machineName: id => id === "local" ? (missing() ? t("web.machines.unavailable") : "") : fleet.name(id, scope.current()?.context),
     taskWritable: id => {
       revision();

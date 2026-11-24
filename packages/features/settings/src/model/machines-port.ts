@@ -10,4 +10,5 @@ export type MaquinasDeAjustes = {
   machineName: (id: string, local?: boolean) => string;
   machineOf: (id: string | null | undefined) => InvokeOptions | undefined;
   isDanilWorkspace: (workspace: string) => boolean;
+  availability?: () => import("../../../machines/src/model/availability").MachineAvailability;
 };

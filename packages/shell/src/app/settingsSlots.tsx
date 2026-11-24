@@ -12,6 +12,7 @@ import { displayName, notifyProfiles } from "../../../features/projects/src/quer
 import { createDanilCreditsBalance } from "../../../features/chat/src/queries/store";
 import { isDanilWorkspace } from "../../../features/machines/src";
 import { machineName, machineOf, machines } from "../../../features/machines/src/queries/store";
+import { machineAvailability } from "../../../host/src/platform";
 
 /** Lo de máquinas que usa Configuración: es de machines y el shell lo enchufa (R3). */
 const maquinasDeAjustes: MaquinasDeAjustes = {
@@ -19,6 +20,7 @@ const maquinasDeAjustes: MaquinasDeAjustes = {
   machineName,
   machineOf,
   isDanilWorkspace,
+  availability: machineAvailability,
 };
 
 /** Lo de projects y chat que pinta Configuración: el shell lo enchufa (R3). */

@@ -102,6 +102,7 @@ const steps = [
   ["Hidden workspaces leave the rail, keep their place and stay with the browser person", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/hidden-workspaces.test.ts")], root],
   ["Account menus keep balances and redemption in their organization context", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/group-account.test.ts")], root],
   ["Session machines isolate inventory, admission and account workspaces", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/session-machines.test.ts")], root],
+  ["Machine availability distinguishes loading, no_machines, offline, ready and unavailable", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/machine-availability.test.ts")], root],
   ["The web window runs Desk's session contexts over the cookie, one X-Danil-Session per call", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-session-contexts.test.ts")], root],
   ["Session contexts isolate calls, groups and partial logout", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/session-contexts.test.ts")], root],
   ["Danil workspaces are added by the person, seeded once atomically and kept local on 404/501/403", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-added-sync.test.ts")], root],

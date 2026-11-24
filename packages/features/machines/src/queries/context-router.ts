@@ -1,7 +1,7 @@
 import { FleetError } from "../model/fleet/index.ts";
 import { rememberWorkspaceSnapshot, setActiveWorkspaceContext } from "../../../../session/src/workspace-context.ts";
 import { createContextAttention } from "./context-attention.ts";
-import type { Invoke, RouterConfig } from "../model/router-config.ts";
+import type { CatalogWorkspaceEntry, Invoke, RouterConfig } from "../model/router-config.ts";
 import { scopedFleet } from "./scoped-fleet.ts";
 
 type LocalListing = { workspaces?: { id?: unknown; account?: { org?: unknown } }[] };
@@ -9,6 +9,7 @@ type ContextInfo = { org: string; plan?: string | null };
 export type ContextRouterConfig = RouterConfig & {
   contextInfo?: (context: string) => ContextInfo | null;
   readContextSpaces?: (context: string, organization: string, workspace: string) => ReturnType<NonNullable<RouterConfig["readWorkspaceSpaces"]>>;
+  contextCatalogWorkspaces?: (context: string) => readonly CatalogWorkspaceEntry[] | null;
 };
 type Core = {
   handle: Invoke; events(machine: string, events: {name:string; payload:unknown}[], metadata?: EventMetadata): void;
@@ -62,6 +63,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
         localWorkspace: !free && config.native ? workspace => localWorkspaces.get(workspace) === info.org : undefined,
         organizationCatalog: !free,
         readWorkspaceSpaces: config.readContextSpaces && (workspace => config.readContextSpaces!(context, info.org, workspace)),
+        catalogWorkspaces: config.contextCatalogWorkspaces ? () => config.contextCatalogWorkspaces!(context) : undefined,
         deliverRemote: config.native !== null,
         deliver: events => config.deliver?.(events.filter(event => event.name === "attention" || activeContext === context).map(event => event.name === "attention" ? { ...event, payload: attention.project(event.payload, context) } : event.name === "loopback-login" && event.payload && typeof event.payload === "object" ? { ...event, payload: { ...(event.payload as Record<string, unknown>), context } } : event)),
         registry: undefined, engineWorkspaces: undefined,
