@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../helpers/catalog.ts";
-import { currentActivityAction, observedActivityAction, presentActivity } from "../../src/features/chat/activityPresentation.ts";
+import { currentActivityAction, observedActivityAction, presentActivity } from "../../../../packages/features/chat/src/model/activityPresentation.ts";
 import { pasoDe } from "../../src/lib/steps.ts";
 
 test("stop request suppresses animation and stale action before authoritative completion", () => {

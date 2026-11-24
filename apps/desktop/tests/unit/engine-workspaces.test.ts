@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createEngineWorkspaces, LIGHT_STATE_MACHINES_FEATURE, railOf } from "../../src/features/machines/engine-workspaces.ts";
+import { createEngineWorkspaces, LIGHT_STATE_MACHINES_FEATURE, railOf } from "../../../../packages/features/machines/src/queries/engine-workspaces.ts";
 
 const FOUNDATION = {
   workspace: "fnd00001",

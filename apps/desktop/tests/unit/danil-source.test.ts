@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { Fleet, type MachineInfo } from '../../../../packages/fleet/src/index.ts';
-import { danilAvailable, danilAvailableContext, danilMachines, isDanilWorkspace, listedOf, noteListing, readDanil, readDanilContext, setDanilFleet } from '../../src/features/machines/danil-source.ts';
+import { danilAvailable, danilAvailableContext, danilMachines, isDanilWorkspace, listedOf, noteListing, readDanil, readDanilContext, setDanilFleet } from '../../../../packages/features/machines/src/queries/danil-source.ts';
 
 const org: MachineInfo = { id: 'cmp_org', name: 'Servidor Acme', wakes: false, kind: 'organization', organizationId: 'org_A' };
 const personal: MachineInfo = { id: 'cmp_vm', name: 'Danil VM', wakes: false, kind: 'personal' };

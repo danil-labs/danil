@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createRoot, createSignal } from "solid-js";
-import { createTaskQueues, type QueueScope } from "../../src/features/task-queues/index.ts";
-import type { Encolado } from "../../src/features/chat/index.ts";
+import { createTaskQueues, type QueueScope } from "../../../../packages/features/task-queues/src/index.ts";
+import type { Encolado } from "../../../../packages/features/chat/src/index.ts";
 const message = (id: string, text = id): Encolado => ({ id, text, provider: "codex", model: null, effort: null, permission_mode: null, attachments: [] });
 function fixture(read: (scope: QueueScope) => Promise<Encolado[]> = async () => []) {
   return createRoot(dispose => {

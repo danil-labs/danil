@@ -15,9 +15,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createRoot, createSignal } from "solid-js";
-import type { ChatEvent, Msg, Session } from "../../src/features/chat/index.ts";
-import type { Respuesta } from "../../src/features/chat/Questions.tsx";
-import { createThreadsCore } from "../../src/features/threads/store-core.ts";
+import type { ChatEvent, Msg, Session } from "../../../../packages/features/chat/src/index.ts";
+import type { Respuesta } from "../../../../packages/features/chat/src/components/Questions.tsx";
+import { createThreadsCore } from "../../../../packages/features/chat/src/queries/threads-store-core.ts";
 
 
 // Copia literal del derivado de `Chat.tsx:1856-1874`.

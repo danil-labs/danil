@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createCloudMachines, edgeFetch } from "../../src/features/machines/cloud-machines.ts";
+import { createCloudMachines, edgeFetch } from "../../../../packages/features/machines/src/queries/cloud-machines.ts";
 
 const machine = { machine_id: "cmp_1", name: "Danil", state: "running", connection: "connected" };
 
@@ -179,7 +179,7 @@ test("a retry hint outside the machine intent budget returns without a delayed e
 });
 
 test("changing context cancels a pending machine write", async () => {
-  const { cancelEdgeWrites } = await import("../../src/lib/edge.ts");
+  const { cancelEdgeWrites } = await import("../../../../packages/platform-client/src/edge.ts");
   let calls = 0;
   const cloud = createCloudMachines(async () => {
     calls++;
@@ -191,8 +191,8 @@ test("changing context cancels a pending machine write", async () => {
 });
 
 test("the organization selector cancels the previous machine intent before selecting", async () => {
-  const { cancelEdgeWrites } = await import("../../src/lib/edge.ts");
-  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  const { cancelEdgeWrites } = await import("../../../../packages/platform-client/src/edge.ts");
+  const { edgeOrganizationSource } = await import("../../../../packages/shell/src/shell/organization-edge.ts");
   let entered!: () => void;
   const firstAttempt = new Promise<void>(resolve => { entered = resolve; });
   let writes = 0;

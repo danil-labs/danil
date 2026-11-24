@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { conservarEnOrden, reutilizar, sessionRefresh, type SessionLists } from "../../src/lib/sessionRefresh.ts";
+import { conservarEnOrden, reutilizar, sessionRefresh, type SessionLists } from "../../../../packages/session/src/sessionRefresh.ts";
 
 function deferred<T>() {
   let resolve!: (value: T) => void;

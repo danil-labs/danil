@@ -3,9 +3,9 @@ import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { encode, type MergeContext } from "@terminus/fleet";
 import { UNKNOWN_TASK_GIT, type SidebarGrouping, type TaskGitStatus } from "../../../../packages/ui/src/lib/tasks/index.ts";
-import Sidebar from "../../src/features/shell/Sidebar";
-import type { SessionRow } from "../../src/features/projects/Sessions";
-import { setMachineRoute } from "../../src/lib/invoke";
+import Sidebar from "../../../../packages/shell/src/shell/Sidebar.tsx";
+import type { SessionRow } from "../../../../packages/features/projects/src/screens/Sessions.tsx";
+import { setMachineRoute } from "../../../../packages/engine-client/src/client.ts";
 import { setSidebarView } from "../../src/lib/sidebarView";
 
 let intervalId = 0;

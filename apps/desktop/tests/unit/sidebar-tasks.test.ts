@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { flattenTasks, folderCounts } from "../../src/features/shell/sidebarTasks.ts";
+import { flattenTasks, folderCounts } from "../../../../packages/shell/src/shell/sidebarTasks.ts";
 
 const fila = (id: string, created_at: number, extra: Record<string, unknown> = {}) => ({ id, created_at, ...extra });
 

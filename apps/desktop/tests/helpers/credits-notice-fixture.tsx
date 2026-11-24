@@ -1,5 +1,5 @@
 import { render } from 'solid-js/web';
-import DanilServices from '../../src/features/chat/DanilServices';
+import DanilServices from '../../../../packages/features/chat/src/screens/DanilServices.tsx';
 import { aplicarLengua } from '../../src/lib/i18n';
 export function mount(root: HTMLElement, prepare: () => Promise<void>) {
   aplicarLengua();

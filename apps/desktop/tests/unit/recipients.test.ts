@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import "../helpers/catalog.ts";
-import { transcripcion } from "../../src/features/chat/transcript.ts";
+import { transcripcion } from "../../../../packages/features/chat/src/model/transcript.ts";
 import { aplicarLenguaDeWorkspace, t } from "../../src/lib/i18n.ts";
 
 import {

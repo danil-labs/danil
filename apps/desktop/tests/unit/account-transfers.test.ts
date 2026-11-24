@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { accountId, applyMoves, movesFor, type PendingUnion, prefsPendingUnions, retryUnions } from "../../src/features/shell/account-transfers.ts";
+import { accountId, applyMoves, movesFor, type PendingUnion, prefsPendingUnions, retryUnions } from "../../../../packages/shell/src/shell/account-transfers.ts";
 
 const local = [
   { id: "qmoved01", account: { org: "org_old", account_id: "10" } },

@@ -24,7 +24,7 @@ function engine(replies: Record<string, Reply>) {
   return calls;
 }
 
-const sessions = () => import("../../src/features/settings/danil-sessions.ts");
+const sessions = () => import("../../../../packages/features/settings/src/queries/danil-sessions.ts");
 
 const ALBERTO = {
   account: "u_alberto",
@@ -193,7 +193,7 @@ test("a read failure never selects the legacy account model", async () => {
 });
 
 test("workspace machines come from that account's registry and refuse actions outside its membership", async () => {
-  const { workspaceComputersSource } = await import("../../src/features/machines/workspace-computers.ts");
+  const { workspaceComputersSource } = await import("../../../../packages/features/machines/src/queries/workspace-computers.ts");
   const renamed: string[] = [];
   let fail = false;
   const source = {
@@ -225,7 +225,7 @@ test("workspace machines come from that account's registry and refuse actions ou
 });
 
 test("a stale machine read cannot restore permissions after a newer authority failure", async () => {
-  const { workspaceComputersSource } = await import("../../src/features/machines/workspace-computers.ts");
+  const { workspaceComputersSource } = await import("../../../../packages/features/machines/src/queries/workspace-computers.ts");
   let release!: () => void;
   const old = new Promise<void>((resolve) => { release = resolve; });
   let reads = 0;

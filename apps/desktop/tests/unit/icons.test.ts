@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { iconoDe } from "../../src/features/code/icons.ts";
+import { iconoDe } from "../../../../packages/ui/src/lib/icons.ts";
 
 /**
  * **Lo que se prueba es qué gana cuando hay más de un candidato.** Un icono

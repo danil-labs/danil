@@ -7,9 +7,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { machineToComputer } from "../../../../packages/platform-client/src/machines.ts";
-import { CONNECTED_MACHINES_FEATURE, createConnectedStatus } from "../../src/features/machines/connected-status.ts";
-import { infoOf } from "../../src/features/machines/machine-info.ts";
-import { mergeContextMachines } from "../../src/features/machines/session-cloud.ts";
+import { CONNECTED_MACHINES_FEATURE, createConnectedStatus } from "../../../../packages/features/machines/src/queries/connected-status.ts";
+import { infoOf } from "../../../../packages/features/machines/src/model/machine-info.ts";
+import { mergeContextMachines } from "../../../../packages/features/machines/src/queries/session-cloud.ts";
 
 const DANIL = { context_id: "ctx-danil", org: "org_danil" };
 const STATUS = {

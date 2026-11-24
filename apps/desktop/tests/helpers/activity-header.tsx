@@ -1,13 +1,13 @@
 import "../../src/locales/catalogs";
-import "../../src/styles/global.css";
+import "../../../../packages/ui/src/styles/global.css";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { RegistroDeTrabajo } from "../../src/features/chat/components/activity/TurnActivity";
-import { ComposerAction } from "../../src/features/chat/components/composer/ComposerAction";
-import { PendingHandoff } from "../../src/features/chat/components/thread/PendingHandoff";
-import type { HandoffPresentation } from "../../src/features/conversation-handoff";
-import { TaskUserBubble } from "../../src/features/chat/TaskChatPresentation";
-import { observedActivityAction } from "../../src/features/chat/activityPresentation";
+import { RegistroDeTrabajo } from "../../../../packages/features/chat/src/screens/activity/TurnActivity.tsx";
+import { ComposerAction } from "../../../../packages/features/chat/src/components/composer/ComposerAction.tsx";
+import { PendingHandoff } from "../../../../packages/features/chat/src/screens/thread/PendingHandoff.tsx";
+import type { HandoffPresentation } from "../../../../packages/features/conversation-handoff/src/index.ts";
+import { TaskUserBubble } from "../../../../packages/features/chat/src/components/TaskChatPresentation.tsx";
+import { observedActivityAction } from "../../../../packages/features/chat/src/model/activityPresentation.ts";
 import { pasoDe, type Paso } from "../../src/lib/steps";
 
 document.documentElement.dataset.theme = new URLSearchParams(location.search).get("theme") ?? "dark";

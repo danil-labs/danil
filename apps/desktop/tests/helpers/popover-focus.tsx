@@ -1,5 +1,5 @@
 import { render } from "solid-js/web";
-import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../src/ui/Popover";
+import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../packages/ui/src/Popover.tsx";
 
 /** Dos menús del riel en miniatura: uno de filas y otro que empieza con un buscador. */
 export function mountMenus(root: HTMLElement) {

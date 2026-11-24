@@ -3,7 +3,7 @@ import { join, relative, resolve } from "node:path";
 import { ROOT, walkFiles } from "../git.mjs";
 
 const root = process.argv[2] ? resolve(process.argv[2]) : ROOT;
-const forbidden = /service[_-]role|\/rest\/v1|supabase-js|DANIL_WEB_(?:SESSION|INBOX)|APPV2_BFF|service\s*=\s*"appv2"/i;
+const forbidden = /service[_-]role|\/rest\/v1|supabase-js|DANIL_WEB_(?:SESSION|INBOX)|APPV2_[A-Z_]+|service\s*=\s*"appv2"/i;
 const violations = [];
 if (forbidden.test(readFileSync(join(root, "package.json"), "utf8"))) violations.push("package.json");
 for (const dir of ["src/web", "alpha-entry"]) {

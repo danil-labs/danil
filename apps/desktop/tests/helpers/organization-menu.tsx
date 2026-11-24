@@ -1,6 +1,6 @@
 import { render } from "solid-js/web";
-import { GroupAccountMenu } from "../../src/features/shell/GroupAccountMenu";
-import { OrganizationAccountMenu } from "../../src/features/shell/OrganizationAccountMenu";
+import { GroupAccountMenu } from "../../../../packages/shell/src/shell/GroupAccountMenu.tsx";
+import { OrganizationAccountMenu } from "../../../../packages/shell/src/shell/OrganizationAccountMenu.tsx";
 
 export function mountOrganizationMenu(root: HTMLElement, role?: string) {
   const actions: string[] = [];

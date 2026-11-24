@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { linuxUserSlug, wslUserProblem } from "../../src/features/machines/wsl.ts";
+import { linuxUserSlug, wslUserProblem } from "../../../../packages/features/machines/src/model/wsl.ts";
 
 test("linuxUserSlug turns what the person types into a Linux user", () => {
   assert.equal(linuxUserSlug("Tu Nombre"), "tu-nombre");

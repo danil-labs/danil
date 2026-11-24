@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { comoEntra, decidir, esBorrado, idos } from "../../src/features/code/refresh.ts";
+import { comoEntra, decidir, esBorrado, idos } from "../../../../packages/features/code/src/queries/refresh.ts";
 
 /**
  * **Las dos decisiones de editar el mismo árbol que el agente.**

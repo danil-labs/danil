@@ -59,7 +59,7 @@ function rgba(value) {
   return parts.length === 3 ? parts.concat(1) : parts.length === 4 ? parts : null;
 }
 
-const css = blocks(readFileSync(join(ROOT, "src/styles/global.css"), "utf8"));
+const css = blocks(readFileSync(join(ROOT, "../../packages/ui/src/styles/global.css"), "utf8"));
 for (const [mode, selectors] of Object.entries(CSS_THEME_BLOCKS)) {
   const vars = new Map();
   for (const selector of selectors) {
@@ -91,7 +91,7 @@ for (const [mode, selectors] of Object.entries(CSS_THEME_BLOCKS)) {
   }
 }
 
-const hoja = readFileSync(join(ROOT, "src/styles/global.css"), "utf8");
+const hoja = readFileSync(join(ROOT, "../../packages/ui/src/styles/global.css"), "utf8");
 const medida = (variable) => hoja.match(new RegExp(`${variable}:\\s*([\\d.]+)(rem|px);`));
 const enPx = (variable) => {
   const m = medida(variable);
@@ -118,11 +118,18 @@ for (const lang of Object.keys(STATUS_LABELS)) {
   }
 }
 
-// Las palabras de la lista de tareas, el dock y las máquinas, contra cualquier catálogo de su lengua.
+// Estas frases solo las consume el teléfono.
+const PHONE_ONLY_WORDS = new Set([
+  "shell.machines.waking",
+  "web.computers.state.starting",
+  "web.computers.state.outdated",
+]);
+
 for (const lang of Object.keys(WORDS)) {
   const dir = join(ROOT, `src/locales/${lang}`);
   const catalog = Object.assign({}, ...readdirSync(dir).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(readFileSync(join(dir, f), "utf8"))));
   for (const [key, text] of Object.entries(WORDS[lang])) {
+    if (PHONE_ONLY_WORDS.has(key) && !(key in catalog)) continue;
     if (JSON.stringify(catalog[key]) !== JSON.stringify(text)) {
       failures.push(`${lang}: WORDS["${key}"] es ${JSON.stringify(text)}; el catálogo dice ${JSON.stringify(catalog[key])}`);
     }
@@ -131,7 +138,7 @@ for (const lang of Object.keys(WORDS)) {
 
 // lucide-solid conserva los nombres viejos como alias de los renombrados.
 const ALIASES = { "circle-help": "circle-question-mark", "shield-question": "shield-question-mark" };
-const status = readFileSync(join(ROOT, "src/features/projects/TaskStatus.tsx"), "utf8");
+const status = readFileSync(join(ROOT, "../../packages/features/projects/src/screens/TaskStatus.tsx"), "utf8");
 const imported = new Map(
   [...status.matchAll(/import (\w+) from "lucide-solid\/icons\/([\w-]+)"/g)].map((m) => [m[1], ALIASES[m[2]] ?? m[2]]),
 );

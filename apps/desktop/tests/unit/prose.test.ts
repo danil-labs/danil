@@ -12,7 +12,7 @@ import {
 } from "../../src/lib/i18n.ts";
 import { SIN_ESPACIO } from "../../src/lib/no-space.ts";
 import { asFailure, claveDe, detalleDe, explicacionDelMotor, prosaDe } from "../../src/lib/failure.ts";
-import { mensajeDeFallo } from "../../src/features/chat/failures.ts";
+import { mensajeDeFallo } from "../../../../packages/features/chat/src/model/failures.ts";
 import { prosa } from "../../src/lib/prose.ts";
 
 // El control en español evita que un respaldo fijo en inglés pase como traducción.

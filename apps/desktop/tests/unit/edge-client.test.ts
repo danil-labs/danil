@@ -22,15 +22,22 @@ function window(reply: (args: Record<string, unknown> | undefined, n: number) =>
   return calls;
 }
 
-const edge = () => import("../../src/lib/edge.ts");
+const edge = async () => {
+  const [client, identity, workspaces] = await Promise.all([
+    import("../../../../packages/platform-client/src/client.ts"),
+    import("../../../../packages/platform-client/src/identity.ts"),
+    import("../../../../packages/platform-client/src/workspaces.ts"),
+  ]);
+  return { ...client, ...identity, ...workspaces };
+};
 const ok = (body: unknown, extra: Record<string, unknown> = {}) => ({ status: 200, body, ...extra });
 const missing = { status: 501, body: null, retry_after_ms: 5 };
 
 test("me, organizations and workspaces go through Rust with the contract paths", async () => {
   const calls = window((args) => ok({ path: args?.path }, args?.method === "POST" ? { idempotency_key: "k" } : {}));
-  const { me, organizations, workspaces, selectOrganization, selectWorkspace } = await edge();
+  const { me, fetchEdgeOrganizations, edgeFetch, workspaces, selectOrganization, selectWorkspace } = await edge();
   await me();
-  await organizations();
+  await fetchEdgeOrganizations((method, path, body) => edgeFetch(method, path, body));
   await workspaces();
   await selectOrganization("org_1");
   await selectWorkspace("ws_1");
@@ -48,8 +55,8 @@ test("me, organizations and workspaces go through Rust with the contract paths",
 
 test("a route that does not exist yet is retried until it appears", async () => {
   const calls = window((_args, n) => (n < 3 ? missing : ok({ items: [{ id: "org_1", name: "Danil", plan: "enterprise", role: "owner" }] })));
-  const { organizations } = await edge();
-  const got = await organizations({ minDelayMs: 1 });
+  const { edgeUntil } = await edge();
+  const got = (await edgeUntil<{ items: { id: string }[] }>("GET", "/v1/identity/organizations", undefined, { minDelayMs: 1 })).body;
   assert.equal(got.items[0].id, "org_1");
   assert.equal(calls.length, 4);
 });

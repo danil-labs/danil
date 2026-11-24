@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../helpers/catalog.ts";
-import { mergeGates } from "../../src/features/chat/permissionGates.ts";
-import { sinRespuesta } from "../../src/features/chat/permissionRecovery.ts";
+import { mergeGates } from "../../../../packages/features/chat/src/model/permissionGates.ts";
+import { sinRespuesta } from "../../../../packages/features/chat/src/model/permissionRecovery.ts";
 
 const gate = (requestId: string, extra: Record<string, unknown> = {}) =>
   ({ session: "s1", requestId, tool: "Bash", target: "echo", origin: null, ...extra }) as never;

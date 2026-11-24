@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { sharesTaskGit, UNKNOWN_GIT } = await import("../../src/features/projects/taskGit.ts");
+const { sharesTaskGit } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
+const { UNKNOWN_TASK_GIT: UNKNOWN_GIT } = await import("../../../../packages/ui/src/lib/tasks/git.ts");
 
 const rama = {
   ...UNKNOWN_GIT,

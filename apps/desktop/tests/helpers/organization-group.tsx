@@ -1,8 +1,8 @@
-import { createContextAttention } from "../../src/features/machines/context-attention";
+import { createContextAttention } from "../../../../packages/features/machines/src/queries/context-attention.ts";
 import { render } from "solid-js/web";
-import { OrganizationRailGroup, type OrganizationRailActions } from "../../src/features/shell/OrganizationRailGroup";
-import { watchOrganizationCredits } from "../../src/features/shell/organization-credits-watch";
-import type { SessionRailGroup } from "../../src/features/shell/session-groups";
+import { OrganizationRailGroup, type OrganizationRailActions } from "../../../../packages/shell/src/shell/OrganizationRailGroup.tsx";
+import { watchOrganizationCredits } from "../../../../packages/shell/src/shell/organization-credits-watch.ts";
+import type { SessionRailGroup } from "../../../../packages/shell/src/shell/session-groups.ts";
 
 export function mountOrganizationGroup(root: HTMLElement, stacked = false, single = false) {
   const actions: string[] = [];

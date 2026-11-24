@@ -1,8 +1,5 @@
 packages:
   - apps/desktop
-  - apps/workspace
-  - apps/auth
-  - apps/desk
   - packages/*
   - "!packages/design"
   - "!packages/tasks"

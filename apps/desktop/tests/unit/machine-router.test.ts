@@ -10,10 +10,10 @@ import { isDeferrable } from "@terminus/computers";
 import { Fleet, type Link, type MachineInfo, classOf } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { withoutAbout } from "../../src/lib/taskMentions.ts";
-import { createRouter, unconfirmedOpen } from "../../src/features/machines/router.ts";
-import type { EngineWorkspace } from "../../src/features/machines/engine-workspaces.ts";
-import { notHere, silent } from "../../src/features/settings/github-account/failures.ts";
-import { runsWorkspace } from "../../src/features/machines/runs-workspace.ts";
+import { createRouter, unconfirmedOpen } from "../../../../packages/features/machines/src/queries/router.ts";
+import type { EngineWorkspace } from "../../../../packages/features/machines/src/queries/engine-workspaces.ts";
+import { notHere, silent } from "../../../../packages/features/settings/src/model/github-account-failures.ts";
+import { runsWorkspace } from "../../../../packages/features/machines/src/model/runs-workspace.ts";
 
 type Args = Record<string, unknown>;
 type Call = { command: string; args: Args; workspace: string | null; id: string };

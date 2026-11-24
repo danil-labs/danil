@@ -17,7 +17,7 @@ function tauri(reply: (c: Call) => unknown) {
   };
   return calls;
 }
-const adapters = () => import("../../src/features/settings/free-router-adapters.ts");
+const adapters = () => import("../../../../packages/features/settings/src/queries/free-router-adapters.ts");
 
 test("each engine order reaches the workspace's engine by its own name and scope", async () => {
   const calls = tauri(() => ({ ok: true }));

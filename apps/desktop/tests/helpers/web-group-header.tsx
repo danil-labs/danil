@@ -1,10 +1,10 @@
-import LegacyProfileMenu from "../../src/features/shell/LegacyProfileMenu";
+import LegacyProfileMenu from "../../../../packages/shell/src/shell/LegacyProfileMenu.tsx";
 import "../../src/locales/catalogs";
 import "../../src/web/phrases";
 import { render } from "solid-js/web";
-import { setCapabilities } from "../../src/lib/platform";
-import { AccountHeader } from "../../src/features/shell/AccountHeader";
-import { setWebOrganizationAttention, setWebOrganizationName } from "../../src/features/shell/GroupOrganizationWatch";
+import { setCapabilities } from "../../../../packages/host/src/platform.ts";
+import { AccountHeader } from "../../../../packages/shell/src/shell/AccountHeader.tsx";
+import { setWebOrganizationAttention, setWebOrganizationName } from "../../../../packages/shell/src/shell/GroupOrganizationWatch.tsx";
 
 export function mountWebGroup(root: HTMLElement, role?: string) {
   const chosen: string[] = [];

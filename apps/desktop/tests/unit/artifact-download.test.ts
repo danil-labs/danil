@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ArtifactDownloadError, readArtifactDownload } from "../../src/features/artifacts/download.ts";
+import { ArtifactDownloadError, readArtifactDownload } from "../../../../packages/features/artifacts/src/model/download.ts";
 
 const reference = { project: "project", session: "task", artifact: "report.txt", n: 2 };
 const limits = { maxBytes: 8, partBytes: 3, timeoutMs: 200 };

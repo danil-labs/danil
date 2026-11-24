@@ -1,5 +1,5 @@
 import { render } from "solid-js/web";
-import { OrganizationStack } from "../../src/features/shell/OrganizationStack";
+import { OrganizationStack } from "../../../../packages/shell/src/shell/OrganizationStack.tsx";
 
 export function mountOrganizationStack(root: HTMLElement) {
   let pinned = 0; let menus = 0; const moves: number[] = [];

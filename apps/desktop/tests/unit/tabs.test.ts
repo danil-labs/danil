@@ -397,7 +397,8 @@ test("la tira guardada por la versión anterior se lee entera", () => {
 });
 
 const { markedState, taskPriority } = await import("../../../../packages/ui/src/taskState.ts");
-const { compactGitKind, UNKNOWN_GIT, mergeRemoteGit, retainGitObservation } = await import("../../src/features/projects/taskGit.ts");
+const { compactGitKind, mergeRemoteGit } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
+const { UNKNOWN_TASK_GIT: UNKNOWN_GIT, retainGitObservation } = await import("../../../../packages/ui/src/lib/tasks/git.ts");
 
 test("la atención gana a trabajo y fallo; fin de turno no significa tarea terminada", () => {
   const base = { aprobando: false, esperando: false, viva: false, outcome: "failed" as const };
@@ -434,7 +435,7 @@ test("compact Git retains known stale PRs but never invents an observation", () 
 });
 
 test("sidebar and tabs share local and remote polling without a third scan", async () => {
-  const { watchSessionGit } = await import("../../src/features/projects/taskGit.ts");
+  const { watchSessionGit } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
   const originalInterval = globalThis.setInterval;
@@ -477,7 +478,7 @@ test("remote metadata cannot overwrite a new HEAD, repository or newer result", 
 });
 
 test("slow remote requests do not block local reads or leak across workspaces", async () => {
-  const { watchSessionGit } = await import("../../src/features/projects/taskGit.ts");
+  const { watchSessionGit } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
   const fake = new EventTarget();
@@ -542,7 +543,7 @@ test("slow remote requests do not block local reads or leak across workspaces", 
 });
 
 test("the shared remote queue starts active work before background projects", async () => {
-  const { watchSessionGit } = await import("../../src/features/projects/taskGit.ts");
+  const { watchSessionGit } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
   const requests: string[] = [];
@@ -575,7 +576,7 @@ test("the shared remote queue starts active work before background projects", as
 
 
 test("a Git read that never answers frees its turn: the PR of a newer task still arrives", async (t) => {
-  const { GIT_READ_DEADLINE, watchSessionGit } = await import("../../src/features/projects/taskGit.ts");
+  const { GIT_READ_DEADLINE, watchSessionGit } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
   const row = { ...UNKNOWN_GIT, kind: "branch" as const, branch: "feature", head: "a", repository: "repo" };
@@ -620,7 +621,7 @@ test("a Git read that never answers frees its turn: the PR of a newer task still
 });
 
 test("local progress paints before completion and rejects superseded channels", async () => {
-  const { watchSessionGit } = await import("../../src/features/projects/taskGit.ts");
+  const { watchSessionGit } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
   type Rows = Record<string, typeof UNKNOWN_GIT>;
@@ -670,7 +671,7 @@ test("local progress paints before completion and rejects superseded channels", 
 });
 
 test("remounting the tabs and the sidebar keeps the last Git rows instead of painting none", async () => {
-  const { watchSessionGit } = await import("../../src/features/projects/taskGit.ts");
+  const { watchSessionGit } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
   const row = { ...UNKNOWN_GIT, kind: "branch" as const, branch: "feature", head: "a", repository: "repo" };
@@ -1070,7 +1071,7 @@ test("la pantalla nunca es provisional y no sustituye a la tarea", () => {
 });
 
 test("Git observations share one read per machine and keep routing explicit", async () => {
-  const { watchSessionGit } = await import("../../src/features/projects/taskGit.ts");
+  const { watchSessionGit } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
   let failure: unknown = null;
@@ -1136,7 +1137,7 @@ test("un guardado inválido no impide entrar a otro espacio ni borra las pestañ
 });
 
 test("an unchanged remote Git answer is asked less often until something changes", async (t) => {
-  const { watchSessionGit } = await import("../../src/features/projects/taskGit.ts");
+  const { watchSessionGit } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
   const previousWindow = globalThis.window;
   const previousDocument = globalThis.document;
   const fake = new EventTarget();

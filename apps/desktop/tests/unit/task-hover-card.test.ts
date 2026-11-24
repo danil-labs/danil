@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const { folderColor } = await import("../../src/lib/folderColor.ts");
-const { hoverCardPull } = await import("../../src/features/projects/hoverCardPull.ts");
-const { UNKNOWN_GIT } = await import("../../src/features/projects/taskGit.ts");
+const { hoverCardPull } = await import("../../../../packages/features/projects/src/model/hoverCardPull.ts");
+const { UNKNOWN_TASK_GIT: UNKNOWN_GIT } = await import("../../../../packages/ui/src/lib/tasks/git.ts");
 
 const PALETA = ["#a78bfa", "#38bdf8", "#f59e0b", "#f472b6", "#34d399", "#fb7185", "#60a5fa", "#facc15"];
 

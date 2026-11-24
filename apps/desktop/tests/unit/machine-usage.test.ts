@@ -6,7 +6,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { active, engineVersion, forgetSamples, hasUsage, heaviest, history, leftovers, level, remember, split, topProcesses, updateState, worst } from "../../src/features/shell/machineUsage.ts";
+import { active, engineVersion, forgetSamples, hasUsage, heaviest, history, leftovers, level, remember, split, topProcesses, updateState, worst } from "../../../../packages/shell/src/shell/machineUsage.ts";
 import { resources } from "../helpers/fixtures/machine-usage.ts";
 
 const GB = 1024 ** 3;
