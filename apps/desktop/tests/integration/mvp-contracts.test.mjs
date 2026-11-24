@@ -7,12 +7,12 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import test from 'node:test';
-import { platformSession, platformTransport } from '../../src/web/platform-session.ts';
+import { platformSession, platformTransport } from '../../../../packages/session/src/platform-session.ts';
 import { readCapabilities, supports } from '../../src/web/service-capabilities.ts';
 import { webOrganizationSource } from '../../src/web/organizations.ts';
-import { edgeOrganizationSource } from '../../src/features/shell/organization-edge.ts';
+import { edgeOrganizationSource } from '../../../../packages/shell/src/shell/organization-edge.ts';
 import { createOrganizationSelection } from "@terminus/computers";
-import { createCloudMachines } from '../../src/features/machines/cloud-machines.ts';
+import { createCloudMachines } from '../../../../packages/features/machines/src/queries/cloud-machines.ts';
 import { machineToComputer, machinesClient } from '../../../../packages/platform-client/src/machines.ts';
 
 const directory = process.env.DANIL_MVP_CONTRACTS ?? '/home/alejandro/danil/mvp/contracts/mvp-v1';
