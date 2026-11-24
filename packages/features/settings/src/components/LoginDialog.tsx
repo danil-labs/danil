@@ -5,15 +5,14 @@ import ExternalLink from "lucide-solid/icons/external-link";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { Show, createSignal } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
-import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../ui/src/lib/i18n";
 import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";
-import { Input } from "../../../../ui/src/Input";
 import { Terminal, TerminalBody } from "../../../../ui/src/Terminal";
 import "../../../../ui/src/locales/settingsPhrases";
+import { LoginCodeForm } from "../screens/LoginCodeForm";
 import { Paso } from "./ConnectionStep";
 
 /**
@@ -26,6 +25,9 @@ export function DialogoDeConexion(props: {
   url: string | null;
   porConfirmar: string | null;
   pideCodigo: boolean;
+  enviandoCodigo?: boolean;
+  codigoEnviado?: boolean;
+  errorCodigo?: string | null;
   salida: string[];
   onCancelar: () => void;
   onCodigo: (codigo: string) => void;
@@ -34,7 +36,8 @@ export function DialogoDeConexion(props: {
   const [copiaFallida, setCopiaFallida] = createSignal<string | null>(null);
   const { copied: copiado, copy } = createCopied(1400, (e) => setCopiaFallida(prosaDe(e)));
   const enviar = () => {
-    if (codigo().trim()) props.onCodigo(codigo().trim());
+    const valor = codigo().trim();
+    if (valor && !props.enviandoCodigo) props.onCodigo(valor);
   };
   async function copiar(u: string) {
     setCopiaFallida(null);
@@ -55,11 +58,13 @@ export function DialogoDeConexion(props: {
             {/* Siempre dice qué espera: que abra el navegador, que termines ahí o que pegues su código. */}
             <span class="flex items-center gap-1.5 text-xs text-neutral-500" role="status">
               <Spinner size={12} />
-              {props.pideCodigo
-                ? t("onboarding.login.waiting_code")
-                : props.url || props.porConfirmar
-                  ? t("onboarding.login.waiting_browser")
-                  : t("onboarding.login.opening_browser")}
+              {props.codigoEnviado
+                ? t("settings.accounts.verifying_code")
+                : props.pideCodigo
+                  ? t("onboarding.login.waiting_code")
+                  : props.url || props.porConfirmar
+                    ? t("onboarding.login.waiting_browser")
+                    : t("onboarding.login.opening_browser")}
             </span>
           </div>
           <Button variant="outline" size="compact" onClick={() => props.onCancelar()}>
@@ -101,21 +106,21 @@ export function DialogoDeConexion(props: {
 
         <Show when={props.pideCodigo}>
           <Paso numero={props.url ? 2 : 1} titulo={t("settings.accounts.step_code")}>
-            <div class="flex items-center gap-2">
-              <Input
-                class="min-w-0 flex-1 font-mono text-xs"
-                type="text"
-                ref={enfocar}
-                value={codigo()}
-                placeholder={t("settings.accounts.code_placeholder")}
-                onInput={(e) => setCodigo(e.currentTarget.value)}
-                onKeyDown={(e) => e.key === "Enter" && enviar()}
-              />
-              <Button disabled={!codigo().trim()} onClick={enviar}>
-                {t("settings.accounts.send_code")}
-              </Button>
-            </div>
+            <LoginCodeForm
+              value={codigo()}
+              onInput={setCodigo}
+              onSubmit={enviar}
+              submitting={props.enviandoCodigo}
+              error={props.errorCodigo}
+            />
           </Paso>
+        </Show>
+
+        <Show when={!props.pideCodigo && props.codigoEnviado}>
+          <p role="status" data-login-code-sent="" class="m-0 flex items-center gap-1.5 text-xs text-neutral-500">
+            <Spinner size={12} />
+            {t("settings.accounts.verifying_code")}
+          </p>
         </Show>
 
         <Show when={props.salida.length > 0}>

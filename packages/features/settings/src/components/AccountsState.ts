@@ -62,6 +62,9 @@ export function createCuentas(props: Parameters<typeof Accounts>[0]) {
   const [porConfirmar, setPorConfirmar] = createSignal<string | null>(null);
   const [pideCodigo, setPideCodigo] = createSignal(false);
   const [codigo, setCodigo] = createSignal("");
+  const [enviandoCodigo, setEnviandoCodigo] = createSignal(false);
+  const [codigoEnviado, setCodigoEnviado] = createSignal(false);
+  const [errorCodigo, setErrorCodigo] = createSignal<string | null>(null);
   const [aviso, setAviso] = createSignal<string | null>(null);
   const [salida, setSalida] = createSignal<string[]>([]);
 
@@ -77,7 +80,8 @@ export function createCuentas(props: Parameters<typeof Accounts>[0]) {
     agentes, agente, machineOf, setAgentes, setFallo, setInstalando, lista, setCargando, setLista,
     setEstados, setSinComprobar, setPorQuitar, enCurso, setUrl, setPorConfirmar, setPideCodigo, setEnCurso,
     setSalida, setConexionFallida, setConectadaVez, setOfrecerTerminal, setComprobando, fallo,
-    olvidarEnlaceCopiado, setCopiaFallida, setCodigo, copiarLaUrl, codigo, setRepuestas, setEsperando,
+    olvidarEnlaceCopiado, setCopiaFallida, setCodigo, copiarLaUrl, codigo, enviandoCodigo, setEnviandoCodigo,
+    codigoEnviado, setCodigoEnviado, errorCodigo, setErrorCodigo, setRepuestas, setEsperando,
     setReponiendo, conexionFallida, agrupadas, tarjetas, instalando, cargando, estados, esperando, reponiendo,
     repuestas, comprobando, sinComprobar, conectadaVez, porQuitar, url, pideCodigo, porConfirmar,
     enlaceCopiado, copiaFallida, aviso, setAviso, salida, ofrecerTerminal,

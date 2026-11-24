@@ -21,7 +21,7 @@ import type { createAccionesDeCuentas } from "./AccountsActions";
 import type { createPartesDeCuentas } from "./AccountsParts";
 
 export function createDialogosDeCuentas(cuentas: ReturnType<typeof createCuentas>, conexion: ReturnType<typeof createConexionDeCuentas>, acciones: ReturnType<typeof createAccionesDeCuentas>, partes: ReturnType<typeof createPartesDeCuentas>) {
-  const { enCurso, instalando, url, pideCodigo, porConfirmar, enlaceCopiado, copiaFallida, codigo, setCodigo, aviso, salida, ofrecerTerminal, machineOf, agente } = cuentas;
+  const { enCurso, instalando, url, pideCodigo, porConfirmar, enlaceCopiado, copiaFallida, codigo, setCodigo, enviandoCodigo, codigoEnviado, errorCodigo, setErrorCodigo, aviso, salida, ofrecerTerminal, machineOf, agente } = cuentas;
   const { etiqueta, acto, terminalLocal, conectar, pidiendoClave, setPidiendoClave, setClave, refrescar, claveDe, clave, guardarClave, guardandoClave } = conexion;
   const { copiarEnlace, enviarCodigo } = acciones;
   const { cancelarConexion } = partes;
@@ -108,8 +108,21 @@ export function createDialogosDeCuentas(cuentas: ReturnType<typeof createCuentas
                   <Show when={aviso()}>
                     {(n) => <p class="m-0 text-xs text-neutral-500" data-login-notice="">{n()}</p>}
                   </Show>
-                  <LoginCodeForm value={codigo()} onInput={setCodigo} onSubmit={() => void enviarCodigo()} />
+                  <LoginCodeForm
+                    value={codigo()}
+                    onInput={(v) => { setCodigo(v); setErrorCodigo(null); }}
+                    onSubmit={() => void enviarCodigo()}
+                    submitting={enviandoCodigo()}
+                    error={errorCodigo()}
+                  />
                 </Paso>
+              </Show>
+
+              <Show when={!pideCodigo() && codigoEnviado()}>
+                <p role="status" data-login-code-sent="" class="m-0 flex items-center gap-1.5 text-xs text-neutral-500">
+                  <Spinner size={12} />
+                  {t("settings.accounts.verifying_code")}
+                </p>
               </Show>
 
               {/* Lo que el agente va diciendo, tal cual: cuando una conexión
