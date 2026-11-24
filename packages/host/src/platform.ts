@@ -137,19 +137,10 @@ export type Capabilities = import("../../../apps/desktop/src/lib/group-account")
   accountCredentials?: CredentialSource;
   /** Bajo la tarjeta de una cuenta: sus máquinas. */
   accountMachines?: (props: AccountMachinesProps) => JSX.Element;
-  /**
-   * «Conectar otra máquina» con la sesión de la página (la web): la lista de la
-   * cuenta y qué hacer cuando la nueva está en línea. El escritorio usa su token
-   * de cliente (`features/machines/ConnectMachine.tsx`).
-   */
   /** Las computadoras de la cuenta con la sesión de la página (la web); el escritorio usa su token de cliente. */
   accountComputers?: AccountComputersSource;
   /** Varias cuentas de Danil en una ventana (la web); el escritorio no la da. */
   webAccounts?: WebAccountsSource;
-  connectMachine?: {
-    list: () => Promise<Answer<Computer[]>>;
-    onReady: (computer: Computer) => void;
-  };
 };
 
 const DESKTOP: Capabilities = { nativeWindow: true, updater: true, localSetup: true, computerStatus: false, danilAccount: true, radiant: true };

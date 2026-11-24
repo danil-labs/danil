@@ -66,9 +66,9 @@ function session() {
 }
 
 test("las URLs del plano de control aceptan host, https o wss", () => {
-  assert.equal(apiUrl("computers.danil.ai", "/v1/computers"), "https://computers.danil.ai/v1/computers");
+  assert.equal(apiUrl("computers.test", "/v1/computers"), "https://computers.test/v1/computers");
   assert.equal(apiUrl("http://127.0.0.1:8787/", "/v1/computers"), "http://127.0.0.1:8787/v1/computers");
-  assert.equal(sessionUrl("https://computers.danil.ai", "cmp_x"), "wss://computers.danil.ai/v1/computers/cmp_x/session");
+  assert.equal(sessionUrl("https://computers.test", "cmp_x"), "wss://computers.test/v1/computers/cmp_x/session");
   assert.equal(sessionUrl("http://127.0.0.1:8787", "cmp_x"), "ws://127.0.0.1:8787/v1/computers/cmp_x/session");
 });
 
@@ -84,7 +84,7 @@ test("el JWT va en los subprotocolos, nunca en la URL", async () => {
 test("con ticket ofrece solo danil.machine-session.v1 y ticket.*, nunca bearer.* (machine-session.v1 § Apertura)", async () => {
   FakeSocket.all = [];
   const relay = new RelaySession(
-    { endpoint: "https://computers.example", computerId: "cmp_a", getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: "t1" }) },
+    { endpoint: "https://computers.example", computerId: "cmp_a", getAdmission: async () => ({ url: "wss://connect.danil.ai/v1/machines/cmp_a/session", ticket: "t1" }) },
     (url, protocols) => new FakeSocket(url, protocols),
   );
   relay.start();
@@ -102,7 +102,7 @@ test("con ticket: conserva ?contracts= y cambia de ticket antes de session_expir
       endpoint: "https://computers.example",
       computerId: "cmp_a",
       contracts: ["abc123"],
-      getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, session_expires_at: new Date(Date.now() + 60_000).toISOString() }),
+      getAdmission: async () => ({ url: "wss://connect.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, session_expires_at: new Date(Date.now() + 60_000).toISOString() }),
     },
     (url, protocols) => new FakeSocket(url, protocols),
   );
@@ -110,13 +110,13 @@ test("con ticket: conserva ?contracts= y cambia de ticket antes de session_expir
   relay.start();
   for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
   const first = FakeSocket.all[0];
-  assert.equal(first.url, "wss://machines.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
+  assert.equal(first.url, "wss://connect.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
   first.open();
   t.mock.timers.tick(55_000);
   for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
   assert.equal(FakeSocket.all.length, 2, "reabrió sin cierre del servidor");
   assert.deepEqual(FakeSocket.all[1].protocols, ["danil.machine-session.v1", "ticket.t2"]);
-  assert.equal(FakeSocket.all[1].url, "wss://machines.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
+  assert.equal(FakeSocket.all[1].url, "wss://connect.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
 });
 
 test("una llamada pendiente se reenvía con el mismo id al reconectar, y `cached` llega aparte", async () => {
@@ -402,7 +402,7 @@ function admissionSession(ms: number, extra: { renewInChannel?: () => boolean } 
     {
       endpoint: "https://computers.example",
       computerId: "cmp_a",
-      getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, protocol: "danil.machine-session.v1", session_expires_at: new Date(Date.now() + ms).toISOString() }),
+      getAdmission: async () => ({ url: "wss://connect.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, protocol: "danil.machine-session.v1", session_expires_at: new Date(Date.now() + ms).toISOString() }),
       ...extra,
     },
     (url, protocols) => new FakeSocket(url, protocols),

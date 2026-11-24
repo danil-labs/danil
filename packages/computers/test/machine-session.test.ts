@@ -6,8 +6,8 @@ function setup(protocol = 'danil.machine-session.v1', lifetime?: number) {
   const sockets: Array<SocketLike & { protocol: string; protocols?: string[]; sent: string[]; closed: boolean }> = [];
   let tickets = 0;
   let revoked = false;
-  const session = new RelaySession({ endpoint: 'wss://machines.danil.ai', computerId: 'm', getAdmission: async () => ({
-    url: 'wss://machines.danil.ai/v1/machines/m/session', ticket: `ticket-${++tickets}`, protocol: 'danil.machine-session.v1',
+  const session = new RelaySession({ endpoint: 'wss://connect.danil.ai', computerId: 'm', getAdmission: async () => ({
+    url: 'wss://connect.danil.ai/v1/machines/m/session', ticket: `ticket-${++tickets}`, protocol: 'danil.machine-session.v1',
     ...(lifetime ? { session_expires_at: new Date(Date.now() + lifetime).toISOString() } : {}),
   }), onUnauthorized: () => { revoked = true; } }, (_url, protocols) => {
     const socket = { protocol, protocols, readyState: 1, onopen: null, onclose: null, onmessage: null, onerror: null,

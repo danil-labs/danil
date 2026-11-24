@@ -19,7 +19,7 @@ const slug = (text) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "anterior";
 
-export function fakeMemoryWorker({ endpoint = "https://computers.danil.ai", workspace = "w1", token } = {}) {
+export function fakeMemoryWorker({ endpoint = "https://memory.test", workspace = "w1", token } = {}) {
   const commits = [];
   const requests = [];
   let busy = false;

@@ -27,7 +27,7 @@ test("el teléfono puede leer el fondo", () => {
 });
 
 test("la imagen en la cuenta (`image_url`) solo sin patrón y solo por https", () => {
-  const url = "https://computers.danil.ai/v1/workspaces/w1/background?v=abc";
+  const url = "https://computers.test/v1/workspaces/w1/background?v=abc";
   assert.equal(chatBackgroundImageUrl({ preset: null, data_url: null, image_url: url, veil: null }), url);
   assert.equal(chatBackgroundImageUrl({ preset: "dusk", data_url: null, image_url: url, veil: null }), null);
   assert.equal(chatBackgroundImageUrl({ preset: null, data_url: null, image_url: "http://x.test/a", veil: null }), null);

@@ -1,4 +1,4 @@
-import { type AccountWorkspace, type Computer, type ConnectionCapabilities, type Connection, listComputers, listConnections, connectionCapabilities, mcpUrl, revokeConnection, updateConnection } from "@terminus/computers";
+import { type AccountWorkspace, type Computer, type ConnectionCapabilities, type Connection, listComputers, listConnections, connectionCapabilities, MCP_URL, revokeConnection, updateConnection } from "@terminus/computers";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
@@ -13,7 +13,7 @@ import { ConnectionRow } from "./ConnectionsRow";
 /** `account_relay_token` (`proxy.rs`): el token de cliente de la cuenta y el plano de control. */
 type ClientToken = { token: string; expires_at: number; endpoint: string };
 
-type Loaded = { endpoint: string; connections: Connection[]; computers: Computer[]; workspaces: AccountWorkspace[]; capabilities: ConnectionCapabilities | null } | { failed: string };
+type Loaded = { connections: Connection[]; computers: Computer[]; workspaces: AccountWorkspace[]; capabilities: ConnectionCapabilities | null } | { failed: string };
 
 async function token(): Promise<ClientToken> {
   return (await accountRelayToken({})) as ClientToken;
@@ -26,7 +26,7 @@ async function load(): Promise<Loaded> {
     if (connections.kind !== "ok") return { failed: connections.kind };
     if (computers.kind !== "ok") return { failed: computers.kind };
     if (capabilities.kind !== "ok" && capabilities.kind !== "missing") return { failed: capabilities.kind };
-    return { endpoint, capabilities: capabilities.kind === "ok" ? capabilities.value : null, connections: connections.value, computers: computers.value, workspaces: [] };
+    return { capabilities: capabilities.kind === "ok" ? capabilities.value : null, connections: connections.value, computers: computers.value, workspaces: [] };
   } catch {
     return { failed: "no_account" };
   }
@@ -72,15 +72,13 @@ export default function Connections(props: { workspace?: string | null }) {
         description={t("settings.connections.description")}
         aside={
           <Show when={ready()}>
-            {(d) => (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => void copy(mcpUrl(d().endpoint))}
-              >
-                {copied() ? t("settings.connections.copied") : t("settings.connections.copy_url")}
-              </Button>
-            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => void copy(MCP_URL)}
+            >
+              {copied() ? t("settings.connections.copied") : t("settings.connections.copy_url")}
+            </Button>
           </Show>
         }
       >
@@ -108,7 +106,7 @@ export default function Connections(props: { workspace?: string | null }) {
               fallback={
                 <EmptyState
                   title={t("settings.connections.empty")}
-                  description={t("settings.connections.empty_hint", { url: mcpUrl(d().endpoint) })}
+                  description={t("settings.connections.empty_hint", { url: MCP_URL })}
                 />
               }
             >
