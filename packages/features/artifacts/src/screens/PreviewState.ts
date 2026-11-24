@@ -4,7 +4,7 @@ import { formaDe } from "../model/sandbox";
 import { historiaDe, publicacionesDe, type History, type Publicacion, type VersionRef } from "../queries";
 import { type Failure, detalleDe } from "../../../../ui/src/Failure";
 import { t } from "../../../../ui/src/lib/i18n";
-import type PreviewPane from "../components/Preview";
+import type PreviewPane from "./Preview";
 
 export function createPreviewState(props: Parameters<typeof PreviewPane>[0]) {
   // Lo que falla al preparar una impresión o al abrir una versión no

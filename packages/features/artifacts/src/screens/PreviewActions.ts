@@ -6,7 +6,7 @@ import { asFailure, detalleDe } from "../../../../ui/src/Failure";
 import { t } from "../../../../ui/src/lib/i18n";
 import { ArtifactDownloadError, readArtifactDownload } from "../model/download.ts";
 import { extensionDe } from "../../../../ui/src/lib/steps";
-import type PreviewPane from "../components/Preview";
+import type PreviewPane from "./Preview";
 import type { createPreviewState } from "./PreviewState";
 
 /**

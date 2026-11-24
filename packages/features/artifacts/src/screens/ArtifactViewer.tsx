@@ -2,7 +2,7 @@ import { createEffect, createMemo, createSignal, on, onCleanup, type JSX } from 
 import { previewFile } from "../queries";
 import { machineOf } from "../../../../host/src/machine";
 import { FileMachine } from "../../../../ui/src/fileMachine";
-import PreviewPane, { type Preview } from "../components/Preview";
+import PreviewPane, { type Preview } from "./Preview";
 import { prosaDe } from "../../../../ui/src/Failure";
 
 /**
@@ -27,7 +27,7 @@ export default function VisorDeArtefacto(props: {
   /** Lo produjo el agente («output»), lo adjuntó la persona («input») o vive fuera de la tarea («external»). */
   kind: "output" | "input" | "external";
   /** La tarea de la pestaña: si corre en otra máquina, el archivo está en su disco. */
-  session: string | undefined;
+  session?: string;
   renderPdf: (props: { base64: string; name: string }) => JSX.Element;
   renderImage: (props: { src: string; alt: string }) => JSX.Element;
   renderTable: (props: { text: string; delim: string }) => JSX.Element;
