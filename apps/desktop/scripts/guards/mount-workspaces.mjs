@@ -255,7 +255,7 @@ const crossingApp = await boot("listo", 20, { ...TASK_AFTER_QUEUE,
   list_active_turns: () => inFlight.filter((turn) => turn.workspace === activeWs).map((turn) => turn.session),
 });
 const crossingBody = () => crossingApp.w.document.body.textContent;
-const turnClock = () => (crossingBody().match(/·\s([\dms ]+?)\s*(?:Fuentes|$)/) ?? [])[1] ?? null;
+const turnClock = () => (crossingBody().match(/·\s(\d+[ms](?:\s\d+s)?)/) ?? [])[1] ?? null;
 const waitingLabel = () => !!crossingApp.w.document.querySelector('[role="status"][aria-label="El agente está trabajando"]');
 const moveTo = async (destination) => {
   activeWs = destination;

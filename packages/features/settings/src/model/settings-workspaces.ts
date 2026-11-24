@@ -291,7 +291,6 @@ export function governedSectionFor(
   entryId: SettingsEntryId,
   tabId: string,
 ): SettingsGovernedSection | null {
-  if (entryId === "general") return "context_sources";
   if (entryId === "ai-accounts") return "models";
   if (entryId === "agents-skills") return tabId === "skills" ? "skills" : "agents";
   if (entryId === "connections" && tabId === "operation") return "mcp_servers";

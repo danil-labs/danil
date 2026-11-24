@@ -62,6 +62,8 @@ test("General and Apariencia mount first in Settings, Notificaciones lives in Ge
 
   const headings = [...w.document.querySelectorAll("#cfg-panel h3")].map((h) => h.textContent?.trim());
   assert.ok(headings.includes("Notificaciones"), "General contains Notificaciones as a SettingsSection");
+  assert.ok(!headings.includes("Contexto"), "General no longer renders the retired Contexto section");
+  assert.equal(w.document.querySelector('[aria-label="Adjuntar una fuente"]'), null, "Chat composer no longer renders the retired Fuentes bar");
   const notifyRow = w.document.querySelector('[data-setting="notify-behavior"]');
   assert.ok(notifyRow, "NotifyBehavior mounts inside General");
   const notifySelect = notifyRow.querySelector("select");

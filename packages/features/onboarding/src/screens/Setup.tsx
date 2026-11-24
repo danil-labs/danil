@@ -65,7 +65,6 @@ export default function Setup(props: SetupProps) {
 
   const consejos = () => [
     [t("setup.tips.agents.title"), t("setup.tips.agents.body")],
-    [t("setup.tips.context.title"), t("setup.tips.context.body")],
     [t("setup.tips.workspaces.title"), t("setup.tips.workspaces.body")],
     [t("setup.tips.memory.title"), t("setup.tips.memory.body")],
   ];

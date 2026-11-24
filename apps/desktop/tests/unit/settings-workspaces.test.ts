@@ -143,7 +143,7 @@ test("includes other browser accounts on Web with signed-in and expired metadata
 });
 
 test("computes governed sections and discrete scope badges", () => {
-  assert.equal(governedSectionFor("general", "general"), "context_sources");
+  assert.equal(governedSectionFor("general", "general"), null);
   assert.equal(governedSectionFor("appearance", "appearance"), null);
   assert.equal(governedSectionFor("ai-accounts", "proveedores-ia"), "models");
   assert.equal(governedSectionFor("agents-skills", "agentes"), "agents");

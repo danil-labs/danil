@@ -8,7 +8,7 @@
   "setup.tips.context.title": "Context that powers their work",
   "setup.tips.context.body": "Governed context sources help your agents find what they need and focus their work.",
   "setup.tips.workspaces.title": "A workspace for every context",
-  "setup.tips.workspaces.body": "Create the workspaces you need. Each keeps its own settings, accounts and sources.",
+  "setup.tips.workspaces.body": "Create the workspaces you need. Each keeps its own settings and accounts.",
   "setup.tips.memory.title": "Learnings that are shared",
   "setup.tips.memory.body": "Agents share memory within the workspace, like a team building knowledge together.",
   "setup.tips.go": "Tip {number}",

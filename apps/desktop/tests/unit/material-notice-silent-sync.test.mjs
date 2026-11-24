@@ -4,27 +4,6 @@ import { boot, sleep } from "../helpers/jsdom-app.mjs";
 
 const workspace = { workspaces: [{ id: "w", name: "W", context_root: "src_root" }], active: "w" };
 
-function source(id, etiqueta, root) {
-  return {
-    id,
-    kind: "git",
-    identity: `git:${id}`,
-    name: id,
-    location: `https://example.com/${id}.git`,
-    branch: "main",
-    etiqueta,
-    parent: null,
-    skills: false,
-    added_at: 1,
-    path: `/lab/${id}`,
-    missing: false,
-    root,
-    project_attachable: !root,
-    projects: [],
-    sessions: 0,
-  };
-}
-
 function baseResponses(overrides = {}) {
   return {
     window_ready: null,
@@ -43,25 +22,17 @@ function baseResponses(overrides = {}) {
   };
 }
 
-test("MaterialNotice shows only secondary sources and invokes sync_workspace_context silently even on rejection", async () => {
+test("MaterialNotice invokes sync_workspace_context silently and never polls source_freshness or mounts a Toast", async () => {
   const syncCalls = [];
-  const updated = [];
-  const app = await boot("listo", "material-notice-mixed", baseResponses({
+  let freshnessCalls = 0;
+  const app = await boot("listo", "material-notice-silent", baseResponses({
     sync_workspace_context: (args) => {
       syncCalls.push(args);
       return Promise.reject(new Error("unsupported"));
     },
-    source_freshness: [
-      { id: "src_root", estado: "atrasada", local: "aaa" },
-      { id: "src_secondary", estado: "atrasada", local: "bbb" },
-    ],
-    list_sources: [
-      source("src_root", "danil-workspace (main)", true),
-      source("src_secondary", "secondary-repo (dev)", false),
-    ],
-    update_source: (args) => {
-      updated.push(args);
-      return null;
+    source_freshness: () => {
+      freshnessCalls += 1;
+      return [{ id: "src_secondary", estado: "atrasada", local: "bbb" }];
     },
   }));
   await sleep(400);
@@ -69,40 +40,8 @@ test("MaterialNotice shows only secondary sources and invokes sync_workspace_con
   await sleep(100);
 
   assert.deepEqual(syncCalls, [{ force: false }]);
-  const status = [...app.w.document.querySelectorAll('[role="status"]')];
-  assert.equal(status.length, 1, "only one material toast should mount");
-  assert.ok(status[0].textContent.includes("secondary-repo (dev)"), "secondary source appears in toast");
-  assert.ok(!status[0].textContent.includes("danil-workspace (main)"), "root source must not appear in toast");
-
-  const fetchButton = [...status[0].querySelectorAll("button")].find((btn) => /traer|fetch/i.test(btn.textContent ?? ""));
-  assert.ok(fetchButton, "fetch button should be present");
-  fetchButton.click();
-  await sleep(100);
-  assert.deepEqual(updated, [{ id: "src_secondary" }], "fetching only updates secondary sources");
-  assert.deepEqual(app.failures, []);
-});
-
-test("MaterialNotice never mounts Toast when only the root source is outdated", async () => {
-  const syncCalls = [];
-  const app = await boot("listo", "material-notice-root-only", baseResponses({
-    sync_workspace_context: (args) => {
-      syncCalls.push(args);
-      return { updated: false };
-    },
-    source_freshness: [
-      { id: "src_root", estado: "atrasada", local: "aaa" },
-    ],
-    list_sources: [
-      source("src_root", "danil-workspace (main)", true),
-    ],
-  }));
-  await sleep(400);
-  app.w.window.dispatchEvent(new app.w.CustomEvent("harness:tarea-nueva"));
-  await sleep(100);
-
-  assert.deepEqual(syncCalls, [{ force: false }]);
-  const status = [...app.w.document.querySelectorAll('[role="status"]')];
-  assert.equal(status.length, 0, "toast must not mount when only root source is outdated");
+  assert.equal(freshnessCalls, 0, "retired secondary-source freshness polling must not run");
+  assert.equal(app.w.document.querySelectorAll('[role="status"]').length, 0, "no material toast should mount");
   assert.deepEqual(app.failures, []);
 });
 

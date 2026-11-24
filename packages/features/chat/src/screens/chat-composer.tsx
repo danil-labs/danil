@@ -13,7 +13,6 @@ import { Adjunto, rodarEnHorizontal } from "./Attachments";
 import VentanaDeContexto from "../components/ContextWindow";
 import ColaDeMensajes from "../components/MessageQueue";
 import SelectorDeModo from "../components/ModePicker";
-import Alcance from "./Scope";
 import { PanelAlMargen } from "../components/SideQuestion";
 import { ComposerAction } from "../components/composer/ComposerAction";
 import type { createChatAttachments } from "./chat-attachments";
@@ -34,11 +33,11 @@ import { For, Show } from "solid-js";
 import { Input } from "../../../../ui/src/Input";
 
 /** Lo que el bloque usa del cuerpo de Chat. */
-export type ChatComposerDeps = { CampoDeLaCaja: ReturnType<typeof createChatComposerField>["CampoDeLaCaja"]; MenuDeSugerencias: ReturnType<typeof createChatComposerPrompts>["MenuDeSugerencias"]; PermisoDeLaCaja: ReturnType<typeof createChatComposerPrompts>["PermisoDeLaCaja"]; PreguntaDeLaCaja: ReturnType<typeof createChatComposerPrompts>["PreguntaDeLaCaja"]; actual: ReturnType<typeof createChatComposerState>["actual"]; attachmentFailure: ReturnType<typeof createChatComposerState>["attachmentFailure"]; bloqueoDeSuperficie: ReturnType<typeof createChatComposerState>["bloqueoDeSuperficie"]; cambiarModo: ReturnType<typeof createChatComposerState>["cambiarModo"]; campo: HTMLTextAreaElement | undefined; carpetaDeTerminal: ReturnType<typeof createChatTurnState>["carpetaDeTerminal"]; composerBox: HTMLDivElement | undefined; efforts: ReturnType<typeof createChatComposerState>["efforts"]; elegido: ReturnType<typeof createChatComposerState>["elegido"]; elegirArchivos: ReturnType<typeof createChatAttachments>["elegirArchivos"]; entradaActiva: ReturnType<typeof createChatTurnState>["entradaActiva"]; entradaArchivo: HTMLInputElement | undefined; faltaUnanime: ReturnType<typeof createChatComposerState>["faltaUnanime"]; fuentes: ReturnType<typeof createChatTurnState>["fuentes"]; listo: ReturnType<typeof createChatComposerState>["listo"]; mandar: ReturnType<typeof createChatAttachments>["mandar"]; menuOpen: ReturnType<typeof createChatComposerInput>["menuOpen"]; modoAlMargen: ReturnType<typeof createChatTurnState>["modoAlMargen"]; modoTerminal: ReturnType<typeof createChatTurnState>["modoTerminal"]; opciones: ReturnType<typeof createChatComposerState>["opciones"]; preguntaPendiente: ReturnType<typeof createChatTurnState>["preguntaPendiente"]; preguntaPlegada: ReturnType<typeof createChatComposerState>["preguntaPlegada"]; presentation: ReturnType<typeof createChatComposerState>["presentation"]; pulsoDeModo: ReturnType<typeof createChatComposerState>["pulsoDeModo"]; setSoltadoDe: ReturnType<typeof createChatTurnState>["setSoltadoDe"]; trigger: ReturnType<typeof createChatComposerState>["trigger"] };
+export type ChatComposerDeps = { CampoDeLaCaja: ReturnType<typeof createChatComposerField>["CampoDeLaCaja"]; MenuDeSugerencias: ReturnType<typeof createChatComposerPrompts>["MenuDeSugerencias"]; PermisoDeLaCaja: ReturnType<typeof createChatComposerPrompts>["PermisoDeLaCaja"]; PreguntaDeLaCaja: ReturnType<typeof createChatComposerPrompts>["PreguntaDeLaCaja"]; actual: ReturnType<typeof createChatComposerState>["actual"]; attachmentFailure: ReturnType<typeof createChatComposerState>["attachmentFailure"]; bloqueoDeSuperficie: ReturnType<typeof createChatComposerState>["bloqueoDeSuperficie"]; cambiarModo: ReturnType<typeof createChatComposerState>["cambiarModo"]; campo: HTMLTextAreaElement | undefined; carpetaDeTerminal: ReturnType<typeof createChatTurnState>["carpetaDeTerminal"]; composerBox: HTMLDivElement | undefined; efforts: ReturnType<typeof createChatComposerState>["efforts"]; elegido: ReturnType<typeof createChatComposerState>["elegido"]; elegirArchivos: ReturnType<typeof createChatAttachments>["elegirArchivos"]; entradaActiva: ReturnType<typeof createChatTurnState>["entradaActiva"]; entradaArchivo: HTMLInputElement | undefined; faltaUnanime: ReturnType<typeof createChatComposerState>["faltaUnanime"]; listo: ReturnType<typeof createChatComposerState>["listo"]; mandar: ReturnType<typeof createChatAttachments>["mandar"]; menuOpen: ReturnType<typeof createChatComposerInput>["menuOpen"]; modoAlMargen: ReturnType<typeof createChatTurnState>["modoAlMargen"]; modoTerminal: ReturnType<typeof createChatTurnState>["modoTerminal"]; opciones: ReturnType<typeof createChatComposerState>["opciones"]; preguntaPendiente: ReturnType<typeof createChatTurnState>["preguntaPendiente"]; preguntaPlegada: ReturnType<typeof createChatComposerState>["preguntaPlegada"]; presentation: ReturnType<typeof createChatComposerState>["presentation"]; pulsoDeModo: ReturnType<typeof createChatComposerState>["pulsoDeModo"]; setSoltadoDe: ReturnType<typeof createChatTurnState>["setSoltadoDe"]; trigger: ReturnType<typeof createChatComposerState>["trigger"] };
 
 /** Movido tal cual de Chat.tsx (el componente `Chat`, tarea 2.6). Lo que usa del cuerpo de Chat llega por `deps`. */
 export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
-  const { CampoDeLaCaja, MenuDeSugerencias, PermisoDeLaCaja, PreguntaDeLaCaja, actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, carpetaDeTerminal, efforts, elegido, elegirArchivos, entradaActiva, faltaUnanime, fuentes, listo, mandar, menuOpen, modoAlMargen, modoTerminal, opciones, preguntaPendiente, preguntaPlegada, presentation, pulsoDeModo, setSoltadoDe, trigger } = deps;
+  const { CampoDeLaCaja, MenuDeSugerencias, PermisoDeLaCaja, PreguntaDeLaCaja, actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, carpetaDeTerminal, efforts, elegido, elegirArchivos, entradaActiva, faltaUnanime, listo, mandar, menuOpen, modoAlMargen, modoTerminal, opciones, preguntaPendiente, preguntaPlegada, presentation, pulsoDeModo, setSoltadoDe, trigger } = deps;
   const BarraDeLaCaja = () => (
         <div class="flex min-w-0 items-center gap-1 px-2">
           {/* Vuelve a abrir el diálogo de archivos de golpe. Contexto y
@@ -189,22 +188,6 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
           La pregunta es una decisión de producto; el permiso ejecuta algo y
           exige un acto separado, con el literal que Rust conserva. */}
       <PermisoDeLaCaja />
-
-      {/* Encima de la caja: lo que la tarea lee se ve antes de escribir, no
-          dentro del control de escribir. Dónde escribe no es una fuente: es
-          la carpeta de trabajo del proyecto, en el panel de la columna. */}
-      <Alcance
-        rotulo={t("chat.scope.sources")}
-        agregar={t("chat.scope.sources_add")}
-        items={fuentes()}
-        materialOptions={props.materialOptions}
-        materialTarget={props.materialTarget}
-        materialAvailable={props.materialAvailable}
-        bloqueado={props.busy}
-        onTraer={props.onAdjuntarFuente}
-        onQuitar={props.onQuitarFuente}
-        onCambiarRama={props.onCambiarRama}
-      />
 
       <form
         class={cn(
