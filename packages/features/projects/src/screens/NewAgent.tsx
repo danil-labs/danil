@@ -171,7 +171,11 @@ export default function NewAgent(props: {
         <Show
           when={eclipse()}
           fallback={
-            <div class="mt-3 grid gap-3">
+            /* La columna se ata al ancho del diálogo. Sin `minmax(0,1fr)` la
+               pista crece con su hijo más ancho —la fila del modelo— y se lleva
+               a todos los campos por delante: el select, las caras y las
+               instrucciones se recortaban por la derecha. */
+            <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3">
               <label class="grid gap-1">
                 <span class="text-xs text-neutral-500">
                   {t("projects.agents.new_name")}
@@ -230,7 +234,7 @@ export default function NewAgent(props: {
 
               <div class="grid gap-1">
                 <span class="text-xs text-neutral-500">{t("projects.agents.profile_model")}</span>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <SelectorDeModelo
                     createFreeRouterConsent={props.createFreeRouterConsent}
                     models={opciones()}
