@@ -10,7 +10,7 @@
  */
 import { type CallResult, type EngineInfo, type EventsPage, type MachineState, requestId as defaultRequestId } from "@terminus/computers";
 import { isUnknownCommand } from "../../../../engine-client/src/index.ts";
-import { classOf, type Link, type MachineInfo, memberKey } from "@terminus/fleet";
+import { classOf, type Link, type MachineInfo, memberKey } from "../model/fleet/index.ts";
 import {
   formatWslMachineName,
   GUEST_MACHINES_FEATURE,

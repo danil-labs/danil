@@ -1,4 +1,4 @@
-import { type Envelope, type Fleet, FleetError, type MachineInfo } from "@terminus/fleet";
+import { type Envelope, type Fleet, FleetError, type MachineInfo } from "../model/fleet/index.ts";
 
 type Scope = { context?: string; org?: string; localOnly?: boolean; includeLocalChildren?: boolean };
 const ENVELOPE = new Set(["read", "readLive", "call", "raw", "peek"]);
