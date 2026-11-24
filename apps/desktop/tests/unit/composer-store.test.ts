@@ -1,19 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createRoot, createSignal } from "solid-js";
-import { createComposerStore } from "../../src/features/composer/index.ts";
-import type { AgentModels, ModelOption } from "../../src/lib/model.ts";
+import { modoInicial, modoRecordado, recordarModo } from "../../../../packages/features/chat/src/model/modes.ts";
+import { createComposerStore } from "../../../../packages/features/composer/src/index.ts";
+import type { Agent, AgentModels, ModelOption } from "../../src/lib/model.ts";
 import type { Superficie } from "../../src/lib/surfaces.ts";
 
 globalThis.window = new EventTarget() as unknown as Window & typeof globalThis;
 const model = (id: string): ModelOption => ({ id, label: id, efforts: ["low", "high"], default_effort: "low", gratis: false, note: null });
 const catalog = (provider: string, id: string): AgentModels => ({ provider, models: [model(id)], fallback: false });
 const surface: Superficie = { id: "claude", provider: "claude", label: "Claude", catalogo: "todo", usable: true, marca: null, porque: null };
+const provider = (id: string): Agent => ({ id, label: id, available: true, path: null, version: null, driver: true, limits: true });
 function pending<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(yes => { resolve = yes; }); return { promise, resolve }; }
-function fixture(options: { invoke?: Parameters<typeof createComposerStore>[0]["invoke"]; install?: boolean; last?: Parameters<typeof createComposerStore>[0]["withLastAnswer"] } = {}) {
+function fixture(options: { invoke?: Parameters<typeof createComposerStore>[0]["invoke"]; install?: boolean; connected?: boolean; machineOn?: boolean; last?: Parameters<typeof createComposerStore>[0]["withLastAnswer"] } = {}) {
   return createRoot(dispose => {
     const [workspace, setWorkspace] = createSignal<string | null>("A");
     const [machine, setMachine] = createSignal<string | null>("m1");
+    const [machineOn, setMachineOn] = createSignal<boolean | undefined>(options.machineOn ?? true);
+    const [connected, setConnected] = createSignal(options.connected ?? false);
     const [session, setSession] = createSignal<string | null>(null);
     const [workspaceMode, setWorkspaceMode] = createSignal<string | null>(null);
     const [configuration, setConfiguration] = createSignal<ReturnType<typeof createComposerStore>["snapshot"] extends () => infer C ? C | undefined : never>(undefined);
@@ -26,11 +30,12 @@ function fixture(options: { invoke?: Parameters<typeof createComposerStore>[0]["
         return value as T;
       },
       withLastAnswer: options.last ?? (async (_machine, _key, read) => read()),
-      scope: { workspace, machine, machineOn: () => true, connected: () => false, session },
+      scope: { workspace, machine, machineOn, connected, session },
       workspaceMode, draftConfiguration: configuration,
+      modoInicial, modoRecordado, recordarModo,
     });
     if (options.install) store.installEffects();
-    return { store, calls, setWorkspace, setMachine, setSession, setWorkspaceMode, setConfiguration, dispose: () => { store.dispose(); dispose(); } };
+    return { store, calls, setWorkspace, setMachine, setMachineOn, setConnected, setSession, setWorkspaceMode, setConfiguration, dispose: () => { store.dispose(); dispose(); } };
   });
 }
 const tick = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
@@ -93,4 +98,63 @@ test("dispose blocks pending answers, new reads and scope-triggered reads", asyn
   f.setWorkspace("B"); f.store.refreshCommands("claude"); void f.store.refreshSurfaces(false); void f.store.refreshProviders();
   await f.store.readModels("codex"); result.resolve(catalog("claude", "late")); await tick();
   assert.equal(f.calls.length, count); assert.deepEqual(f.store.catalogos(), {}); f.dispose();
+});
+
+test("providers recover when switching workspace, waking a machine, or falling back from an offline machine", async () => {
+  let failMachine = true;
+  const f = fixture({
+    install: true,
+    connected: true,
+    machineOn: false,
+    invoke: async <T>(command: string, args?: Record<string, unknown>, routed?: { headers: Record<string, string> }) => {
+      if (command === "list_providers") {
+        if (routed?.headers?.["x-terminus-workspace"] === "A" && failMachine) throw new Error("machine_off");
+        if (routed?.headers?.["x-terminus-machine"] === "m-off") throw new Error("machine_off");
+        return [provider(routed?.headers?.["x-terminus-workspace"] === "B" ? "codex" : "claude")] as T;
+      }
+      if (command === "list_models") return catalog(String(args?.provider), "first") as T;
+      if (command === "list_surfaces") return [surface] as T;
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  await f.store.refreshProviders();
+  assert.deepEqual(f.store.agents(), []);
+
+  // Machine wakes up -> providers load automatically.
+  failMachine = false;
+  f.setMachineOn(true);
+  await tick();
+  assert.deepEqual(f.store.agents().map(a => a.id), ["claude"]);
+
+  // Switching workspace with an offline remembered machine falls back to workspace routing.
+  f.setMachine("m-off");
+  f.setWorkspace("B");
+  await tick();
+  assert.deepEqual(f.store.agents().map(a => a.id), ["codex"]);
+  assert.ok(f.calls.some(c => c.command === "list_providers" && c.headers?.["x-terminus-workspace"] === "B" && !c.headers?.["x-terminus-machine"]));
+  f.dispose();
+});
+
+test("stale provider reads from an earlier workspace are discarded", async () => {
+  const slow = pending<Agent[]>();
+  let reads = 0;
+  const f = fixture({
+    install: true,
+    connected: true,
+    invoke: async <T>(command: string, args?: Record<string, unknown>) => {
+      if (command === "list_providers") return (++reads === 1 ? slow.promise : Promise.resolve([provider("codex")])) as Promise<T>;
+      if (command === "list_models") return catalog(String(args?.provider), "first") as T;
+      if (command === "list_surfaces") return [surface] as T;
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  const first = f.store.refreshProviders();
+  f.setWorkspace("B");
+  await tick();
+  assert.deepEqual(f.store.agents().map(a => a.id), ["codex"]);
+  slow.resolve([provider("claude")]);
+  await first;
+  await tick();
+  assert.deepEqual(f.store.agents().map(a => a.id), ["codex"]);
+  f.dispose();
 });

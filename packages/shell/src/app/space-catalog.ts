@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, onCleanup, type Accessor } from "solid-js";
+import { createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js";
 import { arrangeSpaces } from "../../../platform-client/src/space-order.ts";
 import { displayWorkspaceContext } from "../../../../apps/desktop/src/lib/workspace-context.ts";
 import type { Space } from "../../../../apps/desktop/src/lib/spaces.ts";
@@ -74,12 +74,11 @@ export function createSpaceCatalog(
     }
   };
 
-  createEffect(() => {
-    scope();
+  createEffect(on(scope, () => {
     lastImportKey = "";
     setPendingOrder(null);
     void refresh();
-  });
+  }));
   const timer = setInterval(() => { if (document.visibilityState !== "hidden") void refresh(); }, 15_000);
   const onFocus = () => { void refresh(); };
   window.addEventListener("focus", onFocus);

@@ -24,7 +24,7 @@ async function until(read, what = 'Window condition') {
   }
 }
 
-function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro', machineName = null, machineKind = 'organization', machinesFor = null, extraX = [] } = {}) {
+function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro', machineName = null, machineKind = 'organization', machinesFor = null, extraX = [], spacesFor = null } = {}) {
   const state = { calls: [], unscoped: [], selects: [], expired: 0, admitted: [] };
   const echo = (context, body, init = {}) => Response.json(body, { ...init, headers: { 'X-Danil-Session-Applied': context, 'X-Danil-Session-Applied-Org': ORGS[context] } });
   const fetcher = async (input, init = {}) => {
@@ -50,10 +50,15 @@ function edge({ expireX = () => false, lateX2 = () => true, personalPlan = 'pro'
         { context_id: 'ctx_x', org: 'org_x', org_name: 'Org X', catalog_state: 'listed', workspaces: [{ account_id: 'x1', engine_workspace_id: 'wx1', name: 'X Uno' }, ...(lateX2() ? [{ account_id: 'x2', engine_workspace_id: 'wx2', name: 'X Dos' }] : []), ...extraX.map(w => ({ account_id: w.account, engine_workspace_id: w.id, name: w.name }))] }] }] });
       case '/v1/identity/me': return echo(context, { id: 'user_a', name: 'QA A', email: 'a@example.test', workspace: null, organizations: [] });
       case '/v1/workspaces/preferences': return echo(context, { version: 1, added: context === 'ctx_p' ? ['wp'] : ['wx1', 'wx2', ...extraX.map(w => w.id)] });
-      case '/v1/workspaces': return echo(context, { items: context === 'ctx_x' ? [{ id: 'x1', org: 'org_x', name: 'X Uno', role: 'member', engine_workspace_id: 'wx1', placement: { kind: 'organization_machine' } }] : [], next_cursor: null });
+      case '/v1/workspaces': return echo(context, { items: context === 'ctx_x' ? [{ id: 'x1', org: 'org_x', name: 'X Uno', role: 'member', engine_workspace_id: 'wx1', placement: { kind: 'organization_machine' } }, ...extraX.map(w => ({ id: w.account, org: 'org_x', name: w.name, role: 'member', engine_workspace_id: w.id, placement: { kind: 'organization_machine' } }))] : [], next_cursor: null });
       case '/v1/credits/balance': return echo(context, { items: [] });
       case '/v1/machines': if (machinesFor) return echo(context, { items: machinesFor(context), next_cursor: null });
         return echo(context, { items: [{ machine_id: context === 'ctx_p' ? 'mp' : 'mx', name: machineName ?? (context === 'ctx_p' ? 'Nube P' : 'Nube X'), kind: machineKind, organization_id: ORGS[context], state: 'running', connection: 'connected' }], next_cursor: null });
+    }
+    const spaceMatch = /^\/v1\/workspaces\/([^/]+)\/spaces$/.exec(url.pathname);
+    if (spaceMatch && spacesFor) {
+      const catalog = spacesFor(decodeURIComponent(spaceMatch[1]), context);
+      if (catalog) return echo(context, catalog);
     }
     if (/^\/v1\/machines\/m[a-z]*\/tickets$/.test(url.pathname)) return echo(context, { ticket: 'one-use', url: `wss://connect.danil.ai${url.pathname.replace('/tickets', '/session')}`, expires_at: '2099-01-01T00:00:00Z' });
     return echo(context, {}, { status: 404 });
@@ -344,4 +349,73 @@ test('web discovers safe deletion on the engine that owns the task', async t => 
   assert.equal(review.consent, 'preview-proof');
   assert.ok(fake.calls.some(call => call.command === 'task_lifecycle_preview' && call.workspace === 'wp' && call.args.id === 't1'));
   assert.equal(fake.calls.some(call => call.command === 'task_lifecycle_apply'), false);
+});
+
+test('web creates a new cloud task when the shared catalog leads with a Mac space missing on an older cloud VM', async t => {
+  const state = edge({
+    extraX: [{ id: 'wcat', account: '101', name: 'X Catalog' }],
+    spacesFor: (accountWorkspace) => accountWorkspace === '101' ? {
+      version: 1,
+      spaces: [
+        { id: 'mac_s1', name: 'Mac Space', folders: [] },
+        { id: 'cloud_s1', name: 'Cloud', folders: [] },
+      ],
+      order: ['mac_s1', 'cloud_s1'],
+    } : null,
+  });
+  const sentSpaces = [];
+  const catalogTable = {
+    ...table,
+    list_workspaces: { workspaces: [...WORKSPACES, { id: 'wcat', name: 'X Catalog' }].map(w => ({ ...w, context_root: null })), active: null },
+    workspaces_startup: { workspaces: [...WORKSPACES, { id: 'wcat', name: 'X Catalog' }].map(w => ({ ...w, context_root: null })), active: null },
+    list_spaces: [{ id: 'cloud_s1', name: 'Cloud', folders: [], created_at: 1, updated_at: 1 }],
+    send_message: ({ space }) => {
+      sentSpaces.push(space);
+      return 'new-cloud-task';
+    },
+  };
+  const fake = relay({ table: catalogTable });
+  const app = await open(t, 'web-cloud-task-catalog-space', fake, '?workspace=wcat&org=org_x&account=user_a');
+  const doc = app.w.document;
+  await until(() => tile(doc, 'wp'), 'rail after reload');
+  if (!tile(doc, 'wcat')) doc.querySelector('[data-org-stack="org_x"]')?.click();
+  await until(() => tile(doc, 'wcat')?.getAttribute('aria-current') === 'true', 'cloud workspace active');
+  const spaces = await app.w.__TAURI_INTERNALS__.invoke('list_spaces', {}, { headers: { 'x-danil-context': 'ctx_x', 'x-terminus-workspace': 'wcat' } });
+  assert.equal(spaces[0].id, 'mac_s1', 'catalog puts Mac space first');
+  const task = await app.w.__TAURI_INTERNALS__.invoke('send_message', { text: 'Nueva tarea', space: spaces[0].id }, { headers: { 'x-danil-context': 'ctx_x', 'x-terminus-workspace': 'wcat', 'x-terminus-machine': 'mx' } });
+  assert.equal(task, 'mx~new-cloud-task');
+  assert.deepEqual(sentSpaces, [null], 'older cloud VM must fall back to null instead of nonexistent Mac space');
+  const catalogReads = state.calls.filter(c => c.startsWith('GET /v1/workspaces/101/spaces ')).length;
+  assert.ok(catalogReads >= 1 && catalogReads <= 10, `space catalog should not refetch in a tight loop (got ${catalogReads})`);
+});
+
+test('web usage button recovers after initial provider failure and renders when composer agent differs from active account', async t => {
+  const machine = (id, organization_id) => ({ machine_id: id, name: id, kind: 'organization', organization_id, state: 'running', connection: 'connected' });
+  edge({
+    machinesFor: ctx => ctx === 'ctx_p' ? [] : [machine('mx', ORGS.ctx_x)],
+  });
+  const fake = relay({ table: {
+    ...table,
+    list_providers: [
+      { id: 'claude', label: 'Claude', available: true, driver: true, limits: true },
+      { id: 'codex', label: 'Codex', available: true, driver: true, limits: true },
+    ],
+    list_surfaces: [{ id: 'claude', provider: 'claude', label: 'Claude', catalogo: 'todo', usable: true, marca: null, porque: null }],
+    list_models: ({ provider }) => ({ provider, models: [{ id: `${provider}-auto`, label: `${provider} Auto`, gratis: null, note: null, efforts: [], default_effort: null }], fallback: false }),
+    list_accounts: ({ provider }, { workspace }) => ({
+      provider, env_var: '',
+      accounts: workspace === 'wx1' && provider === 'codex' ? [{ id: 'cloud-codex', label: 'Codex Cloud', created_at: 1 }] : [],
+      active: workspace === 'wx1' && provider === 'codex' ? 'cloud-codex' : null,
+    }),
+    account_status: { connected: true },
+    account_limits: { mode: 'read', windows: [{ label: '5 hours', used_pct: 25, duration_s: 18_000, resets_at: null }], plan: null, fetched_at: Date.now() },
+  } });
+  const app = await open(t, 'web-usage-recover-and-fallback', fake, '?workspace=wp&org=org_p&account=user_a');
+  const doc = app.w.document;
+  await until(() => tile(doc, 'wp') && (tile(doc, 'wx1') || doc.querySelector('[data-org-stack="org_x"]')), 'initial rail');
+  if (!tile(doc, 'wx1')) doc.querySelector('[data-org-stack="org_x"]')?.click();
+  await until(() => tile(doc, 'wx1'), 'cloud workspace tile');
+  tile(doc, 'wx1').click();
+  await until(() => fake.calls.some(c => c.command === 'list_providers' && c.workspace === 'wx1'), 'providers retry after switching to cloud workspace');
+  await until(() => doc.querySelector('button [role="progressbar"][aria-valuenow="75"]'), 'usage button renders active Codex account even when composer uses Claude');
 });
