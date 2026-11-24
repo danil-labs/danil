@@ -1,9 +1,6 @@
 import type { MaquinasDeAjustes } from "../model/machines-port";
-import { Show } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
-import { capabilities } from "../../../../host/src/platform";
 import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
-import Harness from "./Harness";
 import Herramientas from "../screens/Tools";
 import "../../../../ui/src/locales/settingsPhrases";
 
@@ -16,9 +13,6 @@ export default function ConnectionsOperation(props: { maquinas: MaquinasDeAjuste
           <Herramientas maquinas={props.maquinas} />
         </div>
       </SettingsSection>
-      <Show when={capabilities().radiant}>
-        <Harness />
-      </Show>
     </SettingsPanel>
   );
 }

@@ -11,12 +11,13 @@ export const SETTINGS_ENTRIES = [
   { id: "ai-accounts", tabs: ["proveedores-ia"] },
   { id: "source-control", tabs: ["fuentes"] },
   { id: "agents-skills", tabs: ["agentes", "skills"] },
-  { id: "connections", tabs: ["operation", "plugins", "memory", "external"] },
+  { id: "connections", tabs: ["operation", "plugins", "external"] },
   { id: "maintenance", footer: true, tabs: ["maintenance"] },
 ] as const;
 
 const MOVED: Record<string, string> = {
   mcp: "operation",
+  memory: "operation",
   conexiones: "external",
   radiant: "operation",
   download: "maintenance",
