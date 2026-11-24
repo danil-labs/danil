@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ACTIVITY_MOTIONS, createActivityMotionCycle } from "../../src/features/chat/components/activity/activityMotion.ts";
+import { ACTIVITY_MOTIONS, createActivityMotionCycle } from "../../../../packages/features/chat/src/model/activityMotion.ts";
 
 test("each round includes all four and the displayed initial figure is consumed", () => {
   for (const random of [() => 0, () => 0.4, () => 0.999]) {

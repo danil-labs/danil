@@ -9,8 +9,8 @@ import { test } from "node:test";
 import { INTENT_COMMANDS, type MachineState } from "@terminus/computers";
 import { Fleet, type Link, type MachineInfo } from "@terminus/fleet";
 import "../helpers/catalog.ts";
-import { createRouter } from "../../src/features/machines/router.ts";
-import { addBlockedByExternal } from "../../src/features/settings/account-auth.ts";
+import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
+import { addBlockedByExternal } from "../../../../packages/ui/src/lib/account-auth.ts";
 type Args = Record<string, unknown>;
 function fakeLink(answers: Record<string, unknown>, initial: MachineState) {
   let state = initial; const calls: { command: string; args: Args; workspace: string | null }[] = [];

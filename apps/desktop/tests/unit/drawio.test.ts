@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { deflateRawSync } from "node:zlib";
 
-import { drawioAssets, drawioCompressed, drawioExpandedXml, drawioEditUrl, drawioMermaid, drawioScene, drawioXml } from "../../src/features/chat/drawio.ts";
+import { drawioAssets, drawioCompressed, drawioExpandedXml, drawioEditUrl, drawioMermaid, drawioScene, drawioXml } from "../../../../packages/features/chat/src/model/drawio.ts";
 
 test("solo un XML o un Mermaid de verdad cuenta", () => {
   assert.equal(drawioXml({ xml: "<mxGraphModel/>" }), "<mxGraphModel/>");

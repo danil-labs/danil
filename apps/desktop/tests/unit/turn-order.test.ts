@@ -11,7 +11,7 @@ import test from "node:test";
 
 import "../helpers/catalog.ts";
 import { cuentaDelTramo } from "../../src/lib/steps.ts";
-import { transcripcion, type Turn } from "../../src/features/chat/transcript.ts";
+import { transcripcion, type Turn } from "../../../../packages/features/chat/src/model/transcript.ts";
 
 const leer = { name: "Read", target: "a.txt", ok: true };
 

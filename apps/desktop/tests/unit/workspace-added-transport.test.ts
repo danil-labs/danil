@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { platformTransport } from '../../src/web/platform-session.ts';
-import { createAddedSync } from '../../src/features/shell/workspace-added-sync.ts';
-import { edgeAddedTransport, prefsAddedStore, webAddedTransport } from '../../src/features/shell/workspace-added-transport.ts';
+import { platformTransport } from '../../../../packages/session/src/platform-session.ts';
+import { createAddedSync } from '../../../../packages/shell/src/shell/workspace-added-sync.ts';
+import { edgeAddedTransport, prefsAddedStore, webAddedTransport } from '../../../../packages/shell/src/shell/workspace-added-transport.ts';
 
 const json = (status: number, body: unknown, problem = status >= 400) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': problem ? 'application/problem+json' : 'application/json' } });

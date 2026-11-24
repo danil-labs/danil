@@ -67,7 +67,7 @@ g.ResizeObserver = class {
 };
 
 const { createRoot, createSignal } = await import("solid-js");
-const { seguirElFondo } = await import("../../src/features/chat/paste.ts");
+const { seguirElFondo } = await import("../../../../packages/features/chat/src/model/paste.ts");
 
 /**
  * Un contenedor que scrollea, sin navegador debajo.

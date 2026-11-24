@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { deOtraTarea as fromAnotherTask, contestaALaTerminal as answersTerminal, esDeLaTerminal as isTerminalMessage, guardable as isSaveable, inyectable as isInjectable, seMandaSinSuperficie as sendsWithoutSurface } from "../../src/features/chat/queue.ts";
+import { deOtraTarea as fromAnotherTask, contestaALaTerminal as answersTerminal, esDeLaTerminal as isTerminalMessage, guardable as isSaveable, inyectable as isInjectable, seMandaSinSuperficie as sendsWithoutSurface } from "../../../../packages/ui/src/lib/queue.ts";
 
 const delivery = {
   id: "d1",

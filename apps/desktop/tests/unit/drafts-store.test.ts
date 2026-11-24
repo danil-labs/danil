@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createEffect, createRoot, createSignal } from "solid-js";
-import { createDraftsStore } from "../../src/features/drafts/index.ts";
+import { createDraftsStore } from "../../../../packages/features/drafts/src/index.ts";
 
 function fixture(prepareAttachments: (paths: string[], project: string) => Promise<string[]> = async paths => paths) {
   return createRoot(dispose => {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { delegatedRailRows } from "../../src/features/chat/delegatedRail.ts";
-import type { SessionRow } from "../../src/features/projects/Sessions.tsx";
+import { delegatedRailRows } from "../../../../packages/features/projects/src/model/delegatedRail.ts";
+import type { SessionRow } from "../../../../packages/features/projects/src/screens/Sessions.tsx";
 
 const fila = (id: string, extra: Partial<SessionRow> = {}) =>
   ({ id, parent: "raiz", esperando: false, stage: null, archived: false, ...extra }) as SessionRow;

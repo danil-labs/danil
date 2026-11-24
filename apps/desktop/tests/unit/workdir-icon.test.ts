@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { workdirIconKind } from "../../src/features/code/workdirKind.ts";
+import { workdirIconKind } from "../../../../packages/ui/src/lib/workdirKind.ts";
 
 const PROVIDERS = ["google_drive", "one_drive", "icloud", "dropbox", "box", "other"];
 

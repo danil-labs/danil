@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createSessionContexts } from "../../src/features/shell/session-contexts.ts";
-import { createWorkspaceSourceWait } from "../../src/features/shell/workspace-source-wait.ts";
+import { createSessionContexts } from "../../../../packages/shell/src/shell/session-contexts.ts";
+import { createWorkspaceSourceWait } from "../../../../packages/shell/src/shell/workspace-source-wait.ts";
 import { createAccountAddAction } from "../../src/lib/account-add.ts";
 import { type GroupSend, readGroupBalance, redeemGroupCode } from "../../src/lib/group-account.ts";
 import { normalizePromoCode, promoRejection } from "../../src/lib/promo-rejections.ts";

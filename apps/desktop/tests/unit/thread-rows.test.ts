@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createBlockKeys, estimateBlock } from "../../src/features/chat/threadRows.ts";
+import { createBlockKeys, estimateBlock } from "../../../../packages/features/chat/src/model/threadRows.ts";
 
 test("el bloque vivo conserva su fila al guardarse", () => {
   const keys = createBlockKeys();

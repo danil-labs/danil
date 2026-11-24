@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { descendientes: descendants, esChatDeAgente: isAgentChat, taskTree } = await import("../../src/features/projects/taskTree.ts");
+const { descendientes: descendants, esChatDeAgente: isAgentChat, taskTree } = await import("../../../../packages/features/projects/src/model/taskTree.ts");
 
 test("archivar una hija no archiva a su padre ni a sus hermanas", () => {
   const parent = { id: "parent", parent: null, archived: false };
@@ -73,7 +73,7 @@ test("los historiales antiguos siguen disponibles y las tareas con arquetipo son
   ]);
 });
 
-const { canFinishTask, effectiveTaskGit, UNKNOWN_GIT } = await import("../../src/features/projects/taskGit.ts");
+const { canFinishTask, effectiveTaskGit, UNKNOWN_GIT } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
 const merged = {
   ...UNKNOWN_GIT,
   kind: "branch" as const,
