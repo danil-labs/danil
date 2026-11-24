@@ -79,7 +79,7 @@ export default function Settings(props: {
     void ws.cambiarA(option.id, option.context ?? undefined);
   }
 
-  const { ENTRADAS } = createSuperficiesDeAjustes(props);
+  const { ENTRADAS } = createSuperficiesDeAjustes(props, activeWorkspaceId);
   const [personal] = createResource(
     subpanelKey,
     async () => (await capabilities().personalAccount?.isPersonal().catch(() => false)) ?? false,

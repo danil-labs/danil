@@ -8,7 +8,6 @@ export * from "./model/early-startup";
 export * from "./model/environment-store";
 export * from "./model/fiscal";
 export * from "./model/github-account-failures";
-export * from "./model/logo-crop";
 export * from "./model/settings-entries";
 export * from "./model/settings-workspaces";
 export * from "./model/workspace-menu-escape";

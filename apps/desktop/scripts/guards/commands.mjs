@@ -162,6 +162,9 @@ const SIN_INTERFAZ = {
   // La pestaña Configuración › Barra de workspaces se retiró; los workspaces se administran desde el riel principal.
   remove_workspace: "la llamaba Configuración › Barra de workspaces, ya retirada; queda en el contrato del motor",
   set_workspace_worktrees_root: "la llamaba Configuración › Barra de workspaces, ya retirada; queda en el contrato del motor",
+  // La edición del logo del workspace vive en Danil Harness, no en Configuración › Apariencia.
+  set_workspace_logo: "la edición del logo del workspace vive en Danil Harness; queda en el contrato del motor",
+  set_workspace_logo_png: "la edición del logo del workspace vive en Danil Harness; queda en el contrato del motor",
   // `docs/agents.md` § Estado observable: el comando de agregación existe
   // para que el riel deje de sondear; el riel mismo no está construido.
 };

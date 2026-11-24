@@ -112,7 +112,7 @@ test("la imagen elegida se reduce y viaja como data: en set_chat_background, nun
 });
 
 test("en la web la imagen de la cuenta manda, y con la máquina apagada se ve con los velos de la cuenta", async () => {
-  const { setCapabilities, capabilities } = await import("../../src/lib/platform.ts");
+  const { setCapabilities, capabilities } = await import("../../../../packages/host/src/platform.ts");
   const antes = capabilities();
   const subidas: string[] = [];
   const CUENTA = "data:image/webp;base64,Q1VFTlRB";
@@ -149,4 +149,46 @@ test("en la web la imagen de la cuenta manda, y con la máquina apagada se ve co
   } finally {
     setCapabilities(antes);
   }
+});
+
+test("cambiar de workspace reinicia velos nulos de pestañas y paneles y cancela el guardado diferido pendiente", async () => {
+  const s = await store();
+  const { cargarFondoDelWorkspace, guardarVelos } = await engine();
+  const { VELO_DE_PESTANAS, VELO_DE_PANELES } = await import("../../src/lib/chat-background.ts");
+
+  replies = {
+    chat_background: () => ({ preset: "neutro", data_url: null, veil: { chat: 0.4, tabs: 0.55, panels: 0.85 } }),
+    set_chat_background: () => null,
+  };
+  await cargarFondoDelWorkspace("w1");
+  assert.equal(s.veloDePestanas(), 0.55);
+  assert.equal(s.veloDePaneles(), 0.85);
+
+  // Dispara un guardado diferido de velos en w1 y cambia enseguida a w2 (antes de los 400 ms).
+  calls.length = 0;
+  s.elegirVeloDeFondo(0.2);
+  guardarVelos();
+
+  replies = {
+    chat_background: () => ({ preset: "neutro", data_url: null, veil: { chat: 0.5, tabs: null, panels: null } }),
+    set_chat_background: () => null,
+  };
+  await cargarFondoDelWorkspace("w2");
+  assert.equal(s.veloDeFondo(), 0.5);
+  assert.equal(s.veloDePestanas(), VELO_DE_PESTANAS, "un workspace sin velo de pestañas no hereda el del anterior");
+  assert.equal(s.veloDePaneles(), VELO_DE_PANELES, "un workspace sin velo de paneles no hereda el del anterior");
+
+  await new Promise((r) => setTimeout(r, 460));
+  assert.equal(
+    calls.filter((c) => c.command === "set_chat_background").length,
+    0,
+    "el guardado diferido del workspace anterior no se escribe sobre el workspace nuevo",
+  );
+
+  // Sin workspace activo no se consulta `chat_background` y se limpia la imagen en memoria.
+  calls.length = 0;
+  s.setImagenDelWorkspace("data:image/png;base64,AAAA");
+  await cargarFondoDelWorkspace(null);
+  assert.equal(s.imagenDelWorkspace(), null);
+  assert.equal(calls.filter((c) => c.command === "chat_background").length, 0);
 });

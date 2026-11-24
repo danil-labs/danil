@@ -17,8 +17,29 @@ export type Apariencia = "sistema" | "claro" | "oscuro";
 const CLAVE = "harness:apariencia";
 const OSCURO = "(prefers-color-scheme: dark)";
 
+const [themeRev, setThemeRev] = createSignal(0);
+const bumpTheme = () => setThemeRev((n) => n + 1);
+
+function readPref(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writePref(key: string, value: string | null) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+    // En contextos con almacenamiento bloqueado el tema sigue aplicando en memoria.
+  }
+}
+
 export function apariencia(): Apariencia {
-  const v = localStorage.getItem(CLAVE);
+  themeRev();
+  const v = readPref(CLAVE);
   return v === "claro" || v === "oscuro" ? v : "sistema";
 }
 
@@ -50,11 +71,13 @@ const DARK_STYLE_KEY = "harness:dark-style";
 const LIGHT_STYLE_KEY = "harness:light-style";
 
 export function darkStyle(): DarkStyle {
-  return localStorage.getItem(DARK_STYLE_KEY) === "navy" ? "navy" : "graphite";
+  themeRev();
+  return readPref(DARK_STYLE_KEY) === "navy" ? "navy" : "graphite";
 }
 
 export function lightStyle(): LightStyle {
-  return localStorage.getItem(LIGHT_STYLE_KEY) === "graphite" ? "graphite" : "violet";
+  themeRev();
+  return readPref(LIGHT_STYLE_KEY) === "graphite" ? "graphite" : "violet";
 }
 
 function paintDarkStyle(style: DarkStyle) {
@@ -68,18 +91,20 @@ function paintLightStyle(style: LightStyle) {
 }
 
 export function chooseDarkStyle(style: DarkStyle): DarkStyle {
-  if (style === "graphite") localStorage.removeItem(DARK_STYLE_KEY);
-  else localStorage.setItem(DARK_STYLE_KEY, style);
+  writePref(DARK_STYLE_KEY, style === "graphite" ? null : style);
   paintDarkStyle(style);
+  bumpTheme();
   return style;
 }
 
 export function chooseLightStyle(style: LightStyle): LightStyle {
-  if (style === "violet") localStorage.removeItem(LIGHT_STYLE_KEY);
-  else localStorage.setItem(LIGHT_STYLE_KEY, style);
+  writePref(LIGHT_STYLE_KEY, style === "violet" ? null : style);
   paintLightStyle(style);
+  bumpTheme();
   return style;
 }
+
+let siguiendo = false;
 
 /**
  * Aplica la preferencia y se queda escuchando al sistema. El oyente no se quita
@@ -88,17 +113,27 @@ export function chooseLightStyle(style: LightStyle): LightStyle {
  */
 export function seguirElTema() {
   const media = window.matchMedia(OSCURO);
-  paintDarkStyle(darkStyle());
-  paintLightStyle(lightStyle());
-  pintar(apariencia(), media);
+  const aplicarTodo = () => {
+    paintDarkStyle(darkStyle());
+    paintLightStyle(lightStyle());
+    pintar(apariencia(), media);
+  };
+  aplicarTodo();
+  if (siguiendo) return;
+  siguiendo = true;
   media.addEventListener("change", () => pintar(apariencia(), media));
+  window.addEventListener("storage", (e) => {
+    if (e.key !== null && e.key !== CLAVE && e.key !== DARK_STYLE_KEY && e.key !== LIGHT_STYLE_KEY) return;
+    bumpTheme();
+    aplicarTodo();
+  });
 }
 
 /** La cambia y la pinta. Devuelve la elegida, para que quien la llame no tenga
  *  que releerla del almacenamiento. */
 export function elegirApariencia(a: Apariencia): Apariencia {
-  if (a === "sistema") localStorage.removeItem(CLAVE);
-  else localStorage.setItem(CLAVE, a);
+  writePref(CLAVE, a === "sistema" ? null : a);
   pintar(a, window.matchMedia(OSCURO));
+  bumpTheme();
   return a;
 }
