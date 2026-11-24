@@ -1,4 +1,5 @@
 import { createSignal } from "solid-js";
+import { findLocalMachine, type MachineListEntry } from "../../../host/src/machine.ts";
 import { escribirPref, leerPref } from "../../../session/src/prefs.ts";
 import { adoptionTarget, adoptionTargetOf, adoptLocals, prefsAdoptionMemory, type AdoptionClaimed, type AdoptionFailure } from "./account-adoption.ts";
 import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
@@ -106,8 +107,8 @@ export function createAccountWorkspaces(rpc: Invoke, native: boolean, changed: (
       free = new Map();
       failed = false;
       try {
-        const machines = await rpc<{ id: string; local?: boolean; features?: string[] }[]>("machine_list");
-        const self = machines.find((m) => m.local);
+        const machines = await rpc<MachineListEntry[]>("machine_list");
+        const self = findLocalMachine(machines);
         const announced = self && features ? await features().catch(() => null) : null;
         if (self && announced) self.features = [...announced];
         engineAdopts ||= engineOwnsAdoption(announced);

@@ -1,3 +1,4 @@
+import { findLocalMachine, type MachineListEntry } from "../../../host/src/machine.ts";
 import type { PersonalOutcome } from "./personal-open.ts";
 
 /** Hecho cuando el login terminó y no quedan locales sin organización (plan § 2.6). */
@@ -35,7 +36,7 @@ type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>
  */
 export async function localCandidateCount(rpc: Invoke, features?: () => Promise<readonly string[] | null>): Promise<number | null> {
   try {
-    const self = (await rpc<{ id: string; local?: boolean; features?: string[] }[]>("machine_list")).find((m) => m.local);
+    const self = findLocalMachine(await rpc<MachineListEntry[]>("machine_list"));
     const announced = features ? await features().catch(() => null) : self?.features ?? null;
     if (!self || !announced) return null;
     if (!announced.includes("account_adoption_v1") || !announced.includes("account_adoption_proof_v1")) return 0;
