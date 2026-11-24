@@ -3,7 +3,10 @@
  * el valor por defecto; la entrada web (`src/web/main.tsx`) lo fija antes de
  * importar la app y no cambia después.
  */
-import type { AccountWorkspace, Answer, Computer, CredentialSource, MemorySource, SpaceOrderSource } from "@terminus/computers";
+import type { AccountWorkspace, Answer, Computer } from "../../platform-client/src/api.ts";
+import type { CredentialSource } from "../../platform-client/src/account-credentials.ts";
+import type { MemorySource } from "../../platform-client/src/memory.ts";
+import type { SpaceOrderSource } from "../../platform-client/src/space-order.ts";
 import { createRoot, createSignal, type JSX } from "solid-js";
 import type { AccountEmailsSource } from "../../features/settings/src/model/account-emails";
 import type { AccountProfileSource } from "../../features/settings/src/model/account-profile";
@@ -91,7 +94,7 @@ export type Capabilities = import("../../../apps/desktop/src/lib/group-account")
   /** La bitácora de cambios de la cuenta de Danil activa, con la sesión (la web en alfa); la muestra `/admin`. */
   accountAuditLog?: AuditLogSource;
   /** El selector de organización (`identity.organizations`); sin esto, o sin la ruta en el servidor, no sale. */
-  organizations?: () => Promise<import("@terminus/computers").OrganizationSelection>;
+  organizations?: () => Promise<import("../../platform-client/src/organizations.ts").OrganizationSelection>;
   /** `/admin` dentro de esta web (alfa); `allowed` dice si la persona es owner o admin de algún workspace de Danil. Sin esto, el escritorio la abre en el navegador. */
   adminPage?: { href: string; allowed: () => Promise<boolean> };
   /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `plan`, esa pestaña no sale. */

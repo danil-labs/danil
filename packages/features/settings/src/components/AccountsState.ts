@@ -1,4 +1,4 @@
-import { groupAccounts } from "@terminus/computers";
+import { groupAccounts } from "../../../../ui/src/lib/account-usage.ts";
 import { createEffect, createMemo, createSignal } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { createCopied } from "../../../../host/src/clipboard";

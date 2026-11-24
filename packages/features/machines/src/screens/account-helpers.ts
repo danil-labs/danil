@@ -1,4 +1,4 @@
-import { type SystemId } from "@terminus/computers";
+import type { SystemId } from "../../../../platform-client/src/machine.ts";
 import { Fleet } from "../model/fleet/index.ts";
 import { isMac, isWindows } from "../../../../host/src/window";
 import { type Router } from "../queries/router";

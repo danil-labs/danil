@@ -5,7 +5,6 @@
   "type": "module",
   "dependencies": {
     "@tauri-apps/api": "^2.12.4",
-    "@terminus/computers": "workspace:*",
     "lucide-solid": "^1.31.0",
     "solid-js": "^1.9.17"
   },

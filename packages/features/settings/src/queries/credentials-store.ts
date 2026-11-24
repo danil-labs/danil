@@ -14,17 +14,18 @@ import {
   type CredentialPut,
   type CredentialsListing,
   type CredentialSource,
-  canSeal,
   credentialHint,
+  credentialMachines,
   credentialsListingOf,
   deleteCredential,
   listCredentials,
   putCredential,
   removeCredentialMachine,
   restoreCredentialMachine,
-  sealForRecipients,
   sealRecipientsFor,
-} from "@terminus/computers";
+} from "../../../../platform-client/src/account-credentials.ts";
+import { canSeal, sealForRecipients } from "../../../../platform-client/src/seal.ts";
+export { credentialMachines };
 import { createRoot, createSignal } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";

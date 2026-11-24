@@ -1,4 +1,6 @@
-import { type AccountWorkspace, type Computer, type ConnectionPatch, type ConnectionCapabilities, type Connection, webhookUrlOk } from "@terminus/computers";
+import type { AccountWorkspace, Computer } from "../../../../platform-client/src/api.ts";
+import type { Connection, ConnectionCapabilities, ConnectionPatch } from "../../../../platform-client/src/connections.ts";
+import { webhookUrlOk } from "../model/connections.ts";
 import { createSignal, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

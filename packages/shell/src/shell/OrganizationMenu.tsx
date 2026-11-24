@@ -1,4 +1,4 @@
-import type { OrganizationSelection, OrganizationState } from "@terminus/computers";
+import type { OrganizationSelection, OrganizationState } from "../../../platform-client/src/organizations.ts";
 import Check from "lucide-solid/icons/check";
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";

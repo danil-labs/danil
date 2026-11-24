@@ -58,6 +58,7 @@
     "packages/ui/src/Table.tsx": ["files"],
     "packages/ui/src/lib/bundled.ts": ["exports", "types"],
     "packages/platform-client/src/api.ts": ["exports"],
+    "packages/computers/src/relay-frames.ts": ["files"],
     // isManaged es el alias de wakes con nombre del dominio; lo prueba packages/computers/test/computers.test.ts.
     "packages/platform-client/src/machine.ts": ["duplicates"],
     // Reexportaciones de una línea del shim packages/fleet hacia features/machines/src/model/fleet (f44-2).

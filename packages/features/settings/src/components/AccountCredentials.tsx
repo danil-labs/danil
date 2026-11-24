@@ -6,7 +6,7 @@
  * Trozo perezoso: lo cargan Cuentas, MCP y Referencias al abrirse.
  */
 import "../../../../../apps/desktop/src/locales/danilPhrases";
-import { type Credential, type CredentialKind, type CredentialMachine, credentialMachines } from "@terminus/computers";
+import type { Credential, CredentialKind, CredentialMachine } from "../../../../platform-client/src/account-credentials.ts";
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
 import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
@@ -17,7 +17,7 @@ import { type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import { SettingsBlock } from "../../../../ui/src/SettingsLayout";
-import { act, credentialsView, failureOf, reloadCredentials } from "../queries/credentials-store";
+import { act, credentialMachines, credentialsView, failureOf, reloadCredentials } from "../queries/credentials-store";
 
 const nameOf = (m: Pick<CredentialMachine, "computer_id" | "name">) => m.name?.trim() || capabilities().machineName?.(m.computer_id) || m.computer_id;
 const PROVIDERS: Record<string, string> = { opencode: "OpenCode", zotero: "Zotero", github: "GitHub" };

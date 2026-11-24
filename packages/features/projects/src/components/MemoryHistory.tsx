@@ -1,11 +1,11 @@
 import { For, Show, createEffect, createSignal } from "solid-js";
-import { memoryDirs, memoryHistory, type MemoryVersion, parseMemoryEntry, readMemoryFile } from "@terminus/computers";
+import { memoryDirs, parseMemoryEntry } from "../model/memory.ts";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { FailureNote, type Failure } from "../../../../ui/src/Failure";
 import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { MemoriaScope } from "../../../../../apps/desktop/src/lib/model";
-import type { MemoriaDeCuenta } from "../queries/memory-account";
+import { type MemoriaDeCuenta, memoryHistory, type MemoryVersion, readMemoryFile } from "../queries/memory-account";
 
 const fecha = (iso: string) =>
   iso

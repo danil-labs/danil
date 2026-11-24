@@ -1,5 +1,5 @@
 import { For, Show, createEffect, createSignal } from "solid-js";
-import { conflictCopyOf, deleteMemoryFile } from "@terminus/computers";
+import { conflictCopyOf } from "../model/memory.ts";
 import History from "lucide-solid/icons/history";
 import { listMemoryEntries, deleteMemoryEntry } from "../queries";
 import { confirm } from "@tauri-apps/plugin-dialog";
@@ -14,7 +14,7 @@ import type { Agent, MemoriaEntrada, MemoriaIndice, MemoriaScope } from "../../.
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import { capabilities } from "../../../../host/src/platform";
 import HistorialDeEntrada from "./MemoryHistory";
-import { type EntradaDeCuenta, entradasDeCuenta, type MemoriaDeCuenta, memoriaDeCuenta } from "../queries/memory-account";
+import { deleteMemoryFile, type EntradaDeCuenta, entradasDeCuenta, type MemoriaDeCuenta, memoriaDeCuenta } from "../queries/memory-account";
 import { Panel } from "../../../../ui/src/Panel";
 import { FormularioDeEntrada } from "./memoria-entry-form";
 

@@ -1,8 +1,10 @@
-import { type AccountWorkspace, type Computer, type ConnectionCapabilities, type Connection, listComputers, listConnections, connectionCapabilities, MCP_URL, revokeConnection, updateConnection } from "@terminus/computers";
+import type { AccountWorkspace, Computer } from "../../../../platform-client/src/api.ts";
+import type { Connection, ConnectionCapabilities } from "../../../../platform-client/src/connections.ts";
+import { MCP_URL } from "../model/connections.ts";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { accountRelayToken } from "../queries/engine-connections";
+import { accountRelayToken, connectionCapabilities, listComputers, listConnections, revokeConnection, updateConnection } from "../queries/engine-connections";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { EmptyState } from "../../../../ui/src/EmptyState";
