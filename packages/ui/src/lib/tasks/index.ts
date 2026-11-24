@@ -68,6 +68,7 @@ export {
   type DanilService,
   creditsBalanceState,
   danilCreditsTierLabel,
+  formatCreditsCount,
   danilServiceOf,
   isDanilCreditsModel,
 } from "./danil-services.ts";
