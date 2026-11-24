@@ -10,7 +10,7 @@ import X from "lucide-solid/icons/x";
 import { createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import type { Agent } from "../../../../../apps/desktop/src/lib/model";
+import type { Agent } from "../../../../ui/src/lib/model";
 import { Button } from "../../../../ui/src/Button";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { deOtraTarea, esDeLaTerminal, interrumpible, type Encolado, type RazonDeRetencion } from "../../../../ui/src/lib/queue.ts";

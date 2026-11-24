@@ -3,7 +3,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { loadFreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-model-policy-load.ts";
 import { textoDeFalta } from "../../../../../apps/desktop/src/lib/no-space";
-import type { Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
+import type { Superficie } from "../../../../ui/src/lib/surfaces.ts";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { accountKeyUrl } from "../../../../ui/src/lib/account-auth.ts";
 import { ORIGEN_SISTEMA } from "../../../../ui/src/lib/bundled.ts";

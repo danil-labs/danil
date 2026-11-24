@@ -1,7 +1,7 @@
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { HandlerStatus, HandlerStatusRow } from "../../../../../apps/desktop/src/lib/model";
+import type { HandlerStatus, HandlerStatusRow } from "../../../../ui/src/lib/model";
 
 type PresenceCacheEntry = {
   rows: () => HandlerStatusRow[];

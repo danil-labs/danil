@@ -1,7 +1,7 @@
-import { type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
-import { type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import { type OpcionDeModelo } from "../../../../ui/src/lib/models";
+import { type Tab } from "../../../../ui/src/lib/tabs.ts";
 import { createEffect, createSignal, on, type Accessor, type Setter } from "solid-js";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */

@@ -11,7 +11,7 @@ import {
 } from "../queries.ts";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { Button } from "../../../../ui/src/Button";
-import { aDireccion, corta, hayCapaEncima, seguirHueco, zonasEncima } from "../../../../../apps/desktop/src/lib/sites";
+import { aDireccion, corta, hayCapaEncima, seguirHueco, zonasEncima } from "../../../../ui/src/lib/sites";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";

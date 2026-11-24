@@ -12,7 +12,7 @@ import { asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
-import type { Project } from "../../../../../apps/desktop/src/lib/model";
+import type { Project } from "../../../../ui/src/lib/model";
 import { REMOTE_CLONES, faseDeClon, type AnadirCarpetaProps, type RemoteClone } from "./add-workdir-model";
 
 export function createAnadirCarpeta(props: AnadirCarpetaProps) {

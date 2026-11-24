@@ -3,7 +3,7 @@
  * presentación. Compartidos entre Configuración, el alta y el shell.
  */
 import type { Frase } from "../../../../apps/desktop/src/lib/prose";
-import type { Query, Read } from "../../../../apps/desktop/src/lib/limits";
+import type { Query, Read } from "./limits";
 import type { Failure } from "../Failure";
 
 export type Account = {

@@ -1,4 +1,4 @@
-import { marcaDeSuperficie } from "../../../../../apps/desktop/src/lib/surfaces";
+import { marcaDeSuperficie } from "../../../../ui/src/lib/surfaces";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createEffect, createSignal, createUniqueId, type JSX, on, onMount, Show, untrack } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

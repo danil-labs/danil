@@ -1,6 +1,6 @@
 import type { InvokeOptions } from "@tauri-apps/api/core";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
+import type { ArbolEnTarea } from "../../../../ui/src/lib/model";
 
 export const listTaskTrees = (
   project: string,

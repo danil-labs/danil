@@ -1,4 +1,4 @@
-import type { ModoDePermiso } from "../../../../../apps/desktop/src/lib/model";
+import type { ModoDePermiso } from "../../../../ui/src/lib/model";
 import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
 
 /**

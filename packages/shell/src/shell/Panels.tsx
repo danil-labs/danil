@@ -1,5 +1,5 @@
 import { Index, type JSX } from "solid-js";
-import { dividerSpan, gridTracks } from "../../../../apps/desktop/src/lib/panels";
+import { dividerSpan, gridTracks } from "../../../ui/src/lib/panels";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 
 /**

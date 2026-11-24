@@ -1,7 +1,7 @@
 import { createEffect, createMemo, createSignal, mapArray, onCleanup } from "solid-js";
 import { watchRoster } from "../../../ui/src/lib/handlerRoster.ts";
 import { invoke } from "../../../engine-client/src/client.ts";
-import type { AgentProfile, HandlerList, HandlerStatus } from "../../../../apps/desktop/src/lib/model";
+import type { AgentProfile, HandlerList, HandlerStatus } from "../../../ui/src/lib/model";
 import { watchHandlerStatuses } from "../../../features/projects/src/queries/handlerPresence";
 import { notifyProfiles, watchProfiles } from "../../../features/projects/src/queries/profiles";
 import { agentOptions } from "../../../../apps/desktop/src/lib/sidebarView";

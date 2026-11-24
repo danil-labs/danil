@@ -3,7 +3,7 @@ import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { type JSX, Match, Show, Switch } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { formatearDuracion } from "../../../../../apps/desktop/src/lib/steps";
-import { formatTokens } from "../../../../../apps/desktop/src/lib/usage";
+import { formatTokens } from "../../../../ui/src/lib/usage";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { Markdown } from "../../../../ui/src/Markdown";
 import { type ClaseDeSalida, comandoEscrito, esMarkdown } from "../model/slashOutput";

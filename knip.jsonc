@@ -92,6 +92,7 @@
     "packages/features/machines/src/queries/danil-source.ts": ["exports"], // listedOf, noteListing, danilAvailableContext, readDanilContext: danil-source.test.ts
     "packages/features/machines/src/queries/engine-workspaces.ts": ["exports", "types"], // LIGHT_STATE_MACHINES_FEATURE, RailWorkspace: engine-workspaces.test.ts / #1136
     "apps/desktop/src/lib/{activityObservation,projectNames,promo-role,scrollbars,sharedLazy,terminal-themes,turnActivity}.ts": ["files"], // reexportaciones de F4.4 lote 3
+    "apps/desktop/src/lib/{panels-grid,panels-split,panels-storage,panels-store,panels-types,tabs-close,tabs-files,tabs-storage,tabs-store,tabs-types}.ts": ["files"], // reexportaciones de F4.4 lote 8a
     "packages/features/machines/src/queries/router.ts": ["exports"],  // unconfirmedOpen: machine-router.test.ts
     "packages/features/machines/src/queries/session-cloud.ts": ["exports"], // mergeContextMachines: connected-status, session-machines
     "packages/features/onboarding/src/model/account-welcome.ts": ["exports"], // ACCOUNT_WELCOME_KEY: account-welcome.test.ts

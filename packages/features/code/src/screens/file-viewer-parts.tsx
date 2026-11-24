@@ -5,7 +5,7 @@ import Documento from "../../../../ui/src/Document";
 import { formaDe } from "../../../../ui/src/lib/sandbox";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { setMoviendoHueco } from "../../../../../apps/desktop/src/lib/sites";
+import { setMoviendoHueco } from "../../../../ui/src/lib/sites";
 import { sangriaDe } from "../model/indent";
 import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
 import { delimiterFor } from "../../../../ui/src/lib/csv";

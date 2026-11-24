@@ -1,5 +1,5 @@
 import { Show, type JSX } from "solid-js";
-import type { Side as PanelSide } from "../../../../../apps/desktop/src/lib/panels";
+import type { Side as PanelSide } from "../../../../ui/src/lib/panels";
 import type { DragPoint } from "../../../../ui/src/lib/pointer-drag";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 

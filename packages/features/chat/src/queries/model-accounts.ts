@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { Query } from "../../../../../apps/desktop/src/lib/limits";
+import type { Query } from "../../../../ui/src/lib/limits";
 
 export type AccountList = {
   active?: string | null;

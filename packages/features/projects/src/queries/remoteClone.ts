@@ -6,7 +6,7 @@
  */
 import { invoke } from "../../../../engine-client/src/client";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import type { Project } from "../../../../../apps/desktop/src/lib/model";
+import type { Project } from "../../../../ui/src/lib/model";
 import { borrarPref, escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import type { Failure } from "../../../../ui/src/Failure";

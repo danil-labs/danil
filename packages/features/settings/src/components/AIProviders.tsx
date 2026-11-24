@@ -10,7 +10,7 @@ import { Skeleton } from "../../../../ui/src/Skeleton";
 import { aiProvidersView, type SurfacesState } from "../model/ai-providers-view";
 import { grupos, idsDeProveedor, opcionesDeAlta, routers, visible, visibles, type EstadoDeProveedor } from "../model/ai-providers-groups";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
-import { rotuloDeSuperficie, type Superficie } from "../../../../../apps/desktop/src/lib/surfaces";
+import { rotuloDeSuperficie, type Superficie } from "../../../../ui/src/lib/surfaces";
 import { Badge } from "../../../../ui/src/Badge";
 import { rotuloDeMarca } from "../../../../ui/src/lib/surfaceMarks";
 import Accounts from "./Accounts";

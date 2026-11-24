@@ -1,6 +1,6 @@
 import type { MachineResources } from "../../../engine-client/src/index.ts";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { haceCuanto } from "../../../../apps/desktop/src/lib/limits";
+import { haceCuanto } from "../../../ui/src/lib/limits";
 export { type Machine, machineName, machines as fleetMachines } from "../../../features/machines/src/queries/store";
 
 type Clase = "recuperable" | "git" | "fuente" | "trabajo" | "registro";

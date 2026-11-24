@@ -1,7 +1,7 @@
 import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { activeTrigger } from "../../../../../apps/desktop/src/lib/mentions";
-import { opcionesDeModelos } from "../../../../../apps/desktop/src/lib/models";
+import { opcionesDeModelos } from "../../../../ui/src/lib/models";
 import { lastSentAt, usedSince } from "../../../../ui/src/lib/chat/nextSteps";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { slashSuggestions } from "../../../../ui/src/lib/skills";

@@ -2,8 +2,8 @@ import { aplicarLenguaDeWorkspace, t } from "../../../../apps/desktop/src/lib/i1
 import { type InternalTaskLink } from "../../../ui/src/lib/chat/links";
 import { listen } from "../../../host/src/serviceEvents.ts";
 import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
-import { type UsageRecord, ventanaDe } from "../../../../apps/desktop/src/lib/usage";
-import { type Ventana } from "../../../../apps/desktop/src/lib/usage.ts";
+import { type UsageRecord, ventanaDe } from "../../../ui/src/lib/usage";
+import { type Ventana } from "../../../ui/src/lib/usage.ts";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { type createChatEvents as T_createChatEvents } from "../../../features/chat/src";
 import { type ChatEvent, type PreguntaEvent, type SessionEvent } from "../../../features/chat/src/model/transcript";

@@ -5,7 +5,7 @@ import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "so
 import { handlerAction } from "../queries/handler-action";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { detalleDe } from "../../../../../apps/desktop/src/lib/failure";
-import type { HandlerApproval, HandlerMemory, HandlerRelease, HandlerRequests } from "../../../../../apps/desktop/src/lib/model";
+import type { HandlerApproval, HandlerMemory, HandlerRelease, HandlerRequests } from "../../../../ui/src/lib/model";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";

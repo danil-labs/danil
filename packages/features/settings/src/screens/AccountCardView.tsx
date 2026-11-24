@@ -2,7 +2,7 @@ import { For, Show, createSignal, type JSX } from "solid-js";
 import AlertTriangle from "lucide-solid/icons/triangle-alert";
 import { type Account, type AccountStatus } from "../queries/accounts-store";
 import { ProgressBar } from "../../../../ui/src/ProgressBar";
-import { type Query, type Read, cuandoVuelve, haceCuanto, left, legible, revocada, tono } from "../../../../../apps/desktop/src/lib/limits";
+import { type Query, type Read, cuandoVuelve, haceCuanto, left, legible, revocada, tono } from "../../../../ui/src/lib/limits";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

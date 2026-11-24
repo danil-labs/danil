@@ -14,7 +14,7 @@ import {
 } from "../../../../apps/desktop/src/lib/spaces";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { machineOf } from "../../../features/machines/src/queries/store";
-import type { Project } from "../../../../apps/desktop/src/lib/model";
+import type { Project } from "../../../ui/src/lib/model";
 import { Button } from "../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
 import { asFailure, type Failure, FailureNote } from "../../../ui/src/Failure";

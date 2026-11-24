@@ -1,12 +1,12 @@
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { type Project } from "../../../../apps/desktop/src/lib/model.ts";
-import { type CatalogosDeModelos } from "../../../../apps/desktop/src/lib/models.ts";
+import { type Project } from "../../../ui/src/lib/model.ts";
+import { type CatalogosDeModelos } from "../../../ui/src/lib/models.ts";
 import { type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../ui/src/lib/panels-types.ts";
 import { type DragPoint } from "../../../ui/src/lib/pointer-drag.ts";
 import { sidebarViewKey } from "../../../../apps/desktop/src/lib/sidebarView";
 import { spaceName } from "../../../../apps/desktop/src/lib/spaces";
 import { type Space } from "../../../../apps/desktop/src/lib/spaces.ts";
-import { type Superficie } from "../../../../apps/desktop/src/lib/surfaces.ts";
+import { type Superficie } from "../../../ui/src/lib/surfaces.ts";
 import { type TextEdit } from "../../../../apps/desktop/src/lib/taskMentions.ts";
 import { type PermissionRequest } from "../../../features/chat/src/screens/Chat.tsx";
 import { machines } from "../../../features/machines/src/queries/store";
