@@ -1,3 +1,10 @@
+export { Channel, convertFileSrc, invoke as invokeNative, type InvokeOptions } from "@tauri-apps/api/core";
+export { getVersion } from "@tauri-apps/api/app";
+export type { EventCallback } from "@tauri-apps/api/event";
+export { join, tempDir } from "@tauri-apps/api/path";
+export { getCurrentWebview } from "@tauri-apps/api/webview";
+export { getCurrentWindow } from "@tauri-apps/api/window";
+
 /** El IPC de la ventana Tauri tal como lo deja el runtime en `window`; la web no lo tiene. */
 export type NativeInternals = { invoke: (command: string, args?: Record<string, unknown>, options?: { headers?: HeadersInit }) => Promise<unknown> };
 

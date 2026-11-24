@@ -45,7 +45,7 @@ import { machineNamesChanged, refetchMachines, setCloudInventory } from "../quer
 import { normalizeWslChildren, type WslChild } from "../model/wsl";
 import { RELIST, TOKEN_MARGIN, LOCAL, LOCAL_KEY, windowSystem, type ClientToken, type DanilStatus, type Installed } from "./account-helpers";
 import { refresh, slicesChanged, pickedFor } from "../queries/account-events";
-import { nativeInternals, type NativeInternals } from "../../../../host/src/native";
+import { invokeNative, nativeInternals, type NativeInternals } from "../../../../host/src/native";
 
 let started = false;
 
@@ -63,9 +63,8 @@ async function readGuestMachines(): Promise<MachineInfo[]> {
     return [];
   }
   try {
-    const { invoke } = await import("@tauri-apps/api/core");
     // Solo ids de huésped: la flota local no sabe llegar a otra cosa (`connect` lanza).
-    rawGuestChildren = normalizeWslChildren(await invoke<WslChild[]>("guest_children")).filter((c) => isGuestMachine(c.id));
+    rawGuestChildren = normalizeWslChildren(await invokeNative<WslChild[]>("guest_children")).filter((c) => isGuestMachine(c.id));
   } catch {
     // Sin canal o sin registro: la flota sigue con las de la cuenta.
   }

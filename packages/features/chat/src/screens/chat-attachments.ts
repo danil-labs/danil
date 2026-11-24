@@ -1,13 +1,11 @@
 import { t } from "../../../../ui/src/lib/i18n";
 import { base64De, copyText, imagenPegada } from "../../../../host/src/clipboard";
-import { dragDropInPoints } from "../../../../host/src/native";
+import { dragDropInPoints, getCurrentWebview, getCurrentWindow } from "../../../../host/src/native";
 import { capabilities } from "../../../../host/src/platform";
 import { asFailure, prosaDe } from "../../../../ui/src/Failure";
 import type { createChatComposerState } from "./chat-composer-state";
 import { archivosDelNavegador } from "./chat-model";
 import type { ChatProps } from "./chat-props";
-import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
 import { createMemo, createSignal, onCleanup, onMount, type Accessor } from "solid-js";
 

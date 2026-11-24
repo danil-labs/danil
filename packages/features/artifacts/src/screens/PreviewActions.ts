@@ -1,5 +1,5 @@
 import { save } from "@tauri-apps/plugin-dialog";
-import { join, tempDir } from "@tauri-apps/api/path";
+import { join, tempDir } from "../../../../host/src/native.ts";
 import { envolver, formaDe } from "../model/sandbox";
 import { descargarArtefacto, historiaDe, leerVersion, openExternal, preparePrint, publicacionesDe, readArtifactPart, registrarSalida, restaurarVersion, type Preview, type Via, type VersionRef } from "../queries";
 import { asFailure, detalleDe } from "../../../../ui/src/Failure";

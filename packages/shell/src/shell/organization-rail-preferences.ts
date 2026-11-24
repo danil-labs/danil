@@ -1,4 +1,4 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "../../../host/src/native.ts";
 import { createSignal } from "solid-js";
 import { capabilities } from "../../../host/src/platform";
 import { escribirPref, leerPref } from "../../../session/src/prefs";

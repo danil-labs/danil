@@ -1,6 +1,5 @@
 import { resolveTaskGit as resolveSharedTaskGit } from "../../../../ui/src/lib/tasks/index.ts";
-import { Channel } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { Channel, invoke } from "../../../../engine-client/src/client.ts";
 import { type Accessor, createSignal } from "solid-js";
 
 import { type TaskGitStatus, mergeRemoteGit, readTaskGit, retainGitObservation, sameGit as mismoGit, UNKNOWN_TASK_GIT } from "../../../../ui/src/lib/tasks/index.ts";

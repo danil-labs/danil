@@ -1,5 +1,5 @@
 import type { Preview } from "../../../../ui/src/lib/preview.ts";
-import type { InvokeOptions } from "@tauri-apps/api/core";
+import type { InvokeOptions } from "../../../../host/src/native.ts";
 import { type JSX } from "solid-js";
 import type { ThreadSearchTarget } from "./ThreadSearch";
 import type { OlderState } from "../model/history";

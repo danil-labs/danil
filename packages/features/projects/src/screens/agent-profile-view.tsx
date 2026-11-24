@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative as invoke } from "../../../../host/src/native.ts";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import EyeOff from "lucide-solid/icons/eye-off";
 import FolderOpen from "lucide-solid/icons/folder-open";

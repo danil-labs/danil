@@ -7,7 +7,7 @@
  * La máquina hija no se inscribe en el plano de control: su id es
  * `<canal>:<huésped>` (`wsl:<distro>`) y sólo existe en esta computadora.
  */
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative as invoke } from "../../../../host/src/native.ts";
 import type { CallResult, EventsPage } from "../model/relay-frames.ts";
 import { classOf, type Link, type MachineInfo } from "../model/fleet/index.ts";
 import type { Invoke } from "../model/router-commands";

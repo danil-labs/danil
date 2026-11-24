@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative as invoke } from "../../../host/src/native.ts";
 import { createSignal } from "solid-js";
 import { invoke as routedInvoke } from "../../../engine-client/src/client.ts";
 import { t } from "../../../ui/src/lib/i18n";

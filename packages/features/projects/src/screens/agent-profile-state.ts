@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative as invoke } from "../../../../host/src/native.ts";
 import { open } from "@tauri-apps/plugin-dialog";
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";

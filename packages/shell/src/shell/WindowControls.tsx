@@ -1,4 +1,4 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "../../../host/src/native.ts";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { t } from "../../../ui/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
