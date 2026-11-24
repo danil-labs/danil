@@ -89,7 +89,6 @@
   "danil.credentials.delete": "Delete from account",
   "danil.credentials.delete_yes": "Delete from account",
   "danil.credentials.delete_warning": "It is deleted from your account and all your machines, but not revoked at {provider}: to stop it working, revoke it there.",
-  "danil.credentials.mcp_title": "MCP keys in your account",
   "danil.credentials.zotero_title": "Zotero key in your account",
   "danil.credentials.rotate.open": "Change key",
   "danil.credentials.rotate.label": "New key for {name}",

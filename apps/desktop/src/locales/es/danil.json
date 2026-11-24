@@ -89,7 +89,6 @@
   "danil.credentials.delete": "Borrar de la cuenta",
   "danil.credentials.delete_yes": "Borrar de la cuenta",
   "danil.credentials.delete_warning": "Se borra de tu cuenta y de todas tus máquinas, pero no se revoca en {provider}: para que deje de valer, revócala allá.",
-  "danil.credentials.mcp_title": "Claves de MCP en tu cuenta",
   "danil.credentials.zotero_title": "Clave de Zotero en tu cuenta",
   "danil.credentials.rotate.open": "Cambiar la clave",
   "danil.credentials.rotate.label": "Clave nueva para {name}",
