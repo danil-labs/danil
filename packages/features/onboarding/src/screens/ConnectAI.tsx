@@ -72,11 +72,13 @@ export function PanelDeIA(props: { c: Conexiones }) {
             <DialogoDeConexion
               etiqueta={nombreDeFila(f())}
               url={p()?.url ?? null}
+              aviso={p()?.aviso ?? null}
               porConfirmar={p()?.codigo ?? null}
               pideCodigo={Boolean(p()?.pideCodigo)}
               enviandoCodigo={Boolean(p()?.enviandoCodigo)}
               codigoEnviado={Boolean(p()?.codigoEnviado)}
               errorCodigo={p()?.errorCodigo ?? null}
+              onLimpiarErrorCodigo={() => props.c.limpiarErrorCodigo(f().id)}
               salida={props.c.salidas[f().id] ?? []}
               onCancelar={() => void props.c.cancelar(f().id)}
               onCodigo={(codigo) => void props.c.enviarCodigo(f().id, codigo)}

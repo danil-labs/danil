@@ -20,7 +20,7 @@ export function crearConexiones() {
   const carga = crearCargaDeConexiones(estado);
   const { agente, cargar, cancelarDescarga } = carga;
   const { preguntar, responder } = crearConsentimiento(estado, carga);
-  const { conectar, usarSesion, cancelar, enviarCodigo, revisarAlta, abrirAlta, guardarClave, desconectar } =
+  const { conectar, usarSesion, cancelar, enviarCodigo, limpiarErrorCodigo, revisarAlta, abrirAlta, guardarClave, desconectar } =
     crearEntradaDeConexiones(estado, carga, preguntar);
 
   const conectadas = () => filas().filter((f) => pasos[f.id]?.k === "conectada");
@@ -45,6 +45,7 @@ export function crearConexiones() {
     cancelarDescarga,
     cancelar,
     enviarCodigo,
+    limpiarErrorCodigo,
     revisarAlta,
     abrirAlta,
     guardarClave,

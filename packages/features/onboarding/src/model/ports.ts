@@ -27,11 +27,13 @@ export type PuertosDelAlta = {
   DialogoDeConexion: Component<{
     etiqueta: string;
     url: string | null;
+    aviso?: string | null;
     porConfirmar: string | null;
     pideCodigo: boolean;
     enviandoCodigo?: boolean;
     codigoEnviado?: boolean;
     errorCodigo?: string | null;
+    onLimpiarErrorCodigo?: () => void;
     salida: string[];
     onCancelar: () => void;
     onCodigo: (codigo: string) => void;
