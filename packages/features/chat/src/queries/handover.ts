@@ -2,7 +2,7 @@
 import { type OpcionDeModelo } from "../../../../ui/src/lib/models";
 import { idProvisional } from "../../../../ui/src/lib/taskDraft";
 import { callEngine } from "../../../../engine-client/src/client.ts";
-import { isRemoteMachine } from "../../../../host/src/machine.ts";
+import { isOwnMachine } from "../../../../host/src/machine.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { canHandOverTask, handoverMatches, shellCli, type HandoverPending } from "../model/handover";
@@ -273,7 +273,7 @@ export function createHandover(deps: HandoverDeps) {
     // «Esta máquina» aparte hasta que llegaba su fila del disco. La de la
     // ventana no lleva máquina, igual que sus filas.
     const destino = draftMachine() ?? capabilities().remoteCreate?.(workspaceActivo())?.machine ?? null;
-    const machine = destino && isRemoteMachine(machines().find((m) => m.id === destino)) ? destino : undefined;
+    const machine = destino && !isOwnMachine(machines().find((m) => m.id === destino)) ? destino : undefined;
     setNaciendo((ns) => [
       ...ns,
       {
