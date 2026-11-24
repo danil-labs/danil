@@ -1,5 +1,5 @@
 import { splitProps, type JSX } from "solid-js";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 
 export type ProgressRingProps = Omit<
   JSX.HTMLAttributes<HTMLSpanElement>,

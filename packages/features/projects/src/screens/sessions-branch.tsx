@@ -2,7 +2,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createMemo, For, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { createPref } from "../../../../../apps/desktop/src/lib/prefs";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { KeyedList } from "../../../../ui/src/KeyedList";
 import { AstroAvatar } from "./AstroAvatar";
 import { displayName } from "../queries/profiles";

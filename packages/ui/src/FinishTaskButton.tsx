@@ -1,7 +1,7 @@
 import Rocket from "lucide-solid/icons/rocket";
 import { For, Show } from "solid-js";
 import { render } from "solid-js/web";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import { Button } from "./Button";
 
 export function celebrateFinishedTask(rect: DOMRect) {

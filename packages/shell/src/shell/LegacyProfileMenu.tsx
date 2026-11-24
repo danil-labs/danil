@@ -5,7 +5,7 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
 import { canRedeemPromo } from "../../../session/src/promo-role";
 import { type Apariencia, apariencia } from "../../../ui/src/lib/theme";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../../ui/src/Popover";
 import { Pressable } from "../../../ui/src/Pressable";
 import { ProfileThemeAndBug, ProfileWebSignOut } from "./ProfileMenuItems";

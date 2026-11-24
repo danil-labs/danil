@@ -3,7 +3,7 @@ import { Dynamic } from "solid-js/web";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { flechaDeLista } from "../../../../../apps/desktop/src/lib/shortcuts";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";

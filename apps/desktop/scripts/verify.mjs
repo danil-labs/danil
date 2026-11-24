@@ -438,6 +438,12 @@ const steps = [
     root,
   ],
   [
+    "Danil Credits picker orders Ligero/Equilibrado/Avanzado, shows Danil · <mode> in the pill, and omits redundant Use button",
+    process.execPath,
+    ["--test", join(root, "tests/unit/danil-credits-picker.test.mjs")],
+    root,
+  ],
+  [
     "A task changes CLI only when the engine, the machine and the idle session allow it, and the consent goes before the turn",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/provider-handover.test.ts")],

@@ -1,5 +1,5 @@
 import type { Component } from "solid-js";
-import type { AgentProfile, HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
+import type { AgentProfile, HandlerStatus } from "../../../../ui/src/lib/model";
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
 

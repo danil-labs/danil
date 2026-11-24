@@ -1,5 +1,5 @@
 import { canonicalAgentId, OPENCODE } from "./agents.ts";
-import { isDanilCreditsModel } from "./danil-services.ts";
+import { DANIL_CREDITS_MODEL, isDanilCreditsModel } from "./danil-services.ts";
 
 /**
  * Con qué modelo y por qué superficie sigue una tarea: la misma regla en la
@@ -120,4 +120,18 @@ export function chipModel(session: ModelSession): string | null {
     if (turn.role === "agent" && turn.model) return turn.model;
   }
   return null;
+}
+
+/**
+ * Modelo inicial de una superficie cuando aún no hay uno válido elegido.
+ * Danil Credits conserva `Equilibrado` aunque los botones se ordenen de menor a mayor capacidad.
+ */
+export function defaultSurfaceModel<M extends SurfaceModel>(
+  surface: Surface | undefined,
+  models: readonly M[],
+): M | undefined {
+  if (surface?.id === "danil-credits") {
+    return models.find((m) => m.id === DANIL_CREDITS_MODEL) ?? models[0];
+  }
+  return models[0];
 }

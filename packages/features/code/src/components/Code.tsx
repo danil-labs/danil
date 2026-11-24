@@ -7,7 +7,7 @@ import { Channel } from "@tauri-apps/api/core";
 import { listTaskTrees, watchTaskTree, unwatchTaskTree } from "../queries";
 import { machineOf } from "../../../../host/src/machine";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
-import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
+import type { ArbolEnTarea } from "../../../../ui/src/lib/model";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import ArbolDeArchivos from "./FileTreeLazy";
 import KnCloud from "./KnCloud";

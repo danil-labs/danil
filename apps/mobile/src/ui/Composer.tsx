@@ -12,7 +12,7 @@ import {
   type SlashMenu,
 } from "@terminus/protocol";
 import { replaceSlash, slashAt } from "@terminus/chat";
-import { canonicalAgentId, creditsBalanceState, DANIL_CREDITS_MODEL, danilServiceOf, FREE_ROUTER_MODEL, isDanilCreditsModel, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, previewLabel, type CreditsBalanceState, type RouterOfferState, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
+import { canonicalAgentId, creditsBalanceState, DANIL_CREDITS_MODEL, danilServiceOf, defaultSurfaceModel, FREE_ROUTER_MODEL, isDanilCreditsModel, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, previewLabel, type CreditsBalanceState, type RouterOfferState, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -395,7 +395,7 @@ export function Composer({
   const selectedSurface = ownSurfaces.find((s) => s.id === surface) ?? (ownSurfaces.length === 1 ? ownSurfaces[0] : undefined);
   const selectedMark = selectedModelMark(current, model, selectedSurface);
   const selectedProviderLabel = selectedSurface ? surfacePresentation(selectedSurface, { free: t("composer.free_models") }).label : providerLabel(current);
-  const serviceLabels = { credits: t("services.credits"), router: t("composer.free_models") };
+  const serviceLabels = { credits: t("services.label"), router: t("composer.free_models") };
   const modelText = model ? modelLabel(model, serviceLabels, models) : previewLabel(lang, "default_model");
   // El Router y Danil Credits viven en la sección Danil: ni su superficie ni sus modelos se repiten abajo.
   const isRouterSurface = (s: Surface<Frase>) => s.catalogo === "gratuitos" && isFreeRouterAgent(canonicalAgentId(s.provider, FREE_ROUTER_MODEL));
@@ -429,7 +429,7 @@ export function Composer({
     }
     setSurface(s.id);
     if (chosen && !surfaceHas(s, chosen)) {
-      const first = models?.models.find((m) => surfaceHas(s, m)) ?? null;
+      const first = defaultSurfaceModel(s, models?.models.filter((m) => surfaceHas(s, m)) ?? []) ?? null;
       setModel(first?.id ?? null);
       setEffort(null);
     }

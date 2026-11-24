@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { MemoriaListado, MemoriaScope } from "../../../../../apps/desktop/src/lib/model";
+import type { MemoriaListado, MemoriaScope } from "../../../../ui/src/lib/model";
 
 export const writeMemoryEntry = (payload: {
   project: string;

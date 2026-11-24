@@ -1,4 +1,4 @@
-import { type Tab } from "../../../../../apps/desktop/src/lib/tabs";
+import { type Tab } from "../../../../ui/src/lib/tabs";
 import { type SessionRow } from "./Sessions";
 
 // Lo que asoma de la pestaña vecina y el padding de la tira, en px.

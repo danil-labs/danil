@@ -1,6 +1,6 @@
 import { ContextMenu as Kobalte } from "@kobalte/core/context-menu";
 import { splitProps, type ComponentProps } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 /**
  * Menú de clic derecho sobre `@kobalte/core` 0.13.13, con el portal y los tokens

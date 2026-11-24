@@ -20,7 +20,7 @@ import {
 import { entriesIn, memoryDirs, parseMemoryEntry } from "../model/memory.ts";
 export { deleteMemoryFile, memoryHistory, type MemoryVersion, readMemoryFile, writeMemoryFile };
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { MemoriaEntrada, MemoriaScope } from "../../../../../apps/desktop/src/lib/model";
+import type { MemoriaEntrada, MemoriaScope } from "../../../../ui/src/lib/model";
 import { capabilities } from "../../../../host/src/platform";
 
 /** La memoria de un workspace en la cuenta: a dónde hablar y de qué workspace. */

@@ -1,5 +1,5 @@
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import { prosa, type Frase } from "../../../../apps/desktop/src/lib/prose";
+import { prosa, type Frase } from "../../../ui/src/lib/prose";
 
 /**
  * La ventana que **no puede abrir estos datos**, y no abre nada más.

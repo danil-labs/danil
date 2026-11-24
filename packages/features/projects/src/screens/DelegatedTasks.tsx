@@ -1,7 +1,7 @@
 import { type ComponentProps, createEffect, createSignal, on, Show } from "solid-js";
 import GitBranch from "lucide-solid/icons/git-branch";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
 import type { SenderTask } from "../../../../../apps/desktop/src/lib/recipients";
 import { Button } from "../../../../ui/src/Button";

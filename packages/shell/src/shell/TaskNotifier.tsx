@@ -8,7 +8,7 @@ import { Toast } from "../../../ui/src/Toast";
 import { createWorkspaces } from "../../../features/settings/src/queries/workspaces-store";
 import type { AttentionState, WorkspaceAttention } from "./attention";
 import { Dynamic } from "solid-js/web";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { stateColor, stateIcon } from "../../../features/projects/src/screens/TaskStatus";
 import type { ChatEvent } from "../../../engine-client/src/index.ts";
 import { NOTIFY_PREF, type NotifyChoice } from "../../../features/settings/src/model/notify-pref";

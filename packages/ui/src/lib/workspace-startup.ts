@@ -1,4 +1,4 @@
-import type { Frase } from "../../../../apps/desktop/src/lib/prose";
+import type { Frase } from "./prose";
 
 
 export type Workspace = {

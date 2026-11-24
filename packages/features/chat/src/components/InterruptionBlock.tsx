@@ -1,5 +1,5 @@
 import type { JSX } from "solid-js";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 
 /** El sitio común de una interrupción. El borde conserva la diferencia entre
  * aclarar y autorizar: compartir posición no convierte una en la otra. */

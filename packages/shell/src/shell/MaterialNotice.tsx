@@ -2,7 +2,7 @@ import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
-import type { Source } from "../../../../apps/desktop/src/lib/model";
+import type { Source } from "../../../ui/src/lib/model";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { prosaDe } from "../../../ui/src/Failure";
 

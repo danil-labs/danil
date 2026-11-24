@@ -1,5 +1,5 @@
 import { lazy } from "solid-js";
-import type { HandlerStatus } from "../../../../apps/desktop/src/lib/model";
+import type { HandlerStatus } from "../../../ui/src/lib/model";
 import WorkdirIcon from "../../../ui/src/WorkdirIcon";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import { createFreeRouterConsent } from "../../../features/settings/src/components/free-router-consent";

@@ -1,5 +1,5 @@
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { SignalDot, taskSignalTone } from "../../../ui/src/SignalDot";
 import type { AttentionState } from "./attention";
 import { generacionDeLogo, urlDeLogo } from "./logo-src";

@@ -2,7 +2,7 @@ import { Show } from "solid-js";
 import { type GroupAccount, type GroupSend, redeemGroupCode } from "../../../../apps/desktop/src/lib/group-account";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { canRedeemPromo } from "../../../session/src/promo-role";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { SEPARADOR_DE_MENU } from "../../../ui/src/ContextMenu";
 import { openHarnessWorkspaces, RAIL_MENU_ITEM } from "./rail-menu";
 import PromoRedeem from "./PromoRedeem";

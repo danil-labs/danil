@@ -1,6 +1,6 @@
 import { createSignal, For, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { TITULO_DE_GRUPO } from "../../../ui/src/ContextMenu";
 import { KeyedList } from "../../../ui/src/KeyedList";
 import { RAIL_MENU_ITEM } from "./rail-menu";

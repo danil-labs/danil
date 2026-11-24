@@ -7,6 +7,7 @@
     "@kobalte/core": "^0.13.13",
     "@tauri-apps/api": "^2.12.4",
     "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "embla-carousel-solid": "^8.6.0",
     "katex": "^0.18.10",
     "lucide-solid": "^1.31.0",
@@ -16,7 +17,8 @@
     "micromark-extension-math": "^3.1.0",
     "remark-gfm": "^4.0.1",
     "solid-js": "^1.9.17",
-    "solid-markdown": "^2.1.1"
+    "solid-markdown": "^2.1.1",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",

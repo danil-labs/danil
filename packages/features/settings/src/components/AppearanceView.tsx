@@ -6,7 +6,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { elegirVeloDeFondo, elegirVeloDePaneles, elegirVeloDePestanas, imagenDelWorkspace, ponerFondoPropio } from "../../../../../apps/desktop/src/lib/chat-background-store";
 import { VELO_DE_PANELES_MAX, VELO_DE_PANELES_MIN, VELO_DE_PESTANAS_MAX, VELO_DE_PESTANAS_MIN } from "../../../../ui/src/lib/chat-background";
 import { chooseDarkStyle, chooseLightStyle, elegirApariencia, type DarkStyle, type LightStyle } from "../../../../ui/src/lib/theme";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { Pressable } from "../../../../ui/src/Pressable";

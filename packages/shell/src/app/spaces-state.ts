@@ -1,16 +1,16 @@
 import { batch, createEffect, createMemo, createSignal, onCleanup, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { type Project } from "../../../../apps/desktop/src/lib/model.ts";
+import { type Project } from "../../../ui/src/lib/model.ts";
 import { readShellCache, shellCacheWriter } from "../../../../apps/desktop/src/lib/shellCache";
 import { createSpaceNavigationOrder } from "../../../../apps/desktop/src/lib/space-navigation-order";
 import { createSpaceCatalog } from "./space-catalog";
 import { type Space } from "../../../../apps/desktop/src/lib/spaces";
-import { isContentTab, type createTabs } from "../../../../apps/desktop/src/lib/tabs";
+import { isContentTab, type createTabs } from "../../../ui/src/lib/tabs";
 import { createWorkspaces } from "../../../features/settings/src/queries/workspaces-store";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions";
 import { type SearchFilter } from "../shell/GlobalSearch";
-import type { Frase } from "../../../../apps/desktop/src/lib/prose";
+import type { Frase } from "../../../ui/src/lib/prose";
 import type { SidebarFilterProps } from "../shell/SidebarFilter";
 
 export type SpacesStateDeps = { bloqueo: Accessor<Frase | null>; pestanas: ReturnType<typeof createTabs>; projectCatalog: { fromCache: (projects: Project[]) => void }; projectList: Accessor<Project[]>; proyectoAbierto: Accessor<string | null>; sesiones: Accessor<Record<string, SessionRow[]>>; setError: (msg: string) => void; setSesiones: Setter<Record<string, SessionRow[]>>; workspaceActivo: Accessor<string | null>; onCatalogSync?: () => void; };

@@ -3,7 +3,7 @@
  * nunca queda en blanco: cargando, el fallo con su salida, o los agentes que Danil
  * sabe instalar cuando la máquina todavía no trae ninguno.
  */
-import type { Failure } from "../../../../../apps/desktop/src/lib/failure.ts";
+import type { Failure } from "../../../../ui/src/lib/failure.ts";
 
 /** Los agentes en la nube que se ofrecen sin lista de la máquina; ids de `agents::AGENTS`. */
 export const SUPPORTED_AGENTS = ["claude", "codex", "antigravity", "grok"] as const;

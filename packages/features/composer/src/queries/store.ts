@@ -1,8 +1,8 @@
 import { batch, createEffect, createMemo, createSignal, on, onCleanup, onMount, untrack } from "solid-js";
-import type { Agent, AgentModels, ModoDePermiso } from "../../../../../apps/desktop/src/lib/model.ts";
-import { type CatalogosDeModelos, effortAlCambiarDeModelo, type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models.ts";
+import type { Agent, AgentModels, ModoDePermiso } from "../../../../ui/src/lib/model.ts";
+import { type CatalogosDeModelos, effortAlCambiarDeModelo, type OpcionDeModelo } from "../../../../ui/src/lib/models.ts";
 import type { CliCommand, Skill, SlashMenu } from "../../../../ui/src/lib/skills.ts";
-import { esDe, paraElMenu, type Superficie, superficieDe } from "../../../../../apps/desktop/src/lib/surfaces.ts";
+import { esDe, modeloPredeterminadoDe, paraElMenu, type Superficie, superficieDe } from "../../../../ui/src/lib/surfaces.ts";
 
 type Invoke = <T>(command: string, args?: Record<string, unknown>, options?: { headers: Record<string, string> }) => Promise<T>;
 export type ComposerConfiguration = { agent: string; surface: string; model: string; effort: string; mode?: string };
@@ -86,7 +86,8 @@ export function createComposerStore(deps: {
           disponibles.length > 0 &&
           !disponibles.some((m) => m.id === model())
         ) {
-          setModel(disponibles[0].id);
+          const initial = modeloPredeterminadoDe(actual, disponibles);
+          if (initial) setModel(initial.id);
         }
       })
       .catch(() => {
@@ -251,7 +252,10 @@ export function createComposerStore(deps: {
       const s = sups?.find((x) => x.id === id);
       const lista = (cat?.models ?? []).filter((m) => esDe(s, m));
       if (lista.length === 0) return;
-      if (!lista.some((m) => m.id === model())) setModel(lista[0].id);
+      if (!lista.some((m) => m.id === model())) {
+        const initial = modeloPredeterminadoDe(s, lista);
+        if (initial) setModel(initial.id);
+      }
     }),
   );
   onMount(() => {

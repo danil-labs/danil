@@ -1,6 +1,6 @@
 
 import { connected } from "../../../../session/src/engineConnection.ts";
-import { type Agent } from "../../../../../apps/desktop/src/lib/model.ts";
+import { type Agent } from "../../../../ui/src/lib/model.ts";
 import { esProvisional, tituloProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { claveDe } from "../../../../ui/src/Failure";
@@ -10,7 +10,7 @@ import { esDeLaTerminal, interrumpible, type RazonDeRetencion } from "../../../.
 import { type ComandoQueNace, type Corrida, type TerminalLanzada } from "./sleepSession.ts";
 import { batch, createEffect, createMemo, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 import type { ComposerPort, DefaultPermissionModeChange, MachinesPort, ProjectsPort, SessionRow, WorkspaceContextPort, createThreadsStore } from "./types.ts";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createPanelDeChat } from "../screens/PanelDeChat.tsx";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
 import type { createAttachments } from "./attachments.ts";

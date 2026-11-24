@@ -7,7 +7,7 @@ import IconoPrevia from "lucide-solid/icons/eye";
 import IconoCambios from "lucide-solid/icons/git-compare";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote } from "../../../../ui/src/Failure";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { ariaDeAtajo, textoDeAtajo } from "../../../../../apps/desktop/src/lib/shortcuts";

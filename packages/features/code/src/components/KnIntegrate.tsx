@@ -5,7 +5,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { df } from "../../../../../apps/desktop/src/lib/format";
+import { df } from "../../../../ui/src/lib/format";
 import { avisarDeLosArboles } from "../queries/refresh";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 

@@ -1,9 +1,9 @@
 import { type createPanelDeChatState as T_createPanelDeChatState } from "./panel-de-chat-state.ts";
-import { carpetaDeTrabajo, type HandlerDefinition } from "../../../../apps/desktop/src/lib/model";
-import { type CatalogosDeModelos } from "../../../../apps/desktop/src/lib/models.ts";
-import { type Superficie } from "../../../../apps/desktop/src/lib/surfaces.ts";
-import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { carpetaDeTrabajo, type HandlerDefinition } from "../../../ui/src/lib/model";
+import { type CatalogosDeModelos } from "../../../ui/src/lib/models.ts";
+import { type Superficie } from "../../../ui/src/lib/surfaces.ts";
+import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../ui/src/lib/taskFiles.ts";
+import { cn } from "../../../ui/src/lib/utils";
 import { capabilities } from "../../../host/src/platform";
 import { LOCATION_BAR } from "../../../host/src/window";
 import type { default as TaskLocationScreen } from "../../../features/chat/src/screens/TaskLocation";

@@ -3,7 +3,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { accountStatus, addAccount, discardAccount, installProvider, listAccounts, listProviders, loginAccount, setApiKey, tasksAwaitingQuota } from "../queries/engine-accounts";
 import { checkEnvironment } from "../queries/engine-environment";
 import { openExternal } from "../queries/engine-open";
-import { textoDeFalta } from "../../../../../apps/desktop/src/lib/no-space";
+import { textoDeFalta } from "../../../../ui/src/lib/no-space";
 import { capabilities } from "../../../../host/src/platform";
 import { detalleDe } from "../../../../ui/src/Failure";
 import { accountKeyUrl, addBlockedByExternal } from "../../../../ui/src/lib/account-auth.ts";

@@ -13,7 +13,7 @@ import {
 } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { asFailure, FailureNote, prosaDe } from "../../../../ui/src/Failure";

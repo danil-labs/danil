@@ -2,7 +2,7 @@ import { createMemo, type Accessor } from "solid-js";
 import { carpetasDelEscritorio, enEscritorio, spaceName, type Space } from "../../../../../apps/desktop/src/lib/spaces.ts";
 import { delegatedAttention, delegatedFamilies } from "../../../../ui/src/lib/tasks/family.ts";
 import { withRemoteLaunchers, type RemoteScope } from "../../../../ui/src/lib/tasks/remote.ts";
-import type { Project } from "../../../../../apps/desktop/src/lib/model.ts";
+import type { Project } from "../../../../ui/src/lib/model.ts";
 import type { PermissionRequest } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { SessionRow } from "../screens/Sessions.tsx";
 

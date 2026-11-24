@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { Frase } from "../../../../../apps/desktop/src/lib/prose";
+import type { Frase } from "../../../../ui/src/lib/prose";
 
 type Wait = { code: string; url: string };
 type Campo = { id: string; label: Frase; help: Frase; required: boolean };

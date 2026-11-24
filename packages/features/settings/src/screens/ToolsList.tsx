@@ -1,10 +1,10 @@
 import { For, Show } from "solid-js";
 import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { MarcaProveedor } from "../../../../ui/src/icons";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { prosa } from "../../../../../apps/desktop/src/lib/prose";
+import { prosa } from "../../../../ui/src/lib/prose";
 import { Badge } from "../../../../ui/src/Badge";
 import { Pressable } from "../../../../ui/src/Pressable";
 import type { createHerramientas } from "./ToolsState";

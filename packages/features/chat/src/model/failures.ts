@@ -5,9 +5,9 @@
  */
 // Con extensión: este módulo se carga también desde `node --test`, que no tiene
 // el resolvedor de Vite. Es el mismo motivo escrito en `lib/prose.ts`.
-import { asFailure, prosaDe } from "../../../../../apps/desktop/src/lib/failure.ts";
-import { prosa } from "../../../../../apps/desktop/src/lib/prose.ts";
-import { df } from "../../../../../apps/desktop/src/lib/format.ts";
+import { asFailure, prosaDe } from "../../../../ui/src/lib/failure.ts";
+import { prosa } from "../../../../ui/src/lib/prose.ts";
+import { df } from "../../../../ui/src/lib/format.ts";
 import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 
 /**

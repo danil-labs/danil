@@ -1,7 +1,7 @@
 import { createSignal, Show } from "solid-js";
 import type { GroupSend } from "../../../../apps/desktop/src/lib/group-account";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../ui/src/Tooltip";
 import type { AttentionState } from "./attention";
 import { NewAccountTile } from "./NewAccountTile";
