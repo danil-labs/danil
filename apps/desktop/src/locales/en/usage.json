@@ -6,8 +6,6 @@
   "usage.refresh_all": "Refresh",
   "usage.manage_accounts": "Manage accounts",
   "usage.bug_report": "Report a Danil bug",
-  "usage.bug_report.ask_agent": "Ask the agent",
-  "usage.bug_report.open_web": "Open a blank issue",
   "usage.query.failed": "Could not ask {agent} how much you have left.",
   "usage.context.label": "Memory",
   "usage.context.this_agent": "This agent",

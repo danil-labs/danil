@@ -22,7 +22,7 @@ import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-adde
 import { sendIdentityMe } from "../../../platform-client/src/identity.ts";
 
 type WorkspaceRow = { id: string; name: string; logo?: string | null };
-export type SessionRailGroup = ContextGroup & { available: readonly WorkspaceRow[] | null; added: ReadonlySet<string> | null; person: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
+export type SessionRailGroup = ContextGroup & { available: readonly WorkspaceRow[] | null; added: ReadonlySet<string> | null; person: string | null; org_type?: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
 let instance: ReturnType<typeof wire> | undefined;
 export const [sessionRailState, setSessionRailState] = createRoot(() => createSignal<ReturnType<typeof wire>>());
 export const hasSessionGroups = () => !!instance?.groups();
@@ -111,7 +111,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     adoptionStarted = true;
     void adoption.retry();
   });
-  const records = new Map<string, { person: string | null; asking: boolean; sync: ReturnType<typeof createAddedSync> }>();
+  const records = new Map<string, { person: string | null; orgType: string | null; orgRole: string | null; asking: boolean; sync: ReturnType<typeof createAddedSync> }>();
   const known = new Set<string>();
   /** Lo agregado que se vio de cada contexto: una sesión vencida no puede releerlo y conserva sus cuadros. */
   const lastAdded = new Map<string, ReadonlySet<string>>();
@@ -121,7 +121,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     const existing = records.get(g.context_id);
     if (existing?.person || existing?.asking) return;
     if (!existing && g.workspaces === "later") setLaterContext(g.context_id);
-    const record = existing ?? { person: null as string | null, asking: false, sync: null as unknown as ReturnType<typeof createAddedSync> };
+    const record = existing ?? { person: null as string | null, orgType: null as string | null, orgRole: null as string | null, asking: false, sync: null as unknown as ReturnType<typeof createAddedSync> };
     if (!existing) record.sync = createAddedSync({
       seed: g.workspaces === "later" ? "explicit" : "rail",
       transport: edgeAddedTransport((method, path, body) => sessions.send(g.context_id, method, path, body)),
@@ -135,9 +135,14 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     records.set(g.context_id, record);
     record.asking = true;
     void sendIdentityMe(sessions.send, g.context_id).then((r) => {
-      const id = (r.body as { id?: unknown } | null)?.id;
+      const body = r.body as { id?: unknown; organizations?: unknown } | null;
+      const id = body?.id;
       if (r.status === 200 && typeof id === "string" && active(g.context_id)) {
         record.person = id;
+        const orgs = Array.isArray(body?.organizations) ? body.organizations : [];
+        const match = orgs.find((item) => item && typeof item === "object" && (item as { id?: unknown }).id === g.org) as { type?: unknown; role?: unknown } | undefined;
+        if (typeof match?.type === "string" && match.type) record.orgType = match.type;
+        if (typeof match?.role === "string" && match.role) record.orgRole = match.role;
         changed();
         void record.sync.sync();
       }
@@ -151,10 +156,20 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     // Una sesión vencida conserva sus cuadros: el grupo se queda con su aviso «Vuelve a entrar».
     const available = empty_reason && empty_reason !== "session_expired" ? [] : availableFor(g.context_id);
     for (const w of available ?? []) known.add(w.id);
-    const added = records.get(g.context_id)?.sync.added() ?? null;
+    const record = records.get(g.context_id);
+    const added = record?.sync.added() ?? null;
     if (added) lastAdded.set(g.context_id, added);
     const free = accounts.free(g.context_id);
-    return { ...g, available, free: free && !accounts.known().includes(free.id) ? free : undefined, empty_reason, added: added ?? (empty_reason === "session_expired" ? lastAdded.get(g.context_id) ?? null : null), person: records.get(g.context_id)?.person ?? null };
+    return {
+      ...g,
+      ...(g.role === undefined && record?.orgRole ? { role: record.orgRole } : {}),
+      ...(record?.orgType ? { org_type: record.orgType } : {}),
+      available,
+      free: free && !accounts.known().includes(free.id) ? free : undefined,
+      empty_reason,
+      added: added ?? (empty_reason === "session_expired" ? lastAdded.get(g.context_id) ?? null : null),
+      person: record?.person ?? null,
+    };
     }) ?? null;
   });
   createEffect(() => {
