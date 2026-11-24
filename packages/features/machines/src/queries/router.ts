@@ -16,7 +16,7 @@
  * no tiene se lee de sus miembros y actúa en el primero.
  */
 import { arrangeSpaces, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
-import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "@terminus/fleet";
+import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "../model/fleet/index.ts";
 import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { setMachineRoute as engineSetMachineRoute } from "../../../../engine-client/src/client.ts";
 

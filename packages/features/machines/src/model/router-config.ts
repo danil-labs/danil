@@ -1,5 +1,5 @@
 import type { AccountWorkspace, SystemId } from "@terminus/computers";
-import type { Fleet } from "@terminus/fleet";
+import type { Fleet } from "./fleet/index.ts";
 import type { WorkspaceSpaceCatalog } from "../../../../platform-client/src/workspace-spaces.ts";
 import type { EngineWorkspace } from "../queries/engine-workspaces.ts";
 export type Invoke = (command: string, args?: Record<string, unknown>, options?: { headers?: HeadersInit }) => Promise<unknown>;

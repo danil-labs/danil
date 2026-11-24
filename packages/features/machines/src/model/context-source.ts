@@ -1,4 +1,4 @@
-import type { Listed } from "@terminus/fleet";
+import type { Listed } from "./fleet/index.ts";
 
 type Source = {
   organizationMachines(organization: string, context?: string): readonly string[];

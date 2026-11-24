@@ -1,5 +1,5 @@
 import { type SystemId } from "@terminus/computers";
-import { Fleet } from "@terminus/fleet";
+import { Fleet } from "../model/fleet/index.ts";
 import { isMac, isWindows } from "../../../../host/src/window";
 import { type Router } from "../queries/router";
 

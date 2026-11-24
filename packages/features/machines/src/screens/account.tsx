@@ -30,7 +30,7 @@ import {
 import { isRetiredComputersEndpoint } from "../../../../platform-client/src/api.ts";
 import { settledContextIds } from "../../../../../apps/desktop/src/lib/settled-contexts.ts";
 import { cancelEdgeWrites, setMachineRoute, wokeOf } from "../queries";
-import { Fleet, type MachineInfo, unwrap } from "@terminus/fleet";
+import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
 import { createRoot, createSignal } from "solid-js";
 import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
 import { whenConnected } from "../../../../../apps/desktop/src/lib/engineConnection";

@@ -9,7 +9,7 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 import type { CallResult, EngineInfo, EventsPage, MachineState } from "@terminus/computers";
-import { classOf, type Link, type MachineInfo } from "@terminus/fleet";
+import { classOf, type Link, type MachineInfo } from "../model/fleet/index.ts";
 import { WSL_MACHINE_PREFIX, type WslChild } from "../model/wsl";
 
 /** Los prefijos de id de las máquinas locales, uno por canal. */

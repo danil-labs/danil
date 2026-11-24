@@ -1,4 +1,4 @@
-import { type Slice } from "@terminus/fleet";
+import { type Slice } from "./fleet/index.ts";
 
 export type Args = Record<string, unknown>;
 
