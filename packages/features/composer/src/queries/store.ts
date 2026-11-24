@@ -80,7 +80,16 @@ export function createComposerStore(deps: {
     const pedido = withLastAnswer(machine, `list_models:${a}`, () => rpc<AgentModels>("list_models", { provider: a }, routed))
       .then((catalogo) => {
         if (disposed || revision !== composerRevision) return;
-        setCatalogos((actuales) => ({ ...actuales, [a]: catalogo }));
+        setCatalogos((actuales) => {
+          if (
+            catalogo.fallback &&
+            catalogo.models.length === 0 &&
+            (actuales[a]?.models.length ?? 0) > 0
+          ) {
+            return actuales;
+          }
+          return { ...actuales, [a]: catalogo };
+        });
         if (a !== agent()) return;
         const actual = superficies()?.find((s) => s.id === superficie());
         const disponibles = catalogo.models.filter((m) => esDe(actual, m));
@@ -94,7 +103,9 @@ export function createComposerStore(deps: {
       })
       .catch(() => {
         if (disposed || revision !== composerRevision) return;
-        setCatalogos((actuales) => ({ ...actuales, [a]: null }));
+        setCatalogos((actuales) =>
+          actuales[a] === undefined ? { ...actuales, [a]: null } : actuales,
+        );
       })
       .finally(() => {
         if (catalogosEnVuelo.get(a) === pedido) catalogosEnVuelo.delete(a);
