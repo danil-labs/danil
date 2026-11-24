@@ -4,7 +4,7 @@ const open = async (page) => {
   await page.getByText("Tarea de prueba", { exact: true }).first().waitFor({ timeout: 8000 });
   await page.getByRole("button", { name: "Configuración", exact: true }).first().click({ timeout: 8000 });
   await page.getByRole("tab", { name: "Cuentas de IA", exact: true }).click({ timeout: 8000 });
-  await page.getByRole("dialog").getByText("ana@danil.ai", { exact: true }).waitFor({ timeout: 8000 });
+  await page.getByRole("dialog").getByText("ana@danil.ai", { exact: true }).first().waitFor({ timeout: 8000 });
   await page.getByRole("dialog").getByText("Plus", { exact: true }).waitFor({ timeout: 8000 });
 };
 
