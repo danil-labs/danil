@@ -265,10 +265,9 @@ and **perfil por cuenta**. La dirección de la persona establece N workspaces po
 organización, perfil local sin login en Desk y plan obligatorio para la nube. The client neither
 creates assignments nor infers a workspace from an organization.
 
-The private asset Worker serves `dist-web/`; `alpha-entry/` fronts it.
-The web audit transport has been
-removed: there is no platform audit service. Desk's legacy login is isolated
-in `legacy-desktop-auth/`; see [desktop sessions](desktop-bff-session.md).
+The private asset Worker serves `dist-web/`; `alpha-entry/` fronts it for
+beta and staging. The web audit transport has been removed: there is no
+platform audit service.
 
 ## The engine pin
 

@@ -2,14 +2,15 @@ export { DesktopCodeStore } from './desktop-code-store.mjs';
 import { upstreamSignal } from './transport.mjs';
 import { dependencyProblem, logDependency } from './dependency-error.mjs';
 
-const HOST = 'alfa-app.danil.ai';
 const json = (error, status) => Response.json({ error }, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
 
 /** Assets only: every service request is made directly to the configured edge. */
 export default {
   async fetch(request, env) {
+    const host = env.ENTRY_HOST?.trim();
     const url = new URL(request.url);
-    if (url.hostname !== (env.ENTRY_HOST?.trim() || HOST) || url.protocol !== 'https:') return json('not_found', 404);
+    // Sin host configurado no hay despliegue que atender: nunca un host por omisión.
+    if (!host || url.hostname !== host || url.protocol !== 'https:') return json('not_found', 404);
     if (url.pathname === '/terminus' || url.pathname.startsWith('/terminus/')) {
       if (!['GET', 'HEAD'].includes(request.method)) return json('method_not_allowed', 405);
       url.pathname = url.pathname.slice('/terminus'.length) || '/';
