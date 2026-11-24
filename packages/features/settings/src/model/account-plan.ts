@@ -1,4 +1,5 @@
-import type { GrupoDelRiel } from "./sessions-port";
+import type { GrupoDelRiel } from "./sessions-port.ts";
+export { billingHref } from "../../../../platform-client/src/billing-route.ts";
 
 export type AccountPlanGroup = Pick<
   GrupoDelRiel,

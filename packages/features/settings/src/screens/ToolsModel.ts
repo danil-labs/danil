@@ -1,12 +1,6 @@
-import { lazy } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
 import { type Frase } from "../../../../ui/src/lib/prose";
 import { maskServerSource } from "../model/secretScan";
-
-// Fuera de la carga inicial: este archivo también da el vistazo del riel.
-export const CredentialsInUse = lazy(() => import("../components/AccountCredentials").then((m) => ({ default: m.CredentialsInUse })));
-
-export const LocalKeysBanner = lazy(() => import("../components/AccountCredentials").then((m) => ({ default: m.LocalKeysBanner })));
 
 /**
  * Conectar una herramienta al agente: Figma, Jira, Confluence.

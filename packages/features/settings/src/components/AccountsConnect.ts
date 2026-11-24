@@ -9,7 +9,7 @@ import { detalleDe } from "../../../../ui/src/Failure";
 import { accountKeyUrl, addBlockedByExternal } from "../../../../ui/src/lib/account-auth.ts";
 import { type Account, type AccountList, type AccountStatus, type AgentOpt, type EnEspera } from "../queries/accounts-store";
 import type { BloqueoAlta } from "../model/ai-providers-groups";
-import { ESPERA_ANTES_DE_LA_TERMINAL_MS } from "./AccountsModel";
+import { ESPERA_ANTES_DE_LA_TERMINAL_MS, normalizarListaDeCuentas, segundaCuentaBloqueada } from "./AccountsModel";
 import type { createCuentas } from "./AccountsState";
 
 export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas>) {
@@ -165,10 +165,7 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
     try {
       const res = await listAccounts<AccountList>({ provider: agente() });
       if (id !== lecturaId) return;
-      const normalizada: AccountList = res && Array.isArray(res.accounts)
-        ? res
-        : { provider: agente(), env_var: "", shared_credential: null, secret_note: null, active: null, accounts: [] };
-      setLista(normalizada);
+      setLista(normalizarListaDeCuentas(res, agente()));
       setFallo(null);
       setCargando(false);
       // `tasks_awaiting_quota` es secundario: las cuentas ya llegaron y el
@@ -385,16 +382,7 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
   };
 
   /** Por qué no se puede agregar otra cuenta (en la máquina elegida, o en la lista), o `null` si sí. */
-  const segunda = (targetMachine?: string) => {
-    const l = lista();
-    if (!l) return null;
-    if (targetMachine) {
-      if (l.shared_credential_by_machine) return l.shared_credential_by_machine[targetMachine] ?? null;
-      if (!l.shared_credential) return null;
-      return l.accounts.some((a) => a.machines?.some((m) => m.machine === targetMachine)) ? l.shared_credential : null;
-    }
-    return !l.shared_credential || l.accounts.length === 0 ? null : l.shared_credential;
-  };
+  const segunda = (targetMachine?: string) => segundaCuentaBloqueada(lista(), targetMachine);
   return {
     comprobadas, refrescar, comprobar, cancelarEspera, descartarSiVacia, mirarEspera, agregando,
     pidioExterno, faltaExterno, bloqueoAlta, agregar, setPidioExterno, segunda, inferencia, revisandoCli,

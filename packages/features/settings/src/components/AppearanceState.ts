@@ -3,7 +3,7 @@ import { createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { listMachineAgents, savePastedImage, setAgentAvatar } from "../queries/engine-agents";
 import { previewFile } from "../queries/engine-workspaces";
 import { t } from "../../../../ui/src/lib/i18n";
-import { mimeOfAttachment } from "../../../../engine-client/src/attachments";
+import { mimeOfAttachment } from "../../../../ui/src/lib/attachment-mime.ts";
 import { elegirArchivoDeImagen } from "../../../../host/src/pick-image";
 import { capabilities } from "../../../../host/src/platform";
 import type { AgentProfile, CatalogoDeAgentes } from "../../../../ui/src/lib/model";

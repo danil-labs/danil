@@ -55,10 +55,6 @@ export function setApiKey<res = unknown>(args?: InvokeArgs, options?: InvokeOpti
   return invoke<res>("set_api_key", args, options);
 }
 
-export function setMemoryProvider<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
-  return invoke<res>("set_memory_provider", args, options);
-}
-
 export function submitLoginCode<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
   return invoke<res>("submit_login_code", args, options);
 }

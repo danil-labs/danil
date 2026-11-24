@@ -165,6 +165,8 @@ const SIN_INTERFAZ = {
   // La edición del logo del workspace vive en Danil Harness, no en Configuración › Apariencia.
   set_workspace_logo: "la edición del logo del workspace vive en Danil Harness; queda en el contrato del motor",
   set_workspace_logo_png: "la edición del logo del workspace vive en Danil Harness; queda en el contrato del motor",
+  // La pestaña Memoria de Configuración › Conectores se retiró; la memoria nativa es automática.
+  set_memory_provider: "la pestaña Memoria de Configuración › Conectores se retiró; queda en el contrato del motor",
   // `docs/agents.md` § Estado observable: el comando de agregación existe
   // para que el riel deje de sondear; el riel mismo no está construido.
 };
