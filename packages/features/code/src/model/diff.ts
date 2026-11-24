@@ -1,2 +1,2 @@
-export * from "./diff-parse";
-export * from "./diff-tramos";
+export * from "./diff-parse.ts";
+export * from "./diff-tramos.ts";

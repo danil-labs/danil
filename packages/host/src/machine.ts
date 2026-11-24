@@ -1,4 +1,4 @@
-import { capabilities } from "./platform";
+import { capabilities } from "./platform.ts";
 
 /** La máquina de la fila de una tarea del riel; la registra `App.tsx`, que es quien tiene las filas. */
 let taskRowMachine: (id: string) => string | null | undefined = () => null;
