@@ -1,4 +1,4 @@
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { imagenInerte } from "../../../ui/src/lib/chat/links";
 import { capabilities } from "../../../host/src/platform";
 
@@ -10,7 +10,7 @@ export function organizationLogo(context: string, workspace: string, path: strin
   const key = JSON.stringify([context, workspace, path]);
   let image = images.get(key);
   if (!image) {
-    image = invoke<{ data_url: string | null }>("preview_file", { workspace, path, rel: path }, { headers: { "x-danil-context": context } }).then((reply) => imagenInerte(reply.data_url)).catch(() => { images.delete(key); return null; });
+    image = callShellEngine<{ data_url: string | null }>("preview_file", { workspace, path, rel: path }, { headers: { "x-danil-context": context } }).then((reply) => imagenInerte(reply.data_url)).catch(() => { images.delete(key); return null; });
     images.set(key, image);
   }
   return image;

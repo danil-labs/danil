@@ -1,6 +1,6 @@
 import type { EngineUpdate, MachineTaskUsage, Startup } from "../../../engine-client/src/index.ts";
 import { createEffect, createMemo, createSignal, on, onCleanup, untrack } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { t } from "../../../ui/src/lib/i18n";
 import { conservar } from "../../../session/src/sessionRefresh";
 import { errorCode } from "../../../ui/src/lib/errorCode.ts";
@@ -89,7 +89,7 @@ export function createStorageState(props: StorageProps) {
     setSummaries((prev) => ({ ...prev, [m.id]: { ...prev[m.id], loading: true, error: undefined } }));
     try {
       // Startup directo: el resumen de disco no requiere ni materializa un workspace.
-      const startup = await invoke<Partial<Startup>>("list_workspaces", {}, {
+      const startup = await callShellEngine<Partial<Startup>>("list_workspaces", {}, {
         headers: { "x-terminus-machine": m.id },
       });
       remember(m.id, startup.machine_resources);
@@ -114,7 +114,7 @@ export function createStorageState(props: StorageProps) {
     setMidiendo(true);
     setReadError("");
     try {
-      const value = await invoke<Almacen>("list_storage", { refrescar }, destination(captured));
+      const value = await callShellEngine<Almacen>("list_storage", { refrescar }, destination(captured));
       if (current(captured) && request === detailRequest) {
         dataTarget = captured;
         setDatos(value);
@@ -211,7 +211,7 @@ export function createStorageState(props: StorageProps) {
    */
   async function updateEngine(m: Machine, force: boolean): Promise<string> {
     try {
-      await invoke("engine_update", { release: null, force }, { headers: { "x-terminus-machine": m.id } });
+      await callShellEngine("engine_update", { release: null, force }, { headers: { "x-terminus-machine": m.id } });
       await refreshEngine(m, false);
       return "";
     } catch (error) {
@@ -222,7 +222,7 @@ export function createStorageState(props: StorageProps) {
   /** `engine_update_status`: el bloque `engine` de la tarjeta, sin esperar al próximo resumen. */
   async function refreshEngine(m: Machine, refresh = true) {
     try {
-      const engine = await invoke<EngineUpdate>("engine_update_status", { refresh }, { headers: { "x-terminus-machine": m.id } });
+      const engine = await callShellEngine<EngineUpdate>("engine_update_status", { refresh }, { headers: { "x-terminus-machine": m.id } });
       setSummaries((prev) => {
         const s = prev[m.id];
         if (!s?.resources) return prev;
@@ -249,7 +249,7 @@ export function createStorageState(props: StorageProps) {
     setStopping((prev) => ({ ...prev, [key]: true }));
     setStopFailure((prev) => ({ ...prev, [key]: "" }));
     try {
-      await invoke("stop_task_processes", { session: task.session, workspace: task.workspace }, { headers: {
+      await callShellEngine("stop_task_processes", { session: task.session, workspace: task.workspace }, { headers: {
         "x-terminus-machine": m.id,
         "x-terminus-workspace": task.workspace,
       } });
@@ -269,7 +269,7 @@ export function createStorageState(props: StorageProps) {
     setListing(true);
     setInventoryError("");
     try {
-      const list = await invoke<Machine[]>("machine_list", {}, workspace
+      const list = await callShellEngine<Machine[]>("machine_list", {}, workspace
         ? { headers: { "x-terminus-workspace": workspace } } : undefined);
       if (disposed || context !== generation || workspace !== props.workspace || request !== inventoryRequest) return;
       setInventory((previous) => conservar(previous, list, (m) => m.id));
@@ -310,7 +310,7 @@ export function createStorageState(props: StorageProps) {
       const workspace = props.workspace;
       const request = inventoryRequest;
       try {
-        const list = await invoke<Machine[]>("machine_list");
+        const list = await callShellEngine<Machine[]>("machine_list");
         if (!alive || disposed || context !== generation || workspace !== props.workspace || request !== inventoryRequest) return;
         for (const m of list) {
           if (m.on || (!inventory().find((old) => old.id === m.id)?.on && !summaries()[m.id]?.loading)) continue;

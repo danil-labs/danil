@@ -18,7 +18,7 @@ export function contextGroups(status: SessionStatus | null): ContextGroup[] | nu
 }
 
 /** El portador se queda en Rust; una lectura vieja nunca repone un contexto cerrado. */
-export function createSessionContexts(invoke: ContextInvoke, changed: () => void, onStatus?: (status: SessionStatus | null) => void) {
+export function createSessionContexts(rpc: ContextInvoke, changed: () => void, onStatus?: (status: SessionStatus | null) => void) {
   let groups: ContextGroup[] | null = null;
   let families: SessionFamily[] = [];
   let epoch = 0;
@@ -31,7 +31,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
   async function refresh() {
     const read = ++epoch;
     try {
-      const status = await invoke<SessionStatus>("danil_session_status");
+      const status = await rpc<SessionStatus>("danil_session_status");
       if (read !== epoch) return;
       onStatus?.(status);
       ready = true;
@@ -39,7 +39,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
       connected = status.state === "connected";
       if (unsupported && status.sessions?.some((f) => f.contexts.length)) {
         const context = status.sessions.flatMap((f) => f.contexts)[0].context_id;
-        await probeIdentityMe(invoke, context);
+        await probeIdentityMe(rpc, context);
         if (read !== epoch) return;
       }
       families = status.sessions ?? [];
@@ -59,7 +59,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     const group = groups?.find((g) => g.context_id === context);
     if (!group) throw { detail: "session_not_in_set" };
     try {
-      const reply = await invoke<ContextReply>("danil_edge_fetch", { method, path, context, ...(body === undefined ? {} : { body }), ...(method === "GET" ? {} : callerKey(method, path, idempotencyKey)) });
+      const reply = await rpc<ContextReply>("danil_edge_fetch", { method, path, context, ...(body === undefined ? {} : { body }), ...(method === "GET" ? {} : callerKey(method, path, idempotencyKey)) });
       if (!groups?.some((g) => g.context_id === context)) throw { detail: "session_not_in_set" };
       if (empty.note(context, reply)) notify();
       return empty.reason(context) ? { ...reply, body: undefined, empty_reason: empty.reason(context) } : reply;
@@ -78,7 +78,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     }
   };
   async function close(target: { context: string } | { family: string }) {
-    await invoke("danil_sign_out", target);
+    await rpc("danil_sign_out", target);
     ++epoch;
     groups = groups?.filter((g) => "context" in target ? g.context_id !== target.context : g.family !== target.family) ?? null;
     families = families.map((f) => ({ ...f, contexts: f.contexts.filter((c) => groups?.some((g) => g.context_id === c.context_id)) }));
@@ -100,6 +100,6 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     groups: () => unsupported ? null : groups,
     families: () => families,
     emptyReason: empty.reason, removed: empty.removed, dismissRemoved: (context: string) => { empty.dismiss(context); changed(); },
-    addAccount: () => addSessionAccount(invoke, refresh, () => groups),
+    addAccount: () => addSessionAccount(rpc, refresh, () => groups),
   };
 }

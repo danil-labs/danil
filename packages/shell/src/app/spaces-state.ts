@@ -1,5 +1,5 @@
 import { batch, createEffect, createMemo, createSignal, onCleanup, type Accessor, type Setter } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { t } from "../../../ui/src/lib/i18n";
 import { type Project } from "../../../ui/src/lib/model.ts";
 import { readShellCache, shellCacheWriter } from "../../../session/src/shellCache";
@@ -93,7 +93,7 @@ export function createSpacesState(deps: SpacesStateDeps) {
     if (pintadoDesde.has(source) || !Object.values(sesiones()).some((filas) => filas.length > 0)) return;
     pintadoDesde.add(source);
     requestAnimationFrame(() =>
-      void invoke("window_painted", { at: Math.round(performance.now()), source }).catch(() => {}));
+      void callShellEngine("window_painted", { at: Math.round(performance.now()), source }).catch(() => {}));
   });
   // `null` cerrado; si no, el chip con el que abre el buscador global.
   const [buscando, setBuscando] = createSignal<SearchFilter | null>(null);
