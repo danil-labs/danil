@@ -19,7 +19,7 @@ import {
 } from "../../../../platform-client/src/memory.ts";
 import { entriesIn, memoryDirs, parseMemoryEntry } from "../model/memory.ts";
 export { deleteMemoryFile, memoryHistory, type MemoryVersion, readMemoryFile, writeMemoryFile };
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import type { MemoriaEntrada, MemoriaScope } from "../../../../ui/src/lib/model";
 import { capabilities } from "../../../../host/src/platform";
 
@@ -50,13 +50,13 @@ export function memoriaDeCuenta(workspace: string | null | undefined): Promise<M
 }
 
 async function desdeElEscritorio(workspace: string): Promise<MemoriaDeCuenta | null> {
-  const of = (await invoke<WorkspaceAccountOf>("danil_workspace_account", { workspace }).catch(() => null)) ?? null;
+  const of = (await callEngine<WorkspaceAccountOf>("danil_workspace_account", { workspace }).catch(() => null)) ?? null;
   if (!of?.signed_in) return null;
   const account = of.account ?? null;
   let token: ClientToken | null = null;
   const pedir = async () => {
     if (token && token.expires_at - Date.now() > MARGEN_MS) return token;
-    token = await invoke<ClientToken>("account_relay_token", account ? { account } : {});
+    token = await callEngine<ClientToken>("account_relay_token", account ? { account } : {});
     return token;
   };
   try {

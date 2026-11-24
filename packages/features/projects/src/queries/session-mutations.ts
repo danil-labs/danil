@@ -1,5 +1,5 @@
 import { createEffect, createSignal, on, type Accessor, type Setter } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { t } from "../../../../ui/src/lib/i18n.ts";
 import type { ArbolEnTarea, Project, Source } from "../../../../ui/src/lib/model.ts";
@@ -74,7 +74,7 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
    */
   async function moverSesion(de: string, id: string, a: string) {
     try {
-      await invoke("move_session", { project: de, id, to: a }, deLaTarea(id));
+      await callEngine("move_session", { project: de, id, to: a }, deLaTarea(id));
       if (id === sessionId()) setProject(a);
       pestanas.moveToProject(id, a);
       void refreshSessions([de, a]);
@@ -97,7 +97,7 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
   ) {
     try {
       await retocarFila(proyecto, id, { stage: etapa }, () =>
-        invoke("set_session_stage", { project: proyecto, id, stage: etapa }, deLaTarea(id)));
+        callEngine("set_session_stage", { project: proyecto, id, stage: etapa }, deLaTarea(id)));
     } catch (e) {
       setError(prosaDe(e));
     }
@@ -130,7 +130,7 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
 
   async function fijarSesion(proyecto: string, id: string, pinned: boolean) {
     await retocarFila(proyecto, id, { pinned }, () =>
-      invoke("set_session_pinned", { project: proyecto, id, pinned }, deLaTarea(id)));
+      callEngine("set_session_pinned", { project: proyecto, id, pinned }, deLaTarea(id)));
   }
 
   /**
@@ -142,7 +142,7 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
   async function renombrarSesion(proyecto: string, id: string, title: string) {
     try {
       await retocarFila(proyecto, id, { title: title.trim() }, () =>
-        invoke("rename_session", { project: proyecto, id, title }, deLaTarea(id)));
+        callEngine("rename_session", { project: proyecto, id, title }, deLaTarea(id)));
       return true;
     } catch (e) {
       setError(prosaDe(e));
@@ -173,7 +173,7 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
     const sid = sessionId();
     if (!sid) return;
     try {
-      await invoke("detach_session_source", {
+      await callEngine("detach_session_source", {
         project: project(),
         session: sid,
         source: id,
@@ -219,7 +219,7 @@ export function createSessionMutations(deps: SessionMutationsDeps) {
       return;
     }
     if (!options) return;
-    void invoke<Source[]>("list_sources", {}, options).then((listed) => {
+    void callEngine<Source[]>("list_sources", {}, options).then((listed) => {
       if (request === taskSourcesRequest) setTaskSources(listed);
     }).catch((e) => {
       if (request === taskSourcesRequest) setTaskSourcesError(prosaDe(e));

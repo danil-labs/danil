@@ -1,4 +1,4 @@
-import { invoke, type InvokeOptions } from "../../../../engine-client/src/client.ts";
+import { callEngine, type InvokeOptions } from "../../../../engine-client/src/client.ts";
 
 export const getProjectBaseBranches = <t = unknown>(
   payload: {
@@ -8,7 +8,7 @@ export const getProjectBaseBranches = <t = unknown>(
   },
   options?: InvokeOptions,
 ): Promise<t> =>
-  invoke<t>("project_base_branches", payload, options);
+  callEngine<t>("project_base_branches", payload, options);
 
 export const setProjectBaseBranch = (
   payload: {
@@ -17,4 +17,4 @@ export const setProjectBaseBranch = (
   },
   options?: InvokeOptions,
 ): Promise<void> =>
-  invoke("set_project_base_branch", payload, options);
+  callEngine("set_project_base_branch", payload, options);
