@@ -14,7 +14,7 @@ import { createPanelDeFuentes } from "./project-view-sources";
 
 
 // Fuera de la carga inicial: la memoria solo se pinta en Configuración y trae el cliente de la cuenta.
-const Memoria = lazy(() => import("../components/Memoria"));
+const Memoria = lazy(() => import("./Memoria"));
 
 /**
  * El proyecto abierto en el panel principal: su carpeta de trabajo, sus fuentes

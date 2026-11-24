@@ -24,7 +24,7 @@ import type { Nodo } from "../model/tree";
 import { type ArbolProps, CHEVRON, nombreDe, SANGRIA } from "../model/fileTree";
 import type { CargaDelArbol } from "../queries/fileTreeLoad";
 import type { OperacionesDelArbol } from "../queries/fileTreeOps";
-import { CampoDeNombre, HuecoDeChevron } from "./FileTreeNameField";
+import { CampoDeNombre, HuecoDeChevron } from "../components/FileTreeNameField";
 
 /** Lo que las filas toman del menú del árbol, que vive con él. */
 export type MenuDeFila = {

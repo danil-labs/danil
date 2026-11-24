@@ -27,8 +27,8 @@ import { type LecturaDelVisor } from "./file-viewer-io";
 import { type TypstDelVisor } from "./file-viewer-typst";
 
 const EditorDeCodigo = lazy(cargarEditor);
-const VistaPreviaTypst = lazy(() => import("../components/TypstPreview"));
-const VistaTypstExportada = lazy(() => import("../components/TypstExportPreview"));
+const VistaPreviaTypst = lazy(() => import("./TypstPreview"));
+const VistaTypstExportada = lazy(() => import("./TypstExportPreview"));
 
 /** Lo que pinta el visor de archivos con su estado: la barra, los avisos, el código y la vista previa. */
 export function vistaDelVisor(props: VisorProps, deps: EstadoDelVisor & DisposicionDelVisor & MarcasDelVisor & LecturaDelVisor & TypstDelVisor) {

@@ -4,8 +4,9 @@ import { renombrarWorkspace } from "../queries";
 import { Button } from "../../../../ui/src/Button";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
-import { Comprobacion } from "../components/ConnectAI";
-import { Integraciones, Plugins } from "../components/ToolCards";
+import { Comprobacion } from "./ConnectAI";
+import { Integraciones } from "./Integrations";
+import { Plugins } from "./ToolPlugins";
 
 /** La última pantalla del alta: el workspace, las herramientas con que ya se trabaja y los plugins. */
 export default function Personalizar(props: {

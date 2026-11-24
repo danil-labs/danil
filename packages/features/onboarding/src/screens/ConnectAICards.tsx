@@ -10,7 +10,7 @@ import { RemoveButton } from "../../../../ui/src/IconAction";
 import { Input } from "../../../../ui/src/Input";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { Spinner } from "../../../../ui/src/Spinner";
-import { AvanceDeDescarga, BarraDeCarga, CodigoParaConfirmar, Peso } from "./DownloadProgress";
+import { AvanceDeDescarga, BarraDeCarga, CodigoParaConfirmar, Peso } from "../components/DownloadProgress";
 import { MarcaDeFila } from "./ConnectAIMap";
 import { type Conexiones, type Fila, nombreDeFila, openExternal, type Paso } from "../queries/connect-store";
 

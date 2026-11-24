@@ -11,7 +11,7 @@ import type { Msg } from "../model/messageTypes";
 
 
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
-const SelectorDeModelo = sharedLazy(() => import("../components/ModelPicker"));
+const SelectorDeModelo = sharedLazy(() => import("./model-picker-view"));
 /** Un bloque de la transcripción: un mensaje, o una tira de pasos plegable. */
 type Bloque = PresentedActivityBlock<Msg>;
 type Avance = ActivityChunk<Msg>;
