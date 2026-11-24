@@ -32,6 +32,7 @@ export type PuertosDelAlta = {
     enviandoCodigo?: boolean;
     codigoEnviado?: boolean;
     errorCodigo?: string | null;
+    onLimpiarErrorCodigo?: () => void;
     salida: string[];
     onCancelar: () => void;
     onCodigo: (codigo: string) => void;

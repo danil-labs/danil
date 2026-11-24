@@ -51,9 +51,21 @@ export function LoginCodeForm(props: {
   onSubmit: () => void;
   submitting?: boolean;
   error?: string | null;
+  mode?: "code" | "callback_url";
 }) {
+  const mode = () => props.mode ?? "code";
+  const placeholder = () =>
+    mode() === "callback_url"
+      ? t("settings.accounts.callback_url_placeholder")
+      : t("settings.accounts.code_placeholder");
+  const submitLabel = () =>
+    props.submitting
+      ? t("settings.accounts.sending_code")
+      : mode() === "callback_url"
+        ? t("settings.accounts.send_callback_url")
+        : t("settings.accounts.send_code");
   return (
-    <div class="flex flex-col gap-1.5">
+    <div class="flex flex-col gap-1.5" data-login-code-mode={mode()}>
       <form
         class="flex items-center gap-2"
         onSubmit={(event) => {
@@ -68,19 +80,19 @@ export function LoginCodeForm(props: {
           autocomplete="off"
           spellcheck={false}
           disabled={props.submitting}
-          aria-label={t("settings.accounts.code_placeholder")}
-          placeholder={t("settings.accounts.code_placeholder")}
+          aria-label={placeholder()}
+          placeholder={placeholder()}
           value={props.value}
           onInput={(event) => props.onInput(event.currentTarget.value)}
           data-login-code-input=""
         />
         <Button size="sm" type="submit" disabled={props.submitting || !props.value.trim()}>
-          {props.submitting ? t("settings.accounts.sending_code") : t("settings.accounts.send_code")}
+          {submitLabel()}
         </Button>
       </form>
       <Show when={props.error}>
         {(err) => (
-          <p role="alert" data-login-code-error="" class="m-0 text-xs text-error-strong">
+          <p role="alert" data-login-code-error="" class="m-0 whitespace-pre-line text-xs text-error-strong">
             {err()}
           </p>
         )}

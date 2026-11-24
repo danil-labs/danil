@@ -21,9 +21,14 @@ const MAQUINAS: MaquinasDeAjustes = {
   isDanilWorkspace: () => false,
 };
 
-export function mountAccounts(root: HTMLElement, ids: string[], options: { sinAgregar?: boolean; desplegado?: boolean } = {}) {
+export function mountAccounts(
+  root: HTMLElement,
+  ids: string[],
+  options: { sinAgregar?: boolean; desplegado?: boolean; machineOf?: MaquinasDeAjustes["machineOf"] } = {},
+) {
   elegirLengua("es");
   setCapabilities({ nativeWindow: true } as never);
+  const maquinas: MaquinasDeAjustes = options.machineOf ? { ...MAQUINAS, machineOf: options.machineOf } : MAQUINAS;
   const estados: Record<string, EstadoDeProveedor[]> = {};
   const controles: Record<string, { agregar: () => void }> = {};
   const [orden, setOrden] = createSignal(ids);
@@ -38,7 +43,7 @@ export function mountAccounts(root: HTMLElement, ids: string[], options: { sinAg
               titulo={id}
               desplegado={options.desplegado}
               sinAgregar={options.sinAgregar}
-              maquinas={MAQUINAS}
+              maquinas={maquinas}
               onEstado={(e) => (estados[id] ??= []).push(e)}
               onControl={(c) => (controles[id] = c)}
             />

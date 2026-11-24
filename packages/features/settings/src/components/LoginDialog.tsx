@@ -11,6 +11,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Terminal, TerminalBody } from "../../../../ui/src/Terminal";
+import { hasLoopbackRedirect } from "../../../../ui/src/lib/account-auth.ts";
 import "../../../../ui/src/locales/settingsPhrases";
 import { LoginCodeForm } from "../screens/LoginCodeForm";
 import { Paso } from "./ConnectionStep";
@@ -28,10 +29,12 @@ export function DialogoDeConexion(props: {
   enviandoCodigo?: boolean;
   codigoEnviado?: boolean;
   errorCodigo?: string | null;
+  onLimpiarErrorCodigo?: () => void;
   salida: string[];
   onCancelar: () => void;
   onCodigo: (codigo: string) => void;
 }) {
+  const loopback = () => hasLoopbackRedirect(props.url);
   const [codigo, setCodigo] = createSignal("");
   const [copiaFallida, setCopiaFallida] = createSignal<string | null>(null);
   const { copied: copiado, copy } = createCopied(1400, (e) => setCopiaFallida(prosaDe(e)));
@@ -55,13 +58,13 @@ export function DialogoDeConexion(props: {
             <DialogTitle class="text-sm font-semibold">
               {t("settings.accounts.connect_agent", { agent: props.etiqueta })}
             </DialogTitle>
-            {/* Siempre dice qué espera: que abra el navegador, que termines ahí o que pegues su código. */}
+            {/* Siempre dice qué espera: que abra el navegador, que termines ahí o que pegues su código o URL. */}
             <span class="flex items-center gap-1.5 text-xs text-neutral-500" role="status">
               <Spinner size={12} />
               {props.codigoEnviado
-                ? t("settings.accounts.verifying_code")
+                ? (loopback() ? t("settings.accounts.verifying_callback_url") : t("settings.accounts.verifying_code"))
                 : props.pideCodigo
-                  ? t("onboarding.login.waiting_code")
+                  ? (loopback() ? t("onboarding.login.waiting_callback_url") : t("onboarding.login.waiting_code"))
                   : props.url || props.porConfirmar
                     ? t("onboarding.login.waiting_browser")
                     : t("onboarding.login.opening_browser")}
@@ -105,13 +108,25 @@ export function DialogoDeConexion(props: {
         </Show>
 
         <Show when={props.pideCodigo}>
-          <Paso numero={props.url ? 2 : 1} titulo={t("settings.accounts.step_code")}>
+          <Paso
+            numero={props.url ? 2 : 1}
+            titulo={loopback() ? t("settings.accounts.step_callback_url") : t("settings.accounts.step_code")}
+          >
+            <Show when={loopback()}>
+              <p class="m-0 text-xs text-neutral-500" data-login-loopback-hint="">
+                {t("settings.accounts.step_callback_url_hint")}
+              </p>
+            </Show>
             <LoginCodeForm
               value={codigo()}
-              onInput={setCodigo}
+              onInput={(v) => {
+                setCodigo(v);
+                props.onLimpiarErrorCodigo?.();
+              }}
               onSubmit={enviar}
               submitting={props.enviandoCodigo}
               error={props.errorCodigo}
+              mode={loopback() ? "callback_url" : "code"}
             />
           </Paso>
         </Show>
@@ -119,7 +134,7 @@ export function DialogoDeConexion(props: {
         <Show when={!props.pideCodigo && props.codigoEnviado}>
           <p role="status" data-login-code-sent="" class="m-0 flex items-center gap-1.5 text-xs text-neutral-500">
             <Spinner size={12} />
-            {t("settings.accounts.verifying_code")}
+            {loopback() ? t("settings.accounts.verifying_callback_url") : t("settings.accounts.verifying_code")}
           </p>
         </Show>
 

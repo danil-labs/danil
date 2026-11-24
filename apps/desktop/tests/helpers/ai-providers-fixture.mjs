@@ -101,7 +101,7 @@ export function motor() {
   m.responses = { ...BASE };
   for (const [cmd, fn] of Object.entries(handlers)) {
     m.responses[cmd] = (args = {}, options) => {
-      m.llamadas.push({ cmd, args, t: Date.now() });
+      m.llamadas.push({ cmd, args, options, t: Date.now() });
       return (m.on[cmd] ?? fn)(args, options);
     };
   }
