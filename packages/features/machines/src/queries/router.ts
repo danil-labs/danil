@@ -687,7 +687,6 @@ function createRouterCore(config: RouterConfig) {
       if (
         config.organizationCatalog
         && workspace
-        && (CREATE.has(command) || SESSION_WRITE.has(command) || command === "create_empty_session" || command === "create_space" || command === "create_portfolio" || command === "add_account" || command === "login_account" || command === "materialize_workspace")
         && fleet.lists(machine, workspace) !== true
         && fleet.power(machine) === "on"
       ) {
