@@ -8,11 +8,11 @@
  * `<canal>:<huésped>` (`wsl:<distro>`) y sólo existe en esta computadora.
  */
 import { invoke } from "@tauri-apps/api/core";
-import type { MachineState } from "../../../../platform-client/src/machine.ts";
-import type { CallResult, EngineInfo, EventsPage } from "../model/relay-frames.ts";
+import type { CallResult, EventsPage } from "../model/relay-frames.ts";
 import { classOf, type Link, type MachineInfo } from "../model/fleet/index.ts";
 import type { Invoke } from "../model/router-commands";
 import { formatWslMachineName, isAnyGuestMachine, isLocalGuestMachine, WSL_MACHINE_PREFIX, type WslChild } from "../model/wsl";
+import { createGuestLinkChannels, GUEST_CREATES } from "./guest-link-helpers.ts";
 
 /** Los prefijos de id de las máquinas locales, uno por canal. */
 const GUEST_PREFIXES = [WSL_MACHINE_PREFIX];
@@ -64,23 +64,12 @@ export function guestMachineInfo(child: WslChild, hostName?: string | null, sibl
   };
 }
 
-/** Lo que crea o acomoda algo en el workspace: antes, el workspace (y su carpeta) tienen que existir en la distribución. */
-const CREATES = new Set([
-  "send_message",
-  "run_shell_command",
-  "create_project",
-  "clone_project",
-  "start_project_clone",
-  "create_empty_session",
-  "move_task_to_space",
-  "set_task_archived",
-]);
-
 type Folder = { id: string; name?: string; working_directory?: string | null };
 
 export function createGuestLink(machine: string, native?: Invoke): Link {
   const copied = new Set<string>();
   const workspaces = new Set<string>();
+  const channels = createGuestLinkChannels("unknown");
 
   const childCall = <T,>(command: string, args: unknown, workspace: string | null, timeoutMs = 30_000) =>
     invoke<T>("guest_call", { machine, command, args: args ?? {}, workspace, folder: null, timeoutMs });
@@ -115,7 +104,7 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
   async function foldersFor(workspace: string | null): Promise<Folder[]> {
     // Apagada, se ofrecen las de esta PC sin encenderla: elegir una y enviar la enciende.
     let own: Folder[] = [];
-    if (state !== "offline") {
+    if (channels.state() !== "offline") {
       await ensureWorkspace(workspace);
       const there = await childCall<Folder[]>("list_projects", {}, workspace);
       own = Array.isArray(there) ? there : [];
@@ -144,21 +133,11 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
     copied.add(project);
   }
 
-  let state: MachineState = "unknown";
   let cursor: number | null = null;
   let subscribed = false;
   let closed = false;
   let pollTimer: ReturnType<typeof setTimeout> | undefined;
   let healthTimer: ReturnType<typeof setTimeout> | undefined;
-  const stateListeners = new Set<(s: MachineState) => void>();
-  const eventListeners = new Set<(page: EventsPage) => void>();
-  const engineListeners = new Set<(engine: EngineInfo) => void>();
-
-  const setState = (next: MachineState) => {
-    if (next === state) return;
-    state = next;
-    for (const l of stateListeners) l(next);
-  };
 
   async function health() {
     if (closed) return;
@@ -166,11 +145,11 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
       const list = await sharedChildren();
       const me = list.find((c) => c.id === machine);
       if (me?.online) {
-        setState("online");
-        for (const l of engineListeners) l({ contract: me.contract, host_version: me.version });
-      } else if (state !== "starting") setState("offline");
+        channels.setState("online");
+        channels.emitEngine({ contract: me.contract, host_version: me.version });
+      } else if (channels.state() !== "starting") channels.setState("offline");
     } catch {
-      setState("offline");
+      channels.setState("offline");
     }
     if (!closed) healthTimer = setTimeout(() => void health(), HEALTH_EVERY);
   }
@@ -180,22 +159,22 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
     let quiet = true;
     try {
       const page = await invoke<EventsPage & { latest?: number | null }>("guest_events", { machine, cursor });
-      if (state !== "online") setState("online");
+      if (channels.state() !== "online") channels.setState("online");
       const events = page.events ?? [];
       if (events.length || page.gap) {
         quiet = !events.length;
-        for (const l of eventListeners) l({ ...page, events });
+        channels.emitEvents({ ...page, events });
       }
       if (page.cursor !== null && page.cursor !== undefined) cursor = page.cursor;
     } catch {
-      if (state === "online") setState("offline");
+      if (channels.state() === "online") channels.setState("offline");
     }
-    if (!closed && subscribed) pollTimer = setTimeout(() => void poll(), quiet && state !== "online" ? POLL_IDLE : POLL_EVERY);
+    if (!closed && subscribed) pollTimer = setTimeout(() => void poll(), quiet && channels.state() !== "online" ? POLL_IDLE : POLL_EVERY);
   }
 
   const onAwake = () => {
     if (closed) return;
-    setState("online");
+    channels.setState("online");
     clearTimeout(healthTimer);
     void health();
   };
@@ -207,33 +186,24 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
   hooks.add(onAwake);
 
   return {
-    state: () => state,
+    state: channels.state,
     async call(_id, command, workspace, folder, args, timeoutMs): Promise<CallResult> {
       if (command === "list_projects") return { value: await foldersFor(workspace), cached: null, deferred: null };
       // Apagada, leer no la enciende: la barra no prende Linux solo por estar abierta.
-      if (state === "offline" && classOf(command) === "read") throw { code: "machine_off" };
-      if (CREATES.has(command)) {
+      if (channels.state() === "offline" && classOf(command) === "read") throw { code: "machine_off" };
+      if (GUEST_CREATES.has(command)) {
         await ensureWorkspace(workspace);
         await ensureFolder((args as { project?: unknown } | null)?.project, workspace);
         const space = (args as { space?: unknown } | null)?.space;
         if (workspace && typeof space === "string" && space && !spaces.has(space)) await syncSpaces(workspace);
       }
       const value = await invoke<unknown>("guest_call", { machine, command, workspace, folder, args: args ?? {}, timeoutMs: timeoutMs ?? null });
-      if (state !== "online") setState("online");
+      if (channels.state() !== "online") channels.setState("online");
       return { value, cached: null, deferred: null };
     },
-    onState(listener) {
-      stateListeners.add(listener);
-      return () => stateListeners.delete(listener);
-    },
-    onEvents(listener) {
-      eventListeners.add(listener);
-      return () => eventListeners.delete(listener);
-    },
-    onEngine(listener) {
-      engineListeners.add(listener);
-      return () => engineListeners.delete(listener);
-    },
+    onState: channels.onState,
+    onEvents: channels.onEvents,
+    onEngine: channels.onEngine,
     subscribe(after) {
       // El cursor del relay no vale aquí: los eventos de la distro tienen el suyo.
       if (after === null) cursor = null;
@@ -253,9 +223,7 @@ export function createGuestLink(machine: string, native?: Invoke): Link {
       const set = awakeHooks.get(machine);
       set?.delete(onAwake);
       if (set && !set.size) awakeHooks.delete(machine);
-      stateListeners.clear();
-      eventListeners.clear();
-      engineListeners.clear();
+      channels.clear();
     },
   };
 }

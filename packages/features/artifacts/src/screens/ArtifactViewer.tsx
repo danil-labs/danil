@@ -2,7 +2,7 @@ import { createEffect, createMemo, createSignal, on, onCleanup, type JSX } from 
 import { previewFile } from "../queries";
 import { machineOf } from "../../../../host/src/machine";
 import { FileMachine } from "../../../../ui/src/fileMachine";
-import PreviewPane, { type Preview } from "../components/Preview";
+import PreviewPane, { type Preview } from "./Preview";
 import { prosaDe } from "../../../../ui/src/Failure";
 
 /**

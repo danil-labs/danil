@@ -56,8 +56,8 @@ export function createHandover(deps: HandoverDeps) {
    * El agente no entra, salvo el traspaso pendiente: si otro cliente cambió el
    * CLI, el pendiente ya no parte del que la sesión tiene y no se aplica.
    */
-  function restoreSessionConfiguration(session?: Session) {
-    composer.restoreSessionDraft(borrador(), session);
+  function restoreSessionConfiguration(current?: Session) {
+    composer.restoreSessionDraft(borrador(), current);
   }
 
   function restoreDraftConfiguration() {

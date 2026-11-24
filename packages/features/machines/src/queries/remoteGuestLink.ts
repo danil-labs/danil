@@ -8,10 +8,8 @@
  * Si el motor anfitrión no anuncia `guest_machines_v1` (o rechaza `guest_children`
  * como comando desconocido), el gestor retrocede en silencio sin afectar a la flota.
  */
-import type { MachineState } from "../../../../platform-client/src/machine.ts";
-import { type CallResult, type EngineInfo, type EventsPage, requestId as defaultRequestId } from "../model/relay-frames.ts";
-import { isUnknownCommand } from "../../../../engine-client/src/index.ts";
-import { classOf, type Link, type MachineInfo, memberKey } from "../model/fleet/index.ts";
+import { requestId as defaultRequestId } from "../model/relay-frames.ts";
+import { type Link, type MachineInfo, memberKey } from "../model/fleet/index.ts";
 import {
   formatWslMachineName,
   GUEST_MACHINES_FEATURE,
@@ -20,231 +18,19 @@ import {
   remoteGuestMachineId,
   type WslChild,
 } from "../model/wsl.ts";
+import {
+  createRemoteGuestLink,
+  errorCode,
+  isUnsupportedGuestError,
+  type RemoteGuestLink,
+  type RemoteGuestLinkConfig,
+} from "./guest-link-helpers.ts";
+
+export { createRemoteGuestLink, type RemoteGuestLink, type RemoteGuestLinkConfig };
 
 const PROBE_TIMEOUT_MS = 10_000;
 const PROBE_GAP_MS = 10_000;
 const WAKE_TIMEOUT_MS = 60_000;
-const POLL_EVERY_MS = 1_500;
-const POLL_IDLE_MS = 5_000;
-
-const CREATES = new Set([
-  "send_message",
-  "run_shell_command",
-  "create_project",
-  "clone_project",
-  "start_project_clone",
-  "create_empty_session",
-  "move_task_to_space",
-  "set_task_archived",
-]);
-
-const UNSUPPORTED_CODES = new Set(["command", "unsupported", "command_not_allowed"]);
-
-function errorCode(error: unknown): string {
-  if (!error || typeof error !== "object") return "";
-  const code = (error as { code?: unknown }).code;
-  return typeof code === "string" ? code : "";
-}
-
-function isUnsupportedGuestError(error: unknown): boolean {
-  const code = errorCode(error);
-  return UNSUPPORTED_CODES.has(code) || isUnknownCommand(error);
-}
-
-export type RemoteGuestLink = Link & {
-  sync(online: boolean, engine?: EngineInfo): void;
-  markHostOffline(): void;
-  markAwake(): void;
-};
-
-export type RemoteGuestLinkConfig = {
-  guestId: string;
-  hostOnline: () => boolean;
-  hostCall: Link["call"];
-  initialOnline: boolean;
-  pollEveryMs?: number;
-  pollIdleMs?: number;
-  requestId?: () => string;
-};
-
-/** Enlace virtual de una distro WSL que tunela `guest_call` y `guest_events` por su PC Windows anfitriona. */
-export function createRemoteGuestLink(config: RemoteGuestLinkConfig): RemoteGuestLink {
-  const pollEvery = config.pollEveryMs ?? POLL_EVERY_MS;
-  const pollIdle = config.pollIdleMs ?? POLL_IDLE_MS;
-  const nextId = config.requestId ?? defaultRequestId;
-  const materialized = new Set<string>();
-
-  let state: MachineState = config.hostOnline() && config.initialOnline ? "online" : "offline";
-  let cursor: number | null = null;
-  let subscribed = false;
-  let closed = false;
-  let polling = false;
-  let pollTimer: ReturnType<typeof setTimeout> | undefined;
-
-  const stateListeners = new Set<(s: MachineState) => void>();
-  const eventListeners = new Set<(page: EventsPage) => void>();
-  const engineListeners = new Set<(engine: EngineInfo) => void>();
-
-  const setState = (next: MachineState) => {
-    if (next === state) return;
-    state = next;
-    for (const l of stateListeners) l(next);
-  };
-
-  const stopPoll = () => {
-    clearTimeout(pollTimer);
-    pollTimer = undefined;
-  };
-
-  const schedulePoll = (delay: number) => {
-    if (closed || !subscribed || !config.hostOnline() || state !== "online") return;
-    stopPoll();
-    pollTimer = setTimeout(() => void poll(), delay);
-  };
-
-  async function poll() {
-    if (closed || !subscribed || polling) return;
-    if (!config.hostOnline()) {
-      setState("offline");
-      return;
-    }
-    if (state !== "online") return;
-    polling = true;
-    let quiet = true;
-    try {
-      const answer = await config.hostCall(nextId(), "guest_events", null, null, { machine: config.guestId, cursor }, 15_000);
-      if (closed) return;
-      if (answer.cached) {
-        setState("offline");
-        return;
-      }
-      const page = (answer.value ?? {}) as EventsPage;
-      const events = Array.isArray(page.events) ? page.events : [];
-      if (events.length || page.gap) {
-        quiet = !events.length;
-        for (const l of eventListeners) l({ ...page, events });
-      }
-      if (page.cursor !== null && page.cursor !== undefined) cursor = page.cursor;
-    } catch (error) {
-      const code = errorCode(error);
-      if (!config.hostOnline() || code === "machine_off" || code === "guest_offline") {
-        setState("offline");
-        return;
-      }
-    } finally {
-      polling = false;
-    }
-    schedulePoll(quiet ? pollIdle : pollEvery);
-  }
-
-  async function ensureWorkspace(workspace: string | null) {
-    if (!workspace || materialized.has(workspace)) return;
-    const answer = await config.hostCall(
-      nextId(),
-      "guest_call",
-      workspace,
-      null,
-      { machine: config.guestId, command: "materialize_workspace", workspace, folder: null, args: { id: workspace } },
-      30_000,
-    );
-    if (answer.cached) throw { code: "machine_off" };
-    materialized.add(workspace);
-  }
-
-  return {
-    state: () => (config.hostOnline() ? state : "offline"),
-    async call(id, command, workspace, folder, args, timeoutMs): Promise<CallResult> {
-      if (!config.hostOnline()) {
-        setState("offline");
-        throw { code: "machine_off" };
-      }
-      if (state === "offline" && classOf(command) === "read") {
-        throw { code: "machine_off" };
-      }
-      try {
-        if (CREATES.has(command)) await ensureWorkspace(workspace);
-        const answer = await config.hostCall(
-          id,
-          "guest_call",
-          workspace,
-          null,
-          { machine: config.guestId, command, workspace, folder, args: args ?? {}, timeout_ms: timeoutMs ?? null },
-          timeoutMs,
-        );
-        if (answer.cached) {
-          setState("offline");
-          throw { code: "machine_off" };
-        }
-        if (state !== "online") {
-          setState("online");
-          schedulePoll(pollEvery);
-        }
-        return { value: answer.value, cached: null, deferred: null };
-      } catch (error) {
-        const code = errorCode(error);
-        if (!config.hostOnline() || code === "machine_off" || code === "guest_offline") {
-          setState("offline");
-          throw { code: "machine_off" };
-        }
-        throw error;
-      }
-    },
-    onState(listener) {
-      stateListeners.add(listener);
-      return () => stateListeners.delete(listener);
-    },
-    onEvents(listener) {
-      eventListeners.add(listener);
-      return () => eventListeners.delete(listener);
-    },
-    onEngine(listener) {
-      engineListeners.add(listener);
-      return () => engineListeners.delete(listener);
-    },
-    subscribe(after) {
-      if (after === null) cursor = null;
-      subscribed = true;
-      if (config.hostOnline() && state === "online") schedulePoll(0);
-    },
-    start() {
-      closed = false;
-      if (!config.hostOnline()) setState("offline");
-    },
-    close() {
-      closed = true;
-      subscribed = false;
-      stopPoll();
-      stateListeners.clear();
-      eventListeners.clear();
-      engineListeners.clear();
-    },
-    sync(online, engine) {
-      if (closed) return;
-      if (!config.hostOnline()) {
-        stopPoll();
-        setState("offline");
-        return;
-      }
-      const next: MachineState = online ? "online" : "offline";
-      setState(next);
-      if (online && engine) {
-        for (const l of engineListeners) l(engine);
-      }
-      if (online && subscribed) schedulePoll(pollEvery);
-      else stopPoll();
-    },
-    markHostOffline() {
-      if (closed) return;
-      stopPoll();
-      setState("offline");
-    },
-    markAwake() {
-      if (closed || !config.hostOnline()) return;
-      setState("online");
-      if (subscribed) schedulePoll(pollEvery);
-    },
-  };
-}
 
 type HostRecord = {
   key: string;
