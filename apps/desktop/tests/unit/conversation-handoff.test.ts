@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { batch, createRoot, createSignal } from "solid-js";
-import { createConversationHandoff, type ConversationScope } from "../../src/features/conversation-handoff/index.ts";
-import { createTaskQueues } from "../../src/features/task-queues/index.ts";
+import { createConversationHandoff, type ConversationScope } from "../../../../packages/features/conversation-handoff/src/index.ts";
+import { createTaskQueues } from "../../../../packages/features/task-queues/src/index.ts";
 
 const scope: ConversationScope = { workspace: "A", generation: 1, project: "p", session: "s", route: { headers: { "x-terminus-machine": "m1" } } };
 function fixture() {

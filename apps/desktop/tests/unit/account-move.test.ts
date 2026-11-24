@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { accountOfEngine, moveDestinations, moveWorkspace } from "../../src/features/shell/account-move.ts";
+import { accountOfEngine, moveDestinations, moveWorkspace } from "../../../../packages/shell/src/shell/account-move.ts";
 
 const source = { context_id: "ctx-src", org: "org_src" };
 const groups = [

@@ -5,8 +5,8 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ENGINE_ADOPTION_FEATURE, engineAdoptionDone, engineAdoptionOf, engineAdoptionProgress, engineAdoptionReport, engineOwnsAdoption } from "../../src/features/shell/engine-adoption.ts";
-import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
+import { ENGINE_ADOPTION_FEATURE, engineAdoptionDone, engineAdoptionOf, engineAdoptionProgress, engineAdoptionReport, engineOwnsAdoption } from "../../../../packages/shell/src/shell/engine-adoption.ts";
+import { createAccountWorkspaces } from "../../../../packages/shell/src/shell/session-account-workspaces.ts";
 
 globalThis.localStorage ??= (() => {
   const m = new Map<string, string>();

@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mergeBridgeInventory } from "../../src/features/machines/bridge-inventory.ts";
-import { createContextRelayPool } from "../../src/features/machines/context-relay-pool.ts";
-import { createSessionCloud, mergeContextMachines } from "../../src/features/machines/session-cloud.ts";
-import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
-import { confirmEmailClose, emailContextCount } from "../../src/features/shell/session-close-confirm.ts";
-import { createSessionEmptyState } from "../../src/features/shell/session-empty.ts";
-import { sessionWorkspaceSource } from "../../src/features/shell/session-workspace-source.ts";
+import { mergeBridgeInventory } from "../../../../packages/features/machines/src/model/bridge-inventory.ts";
+import { createContextRelayPool } from "../../../../packages/features/machines/src/queries/context-relay-pool.ts";
+import { createSessionCloud, mergeContextMachines } from "../../../../packages/features/machines/src/queries/session-cloud.ts";
+import { createAccountWorkspaces } from "../../../../packages/shell/src/shell/session-account-workspaces.ts";
+import { confirmEmailClose, emailContextCount } from "../../../../packages/shell/src/shell/session-close-confirm.ts";
+import { createSessionEmptyState } from "../../../../packages/shell/src/shell/session-empty.ts";
+import { sessionWorkspaceSource } from "../../../../packages/shell/src/shell/session-workspace-source.ts";
 import { subscribeOrganizationProblems } from "../../src/lib/organization-problems.ts";
 
 const contexts = [{ context_id: "a", org: "A" }, { context_id: "b", org: "B" }];

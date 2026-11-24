@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createdTasks, filtrarTareas, primerasRaices } from "../../src/features/projects/agentPageFilters.ts";
-import type { SessionRow } from "../../src/features/projects/Sessions.tsx";
+import { createdTasks, filtrarTareas, primerasRaices } from "../../../../packages/features/projects/src/model/agentPageFilters.ts";
+import type { SessionRow } from "../../../../packages/features/projects/src/screens/Sessions.tsx";
 
 const fila = (id: string, created_at: number, parent: string | null = null, extra: Partial<SessionRow> = {}) =>
   ({ id, created_at, parent, esperando: false, stage: null, ...extra }) as SessionRow;

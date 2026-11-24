@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { pideClave as asksSecret } from "../../src/features/chat/commandInput.ts";
+import { pideClave as asksSecret } from "../../../../packages/features/chat/src/model/commandInput.ts";
 
 test("a sudo prompt on the last line asks for a secret", () => {
   assert.equal(asksSecret("== Usuario ghrunner\nPassword:"), true);

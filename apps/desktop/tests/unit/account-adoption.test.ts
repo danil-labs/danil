@@ -6,9 +6,9 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { adoptionTarget, adoptionTargetOf, adoptLocals, prefsAdoptionMemory } from "../../src/features/shell/account-adoption.ts";
-import { prefsPendingUnions } from "../../src/features/shell/account-transfers.ts";
-import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
+import { adoptionTarget, adoptionTargetOf, adoptLocals, prefsAdoptionMemory } from "../../../../packages/shell/src/shell/account-adoption.ts";
+import { prefsPendingUnions } from "../../../../packages/shell/src/shell/account-transfers.ts";
+import { createAccountWorkspaces } from "../../../../packages/shell/src/shell/session-account-workspaces.ts";
 
 function prefs() {
   const store = new Map<string, unknown>();

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createOrganizationSelection } from "@terminus/computers";
-import { platformTransport } from "../../src/web/platform-session.ts";
+import { platformTransport } from "../../../../packages/session/src/platform-session.ts";
 import { webOrganizationSource } from "../../src/web/organizations.ts";
 
 const DANIL = { id: "org_01M62PT11XGX8R8J883NZVYHR6", name: "Danil", plan: "enterprise", role: "owner" };

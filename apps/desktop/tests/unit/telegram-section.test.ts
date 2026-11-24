@@ -30,7 +30,7 @@ function window(busyFor: number) {
 
 test("saving the token of an agent with no conversation survives a saturated window", async () => {
   const { calls, saved } = window(2);
-  const { invoke } = await import("../../src/lib/invoke.ts");
+  const { invoke } = await import("../../../../packages/engine-client/src/client.ts");
   const agent = { project: "gfe8ehsg", name: "daneel-po" };
   await invoke("telegram_set_token", { ...agent, token: "123:abc" });
   const status = await invoke<{ token_saved: boolean }>("telegram_status", agent);

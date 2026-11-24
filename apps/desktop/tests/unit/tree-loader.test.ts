@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { crearLector, esTransitorio } from "../../src/features/code/treeLoader.ts";
+import { crearLector, esTransitorio } from "../../../../packages/features/code/src/model/treeLoader.ts";
 
 /**
  * El panel «Carpeta» no se queda con un error viejo: una lectura a la vez,

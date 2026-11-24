@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { type AddedRecord, type AddedScope, createAddedSync, outcomeOf, parsePreferences, type PreferencesReply, seedOf } from '../../src/features/shell/workspace-added-sync.ts';
+import { type AddedRecord, type AddedScope, createAddedSync, outcomeOf, parsePreferences, type PreferencesReply, seedOf } from '../../../../packages/shell/src/shell/workspace-added-sync.ts';
 
 const ID = /^[A-Za-z0-9_-]{1,128}$/;
 

@@ -1,9 +1,9 @@
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import ArtifactViewer from "../../../src/features/artifacts/ArtifactViewer";
-import { setMachineRoute } from "../../../src/lib/invoke";
+import ArtifactViewer from "../../../../../packages/features/artifacts/src/screens/ArtifactViewer";
+import { setMachineRoute } from "../../../../../packages/engine-client/src/client";
 
-import { setTaskRowMachine } from "../../../src/features/machines/store";
+import { setTaskRowMachine } from "../../../../../packages/features/machines/src/queries/store";
 
 const [rows, setRows] = createSignal([{ id: "one", machine: "machine-one" }]);
 setTaskRowMachine((id) => rows().find((row) => row.id === id)?.machine);

@@ -4,10 +4,10 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createPersonalOpener, openPersonal } from "../../src/features/shell/personal-open.ts";
-import { edgeOrganizationSource } from "../../src/features/shell/organization-edge.ts";
+import { createPersonalOpener, openPersonal } from "../../../../packages/shell/src/shell/personal-open.ts";
+import { edgeOrganizationSource } from "../../../../packages/shell/src/shell/organization-edge.ts";
 import { createOrganizationSelection } from "../../../../packages/computers/src/organizations.ts";
-import { isBusy, retryBusy } from "../../src/features/shell/select-busy.ts";
+import { isBusy, retryBusy } from "../../../../packages/shell/src/shell/select-busy.ts";
 
 const none = async () => {};
 
