@@ -1,6 +1,6 @@
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createEffect, createSignal, onCleanup } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import type { HandlerStatus, HandlerStatusRow } from "../../../../ui/src/lib/model";
 
 type PresenceCacheEntry = {
@@ -15,7 +15,7 @@ async function reload(project: string) {
   const entry = cache.get(project);
   if (!entry) return;
   try {
-    entry.setRows(await invoke<HandlerStatusRow[]>("list_agent_status", { project }));
+    entry.setRows(await callEngine<HandlerStatusRow[]>("list_agent_status", { project }));
   } catch {
   }
 }

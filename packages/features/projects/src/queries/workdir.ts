@@ -1,4 +1,4 @@
-import { Channel, invoke, type InvokeOptions } from "../../../../engine-client/src/client.ts";
+import { Channel, callEngine, type InvokeOptions } from "../../../../engine-client/src/client.ts";
 import type { Project } from "../../../../ui/src/lib/model";
 
 export const cloneProject = (
@@ -17,7 +17,7 @@ export const cloneProject = (
   const channel = onProgress
     ? new Channel<{ phase: string; percent: number | null }>(onProgress)
     : undefined;
-  return invoke<(Project)>(
+  return callEngine<(Project)>(
     "clone_project",
     { ...payload, progress: channel },
     options,
@@ -25,7 +25,7 @@ export const cloneProject = (
 };
 
 export const cancelProjectClone = (operation: string): Promise<void> =>
-  invoke("cancel_project_clone", { operation });
+  callEngine("cancel_project_clone", { operation });
 
 export const createProject = (
   payload: {
@@ -37,7 +37,7 @@ export const createProject = (
   },
   options?: InvokeOptions,
 ): Promise<(Project)> =>
-  invoke<(Project)>("create_project", payload, options);
+  callEngine<(Project)>("create_project", payload, options);
 
 export const reuseProject = (
   payload: {
@@ -48,7 +48,7 @@ export const reuseProject = (
   },
   options?: InvokeOptions,
 ): Promise<(Project)> =>
-  invoke<(Project)>("reuse_project", payload, options);
+  callEngine<(Project)>("reuse_project", payload, options);
 
 export const getProjectDirectory = (options?: InvokeOptions): Promise<string> =>
-  invoke<string>("get_project_directory", {}, options);
+  callEngine<string>("get_project_directory", {}, options);

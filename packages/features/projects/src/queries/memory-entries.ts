@@ -1,4 +1,4 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import type { MemoriaListado, MemoriaScope } from "../../../../ui/src/lib/model";
 
 export const writeMemoryEntry = (payload: {
@@ -9,17 +9,17 @@ export const writeMemoryEntry = (payload: {
   type?: string | null;
   expected_oid?: string | null;
 }): Promise<void> =>
-  invoke("write_memory_entry", payload);
+  callEngine("write_memory_entry", payload);
 
 export const listMemoryEntries = (payload: {
   project: string;
   scope: MemoriaScope;
 }): Promise<(MemoriaListado)> =>
-  invoke<(MemoriaListado)>("list_memory_entries", payload);
+  callEngine<(MemoriaListado)>("list_memory_entries", payload);
 
 export const deleteMemoryEntry = (payload: {
   project: string;
   scope: MemoriaScope;
   file: string;
 }): Promise<void> =>
-  invoke("delete_memory_entry", payload);
+  callEngine("delete_memory_entry", payload);

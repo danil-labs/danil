@@ -1,5 +1,5 @@
 import type { Accessor, Setter } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { t } from "../../../../ui/src/lib/i18n.ts";
 import { carpetasDelEscritorio, type Space } from "../../../../ui/src/lib/spaces.ts";
@@ -31,7 +31,7 @@ export function createSessionMutationOpen(deps: SessionMutationsOpenDeps) {
     if (sessionId() && !taskMaterialOptions()) throw { what: t("projects.context.task_unavailable") };
     const machine = sessionId() ? filaDe(sessionId()!)?.machine : null;
     const options = machine ? { headers: { "x-terminus-machine": machine } } : taskMaterialOptions();
-    const nueva = await invoke<{ id: string }>("add_repo_url", {
+    const nueva = await callEngine<{ id: string }>("add_repo_url", {
       cloneUrl: fuente.location,
       branch: rama,
     }, options);
@@ -146,7 +146,7 @@ export function createSessionMutationOpen(deps: SessionMutationsOpenDeps) {
       .some((p) => p.clase === "archivo" && p.session === "" && p.project === proyecto);
     if (!sueltas) return;
     try {
-      const arboles = await invoke<ArbolEnTarea[]>("list_task_trees", {
+      const arboles = await callEngine<ArbolEnTarea[]>("list_task_trees", {
         project: proyecto,
         session,
       }, deLaTarea(session));
@@ -185,7 +185,7 @@ export function createSessionMutationOpen(deps: SessionMutationsOpenDeps) {
     // que va a otra pestaña de navegador.
     if (p?.clase === "sitio" && p.navegador) return abrirNavegador(url);
     if (p) return void abrirSitio(url, p.project, p.session);
-    await invoke("open_external", { target: url }).catch(() => {});
+    await callEngine("open_external", { target: url }).catch(() => {});
   }
 
   /**
@@ -245,7 +245,7 @@ export function createSessionMutationOpen(deps: SessionMutationsOpenDeps) {
   /** El árbol recuenta por `harness:copia`, como al guardar un archivo desde su pestaña. */
   async function exportarChat(id: string, proyecto: string) {
     try {
-      const salida = await invoke<ChatExportado>("export_chat", { project: proyecto, id }, deLaTarea(id));
+      const salida = await callEngine<ChatExportado>("export_chat", { project: proyecto, id }, deLaTarea(id));
       abrirArtefacto(salida.rel, salida.path);
       window.dispatchEvent(new CustomEvent("harness:copia"));
     } catch (e) {
@@ -258,7 +258,7 @@ export function createSessionMutationOpen(deps: SessionMutationsOpenDeps) {
     const id = sessionId();
     const proyecto = project();
     if (!id) return;
-    const context = await invoke<{
+    const context = await callEngine<{
       path: string; last_prompt: string; last_reply: string;
       sources: string[]; excluded_sources: string[];
     }>("prepare_session_continuation", { project: proyecto, id, turno }, deLaTarea(id))
