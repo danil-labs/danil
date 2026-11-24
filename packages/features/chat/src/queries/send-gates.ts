@@ -4,7 +4,7 @@ import { type Project } from "../../../../ui/src/lib/model.ts";
 import { trimDraft } from "../../../../ui/src/lib/recipients";
 import { preguntaAlMargen } from "../../../../ui/src/lib/side-question";
 import { type TextEdit } from "../../../../ui/src/lib/taskMentions.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { type Respuesta, type RespuestaEnviada } from "../components/Questions";
@@ -84,7 +84,7 @@ export function createSendGates(deps: SendGatesDeps) {
     const sid = sessionId();
     if (!sid) throw new Error(t("shell.answer.no_session"));
     try {
-      const guardado = await invoke<Turn>("cancel_question", {
+      const guardado = await callEngine<Turn>("cancel_question", {
         project: project(),
         session: sid,
         turn: turno,
@@ -135,7 +135,7 @@ export function createSendGates(deps: SendGatesDeps) {
       try {
         const pending = (await pendientesDe(sid, questionWorkspace))?.questions.find((q) => (q.request_id === viva || q.id === viva) && q.turn === turno);
         if (!pending) throw new Error(t("shell.answer.question_missing"));
-        const guardado = await invoke<Turn>("answer_question", {
+        const guardado = await callEngine<Turn>("answer_question", {
           session: sid,
           requestId: pending.id ?? pending.request_id,
           revision: pending.revision,

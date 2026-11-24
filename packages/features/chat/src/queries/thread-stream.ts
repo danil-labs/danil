@@ -10,7 +10,7 @@ import { alHilo } from "../../../../ui/src/lib/side-question";
 import { type PlaceCandidate, type TaskCandidate } from "../../../../ui/src/lib/taskMentions";
 import { type TextEdit } from "../../../../ui/src/lib/taskMentions.ts";
 import { type Ventana } from "../../../../ui/src/lib/usage";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { asFailure, prosaDe } from "../../../../ui/src/Failure";
 import { type Encolado } from "../components/MessageQueue";
@@ -200,12 +200,12 @@ export function createThreadStream(deps: ThreadStreamDeps) {
   // el material que la tarea lee.
   const [ventana, setVentana] = createSignal<Ventana>(null);
 
-  const { engineCanDispatch, resumeQueue, stopTurn, turnClosed, turnStarted } = createEngineQueue({ invoke, machines, machineOf, nativeWindow: () => capabilities().nativeWindow, notStoppableYet: (id) => threads.appendLive(id, [{ role: "system", text: t("shell.turn.not_stoppable_yet"), meta: "aviso" }]) });
+  const { engineCanDispatch, resumeQueue, stopTurn, turnClosed, turnStarted } = createEngineQueue({ invoke: callEngine, machines, machineOf, nativeWindow: () => capabilities().nativeWindow, notStoppableYet: (id) => threads.appendLive(id, [{ role: "system", text: t("shell.turn.not_stoppable_yet"), meta: "aviso" }]) });
   const taskQueues = createTaskQueues({
     scope: () => ({ workspace: workspaceActivo(), generation: workspaceContext.generation(), session: sessionId(), project: project() }),
-    readQueue: (scope) => invoke<Encolado[]>("load_queue", { project: scope.project, session: scope.session }, opcionesDeLaTarea(scope.session, scope.workspace)),
+    readQueue: (scope) => callEngine<Encolado[]>("load_queue", { project: scope.project, session: scope.session }, opcionesDeLaTarea(scope.session, scope.workspace)),
     // Siempre: un motor que no lo conoce ignora el argumento, y el que sí no toma esta ventana por una vieja.
-    writeQueue: (scope, queued) => invoke("save_queue", { project: scope.project, session: scope.session, queued, engineDispatch: true }, opcionesDeLaTarea(scope.session, scope.workspace)),
+    writeQueue: (scope, queued) => callEngine("save_queue", { project: scope.project, session: scope.session, queued, engineDispatch: true }, opcionesDeLaTarea(scope.session, scope.workspace)),
     onSaveFailure: (error, scope) => threads.appendLive(scope.session, [{ role: "system", text: t("shell.queue.save_failed", { error: prosaDe(error) }), meta: "aviso" }]),
   });
   onCleanup(taskQueues.dispose);
@@ -220,7 +220,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
       const current = () => scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation();
       if (shell) detenidos.add(id);
       try {
-        const stopped = shell ? await invoke<boolean>("stop_shell_command", { session: id }, scope.route) : await stopTurn(scope);
+        const stopped = shell ? await callEngine<boolean>("stop_shell_command", { session: id }, scope.route) : await stopTurn(scope);
         if (current()) {
           if (shell && stopped === false) detenidos.delete(id);
           if (!shell) { void reconcileActiveTurns(); if (stopped !== false) setPermissions(ps => ps.filter(p => p.session !== id)); }
@@ -289,7 +289,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
     setAlMargen({ session, question, answer: null, failure: null });
     const vigente = () => turno === preguntasAlMargen && sessionId() === session;
     try {
-      const { answer } = await invoke<{ answer: string }>("ask_side_question", { project: project(), session, question }, deLaTarea(session));
+      const { answer } = await callEngine<{ answer: string }>("ask_side_question", { project: project(), session, question }, deLaTarea(session));
       if (vigente()) setAlMargen({ session, question, answer, failure: null });
     } catch (e) {
       if (vigente()) setAlMargen({ session, question, answer: null, failure: asFailure(e) });
@@ -312,7 +312,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
     const workspace = workspaceActivo();
     const session = sessionId();
     try {
-      const items = await invoke<TaskCandidate[]>("list_task_mentions");
+      const items = await callEngine<TaskCandidate[]>("list_task_mentions");
       if (request === taskCandidateRequest && workspace === workspaceActivo() && session === sessionId()) setTaskCandidates(items);
     } catch {
       if (request === taskCandidateRequest) setTaskCandidates([]);
@@ -326,7 +326,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
   const [rosterDelProyecto] = createResource(project, async (id) => {
     if (!id) return [] as HandlerDefinition[];
     try {
-      const listado = (await invoke<HandlerList>("list_agents", { project: id })).agents;
+      const listado = (await callEngine<HandlerList>("list_agents", { project: id })).agents;
       rememberRoster(id, listado);
       return listado;
     } catch {

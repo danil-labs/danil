@@ -23,7 +23,7 @@ export function createThreadsCore(deps: {
   route: (id: string) => Options | undefined;
   liveThreads: () => ReadonlySet<string>;
 }) {
-  const { invoke } = deps;
+  const { invoke: rpc } = deps;
   let disposed = false;
   const activity = createActivityProjection();
   const assistantHistory = createAssistantHistory(deps.scope);
@@ -162,8 +162,8 @@ export function createThreadsCore(deps: {
   const leerTarea = (project: string, id: string, before: number | null = null) => {
     proyectosDeHistoria.set(id, project);
     return optimisticHistory.read(project, id, () => deps.scope.paged()
-      ? invoke<Session>("load_history", { project, id, before }, route(id))
-      : invoke<Session>("load_session", { project, id, history_request: { version: 1, before } }, route(id)));
+      ? rpc<Session>("load_history", { project, id, before }, route(id))
+      : rpc<Session>("load_session", { project, id, history_request: { version: 1, before } }, route(id)));
   };
   async function cargarAntiguos(project: string, id: string): Promise<(() => void) | null> {
     const pager = historias.get(id);

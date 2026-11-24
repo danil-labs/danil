@@ -3,7 +3,7 @@ import { t } from "../../../../ui/src/lib/i18n";
 import { type Frase } from "../../../../ui/src/lib/prose.ts";
 import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
 import { deliver, listen } from "../../../../host/src/serviceEvents.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { claveDe, prosaDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
 import { TRANSPORTE } from "./sleepSession.ts";
@@ -46,14 +46,14 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     // Aquí es cuando deja de verse la ventana en blanco: `Setup` no monta esto
     // hasta que su comprobación vuelve. Sin esta línea el arranque no se mide
     // en ningún sitio y cualquier mejora suya es una opinión.
-    void invoke("window_ready", { at: Math.round(performance.now()) });
+    void callEngine("window_ready", { at: Math.round(performance.now()) });
     // El webview es la mayor parte de la memoria de la app y nadie sabe de qué.
     // Nodos, heap y lo que la ventana retiene separan las causas posibles, que
     // piden arreglos distintos. `memory` no existe en todos los motores: cero dice «no se sabe».
     const vitales = () => {
       const memoria = (performance as { memory?: { usedJSHeapSize: number } }).memory;
       const retenidos = Object.values(hilos());
-      void invoke("window_vitals", {
+      void callEngine("window_vitals", {
         nodes: document.getElementsByTagName("*").length,
         heapMb: Math.round((memoria?.usedJSHeapSize ?? 0) / 1048576),
         tabs: pestanas.open().length,
@@ -79,7 +79,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     // `list_workspaces` y el arranque la confirma al llegar (`early-startup.ts`).
     let arranqueLlego = false;
     let aplicadaDeLista: Startup | null = null;
-    void invoke<Startup>("list_workspaces").then((lista) => {
+    void callEngine<Startup>("list_workspaces").then((lista) => {
       if (arranqueLlego || workspaceRequest !== 0 || bloqueo()) return;
       if (!listaBasta(lista)) return;
       aplicadaDeLista = lista;
@@ -93,7 +93,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     // la app abría a medias y no se recuperaba sola.
     const arrancar = async (quedan: number) => {
       try {
-        const a = await invoke<Startup>("workspaces_startup");
+        const a = await callEngine<Startup>("workspaces_startup");
         arranqueLlego = true;
         // `bloqueo` no pasa por `aplicar`: es lo que lo hace seguro. Viene
         // con `workspaces` y `active` vacíos, que para `aplicar` significan
@@ -141,7 +141,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     // pie del sidebar— sin tocar a nadie.
     const alMudar = () => {
       const request = ++workspaceRequest;
-      void invoke<Startup>("list_workspaces")
+      void callEngine<Startup>("list_workspaces")
         .then((startup) => request === workspaceRequest ? aplicar(startup) : undefined)
         .catch((e) => { if (request === workspaceRequest && !asleep(e)) setStartupReadError(prosaDe(e)); });
     };

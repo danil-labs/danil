@@ -1,7 +1,7 @@
 
 import { pasoDe } from "../../../../ui/src/lib/steps";
 import { type Superficie } from "../../../../ui/src/lib/surfaces.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { type ComandoEnVivo } from "../components/ShellCard";
 import { contestaALaTerminal } from "../../../../ui/src/lib/queue.ts";
@@ -51,7 +51,7 @@ export function createResyncCommands(deps: ResyncCommandsDeps) {
       // Un motor anterior a los pendientes durables los lista sin `id` ni
       // `revision` y contesta por `request_id`; exigir la revisión dejaba el
       // gate sin forma de aprobarse. El motor nuevo acepta la misma forma.
-      const guardado = await invoke<Turn>("respond_permission", {
+      const guardado = await callEngine<Turn>("respond_permission", {
         session: p.session,
         requestId: current?.id ?? p.requestId,
         revision: current?.revision,

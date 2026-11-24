@@ -1,5 +1,5 @@
 import { sessionModelArgs } from "../../../../engine-client/src/index.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 
 export type HandoverSend<T> = {
   session: string | null;
@@ -62,13 +62,13 @@ export async function saveSessionModel(
   id: string,
   model: string,
   effort: string | null,
-  options: Parameters<typeof invoke>[2],
+  options: Parameters<typeof callEngine>[2],
   effortOnly?: boolean,
 ): Promise<void> {
   if (effortOnly && elegidos.get(id) !== model) return;
   elegidos.set(id, model);
   try {
-    await invoke("set_session_model", sessionModelArgs(project, id, model, effort), options);
+    await callEngine("set_session_model", sessionModelArgs(project, id, model, effort), options);
   } catch (error) {
     if (elegidos.get(id) === model) elegidos.delete(id);
     throw error;

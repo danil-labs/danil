@@ -10,7 +10,7 @@ import { type ShellSnapshot } from "../../../../session/src/shellCache.ts";
 import { type Space } from "../../../../ui/src/lib/spaces";
 import { isTaskTab } from "../../../../ui/src/lib/tabs";
 import { aplicarTemaDeTerminal } from "../model/terminal-themes";
-import { displayWorkspaceSnapshot, invoke, requestedWorkspaceSnapshot } from "../../../../engine-client/src/client.ts";
+import { displayWorkspaceSnapshot, callEngine, requestedWorkspaceSnapshot } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { batch, type Accessor, type Setter } from "solid-js";
@@ -67,12 +67,12 @@ export function createAttachments(deps: AttachmentsDeps) {
     try {
       const listas = await attachmentsOn(paths, alla, {
         documentos,
-        read: (path) => invoke<Preview>("preview_file", { path, rel: path }, enMaquina(adjuntosEn.get(path))),
+        read: (path) => callEngine<Preview>("preview_file", { path, rel: path }, enMaquina(adjuntosEn.get(path))),
         save: (mime, datos, nombre) => {
-          if (documentos) return invoke<string>("guardar_adjunto", { mime, nombre: nombre ?? null, datos }, options);
-          return invoke<string>("guardar_imagen_pegada", { mime, datos }, options);
+          if (documentos) return callEngine<string>("guardar_adjunto", { mime, nombre: nombre ?? null, datos }, options);
+          return callEngine<string>("guardar_imagen_pegada", { mime, datos }, options);
         },
-        prepare: (saved) => invoke<string[]>("prepare_attachments", { project: proyecto, paths: saved }, options),
+        prepare: (saved) => callEngine<string[]>("prepare_attachments", { project: proyecto, paths: saved }, options),
       });
       if (machine) for (const path of listas) adjuntosEn.set(path, machine);
       return listas;
@@ -87,8 +87,8 @@ export function createAttachments(deps: AttachmentsDeps) {
     const abierta = sessionId();
     const opciones = abierta ? deLaTarea(abierta) : draftOptions();
     const ruta = documentosEn(opciones)
-      ? await invoke<string>("guardar_adjunto", { mime, nombre: nombre ?? null, datos }, opciones)
-      : await invoke<string>("guardar_imagen_pegada", { mime, datos }, opciones);
+      ? await callEngine<string>("guardar_adjunto", { mime, nombre: nombre ?? null, datos }, opciones)
+      : await callEngine<string>("guardar_imagen_pegada", { mime, datos }, opciones);
     const machine = opciones?.headers["x-terminus-machine"];
     if (machine) pegadasEn.set(ruta, machine);
     return ruta;
@@ -99,7 +99,7 @@ export function createAttachments(deps: AttachmentsDeps) {
   // (`abrirPorRel`).
   async function refreshFolder(p: string, id: string) {
     try {
-      setFolder(await invoke<string>("session_folder", { project: p, id }, deLaTarea(id)));
+      setFolder(await callEngine<string>("session_folder", { project: p, id }, deLaTarea(id)));
     } catch {
       setFolder(null);
     }
@@ -117,7 +117,7 @@ export function createAttachments(deps: AttachmentsDeps) {
     const request = ++startupRetryRequest;
     const current = () => request === startupRetryRequest && generation === workspaceContext.generation() && workspace === workspaceActivo();
     try {
-      const startup = await invoke<Startup>("workspaces_startup");
+      const startup = await callEngine<Startup>("workspaces_startup");
       if (!current()) return;
       if (startup.bloqueo) { setBloqueo(startup.bloqueo); return; }
       if (workspace === null) await aplicar(startup);
@@ -133,7 +133,7 @@ export function createAttachments(deps: AttachmentsDeps) {
     if (!workspace) return;
     setMaterialError(null);
     try {
-      const arranque = await invoke<Startup>("list_workspaces");
+      const arranque = await callEngine<Startup>("list_workspaces");
       if (!workspaceContext.currentMaterial(request)) return;
       const current = arranque.workspaces.find((w: { id: string }) => w.id === workspace);
       if (!current) throw { what: t("projects.context.unavailable"), detail: "context_unavailable" };
@@ -143,7 +143,7 @@ export function createAttachments(deps: AttachmentsDeps) {
           if (workspaceContext.currentMaterial(request)) setProjectReadError(null);
           return rows;
         }),
-        invoke<Source[]>("list_sources"),
+        callEngine<Source[]>("list_sources"),
       ]);
       if (!workspaceContext.currentMaterial(request)) return;
 
@@ -272,7 +272,7 @@ export function createAttachments(deps: AttachmentsDeps) {
       setSources([]);
       return;
     }
-    const pedidas = invoke<Space[]>("list_spaces").catch(() => null);
+    const pedidas = callEngine<Space[]>("list_spaces").catch(() => null);
     // Con las carpetas de la caché, sus tareas se leen a la vez que la lista de carpetas.
     const primeras = desdeCache ? refreshSessions(grupos()) : null;
     try {
@@ -283,7 +283,7 @@ export function createAttachments(deps: AttachmentsDeps) {
       // Las fuentes que no llegan (su máquina apagada, sin copia) dejan las de antes y no tumban las carpetas.
       const [, fuentes] = await Promise.all([
         projectCatalog.refresh(),
-        invoke<Source[]>("list_sources").catch(() => null),
+        callEngine<Source[]>("list_sources").catch(() => null),
       ]);
       if (generation !== workspaceContext.generation()) return;
 
