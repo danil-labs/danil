@@ -32,13 +32,6 @@ export function createSpacesState(deps: SpacesStateDeps) {
   };
   const spaces = createMemo(() => spaceCatalog.arrange(rawSpaces(), localOrder));
   const sesiones = createMemo(() => spaceCatalog.projectSessions(rawSesiones()));
-  createEffect(() => {
-    const rows = rawSpaces();
-    const catalog = spaceCatalog.catalog();
-    if (rows.length > 0 && catalog && catalog.version === 0 && catalog.spaces.length === 0) {
-      void spaceCatalog.sync(rows, rawSesiones());
-    }
-  });
   const [escritorio, setEscritorio] = createSignal<string | null>(null);
   const [sidebarFilter, setSidebarFilter] = createSignal<SidebarFilterProps | null>(null);
   // El nombre del workspace abierto rotula el menú de espacios de la franja.
@@ -70,6 +63,19 @@ export function createSpacesState(deps: SpacesStateDeps) {
       setEscritorio(shellCache.desk);
     });
   }
+  createEffect(() => {
+    const rows = rawSpaces();
+    const catalog = spaceCatalog.catalog();
+    const currentSessions = rawSesiones();
+    if (enCache() || bloqueo() || !catalog) return;
+    if (rows.length > 0 && catalog.version === 0 && catalog.spaces.length === 0) {
+      void spaceCatalog.sync(rows, currentSessions);
+      return;
+    }
+    if (catalog.spaces.length > 0) {
+      spaceCatalog.scheduleBackfill(currentSessions);
+    }
+  });
   const guardarCache = shellCacheWriter();
   createEffect(() => {
     const workspace = workspaceActivo();

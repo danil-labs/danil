@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   buildInitialSeed,
+  buildTaskSpacesBackfill,
+  buildTaskSpacesBackfillEdit,
   canonicalRef,
   projectCatalogSessions,
   projectCatalogSpaces,
@@ -149,4 +151,107 @@ test("projectCatalogSessions preserves valid engine row.space when task_spaces h
     t_unknown: "sp_default",
     t_empty: "sp_default",
   });
+});
+
+test("buildTaskSpacesBackfill collects missing valid engine assignments, skips inherited subtasks, pending, attempted, deleted spaces, and foreign workspaces", () => {
+  const catalog = {
+    version: 12,
+    spaces: [
+      { id: "sp_default", name: "Default", folders: ["p1"] },
+      { id: "sp_agents", name: "Agents", folders: ["p2"] },
+      { id: "sp_general", name: "General", folders: [] },
+    ],
+    order: ["sp_default", "sp_agents", "sp_general"],
+    task_spaces: {
+      t_saved: "sp_default",
+      t_saved_parent: "sp_general",
+    },
+  };
+  const sesiones = {
+    p1: [
+      { id: "t_saved", space: "sp_agents", parent: null, workspace: "ws_1", updated_at: 100 },
+      { id: "t_pending", space: "sp_agents", parent: null, workspace: "ws_1", updated_at: 100 },
+      { id: "t_attempted", space: "sp_agents", parent: null, workspace: "ws_1", updated_at: 100 },
+      { id: "t_deleted_space", space: "sp_deleted", parent: null, workspace: "ws_1", updated_at: 100 },
+      { id: "t_null_space", space: null, parent: null, workspace: "ws_1", updated_at: 100 },
+      { id: "t_other_ws", space: "sp_agents", parent: null, workspace: "ws_other", updated_at: 100 },
+    ],
+    p2: [
+      { id: "cmp_mac~t_root", space: "cmp_mac~sp_agents", parent: null, workspace: "ws_1", updated_at: 200 },
+      // Subtask sharing its root's space is inherited via lookup(parent) and skipped to save quota.
+      { id: "cmp_mac~t_child_same", space: "cmp_mac~sp_agents", parent: "cmp_mac~t_root", workspace: "ws_1", updated_at: 210 },
+      // Subtask whose saved parent already has the same space is also skipped.
+      { id: "t_child_of_saved", space: "sp_general", parent: "t_saved_parent", workspace: "ws_1", updated_at: 220 },
+      // Subtask whose parent is archived/absent must still be backfilled.
+      { id: "t_orphan_child", space: "sp_general", parent: "t_archived_parent", workspace: "ws_1", updated_at: 150 },
+      // Subtask with a different space than its parent must be preserved explicitly.
+      { id: "t_child_diff", space: "sp_general", parent: "cmp_mac~t_root", workspace: "ws_1", updated_at: 160 },
+    ],
+  };
+
+  const backfill = buildTaskSpacesBackfill(
+    catalog,
+    { t_pending: "sp_default" },
+    sesiones,
+    new Set(["t_attempted"]),
+    "ws_1",
+  );
+  assert.deepEqual(backfill, {
+    t_root: "sp_agents",
+    t_orphan_child: "sp_general",
+    t_child_diff: "sp_general",
+  });
+
+  const edit = buildTaskSpacesBackfillEdit(
+    catalog,
+    { t_pending: "sp_default" },
+    sesiones,
+    new Set(["t_attempted"]),
+    "ws_1",
+  );
+  assert.deepEqual(edit, {
+    kind: "import",
+    spaces: [catalog.spaces[0]],
+    task_spaces: {
+      t_root: "sp_agents",
+      t_orphan_child: "sp_general",
+      t_child_diff: "sp_general",
+    },
+  });
+});
+
+test("buildTaskSpacesBackfill respects remaining maxTaskSpaces quota, prioritizing root tasks and most recent first", () => {
+  const catalog = {
+    version: 3,
+    spaces: [
+      { id: "sp_a", name: "A", folders: [] },
+      { id: "sp_b", name: "B", folders: [] },
+    ],
+    order: ["sp_a", "sp_b"],
+    task_spaces: {
+      t_existing_1: "sp_a",
+      t_existing_2: "sp_a",
+    },
+  };
+  const sesiones = {
+    "": [
+      { id: "t_old_root", space: "sp_b", parent: null, updated_at: 10 },
+      { id: "t_new_root", space: "sp_b", parent: null, updated_at: 50 },
+      { id: "t_orphan_newest", space: "sp_b", parent: "t_archived", updated_at: 99 },
+    ],
+  };
+
+  // Limit 4 minus 2 existing = 2 remaining slots -> picks both roots before orphan child.
+  assert.deepEqual(
+    buildTaskSpacesBackfill(catalog, {}, sesiones, new Set(), null, 4),
+    { t_new_root: "sp_b", t_old_root: "sp_b" },
+  );
+  // Limit 3 minus 2 existing = 1 remaining slot -> picks the most recent root.
+  assert.deepEqual(
+    buildTaskSpacesBackfill(catalog, {}, sesiones, new Set(), null, 3),
+    { t_new_root: "sp_b" },
+  );
+  // Quota already full -> returns null.
+  assert.equal(buildTaskSpacesBackfill(catalog, {}, sesiones, new Set(), null, 2), null);
+  assert.equal(buildTaskSpacesBackfillEdit(catalog, {}, sesiones, new Set(), null, 2), null);
 });
