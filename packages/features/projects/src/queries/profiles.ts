@@ -1,6 +1,6 @@
-import { invokeNative as invoke } from "../../../../host/src/native.ts";
+import { invokeNative } from "../../../../host/src/native.ts";
 import { createSignal, onCleanup } from "solid-js";
-import type { AgentProfile } from "../../../../ui/src/lib/model";
+import type { AgentProfile, HandlerDefinition } from "../../../../ui/src/lib/model";
 
 type Entry = {
   profiles: () => Record<string, AgentProfile>;
@@ -28,7 +28,7 @@ async function reload(project: string) {
   if (!entry) return;
   try {
     entry.setProfiles(
-      await invoke<Record<string, AgentProfile>>("list_agent_profiles", { project }),
+      await invokeNative<Record<string, AgentProfile>>("list_agent_profiles", { project }),
     );
   } catch {
     // Una lectura fallida deja el último perfil conocido: mejor una cara vieja
@@ -74,4 +74,68 @@ export const displayName = (name: string, profile?: AgentProfile) =>
 /** Que todas las vistas relean la apariencia que se acaba de guardar. */
 export function notifyProfiles() {
   window.dispatchEvent(new CustomEvent("harness:profiles"));
+}
+
+export function setAgentModel(args: {
+  project: string;
+  name: string;
+  provider: string | null;
+  model: string | null;
+  effort: string | null;
+}): Promise<AgentProfile> {
+  return invokeNative<AgentProfile>("set_agent_model", args);
+}
+
+export function saveAgentProfile(args: {
+  project: string;
+  name: string;
+  displayName: string | null;
+  body: string | null;
+  veil: number;
+}): Promise<AgentProfile> {
+  return invokeNative<AgentProfile>("save_agent_profile", args);
+}
+
+export function saveAgentDeclaration(args: {
+  project: string;
+  name: string;
+  description: string;
+  instructions: string;
+}): Promise<HandlerDefinition> {
+  return invokeNative<HandlerDefinition>("save_agent_declaration", args);
+}
+
+export function deleteAgentProfile(args: {
+  project: string;
+  name: string;
+}): Promise<unknown> {
+  return invokeNative("delete_agent", args);
+}
+
+export function setAgentHidden(args: {
+  project: string;
+  name: string;
+  hidden: boolean;
+}): Promise<AgentProfile> {
+  return invokeNative<AgentProfile>("set_agent_hidden", args);
+}
+
+export function setAgentAvatar(args: {
+  project: string;
+  name: string;
+  source: string | null;
+}): Promise<AgentProfile> {
+  return invokeNative<AgentProfile>("set_agent_avatar", args);
+}
+
+export function setAgentBackground(args: {
+  project: string;
+  name: string;
+  source: string | null;
+}): Promise<AgentProfile> {
+  return invokeNative<AgentProfile>("set_agent_background", args);
+}
+
+export function openAgentExternalFolder(target: string): Promise<unknown> {
+  return invokeNative("open_external", { target });
 }
