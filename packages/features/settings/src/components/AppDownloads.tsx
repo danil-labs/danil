@@ -13,7 +13,7 @@ import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../.
 const platformName = (p: DesktopPlatform) => t(`web.download.platform.${p}`);
 
 export function AppDownloadsSection(props: { userAgent?: string }) {
-  const downloads = () => downloadsFor(props.userAgent ?? (typeof navigator === "undefined" ? "" : navigator.userAgent));
+  const downloads = () => downloadsFor(props.userAgent);
   return (
     <SettingsSection title={t("web.download.title")} data-app-downloads="">
       <For each={downloads()}>
