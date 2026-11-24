@@ -1,5 +1,5 @@
 import { createSignal, onCleanup, onMount, untrack } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { listen } from "../../../host/src/serviceEvents.ts";
 import { machineOf } from "../../../features/machines/src/queries/store";
 import { contextAttentionOf, mergeContextAttention } from "./context-attention";
@@ -30,7 +30,7 @@ export function createAttention() {
   let asked = 0;
   const reload = () => {
     const mine = ++asked;
-    void invoke<WorkspaceAttention[]>("list_workspace_attention")
+    void callShellEngine<WorkspaceAttention[]>("list_workspace_attention")
       .then((next) => { if (mine === asked) setList(known(next)); })
       .catch(() => {});
   };
@@ -59,7 +59,7 @@ export function createAttention() {
     unseen: (workspace: string | null) =>
       new Set(of(workspace).filter((task) => task.state === "unseen" || task.state === "failed").map((task) => task.session)),
     markSeen(workspace: string, session: string) {
-      void invoke("mark_task_seen", { workspace, session }, untrack(() => machineOf(session))).catch(() => {});
+      void callShellEngine("mark_task_seen", { workspace, session }, untrack(() => machineOf(session))).catch(() => {});
     },
   };
 }

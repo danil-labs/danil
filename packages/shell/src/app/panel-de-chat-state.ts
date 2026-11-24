@@ -4,7 +4,7 @@ import { type AgentProfile, type HandlerStatus } from "../../../ui/src/lib/model
 import { type SenderTask } from "../../../ui/src/lib/recipients";
 import { esProvisional } from "../../../ui/src/lib/taskDraft";
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../ui/src/lib/taskFiles.ts";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { conservar } from "../../../session/src/sessionRefresh";
 import { type Encolado } from "../../../ui/src/lib/queue.ts";
 import { type AlmacenDePreguntas } from "../../../features/chat/src/components/Questions.tsx";
@@ -72,7 +72,7 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
     const [delegation, { refetch: refreshDelegation }] = createResource(delegationScope, async key => {
       const [workspace, folder, id] = JSON.parse(key) as [string, string, string];
       try {
-        const rows = await invoke<SessionRow[]>("list_delegated_sessions", { project: folder, id }, deLaTarea(id));
+        const rows = await callShellEngine<SessionRow[]>("list_delegated_sessions", { project: folder, id }, deLaTarea(id));
         return { workspace, id, rows, error: undefined as unknown };
       } catch (error) {
         return { workspace, id, rows: [] as SessionRow[], error };
@@ -144,7 +144,7 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
     const [coordinator] = createResource(coordinatorScope, async key => {
       const [workspace, folder, id] = JSON.parse(key) as [string, string, string];
       try {
-        const reference = await invoke<SenderTask | null>("task_coordinator", { project: folder, id }, deLaTarea(id));
+        const reference = await callShellEngine<SenderTask | null>("task_coordinator", { project: folder, id }, deLaTarea(id));
         return { workspace, id, reference };
       } catch { return { workspace, id, reference: null }; }
     });
@@ -224,7 +224,7 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
       () => cellProfile().background ?? undefined,
       async (ruta) => {
         try {
-          return (await invoke<Preview>("preview_file", { path: ruta, rel: ruta }, machineOf(ruta))).data_url;
+          return (await callShellEngine<Preview>("preview_file", { path: ruta, rel: ruta }, machineOf(ruta))).data_url;
         } catch {
           return null;
         }
@@ -250,7 +250,7 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
       async (clave) => {
         const [id, name] = clave.split("\u0000");
         try {
-          const listado = await invoke<HandlerList>("list_agents", { project: id });
+          const listado = await callShellEngine<HandlerList>("list_agents", { project: id });
           return listado.agents.find((e) => e.name === name) ?? null;
         } catch {
           return null;

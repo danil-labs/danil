@@ -50,11 +50,11 @@ export function movesFor(local: readonly Local[], org: string, context: string, 
  * en ese orden, porque la unión exige repetir el sello. Un re-sellado que falla
  * se repite en el siguiente repaso, porque el catálogo sigue declarando el traslado.
  */
-export async function applyMoves(invoke: Invoke, header: Record<string, unknown>, moves: readonly AccountMove[], pending: PendingUnions) {
+export async function applyMoves(rpc: Invoke, header: Record<string, unknown>, moves: readonly AccountMove[], pending: PendingUnions) {
   let applied = 0;
   for (const move of moves) {
     try {
-      await invoke("reseal_account_workspace", { ...header, id: move.id, from: move.from, to: move.to });
+      await rpc("reseal_account_workspace", { ...header, id: move.id, from: move.from, to: move.to });
     } catch { continue; }
     applied++;
     pending.add({ id: move.id, context: move.context, org: move.to.org, account_id: move.to.account_id });
@@ -63,12 +63,12 @@ export async function applyMoves(invoke: Invoke, header: Record<string, unknown>
 }
 
 /** Las uniones pendientes, en cada repaso: la que el motor acepta sale de la lista. */
-export async function retryUnions(invoke: Invoke, header: Record<string, unknown>, pending: PendingUnions, personOf: (context: string) => string | null) {
+export async function retryUnions(rpc: Invoke, header: Record<string, unknown>, pending: PendingUnions, personOf: (context: string) => string | null) {
   for (const union of pending.list()) {
     const person = personOf(union.context);
     if (!person) continue;
     try {
-      await invoke("set_free_router_union", { ...header, workspace: union.id, platformAccount: union.account_id, org: union.org, sub: person });
+      await rpc("set_free_router_union", { ...header, workspace: union.id, platformAccount: union.account_id, org: union.org, sub: person });
       pending.remove(union.id);
     } catch { /* Sin red o sin motor: sigue pendiente. */ }
   }

@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, on, onMount } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { copyText } from "../../../host/src/clipboard";
 import { prosaDe } from "../../../ui/src/Failure";
 import { type Cierre, HOT_CPU, type Puerto, type Puertos, type PuertosProps, type TaskProcess } from "./open-ports-types";
@@ -20,7 +20,7 @@ export function createPuertos(props: PuertosProps) {
   async function consultar() {
     setConsultando(true);
     try {
-      setDatos(await invoke<Puertos>("list_ports"));
+      setDatos(await callShellEngine<Puertos>("list_ports"));
     } catch (e) {
       // Un fallo al preguntar no puede dejar el número de antes en pantalla
       // afirmando puertos que ya no se sabe si están. Y se dice por qué: un
@@ -65,7 +65,7 @@ export function createPuertos(props: PuertosProps) {
     // no hacen lo mismo:
     // la de aquí no comparte la sesión de la persona, así que un panel que pide
     // login sigue queriendo su navegador.
-    await invoke("open_external", { target: p.url }).catch(() => {});
+    await callShellEngine("open_external", { target: p.url }).catch(() => {});
   }
 
   async function copiar(p: Puerto) {
@@ -85,7 +85,7 @@ export function createPuertos(props: PuertosProps) {
     setCerrando((c) => ({ ...c, [p.pid]: true }));
     setFallo((f) => ({ ...f, [p.pid]: "" }));
     try {
-      const r = await invoke<Cierre>("close_port", {
+      const r = await callShellEngine<Cierre>("close_port", {
         session,
         pid: p.pid,
         puerto: p.puerto,
@@ -103,7 +103,7 @@ export function createPuertos(props: PuertosProps) {
     setCerrando((c) => ({ ...c, [p.pid]: true }));
     setFallo((f) => ({ ...f, [p.pid]: "" }));
     try {
-      const r = await invoke<Cierre>("close_process", { session, pid: p.pid });
+      const r = await callShellEngine<Cierre>("close_process", { session, pid: p.pid });
       if (!r.cerrado) setFallo((f) => ({ ...f, [p.pid]: r.detalle }));
     } catch (e) {
       setFallo((f) => ({ ...f, [p.pid]: prosaDe(e) }));
