@@ -1,4 +1,4 @@
-import { type Fleet, type Listed, listedWorkspaces } from "@terminus/fleet";
+import { type Fleet, type Listed, listedWorkspaces } from "../model/fleet/index.ts";
 import { createRoot, createSignal } from "solid-js";
 import { availableInContext } from "../model/context-source.ts";
 import { rememberMachineNames } from "../../../../session/src/known-machine-names.ts";

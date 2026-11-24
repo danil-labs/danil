@@ -81,6 +81,7 @@ export default function AvisoDeMaterial() {
   async function mirar() {
     if (document.visibilityState !== "visible") return;
     const mia = vuelta;
+    void invoke("sync_workspace_context", { force: false }).catch(() => {});
     try {
       const rs = await invoke<Frescura[]>("source_freshness");
       const nuevas = rs.filter((f) => f.estado === "atrasada");
@@ -94,8 +95,10 @@ export default function AvisoDeMaterial() {
       // trabajo para no decir nada.
       const ss = await invoke<Source[]>("list_sources");
       if (mia !== vuelta) return;
+      const raices = new Set(ss.filter((s) => s.root === true).map((s) => s.id));
+      const secundarias = nuevas.filter((f) => !raices.has(f.id));
       setNombres(Object.fromEntries(ss.map((s) => [s.id, s.etiqueta])));
-      setAtrasadas(nuevas);
+      setAtrasadas(secundarias);
     } catch {
       // Sin red, o sin workspace abierto todavía, no se sabe si hay novedad — y
       // eso no es un fallo de la app. No se pinta nada y se sigue trabajando.
