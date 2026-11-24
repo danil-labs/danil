@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { type BlobFetch, accountAssetUrl, readAccountAsset } from "../src/index.ts";
 
-const ENDPOINT = "https://computers.danil.ai";
+const ENDPOINT = "https://computers.test";
 const LOGO = `${ENDPOINT}/v1/workspaces/w1/logo`;
 const serve = (status: number, blob: Blob, seen: { url?: string; auth?: string } = {}): BlobFetch => async (input, init) => {
   seen.url = input;

@@ -141,9 +141,6 @@ export function listComputers(endpoint: string, token: string, f: Fetch = global
   );
 }
 
-/** El largo máximo del nombre de una computadora, el mismo que valida el plano de control. */
-export const COMPUTER_NAME_MAX = 60;
-
 /** Un proyecto del registro de la cuenta (`Project` de `GET /v1/workspaces`): el mismo id en cada máquina. */
 export type AccountProject = {
   id: string;

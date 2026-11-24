@@ -31,9 +31,6 @@ export function unavailable(m: Machine, project: ProjectPlace, all: Machine[] = 
 export const removeMachineAccount = (provider: string, id: string, machine: string) =>
   invoke("remove_account", { provider, id }, { headers: { "x-terminus-machine": machine } });
 
-export const getAccountRelayToken = (account?: string | null) =>
-  invoke<{ token: string; endpoint: string }>("account_relay_token", account ? { account } : {});
-
 // Una sola lista para toda la ventana. Señal y no `createResource`, que
 // suspendería la vista entera mientras contestan.
 const [machines, setMachines] = createRoot(() => createSignal<Machine[]>([]));
