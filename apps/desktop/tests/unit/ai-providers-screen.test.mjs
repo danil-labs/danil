@@ -369,3 +369,100 @@ test("P67: closing Configuration with a login open does not call cancel_login, a
   assert.equal(m.de("cancel_login").length, 0);
   s.fin();
 });
+
+const esqueletosVisibles = (panel) => [...panel.querySelectorAll('[aria-busy="true"]')].filter((n) => !n.closest(".hidden"));
+
+test("SKELETON: accounts loaded with hanging tasks_awaiting_quota and pending/failing sibling providers leave zero visible skeletons", async () => {
+  const m = motor();
+  m.provs.claude = { cuentas: [cuenta("c1")], active: "c1" };
+  m.provs.codex = { cuentas: [] };
+  m.provs.grok = { cuentas: [] };
+  const codexPendiente = diferido();
+  const esperaColgada = diferido();
+  m.on.list_accounts = (args) => {
+    if (args.provider === "codex") return codexPendiente.promise;
+    if (args.provider === "grok") return Promise.reject({ what: "caída", detail: "disco ilegible" });
+    return { provider: args.provider, env_var: "", shared_credential: null, secret_note: null, active: "c1", accounts: [cuenta("c1")] };
+  };
+  m.on.tasks_awaiting_quota = () => esperaColgada.promise;
+  const s = await abrir("skeleton-partial-load", m, [sup("claude", "Claude Code"), sup("codex", "Codex"), sup("grok", "Grok")]);
+  await waitFor(() => s.seVe("claude") && s.seVe("grok"), "claude cargado y grok con error");
+  await sleep(100);
+  assert.equal(esqueletosVisibles(s.panel).length, 0, "ningún Skeleton visible con cuentas ya pintadas aunque codex siga pendiente y tasks_awaiting_quota cuelgue");
+  assert.equal(s.hueco("claude").querySelectorAll("[data-account-grid] > li").length, 1);
+  assert.ok(s.hueco("grok").textContent.includes("No se pudieron leer las cuentas."));
+  codexPendiente.resolve({ provider: "codex", env_var: "", shared_credential: null, secret_note: null, active: null, accounts: [] });
+  await sleep(100);
+  assert.equal(esqueletosVisibles(s.panel).length, 0);
+  s.fin();
+});
+
+test("SKELETON: zero accounts and supported (no surfaces) views leave zero visible skeletons", async () => {
+  const m0 = motor();
+  for (const id of ["claude", "codex"]) m0.provs[id] = { cuentas: [] };
+  const s0 = await abrir("skeleton-zero", m0, [sup("claude", "Claude Code"), sup("codex", "Codex")]);
+  await waitFor(() => s0.panel.querySelector("[data-no-accounts]"), "sin cuentas");
+  assert.equal(esqueletosVisibles(s0.panel).length, 0, "sin Skeleton con 0 cuentas");
+  s0.fin();
+
+  const ms = motor();
+  for (const id of Object.keys(LABEL)) ms.provs[id] = { cuentas: [] };
+  ms.on.list_accounts = () => new Promise(() => {});
+  const ss = await abrir("skeleton-supported", ms, []);
+  await waitFor(() => ss.panel.querySelector('[data-ai-providers="supported"]'), "vista supported");
+  await sleep(100);
+  assert.equal(esqueletosVisibles(ss.panel).length, 0, "sin Skeleton debajo de «Esta máquina todavía no tiene asistentes de IA instalados.»");
+  assert.equal(ss.panel.querySelector("[data-no-accounts]"), null);
+  ss.fin();
+});
+
+test("SKELETON: multi-surface providers (opencode + danil-credits / opencode-zen) mount a single Accounts without duplicate cards or inner skeletons", async () => {
+  const m = motor();
+  m.provs.opencode = { cuentas: [cuenta("o1")], active: "o1" };
+  m.on.tasks_awaiting_quota = () => new Promise(() => {});
+  const s = await abrir("skeleton-multisurface", m, [
+    { ...sup("opencode", "OpenCode"), catalogo: "de_pago" },
+    { ...sup("opencode", "Danil Credits"), id: "danil-credits", label: "Danil Credits" },
+    { ...sup("opencode", "OpenCode Zen"), id: "opencode-zen", label: "OpenCode Zen" },
+  ]);
+  await waitFor(() => s.seVe("opencode") && s.hueco("opencode").querySelectorAll("[data-account-grid] > li").length === 1, "una sola tarjeta de opencode");
+  await sleep(200);
+  assert.equal(s.hueco("opencode").querySelectorAll("[data-account-grid]").length, 1, "un solo Accounts dentro del grupo");
+  assert.equal(s.hueco("opencode").querySelectorAll("[data-account-grid] > li").length, 1, "sin tarjetas duplicadas");
+  assert.doesNotMatch(s.hueco("opencode").textContent, /Danil Credits|OpenCode Zen/);
+  assert.equal(esqueletosVisibles(s.panel).length, 0, "sin Skeleton interno ni externo");
+  s.fin();
+});
+
+test("SKELETON: switching workspace resets stale surfaces, ignores out-of-order responses, and leaves zero visible skeletons once loaded", async () => {
+  const m = motor();
+  m.provs.claude = { cuentas: [cuenta("c1")], active: "c1" };
+  m.provs.codex = { cuentas: [cuenta("x1")], active: "x1" };
+  let activeWs = "w1";
+  const w1 = { id: "w1", name: "Workspace 1", context_root: null };
+  const w2 = { id: "w2", name: "Workspace 2", context_root: null };
+  let ws2Surfaces = diferido();
+  let call = 0;
+  const surfaces = () => {
+    call++;
+    if (activeWs === "w1") return [sup("claude", "Claude Code")];
+    return ws2Surfaces.promise;
+  };
+  const s = await abrir("skeleton-workspace-switch", m, surfaces, {
+    list_workspaces: () => ({ workspaces: [w1, w2], active: activeWs }),
+    workspaces_startup: () => ({ workspaces: [w1, w2], active: activeWs }),
+  });
+  await waitFor(() => s.seVe("claude"), "claude en w1");
+  assert.equal(esqueletosVisibles(s.panel).length, 0);
+
+  activeWs = "w2";
+  s.app.w.dispatchEvent(new s.app.w.CustomEvent("harness:workspace"));
+  await waitFor(() => s.panel.querySelector('[data-ai-providers="loading"]'), "cargando superficies del nuevo workspace");
+  assert.equal(s.hueco("claude"), null, "no se quedan los grupos del workspace anterior");
+  ws2Surfaces.resolve([sup("codex", "Codex")]);
+  await waitFor(() => s.seVe("codex"), "codex en w2");
+  await sleep(100);
+  assert.equal(esqueletosVisibles(s.panel).length, 0, "sin Skeleton tras cargar w2");
+  assert.ok(call >= 2);
+  s.fin();
+});

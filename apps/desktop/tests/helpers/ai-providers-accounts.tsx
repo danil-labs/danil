@@ -8,10 +8,18 @@ import { elegirLengua } from "../../src/lib/i18n";
 import "../../src/locales/catalogs";
 import { createSignal, For } from "solid-js";
 import { render } from "solid-js/web";
-import { setCapabilities } from "../../src/lib/platform";
-import Accounts from "../../src/features/settings/Accounts";
-export { ESPERA_ANTES_DE_LA_TERMINAL_MS } from "../../src/features/settings/Accounts";
-import type { EstadoDeProveedor } from "../../src/features/settings/ai-providers-groups";
+import { setCapabilities } from "../../../../packages/host/src/platform";
+import Accounts from "../../../../packages/features/settings/src/components/Accounts";
+export { ESPERA_ANTES_DE_LA_TERMINAL_MS } from "../../../../packages/features/settings/src/components/Accounts";
+import type { EstadoDeProveedor } from "../../../../packages/features/settings/src/model/ai-providers-groups";
+import type { MaquinasDeAjustes } from "../../../../packages/features/settings/src/model/machines-port";
+
+const MAQUINAS: MaquinasDeAjustes = {
+  machines: () => [],
+  machineName: (id) => id,
+  machineOf: () => undefined,
+  isDanilWorkspace: () => false,
+};
 
 export function mountAccounts(root: HTMLElement, ids: string[], options: { sinAgregar?: boolean; desplegado?: boolean } = {}) {
   elegirLengua("es");
@@ -30,6 +38,7 @@ export function mountAccounts(root: HTMLElement, ids: string[], options: { sinAg
               titulo={id}
               desplegado={options.desplegado}
               sinAgregar={options.sinAgregar}
+              maquinas={MAQUINAS}
               onEstado={(e) => (estados[id] ??= []).push(e)}
               onControl={(c) => (controles[id] = c)}
             />

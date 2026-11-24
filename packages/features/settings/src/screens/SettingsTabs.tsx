@@ -61,8 +61,6 @@ export type Entrada = {
 type ContextoDeAgentes = {
   readonly modelos: ModelChoices;
   readonly proyecto: string;
-  /** Los agentes de las tareas abiertas: sus proveedores llegan desplegados. */
-  readonly agentesEnUso: string[];
   onAgentProfile: (project: string, name: string) => void;
   /** Si `list_surfaces` todavía no contesta, contestó o falló. */
   readonly estadoSuperficies: SurfacesState;

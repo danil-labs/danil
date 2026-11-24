@@ -77,7 +77,7 @@ export function createCuentas(props: Parameters<typeof Accounts>[0]) {
     setEstados, setSinComprobar, setPorQuitar, enCurso, setUrl, setPorConfirmar, setPideCodigo, setEnCurso,
     setSalida, setConexionFallida, setConectadaVez, setOfrecerTerminal, setComprobando, fallo,
     olvidarEnlaceCopiado, setCopiaFallida, setCodigo, copiarLaUrl, codigo, setRepuestas, setEsperando,
-    setReponiendo, conexionFallida, tarjetas, instalando, cargando, estados, esperando, reponiendo,
+    setReponiendo, conexionFallida, agrupadas, tarjetas, instalando, cargando, estados, esperando, reponiendo,
     repuestas, comprobando, sinComprobar, conectadaVez, porQuitar, url, pideCodigo, porConfirmar,
     enlaceCopiado, copiaFallida, salida, ofrecerTerminal,
   };

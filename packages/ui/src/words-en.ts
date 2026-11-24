@@ -295,8 +295,6 @@ export const en: Record<WordKey, Word> = {
   "chat.steer.unconfirmed": "Message delivery to the agent could not be confirmed. Check the conversation before resending.",
   "chat.queue.stop_and_send": "Interrupt and send",
   "chat.failure.retry": "Try again",
-  "settings.ai_providers.opencode_detail": "Pay-as-you-go models and Go",
-  "settings.ai_providers.zen_go": "OpenCode",
   "settings.ai_providers.free_detail": "Kilo · Vercel · Reflection",
   "surfaces.label.free": "Free AI Router",
   "surfaces.free_off": "Free models are not enabled in this workspace",

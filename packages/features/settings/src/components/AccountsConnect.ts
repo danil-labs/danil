@@ -1,4 +1,4 @@
-import { createSignal, onMount } from "solid-js";
+import { createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { accountStatus, addAccount, discardAccount, installProvider, listAccounts, listProviders, loginAccount, setApiKey, tasksAwaitingQuota } from "../queries/engine-accounts";
 import { checkEnvironment } from "../queries/engine-environment";
@@ -13,7 +13,7 @@ import { ESPERA_ANTES_DE_LA_TERMINAL_MS } from "./AccountsModel";
 import type { createCuentas } from "./AccountsState";
 
 export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas>) {
-  const { agentes, agente, machineOf, setAgentes, setFallo, setInstalando, lista, setCargando, setLista, enCurso, setComprobando, setEstados, setSinComprobar, fallo, setEnCurso, setUrl, olvidarEnlaceCopiado, setCopiaFallida, setPorConfirmar, setPideCodigo, setCodigo, setSalida, setConexionFallida, setOfrecerTerminal, setEsperando } = cuentas;
+  const { agentes, agente, machineOf, setAgentes, setFallo, setInstalando, lista, cargando, setCargando, setLista, enCurso, setComprobando, setEstados, setSinComprobar, fallo, setEnCurso, setUrl, olvidarEnlaceCopiado, setCopiaFallida, setPorConfirmar, setPideCodigo, setCodigo, setSalida, setConexionFallida, setOfrecerTerminal, setEsperando } = cuentas;
   /**
    * `espera` y `recienCreada` son variables: nadie pinta sus valores, y una
    * señal añadiría dependencias reactivas sin consumidores. `espera` conserva
@@ -23,6 +23,10 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
    */
   let espera: number | null = null;
   let recienCreada: string | null = null;
+  let lecturaId = 0;
+  onCleanup(() => {
+    lecturaId++;
+  });
   // A cuáles ya se les preguntó. Cambiarla no tiene que repintar nada, y en una
   // señal provocaría justo el render que vuelve a disparar la consulta.
   const comprobadas = new Set<string>();
@@ -47,6 +51,7 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
       await checkEnvironment({ force: true });
       setAgentes(await listProviders<AgentOpt[]>());
       setFallo(null);
+      if (lista() === null && !cargando()) void refrescar();
     } catch (e) {
       setFallo({ what: t("settings.accounts.error.check_provider"), detail: detalleDe(e) });
     } finally {
@@ -142,6 +147,7 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
       await installProvider({ provider: agente() });
       setAgentes(await listProviders<AgentOpt[]>());
       setFallo(null);
+      if (lista() === null && !cargando()) void refrescar();
     } catch (e) {
       const sinEspacio = await textoDeFalta(e, `provider:${agente()}`);
       setFallo(sinEspacio ? { what: sinEspacio, detail: "" } : { what: t("settings.accounts.error.install"), detail: detalleDe(e) });
@@ -151,20 +157,29 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
   }
 
   async function refrescar() {
+    const id = ++lecturaId;
     // El esqueleto es de la primera lectura. Después, la lista que ya se ve se
     // queda mientras llega la nueva: autenticar o quitar una cuenta no vuelve
     // a vaciar la sección, y cada tarjeta dice su propia carga.
     if (lista() === null) setCargando(true);
     try {
-      setLista(await listAccounts<AccountList>({ provider: agente() }));
+      const res = await listAccounts<AccountList>({ provider: agente() });
+      if (id !== lecturaId) return;
+      const normalizada: AccountList = res && Array.isArray(res.accounts)
+        ? res
+        : { provider: agente(), env_var: "", shared_credential: null, secret_note: null, active: null, accounts: [] };
+      setLista(normalizada);
       setFallo(null);
-      await mirarEspera();
+      setCargando(false);
+      // `tasks_awaiting_quota` es secundario: las cuentas ya llegaron y el
+      // esqueleto no debe quedarse esperando este aviso (puede tardar hasta 60 s por relay).
+      void mirarEspera(id);
     } catch (e) {
+      if (id !== lecturaId) return;
       // Cargando, vacío y error son tres pantallas distintas: dejar la lista
       // vacía haría que "todavía no agregaste cuentas" apareciera mintiendo.
       setLista(null);
       setFallo({ what: t("settings.accounts.error.list"), detail: detalleDe(e) });
-    } finally {
       setCargando(false);
     }
   }
@@ -350,10 +365,13 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
     }
   }
 
-  async function mirarEspera() {
+  async function mirarEspera(esperadoId?: number) {
     try {
-      setEsperando(await tasksAwaitingQuota<EnEspera[]>({ provider: agente() }));
+      const enEspera = await tasksAwaitingQuota<EnEspera[]>({ provider: agente() });
+      if (esperadoId !== undefined && esperadoId !== lecturaId) return;
+      setEsperando(Array.isArray(enEspera) ? enEspera : []);
     } catch {
+      if (esperadoId !== undefined && esperadoId !== lecturaId) return;
       setEsperando([]);
     }
   }
