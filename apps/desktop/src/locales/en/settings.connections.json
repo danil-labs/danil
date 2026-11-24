@@ -52,5 +52,19 @@
   "settings.connections.one_workspace": "Choose only one workspace per computer before activating.",
   "settings.connections.access_saved": "Selection saved. Access is checked when the orchestrator uses each destination.",
   "settings.connections.retry": "Retry",
-  "settings.connections.approval_fixed": "An existing connection keeps its approval mode. The service does not yet support changing it."
+  "settings.connections.approval_fixed": "An existing connection keeps its approval mode. The service does not yet support changing it.",
+  "settings.connections.state.needs_setup": "Needs setup",
+  "settings.connections.needs_setup_hint": "Choose the organization and scope to activate this connection.",
+  "settings.connections.summary_n1": "Organization: {org} · All workspaces",
+  "settings.connections.summary_n1_exclusions": "Organization: {org} · {count} exclusions",
+  "settings.connections.organization": "Organization",
+  "settings.connections.workspaces_scope": "Authorized workspaces",
+  "settings.connections.audit": "Activity",
+  "settings.connections.audit_empty": "No recorded activity yet.",
+  "settings.connections.error.organization_unavailable": "Could not verify the organization right now. Try again.",
+  "settings.connections.error.relay_unavailable": "The machines service did not respond in time. Try again.",
+  "settings.connections.error.connection_revoked": "This connection was revoked. Reconnect the client via OAuth.",
+  "settings.connections.error.connection_needs_setup": "Configure this connection's organization before pausing or resuming it.",
+  "settings.connections.error.organization_mismatch": "The selected organization conflicts with the active connection.",
+  "settings.connections.error.organization_access_denied": "You do not have active membership in that organization."
 }

@@ -52,5 +52,19 @@
   "settings.connections.one_workspace": "Elige sólo un workspace por máquina antes de activar.",
   "settings.connections.access_saved": "Selección guardada. El acceso se comprueba cuando el orquestador usa cada destino.",
   "settings.connections.retry": "Reintentar",
-  "settings.connections.approval_fixed": "El modo de aprobación de una conexión existente se conserva. El servicio todavía no permite cambiarlo."
+  "settings.connections.approval_fixed": "El modo de aprobación de una conexión existente se conserva. El servicio todavía no permite cambiarlo.",
+  "settings.connections.state.needs_setup": "Por configurar",
+  "settings.connections.needs_setup_hint": "Elige la organización y el alcance para activar esta conexión.",
+  "settings.connections.summary_n1": "Organización: {org} · Todos los workspaces",
+  "settings.connections.summary_n1_exclusions": "Organización: {org} · {count} exclusiones",
+  "settings.connections.organization": "Organización",
+  "settings.connections.workspaces_scope": "Workspaces autorizados",
+  "settings.connections.audit": "Actividad",
+  "settings.connections.audit_empty": "Sin actividad registrada todavía.",
+  "settings.connections.error.organization_unavailable": "No pudimos verificar la organización en este momento. Intenta de nuevo.",
+  "settings.connections.error.relay_unavailable": "El servicio de máquinas no respondió a tiempo. Intenta de nuevo.",
+  "settings.connections.error.connection_revoked": "Esta conexión ya fue revocada. Vuelve a conectar el cliente desde OAuth.",
+  "settings.connections.error.connection_needs_setup": "Configura primero la organización de esta conexión antes de pausarla o reanudarla.",
+  "settings.connections.error.organization_mismatch": "La organización elegida no coincide con la conexión activa.",
+  "settings.connections.error.organization_access_denied": "No tienes membresía activa en esa organización."
 }
