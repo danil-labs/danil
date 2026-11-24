@@ -6,7 +6,7 @@ import { enfocarYSeleccionar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { SESSION_TITLE_MAX_LENGTH } from "../../../../ui/src/lib/projectNames";
 import { esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { FinishTaskButton } from "../../../../ui/src/FinishTaskButton";
 import { Input } from "../../../../ui/src/Input";
 import { WithMentions } from "../../../../ui/src/WithMentions";

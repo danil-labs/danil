@@ -1,9 +1,9 @@
 import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { modelBrand } from "../../../../../apps/desktop/src/lib/models";
-import { prosa } from "../../../../../apps/desktop/src/lib/prose";
+import { prosa } from "../../../../ui/src/lib/prose";
 import { nombreDe } from "../../../../../apps/desktop/src/lib/steps";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote } from "../../../../ui/src/Failure";

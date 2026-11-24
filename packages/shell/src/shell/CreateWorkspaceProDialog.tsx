@@ -4,7 +4,7 @@ import { For } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { openNativeExternal } from "../../../../apps/desktop/src/lib/native-workspace-add-link";
 import { capabilities } from "../../../host/src/platform";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
 import { billingHref } from "../../../platform-client/src/billing-route";
 import { RAIL_MENU_ITEM } from "./rail-menu";

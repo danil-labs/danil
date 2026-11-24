@@ -3,7 +3,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Markdown } from "../../../../ui/src/Markdown";
 import Documento from "../../../../ui/src/Document";
 import { formaDe } from "../../../../ui/src/lib/sandbox";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { setMoviendoHueco } from "../../../../../apps/desktop/src/lib/sites";
 import { sangriaDe } from "../model/indent";

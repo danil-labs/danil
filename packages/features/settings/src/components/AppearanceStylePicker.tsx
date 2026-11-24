@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 import { Pressable } from "../../../../ui/src/Pressable";
 

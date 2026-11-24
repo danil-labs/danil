@@ -7,7 +7,7 @@ import { createEffect, createSignal, on, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Pressable } from "../../../../ui/src/Pressable";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { SesionesDeAjustes } from "../model/sessions-port";
 import { createDanilAccounts, type DanilAccounts } from "../queries/danil-accounts";

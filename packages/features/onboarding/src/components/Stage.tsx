@@ -1,5 +1,5 @@
 import { createEffect, createSignal, on, onCleanup, type JSX } from "solid-js";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 
 export const QUIETO = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 

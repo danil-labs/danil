@@ -2,7 +2,7 @@ import Check from "lucide-solid/icons/check";
 import Copy from "lucide-solid/icons/copy";
 import { Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
-import { mb } from "../../../../../apps/desktop/src/lib/format";
+import { mb } from "../../../../ui/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { CancelButton } from "../../../../ui/src/IconAction";
 import { Pressable } from "../../../../ui/src/Pressable";

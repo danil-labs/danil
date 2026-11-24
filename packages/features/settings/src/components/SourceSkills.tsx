@@ -11,7 +11,7 @@ import { EmptyState } from "../../../../ui/src/EmptyState";
 import Search from "lucide-solid/icons/search";
 import { SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { lockedBy } from "../../../../../apps/desktop/src/lib/governance";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Governed } from "../../../../ui/src/Governed";
 import "../../../../../apps/desktop/src/locales/settingsPhrases";
 

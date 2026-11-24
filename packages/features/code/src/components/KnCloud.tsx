@@ -5,7 +5,7 @@ import { listen } from "../../../../host/src/serviceEvents.ts";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { peso } from "../../../../../apps/desktop/src/lib/format";
+import { peso } from "../../../../ui/src/lib/format";
 import { avisarDeLosArboles } from "../queries/refresh";
 
 /** `kn_cloud::Descarga`: lo que baja de la nube a la carpeta de un proyecto kn. */

@@ -7,7 +7,7 @@ import { createPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
 import { recordarCarpetas } from "../../../../../apps/desktop/src/lib/folderKinds.ts";
 import { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import { createTaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles.ts";
-import type { Frase } from "../../../../../apps/desktop/src/lib/prose.ts";
+import type { Frase } from "../../../../ui/src/lib/prose.ts";
 import type { Project, Source } from "../../../../../apps/desktop/src/lib/model.ts";
 import type { Machine, ProjectPlace } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import { activeTaskCounts, activityByProject, hiddenIn, type HiddenProjects, type PickedAt, picksIn, rememberPick, setHidden, storedPicks } from "../model/recent.ts";

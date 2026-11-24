@@ -5,7 +5,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { AgentModels } from "../../../../../apps/desktop/src/lib/model";
 import type { MachineOf } from "../queries/history-details";
 import { formatearDuracion, type Paso } from "../../../../../apps/desktop/src/lib/steps";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { type VisualBudget } from "../model/visualBudget";
 import { stripNextSteps } from "../../../../ui/src/lib/chat/nextSteps";

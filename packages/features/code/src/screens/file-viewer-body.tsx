@@ -2,7 +2,7 @@ import { Show, Suspense, createResource, createSignal } from "solid-js";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { peso } from "../../../../../apps/desktop/src/lib/format";
+import { peso } from "../../../../ui/src/lib/format";
 import type { FilePreview as Preview } from "../../../../engine-client/src/index.ts";
 import { mediaKindOf } from "../model/media";
 import type { LeerParte } from "../../../../host/src/tree-download";

@@ -1,8 +1,8 @@
 import ExternalLink from "lucide-solid/icons/external-link";
 import { For, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { prosa } from "../../../../../apps/desktop/src/lib/prose";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { prosa } from "../../../../ui/src/lib/prose";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { Pressable } from "../../../../ui/src/Pressable";

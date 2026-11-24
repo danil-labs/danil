@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js";
 import { splitProps } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 export function Toggle(
   props: {

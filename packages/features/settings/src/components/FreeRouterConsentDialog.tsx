@@ -1,8 +1,8 @@
 import { For, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { openExternal } from "../queries/engine-open";
-import { prosa } from "../../../../../apps/desktop/src/lib/prose";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { prosa } from "../../../../ui/src/lib/prose";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent } from "../../../../ui/src/Dialog";
 import { Spinner } from "../../../../ui/src/Spinner";

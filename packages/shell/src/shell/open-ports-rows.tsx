@@ -1,8 +1,8 @@
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { elapsed, percent } from "../../../../apps/desktop/src/lib/format";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { elapsed, percent } from "../../../ui/src/lib/format";
+import { cn } from "../../../ui/src/lib/utils";
 import Copy from "lucide-solid/icons/copy";
 import ExternalLink from "lucide-solid/icons/external-link";
 import Globe from "lucide-solid/icons/globe";

@@ -1,6 +1,6 @@
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { splitProps, type ComponentProps } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 /**
  * El loader de toda la app: una pista tenue y un arco que gira continuo (a 24
