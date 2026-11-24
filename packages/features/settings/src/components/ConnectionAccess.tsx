@@ -134,8 +134,7 @@ function AccessEditor(props: Props & { onClose: () => void }) {
           <For each={props.workspaces}>
             {(ws) => (
               <label class="flex items-center gap-2 text-ui text-neutral-950">
-                <input
-                  type="checkbox"
+                <input type="checkbox"
                   class={NO_RING}
                   checked={!excluded().has(ws.id)}
                   onChange={(e) => toggleWorkspace(ws.id, e.currentTarget.checked)}
