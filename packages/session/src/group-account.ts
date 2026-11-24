@@ -1,4 +1,4 @@
-import type { edgeTransport } from "@terminus/computers";
+import type { edgeTransport } from "../../platform-client/src/edge.ts";
 import type { GroupAccount, GroupReply, GroupSend } from "../../../apps/desktop/src/lib/group-account.ts";
 import { settledContextIds } from "../../../apps/desktop/src/lib/settled-contexts.ts";
 import { CREDITS_BALANCE_PATH } from "../../platform-client/src/treasury.ts";

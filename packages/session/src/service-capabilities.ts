@@ -1,4 +1,4 @@
-import { type CapabilityList, capabilityList, mayCall } from "@terminus/computers";
+import { type CapabilityList, capabilityList, mayCall } from "../../platform-client/src/capabilities.ts";
 import { PlatformSessionError } from "./platform-session.ts";
 
 /** Lo que el borde anuncia, leído igual que en Desk (`@terminus/computers`, `capabilities.ts`). */

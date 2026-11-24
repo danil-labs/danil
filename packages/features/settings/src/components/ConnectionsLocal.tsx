@@ -1,4 +1,4 @@
-import { PERMISSION_MODES } from "@terminus/computers";
+import { PERMISSION_MODES } from "../model/connections.ts";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

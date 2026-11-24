@@ -1,4 +1,5 @@
-import { EdgeError, type EdgeTransport, type OrganizationSelection } from "@terminus/computers";
+import { EdgeError, type EdgeTransport } from "../../platform-client/src/edge.ts";
+import type { OrganizationSelection } from "../../platform-client/src/organizations.ts";
 import type { GroupAccount } from "../../../apps/desktop/src/lib/group-account.ts";
 import { activeWorkspaceContext } from "../../../apps/desktop/src/lib/workspace-context.ts";
 import type { WebSessionCommands, WebSessionStatus } from "./web-session-contexts.ts";

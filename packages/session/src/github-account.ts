@@ -16,7 +16,7 @@ import {
   removeGithubMachine,
   restoreGithubMachine,
   setGithubAreas,
-} from "@terminus/computers";
+} from "../../platform-client/src/github.ts";
 import { githubAccountFailure } from "../../features/settings/src/model/github-account-failures.ts";
 
 type Args = Record<string, unknown>;

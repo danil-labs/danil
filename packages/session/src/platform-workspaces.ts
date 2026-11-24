@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { EdgeTransport } from "@terminus/computers";
+import type { EdgeTransport } from "../../platform-client/src/edge.ts";
 
 export const workspaceId = z.string().regex(/^[1-9]\d*$/);
 const workspace = z.object({ id: workspaceId, org: z.string(), name: z.string(), role: z.string(), engine_workspace_id: z.string().min(1).nullish() });

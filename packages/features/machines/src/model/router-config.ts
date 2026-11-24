@@ -1,4 +1,5 @@
-import type { AccountWorkspace, SystemId } from "@terminus/computers";
+import type { AccountWorkspace } from "../../../../platform-client/src/api.ts";
+import type { SystemId } from "../../../../platform-client/src/machine.ts";
 import type { Fleet } from "./fleet/index.ts";
 import type { WorkspaceSpaceCatalog } from "../../../../platform-client/src/workspace-spaces.ts";
 import type { EngineWorkspace } from "../queries/engine-workspaces.ts";

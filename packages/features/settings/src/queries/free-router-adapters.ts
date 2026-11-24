@@ -1,5 +1,5 @@
 /** El motor y el borde que usa el cliente del Free router de plataforma, en Desk (Rust) y en la web (cookie). */
-import { EdgeError, type EdgeTransport } from "@terminus/computers";
+import { EdgeError, type EdgeTransport } from "../../../../platform-client/src/edge.ts";
 import type { InvokeOptions } from "@tauri-apps/api/core";
 import { edgeFetch } from "../../../../platform-client/src/client.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";

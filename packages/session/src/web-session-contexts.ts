@@ -15,7 +15,7 @@
  *   Cualquier escritura de la sesión (o `invalidate()`, que llama el transporte en cada escritura de
  *   identity o workspaces) las olvida.
  */
-import { EdgeError, type EdgeTransport } from "@terminus/computers";
+import { EdgeError, type EdgeTransport } from "../../platform-client/src/edge.ts";
 import { SESSION_ROUTES, SHARED_SESSION_READS } from "../../platform-client/src/identity.ts";
 import { sharedRead, sharedReads } from "../../platform-client/src/shared-read.ts";
 

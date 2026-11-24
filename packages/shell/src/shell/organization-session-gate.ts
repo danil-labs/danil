@@ -1,4 +1,4 @@
-import { isOrganizationSelectionRequired, type OrganizationSelection } from "@terminus/computers";
+import { isOrganizationSelectionRequired, type OrganizationSelection } from "../../../platform-client/src/organizations.ts";
 import { listenDanilConnectionChange } from "../../../host/src/danilConnectionEvents.ts";
 import { onEdgeProblem } from "../../../platform-client/src/client";
 import { invoke } from "../../../engine-client/src/client";

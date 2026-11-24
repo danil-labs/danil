@@ -1,4 +1,4 @@
-import type { edgeTransport } from "@terminus/computers";
+import type { edgeTransport } from "../../platform-client/src/edge.ts";
 import { z } from "zod";
 
 export function webRedeemPromo(transport: ReturnType<typeof edgeTransport>) {

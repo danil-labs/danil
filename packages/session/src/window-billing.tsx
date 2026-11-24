@@ -1,5 +1,5 @@
 import { BILLING_RETURN_KEY } from "./billing-v2-return";
-import type { OrganizationSelection } from "@terminus/computers";
+import type { OrganizationSelection } from "../../platform-client/src/organizations.ts";
 import type { Machine } from "../../platform-client/src/machines.ts";
 import { createSignal, lazy, onCleanup, Show, Suspense } from "solid-js";
 import type { Capabilities } from "../../host/src/platform";

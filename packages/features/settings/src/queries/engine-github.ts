@@ -1,5 +1,6 @@
 import type { InvokeArgs, InvokeOptions } from "@tauri-apps/api/core";
 import { invoke } from "../../../../engine-client/src/client.ts";
+export { githubAuthorizeOf, githubCredentialOf, githubInstallationsOf, githubStatusOf } from "../../../../platform-client/src/github.ts";
 
 export function accountCredentialRemoveMachine<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
   return invoke<res>("account_credential_remove_machine", args, options);

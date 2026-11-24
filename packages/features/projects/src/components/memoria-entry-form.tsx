@@ -1,5 +1,5 @@
 import { Show, createEffect, createSignal } from "solid-js";
-import { memoryEntryText, writeMemoryFile } from "@terminus/computers";
+import { memoryEntryText } from "../model/memory.ts";
 import { writeMemoryEntry } from "../queries";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
@@ -9,7 +9,7 @@ import { Textarea } from "../../../../ui/src/Textarea";
 import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { MemoriaEntrada, MemoriaScope } from "../../../../ui/src/lib/model";
-import type { EntradaDeCuenta, MemoriaDeCuenta } from "../queries/memory-account";
+import { type EntradaDeCuenta, type MemoriaDeCuenta, writeMemoryFile } from "../queries/memory-account";
 
 /**
  * El mismo formulario para escribir y para editar. `file` es la identidad:
