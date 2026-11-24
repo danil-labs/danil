@@ -20,10 +20,10 @@
  */
 import { refreshLanguage, registrarCatalogo, type Manifiesto } from "../lib/i18n.ts";
 
-// `web.json` y `audit.json` los lleva la entrada web (`src/web/phrases.ts`);
+// `web.json` lo lleva la entrada web (`src/web/phrases.ts`);
 // `danil.json`, `work.json`, todos los `settings.<sección>.json`, `cli.json`, `chat.notice.json`, `chat.session_model.json` y `chat.handover.confirm.json`, los trozos
 // perezosos que los enseñan (`danilPhrases.ts`, `workPhrases.ts`, `handlerPhrases.ts`, `settingsPhrases.ts`, `failurePhrases.ts`, `handoverPhrases.ts`).
-const EMPOTRADOS = import.meta.glob(["../../../../apps/desktop/src/locales/*/*.json", "!../../../../apps/desktop/src/locales/*/web.json", "!../../../../apps/desktop/src/locales/*/danil.json", "!../../../../apps/desktop/src/locales/*/work.json", "!../../../../apps/desktop/src/locales/*/settings.*.json", "!../../../../apps/desktop/src/locales/*/onboarding.ai.*.json", "!../../../../apps/desktop/src/locales/*/workspaces.consent.free_models.json", "!../../../../apps/desktop/src/locales/*/cli.json", "!../../../../apps/desktop/src/locales/*/chat.notice.json", "!../../../../apps/desktop/src/locales/*/chat.failure.json", "!../../../../apps/desktop/src/locales/*/chat.session_model.json", "!../../../../apps/desktop/src/locales/*/chat.handover.confirm.json", "!../../../../apps/desktop/src/locales/*/audit.json"], {
+const EMPOTRADOS = import.meta.glob(["../../../../apps/desktop/src/locales/*/*.json", "!../../../../apps/desktop/src/locales/*/web.json", "!../../../../apps/desktop/src/locales/*/danil.json", "!../../../../apps/desktop/src/locales/*/work.json", "!../../../../apps/desktop/src/locales/*/settings.*.json", "!../../../../apps/desktop/src/locales/*/onboarding.ai.*.json", "!../../../../apps/desktop/src/locales/*/workspaces.consent.free_models.json", "!../../../../apps/desktop/src/locales/*/cli.json", "!../../../../apps/desktop/src/locales/*/chat.notice.json", "!../../../../apps/desktop/src/locales/*/chat.failure.json", "!../../../../apps/desktop/src/locales/*/chat.session_model.json", "!../../../../apps/desktop/src/locales/*/chat.handover.confirm.json"], {
   eager: true,
   import: "default",
 }) as Record<string, Record<string, unknown>>;

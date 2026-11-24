@@ -7,7 +7,10 @@ import type { SurfacesState } from "../model/ai-providers-view";
 import { pestanasDe, entradasDe } from "./SettingsTabs";
 import type Settings from "./SettingsScreen";
 
-export function createSuperficiesDeAjustes(props: Parameters<typeof Settings>[0]) {
+export function createSuperficiesDeAjustes(
+  props: Parameters<typeof Settings>[0],
+  scope?: { workspace: () => string | null; context: () => string | null },
+) {
   // Lo que se puede elegir para trabajar, que es lo que decide qué proveedores
   // tienen pantalla. Con su estado: aquí no apaga nada, lo enseña.
   const [superficies, setSuperficies] = createSignal<Superficie[]>([]);
@@ -76,25 +79,34 @@ export function createSuperficiesDeAjustes(props: Parameters<typeof Settings>[0]
       void cuenta.then((f) => f());
     });
   });
-  const pestanas = pestanasDe(superficies, {
-    get modelos() {
-      return props.modelos;
+  const pestanas = pestanasDe(
+    superficies,
+    {
+      get modelos() {
+        return props.modelos;
+      },
+      get proyecto() {
+        return props.proyecto ?? "";
+      },
+      get agentesEnUso() {
+        return props.agentesEnUso ?? [];
+      },
+      onAgentProfile: (project, name) => props.onAgentProfile?.(project, name),
+      get estadoSuperficies() {
+        return estadoSuperficies();
+      },
+      reintentarSuperficies: () => {
+        setEstadoSuperficies({ k: "loading" });
+        cargarSuperficies();
+      },
     },
-    get proyecto() {
-      return props.proyecto ?? "";
-    },
-    get agentesEnUso() {
-      return props.agentesEnUso ?? [];
-    },
-    onAgentProfile: (project, name) => props.onAgentProfile?.(project, name),
-    get estadoSuperficies() {
-      return estadoSuperficies();
-    },
-    reintentarSuperficies: () => {
-      setEstadoSuperficies({ k: "loading" });
-      cargarSuperficies();
-    },
-  }, () => props.workspace ?? null, props.maquinas, props.piezas, props.sesiones, props.integraciones);
+    scope?.workspace ?? (() => props.workspace ?? null),
+    scope?.context ?? (() => null),
+    props.maquinas,
+    props.piezas,
+    props.sesiones,
+    props.integraciones,
+  );
   const ENTRADAS = entradasDe(pestanas);
   return { ENTRADAS };
 }

@@ -1,7 +1,5 @@
 import Bot from "lucide-solid/icons/bot";
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
-import CreditCard from "lucide-solid/icons/credit-card";
-import ExternalLink from "lucide-solid/icons/external-link";
 import GitBranch from "lucide-solid/icons/git-branch";
 import Palette from "lucide-solid/icons/palette";
 import Plug from "lucide-solid/icons/plug";
@@ -9,27 +7,26 @@ import Shield from "lucide-solid/icons/shield";
 import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
 import Sparkles from "lucide-solid/icons/sparkles";
 import Wrench from "lucide-solid/icons/wrench";
-import { createResource, type JSX, lazy, Show, Suspense } from "solid-js";
-import { t } from "../../../../ui/src/lib/i18n";
-import { capabilities } from "../../../../host/src/platform";
+import { type JSX, lazy, Suspense } from "solid-js";
 import { machineAction } from "../../../../host/src/machine-action";
-import { type Superficie } from "../../../../ui/src/lib/surfaces";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../../../../ui/src/sidebar";
-import type { MaquinasDeAjustes } from "../model/machines-port";
-import type { PiezasDeAjustes } from "../model/features-port";
-import type { SesionesDeAjustes } from "../model/sessions-port";
+import { capabilities } from "../../../../host/src/platform";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
+import { type Superficie } from "../../../../ui/src/lib/surfaces";
+import { SettingsPanel } from "../../../../ui/src/SettingsLayout";
 import AIProviders from "../components/AIProviders";
-import type { SurfacesState } from "../model/ai-providers-view";
 import Connections from "../components/Connections";
 import ConnectionsOperation from "../components/ConnectionsOperation";
 import General from "../components/General";
 import Integrations from "../components/Integrations";
 import LoginSecurity from "../components/LoginSecurity";
-import { SettingsPanel } from "../../../../ui/src/SettingsLayout";
 import ProveedorDeMemoria from "../components/MemoryProvider";
 import Providers from "../components/Providers";
 import Skills from "../components/Skills";
+import type { SurfacesState } from "../model/ai-providers-view";
+import type { PiezasDeAjustes } from "../model/features-port";
+import type { MaquinasDeAjustes } from "../model/machines-port";
+import type { SesionesDeAjustes } from "../model/sessions-port";
 import { SETTINGS_ENTRIES, type SettingsEntryId } from "../model/settings-entries";
 
 // Chunks aparte: solo los carga quien abre la sección.
@@ -81,6 +78,7 @@ export const pestanasDe = (
   superficies: () => Superficie[],
   agentes: ContextoDeAgentes,
   workspace: () => string | null,
+  context: () => string | null,
   maquinas: MaquinasDeAjustes,
   piezas: PiezasDeAjustes,
   sesiones: SesionesDeAjustes,
@@ -89,10 +87,7 @@ export const pestanasDe = (
   const cuenta = capabilities().danilAccount || capabilities().accountProfile;
   const tab = (id: string, name: () => string, panel: Pestana["panel"]): Pestana => ({ id, get name() { return name(); }, panel });
   return {
-    "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.nav.danil_account"), () => <Suspense fallback={null}><DanilAccount part="profile" maquinas={maquinas} sesiones={sesiones} /></Suspense>) : undefined,
-    emails: capabilities().accountEmails ? tab("emails", () => t("settings.tab.emails"), () => <Suspense fallback={null}><DanilAccount part="emails" maquinas={maquinas} sesiones={sesiones} /></Suspense>) : undefined,
-    usage: capabilities().accountUsage ? tab("usage", () => t("settings.tab.usage"), () => capabilities().accountUsage?.()) : undefined,
-    plan: capabilities().nativeWindow || capabilities().personalAccount?.plan ? tab("plan", () => t("settings.tab.plan"), () => capabilities().nativeWindow ? <Suspense><DeskPlan workspace={workspace()} sesiones={sesiones} /></Suspense> : capabilities().personalAccount?.plan?.()) : undefined,
+    "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.nav.danil_account"), () => <Suspense fallback={null}><DanilAccount workspace={workspace()} context={context()} sesiones={sesiones} /></Suspense>) : undefined,
     security: tab("security", () => t("settings.tab.security"), () => <LoginSecurity />),
     general: tab("general", () => t("settings.nav.general"), () => <General maquinas={maquinas} />),
     appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} sesiones={sesiones} /></Suspense>),
@@ -126,7 +121,6 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitBranch size={15} /> },
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
   connections: { name: () => t("settings.nav.connections"), icono: () => <Plug size={15} /> },
-  billing: { name: () => t("settings.entry.billing"), icono: () => <CreditCard size={15} /> },
   maintenance: { name: () => t("settings.entry.maintenance"), icono: () => <Wrench size={15} /> },
 };
 
@@ -140,48 +134,9 @@ export const entradasDe = (pestanas: Record<string, Pestana | undefined>): Entra
     return [{ id: e.id, get name() { return h.name(); }, icono: h.icono, tabs, footer }];
   });
 
-/** Una entrada con solo pestañas de cuenta personal, mientras llega si la cuenta lo es. */
+/** Respaldo vacío si una entrada no tuviera pestaña montable. */
 export const SIN_PESTANA: Pestana = { id: "", name: "", panel: null };
 
 export const idTab = (id: string) => `cfg-tab-${id}`;
 
 export const idSub = (id: string) => `cfg-sub-${id}`;
-
-/** Enlace de administracion cuando la plataforma web lo ofrece. */
-export function AdminLink(props: { embedded?: boolean }) {
-  const page = capabilities().adminPage;
-  const [allowed] = createResource(async () => page ? await page.allowed().catch(() => false) : false);
-  const item = () => (
-    <SidebarMenuItem role="presentation">
-      <SidebarMenuButton
-        as="a"
-        href={page?.href}
-        target="_blank"
-        rel="noopener"
-        data-settings-admin=""
-        selectionMark={false}
-        class="h-10 min-h-10 grid-cols-[18px_minmax(0,1fr)_auto] gap-2.5 rounded-l-[10px] rounded-r-none border-0 py-0 pl-3.5 pr-3 outline-none focus:outline-none focus-visible:outline-none"
-      >
-        <span class="flex size-4 items-center justify-center"><Shield size={15} /></span>
-        <span class="truncate">{t("web.admin.title")}</span>
-        <ExternalLink size={13} class="text-neutral-500" />
-      </SidebarMenuButton>
-    </SidebarMenuItem>
-  );
-  return (
-    <Show when={allowed()}>
-      <Show
-        when={!props.embedded}
-        fallback={item()}
-      >
-        <div class="mt-auto border-0 border-t border-solid border-border px-0 pb-3 pl-2 pt-2">
-          <SidebarMenu role="presentation">
-            {item()}
-          </SidebarMenu>
-        </div>
-      </Show>
-    </Show>
-  );
-}
-
-const DeskPlan = lazy(() => import("../components/DeskPlan"));

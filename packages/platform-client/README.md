@@ -27,7 +27,6 @@ Exporta desde `src/client.ts` y los módulos de dominio en `src/`:
   - `memory.ts`: memoria versionada del workspace en `/v1/workspaces/{id}/memory/*` (`memoryFiles`, `readMemoryFile`, `memoryHistory`, `memoryLog`, `writeMemoryFile`, `deleteMemoryFile`, `MemorySource`).
   - `seal.ts`: sellado `TERMINUS-SECRET/1` con WebCrypto X25519 + HKDF-SHA256 + AES-256-GCM (`canSeal`, `sealCredential`, `sealForRecipients`, `SEAL_MAX_BYTES`, `fromBase64`, `toBase64`).
   - `billing-route.ts`: rutas y estado de retorno en `sessionStorage` para `/billing` (`BILLING_LOGIN_KEY`, `BILLING_PAYMENT_KEY`, `billingHref`, `rememberBillingLogin`, `rememberBillingReturn`).
-  - `audit-log.ts`: tipos y contrato de lectura de la bitácora de auditoría (`AuditActorType`, `AuditEntry`, `AuditLogSource`).
   - `api.ts`, `machine.ts` y `account-credentials.ts` (movidos de `packages/computers` en p4-4a): utilidades `bearerCall`/`apiUrl`/`errorCodeOf`, estados de máquina (`MachineState`) y cliente/normalización de `/v1/credentials/workspaces/{ws}/accounts` (`listCredentials`, `putCredential`, `deleteCredential`, `removeCredentialMachine`, `restoreCredentialMachine`). En `packages/computers` solo quedan shims de reexportación para `apps/mobile` y pruebas heredadas.
 
 ## Qué consume

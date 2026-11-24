@@ -1,18 +1,17 @@
 /**
- * Las diez entradas de Configuración y sus pestañas. Los ids de destinos que
+ * Las nueve entradas de Configuración y sus pestañas. Los ids de destinos que
  * ya no son pestaña siguen en `MOVED`: `setSettings("plugins")` y los enlaces
  * guardados abren la entrada o pestaña que ahora los contiene.
  */
 export const SETTINGS_ENTRIES = [
   { id: "general", tabs: ["general"] },
   { id: "appearance", tabs: ["appearance"] },
-  { id: "account", tabs: ["cuenta-danil", "emails", "usage", "plan"] },
+  { id: "account", tabs: ["cuenta-danil"] },
   { id: "security", tabs: ["security"] },
   { id: "ai-accounts", tabs: ["proveedores-ia"] },
   { id: "source-control", tabs: ["fuentes"] },
   { id: "agents-skills", tabs: ["agentes", "skills"] },
   { id: "connections", tabs: ["operation", "plugins", "memory", "external"] },
-  { id: "billing", tabs: ["business", "fiscal"] },
   { id: "maintenance", footer: true, tabs: ["maintenance"] },
 ] as const;
 
@@ -24,6 +23,12 @@ const MOVED: Record<string, string> = {
   notify: "general",
   notifications: "general",
   languages: "general",
+  emails: "cuenta-danil",
+  usage: "cuenta-danil",
+  plan: "cuenta-danil",
+  billing: "cuenta-danil",
+  business: "cuenta-danil",
+  fiscal: "cuenta-danil",
 };
 
 export type SettingsEntryId = (typeof SETTINGS_ENTRIES)[number]["id"];
