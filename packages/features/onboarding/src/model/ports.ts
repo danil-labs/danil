@@ -27,6 +27,7 @@ export type PuertosDelAlta = {
   DialogoDeConexion: Component<{
     etiqueta: string;
     url: string | null;
+    aviso?: string | null;
     porConfirmar: string | null;
     pideCodigo: boolean;
     enviandoCodigo?: boolean;

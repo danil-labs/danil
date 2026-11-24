@@ -4,13 +4,13 @@ import { listProviders, removeAccount, renameAccount, resumeAwaitingQuota, setAc
 import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { detalleDe } from "../../../../ui/src/Failure";
-import { loginCodeErrorText } from "../../../../ui/src/lib/account-auth.ts";
+import { loginCodeErrorText, shouldOpenManualCodeInput } from "../../../../ui/src/lib/account-auth.ts";
 import { type AgentOpt, type LoginEvent } from "../queries/accounts-store";
 import type { createCuentas } from "./AccountsState";
 import type { createConexionDeCuentas } from "./AccountsConnect";
 
 export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas>, conexion: ReturnType<typeof createConexionDeCuentas>) {
-  const { agente, setEstados, setSinComprobar, setPorQuitar, setLista, lista, enCurso, setUrl, setPorConfirmar, setPideCodigo, setEnCurso, setAviso, setSalida, setConexionFallida, setAgentes, setConectadaVez, setOfrecerTerminal, setCopiaFallida, copiarLaUrl, codigo, enviandoCodigo, setEnviandoCodigo, setCodigoEnviado, setErrorCodigo, machineOf, setCodigo, setFallo, setRepuestas, setReponiendo } = cuentas;
+  const { agente, setEstados, setSinComprobar, setPorQuitar, setLista, lista, enCurso, url, setUrl, setPorConfirmar, setPideCodigo, setEnCurso, aviso, setAviso, setSalida, setConexionFallida, setAgentes, setConectadaVez, setOfrecerTerminal, setCopiaFallida, copiarLaUrl, codigo, enviandoCodigo, setEnviandoCodigo, codigoEnviado, setCodigoEnviado, setErrorCodigo, machineOf, setCodigo, setFallo, setRepuestas, setReponiendo } = cuentas;
   const { comprobadas, refrescar, comprobar, cancelarEspera, descartarSiVacia, mirarEspera } = conexion;
   // Cambiar de agente reinicia lo que era de la lista anterior. Con `on(...)`:
   // el cuerpo lee más señales de las que deben dispararlo.
@@ -105,6 +105,10 @@ export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas
       if (kind === "url") {
         cancelarEspera();
         setUrl(text);
+        if (!codigoEnviado() && shouldOpenManualCodeInput(text, aviso())) {
+          setPideCodigo(true);
+          setErrorCodigo(null);
+        }
         // El navegador de la persona ya tiene su sesión; el webview no.
         openExternal({ target: text }).catch(() => {});
         return;
@@ -164,6 +168,11 @@ export function createAccionesDeCuentas(cuentas: ReturnType<typeof createCuentas
       const msg = text.trim();
       if (kind === "notice" && msg && !/^https?:\/\//.test(msg)) {
         setAviso(msg);
+        if (!codigoEnviado() && shouldOpenManualCodeInput(url(), msg)) {
+          cancelarEspera();
+          setPideCodigo(true);
+          setErrorCodigo(null);
+        }
       }
       setSalida((s) => [...s, text].slice(-12));
     });

@@ -7,7 +7,7 @@ import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-l
 import { machineOf } from "../../../../host/src/machine.ts";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { accountPresentation } from "../../../../ui/src/lib/accounts.ts";
-import { loginCodeErrorText } from "../../../../ui/src/lib/account-auth.ts";
+import { loginCodeErrorText, shouldOpenManualCodeInput } from "../../../../ui/src/lib/account-auth.ts";
 import type { AccountList, AccountStatus, AgentOpt, LoginEvent } from "../../../../ui/src/lib/accounts.ts";
 import { explicar } from "./connect-rows";
 import type { CargaDeConexiones } from "./connect-load";
@@ -254,10 +254,25 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     const { kind, text } = ev.payload;
     if (kind === "url") {
       vigilarEntrada(e.fila, e.cuenta);
-      poner(e.fila, { ...p, url: text });
+      const abrirCodigo = !p.codigoEnviado && shouldOpenManualCodeInput(text, p.aviso);
+      poner(e.fila, {
+        ...p,
+        url: text,
+        ...(abrirCodigo ? { pideCodigo: true, errorCodigo: null } : {}),
+      });
       callEngine("open_external", { target: text }).catch(() => {});
-    } else if (kind === "notice") setSalidas(e.fila, (s) => [...(s ?? []), text]);
-    else if (kind === "confirm") poner(e.fila, { ...p, codigo: text });
+    } else if (kind === "notice") {
+      setSalidas(e.fila, (s) => [...(s ?? []), text]);
+      const msg = text.trim();
+      if (msg && !/^https?:\/\//.test(msg)) {
+        const abrirCodigo = !p.codigoEnviado && shouldOpenManualCodeInput(p.url, msg);
+        poner(e.fila, {
+          ...p,
+          aviso: msg,
+          ...(abrirCodigo ? { pideCodigo: true, errorCodigo: null } : {}),
+        });
+      }
+    } else if (kind === "confirm") poner(e.fila, { ...p, codigo: text });
     else if (kind === "code") poner(e.fila, { ...p, pideCodigo: true, codigoEnviado: false, errorCodigo: null });
     else if (kind === "done") void terminarEntrada(text);
   });

@@ -14,7 +14,7 @@ import { Terminal, TerminalBody } from "../../../../ui/src/Terminal";
 import { LoginCodeForm } from "../screens/LoginCodeForm";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { ExternalLink as EnlaceExterno } from "../../../../ui/src/ExternalLink";
-import { hasLoopbackRedirect } from "../../../../ui/src/lib/account-auth.ts";
+import { isHeadlessCodeNotice, manualLoginMode } from "../../../../ui/src/lib/account-auth.ts";
 import { Paso } from "./ConnectionStep";
 import type { createCuentas } from "./AccountsState";
 import type { createConexionDeCuentas } from "./AccountsConnect";
@@ -26,6 +26,13 @@ export function createDialogosDeCuentas(cuentas: ReturnType<typeof createCuentas
   const { etiqueta, acto, terminalLocal, conectar, pidiendoClave, setPidiendoClave, setClave, refrescar, claveDe, clave, guardarClave, guardandoClave } = conexion;
   const { copiarEnlace, enviarCodigo } = acciones;
   const { cancelarConexion } = partes;
+  const modoCodigo = () => manualLoginMode(url(), aviso());
+  const tituloCodigo = () =>
+    modoCodigo() === "callback_url"
+      ? t("settings.accounts.step_callback_url")
+      : modoCodigo() === "hosted_code"
+        ? t("settings.accounts.step_hosted_code")
+        : t("settings.accounts.step_code");
   const DialogoDeClave = () => (
     <Show when={enCurso()}>
       {(id) => (
@@ -105,44 +112,43 @@ export function createDialogosDeCuentas(cuentas: ReturnType<typeof createCuentas
               </Show>
 
               <Show when={pideCodigo()}>
-                {(() => {
-                  const loopback = () => hasLoopbackRedirect(url());
-                  return (
-                    <Paso
-                      numero={url() ? 2 : 1}
-                      titulo={loopback() ? t("settings.accounts.step_callback_url") : t("settings.accounts.step_code")}
-                    >
-                      <Show
-                        when={loopback()}
-                        fallback={
-                          <Show when={aviso()}>
-                            {(n) => <p class="m-0 text-xs text-neutral-500" data-login-notice="">{n()}</p>}
-                          </Show>
-                        }
-                      >
-                        <p class="m-0 text-xs text-neutral-500" data-login-loopback-hint="">
-                          {t("settings.accounts.step_callback_url_hint")}
-                        </p>
-                      </Show>
-                      <LoginCodeForm
-                        value={codigo()}
-                        onInput={(v) => { setCodigo(v); setErrorCodigo(null); }}
-                        onSubmit={() => void enviarCodigo()}
-                        submitting={enviandoCodigo()}
-                        error={errorCodigo()}
-                        mode={loopback() ? "callback_url" : "code"}
-                      />
-                    </Paso>
-                  );
-                })()}
+                <Paso numero={url() ? 2 : 1} titulo={tituloCodigo()}>
+                  <Show when={modoCodigo() === "callback_url"}>
+                    <p class="m-0 text-xs text-neutral-500" data-login-loopback-hint="">
+                      {t("settings.accounts.step_callback_url_hint")}
+                    </p>
+                  </Show>
+                  <Show when={modoCodigo() === "hosted_code"}>
+                    <p class="m-0 text-xs text-neutral-500" data-login-hosted-hint="">
+                      {t("settings.accounts.step_hosted_code_hint")}
+                    </p>
+                  </Show>
+                  <Show
+                    when={
+                      aviso() &&
+                      modoCodigo() !== "callback_url" &&
+                      !(modoCodigo() === "hosted_code" && isHeadlessCodeNotice(aviso()))
+                    }
+                  >
+                    <p class="m-0 text-xs text-neutral-500" data-login-notice="">{aviso()}</p>
+                  </Show>
+                  <LoginCodeForm
+                    value={codigo()}
+                    onInput={(v) => { setCodigo(v); setErrorCodigo(null); }}
+                    onSubmit={() => void enviarCodigo()}
+                    submitting={enviandoCodigo()}
+                    error={errorCodigo()}
+                    mode={modoCodigo()}
+                  />
+                </Paso>
               </Show>
 
               <Show when={!pideCodigo() && codigoEnviado()}>
                 <p role="status" data-login-code-sent="" class="m-0 flex items-center gap-1.5 text-xs text-neutral-500">
                   <Spinner size={12} />
-                  {hasLoopbackRedirect(url())
-                    ? t("settings.accounts.verifying_callback_url")
-                    : t("settings.accounts.verifying_code")}
+                  {modoCodigo() === "code"
+                    ? t("settings.accounts.verifying_code")
+                    : t("settings.accounts.verifying_callback_url")}
                 </p>
               </Show>
 

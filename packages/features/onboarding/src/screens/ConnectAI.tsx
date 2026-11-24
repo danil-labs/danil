@@ -72,6 +72,7 @@ export function PanelDeIA(props: { c: Conexiones }) {
             <DialogoDeConexion
               etiqueta={nombreDeFila(f())}
               url={p()?.url ?? null}
+              aviso={p()?.aviso ?? null}
               porConfirmar={p()?.codigo ?? null}
               pideCodigo={Boolean(p()?.pideCodigo)}
               enviandoCodigo={Boolean(p()?.enviandoCodigo)}

@@ -11,7 +11,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Terminal, TerminalBody } from "../../../../ui/src/Terminal";
-import { hasLoopbackRedirect } from "../../../../ui/src/lib/account-auth.ts";
+import { isHeadlessCodeNotice, manualLoginMode } from "../../../../ui/src/lib/account-auth.ts";
 import "../../../../ui/src/locales/settingsPhrases";
 import { LoginCodeForm } from "../screens/LoginCodeForm";
 import { Paso } from "./ConnectionStep";
@@ -24,6 +24,7 @@ import { Paso } from "./ConnectionStep";
 export function DialogoDeConexion(props: {
   etiqueta: string;
   url: string | null;
+  aviso?: string | null;
   porConfirmar: string | null;
   pideCodigo: boolean;
   enviandoCodigo?: boolean;
@@ -34,7 +35,19 @@ export function DialogoDeConexion(props: {
   onCancelar: () => void;
   onCodigo: (codigo: string) => void;
 }) {
-  const loopback = () => hasLoopbackRedirect(props.url);
+  const modoCodigo = () => manualLoginMode(props.url, props.aviso);
+  const tituloCodigo = () =>
+    modoCodigo() === "callback_url"
+      ? t("settings.accounts.step_callback_url")
+      : modoCodigo() === "hosted_code"
+        ? t("settings.accounts.step_hosted_code")
+        : t("settings.accounts.step_code");
+  const esperaCodigo = () =>
+    modoCodigo() === "callback_url"
+      ? t("onboarding.login.waiting_callback_url")
+      : modoCodigo() === "hosted_code"
+        ? t("onboarding.login.waiting_hosted_code")
+        : t("onboarding.login.waiting_code");
   const [codigo, setCodigo] = createSignal("");
   const [copiaFallida, setCopiaFallida] = createSignal<string | null>(null);
   const { copied: copiado, copy } = createCopied(1400, (e) => setCopiaFallida(prosaDe(e)));
@@ -62,9 +75,9 @@ export function DialogoDeConexion(props: {
             <span class="flex items-center gap-1.5 text-xs text-neutral-500" role="status">
               <Spinner size={12} />
               {props.codigoEnviado
-                ? (loopback() ? t("settings.accounts.verifying_callback_url") : t("settings.accounts.verifying_code"))
+                ? (modoCodigo() === "code" ? t("settings.accounts.verifying_code") : t("settings.accounts.verifying_callback_url"))
                 : props.pideCodigo
-                  ? (loopback() ? t("onboarding.login.waiting_callback_url") : t("onboarding.login.waiting_code"))
+                  ? esperaCodigo()
                   : props.url || props.porConfirmar
                     ? t("onboarding.login.waiting_browser")
                     : t("onboarding.login.opening_browser")}
@@ -108,14 +121,25 @@ export function DialogoDeConexion(props: {
         </Show>
 
         <Show when={props.pideCodigo}>
-          <Paso
-            numero={props.url ? 2 : 1}
-            titulo={loopback() ? t("settings.accounts.step_callback_url") : t("settings.accounts.step_code")}
-          >
-            <Show when={loopback()}>
+          <Paso numero={props.url ? 2 : 1} titulo={tituloCodigo()}>
+            <Show when={modoCodigo() === "callback_url"}>
               <p class="m-0 text-xs text-neutral-500" data-login-loopback-hint="">
                 {t("settings.accounts.step_callback_url_hint")}
               </p>
+            </Show>
+            <Show when={modoCodigo() === "hosted_code"}>
+              <p class="m-0 text-xs text-neutral-500" data-login-hosted-hint="">
+                {t("settings.accounts.step_hosted_code_hint")}
+              </p>
+            </Show>
+            <Show
+              when={
+                props.aviso &&
+                modoCodigo() !== "callback_url" &&
+                !(modoCodigo() === "hosted_code" && isHeadlessCodeNotice(props.aviso))
+              }
+            >
+              <p class="m-0 text-xs text-neutral-500" data-login-notice="">{props.aviso}</p>
             </Show>
             <LoginCodeForm
               value={codigo()}
@@ -126,7 +150,7 @@ export function DialogoDeConexion(props: {
               onSubmit={enviar}
               submitting={props.enviandoCodigo}
               error={props.errorCodigo}
-              mode={loopback() ? "callback_url" : "code"}
+              mode={modoCodigo()}
             />
           </Paso>
         </Show>
@@ -134,7 +158,7 @@ export function DialogoDeConexion(props: {
         <Show when={!props.pideCodigo && props.codigoEnviado}>
           <p role="status" data-login-code-sent="" class="m-0 flex items-center gap-1.5 text-xs text-neutral-500">
             <Spinner size={12} />
-            {loopback() ? t("settings.accounts.verifying_callback_url") : t("settings.accounts.verifying_code")}
+            {modoCodigo() === "code" ? t("settings.accounts.verifying_code") : t("settings.accounts.verifying_callback_url")}
           </p>
         </Show>
 

@@ -8,6 +8,7 @@ import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
+import type { ManualLoginMode } from "../../../../ui/src/lib/account-auth.ts";
 import "../../../../ui/src/locales/settingsPhrases";
 
 export function LoginUrlActions(props: { url: string; openLabel: string }) {
@@ -51,17 +52,19 @@ export function LoginCodeForm(props: {
   onSubmit: () => void;
   submitting?: boolean;
   error?: string | null;
-  mode?: "code" | "callback_url";
+  mode?: ManualLoginMode;
 }) {
   const mode = () => props.mode ?? "code";
   const placeholder = () =>
     mode() === "callback_url"
       ? t("settings.accounts.callback_url_placeholder")
-      : t("settings.accounts.code_placeholder");
+      : mode() === "hosted_code"
+        ? t("settings.accounts.hosted_code_placeholder")
+        : t("settings.accounts.code_placeholder");
   const submitLabel = () =>
     props.submitting
       ? t("settings.accounts.sending_code")
-      : mode() === "callback_url"
+      : mode() === "callback_url" || mode() === "hosted_code"
         ? t("settings.accounts.send_callback_url")
         : t("settings.accounts.send_code");
   return (

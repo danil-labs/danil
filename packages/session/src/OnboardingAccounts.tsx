@@ -2,7 +2,13 @@ import { isFreeRouterAgent, isRetiredAgent } from "../../ui/src/lib/tasks/agents
 import { createSignal, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { nombreDeAgente } from "../../features/onboarding/src/queries/onboarding-store";
 import { Pantalla } from "../../features/onboarding/src/components/Screen";
-import { accountKeyUrl, hasLoopbackRedirect, loginCodeErrorText } from "../../ui/src/lib/account-auth.ts";
+import {
+  accountKeyUrl,
+  isHeadlessCodeNotice,
+  loginCodeErrorText,
+  manualLoginMode,
+  shouldOpenManualCodeInput,
+} from "../../ui/src/lib/account-auth.ts";
 import type { AccountList, AgentOpt, LoginEvent } from "../../features/settings/src/queries/accounts-store";
 import { LoginCodeForm, LoginUrlActions } from "../../features/settings/src/screens/LoginCodeForm";
 import { t } from "../../ui/src/lib/i18n";
@@ -179,7 +185,9 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
         return p.t === "browser" ? p : { t: "browser", url: null, code: null, notice: null, asks: false };
       };
       if (kind === "url") {
-        setPhase({ ...shown(), url: text });
+        const cur = shown();
+        const openCode = !cur.submitted && shouldOpenManualCodeInput(text, cur.notice);
+        setPhase({ ...cur, url: text, ...(openCode ? { asks: true, codeError: null } : {}) });
         // A headless computer has no browser: the page opens in a new tab of this one.
         invoke("open_external", { target: text }).catch(() => {});
       } else if (kind === "confirm") setPhase({ ...shown(), code: text });
@@ -187,7 +195,9 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
       else if (kind === "notice") {
         const msg = text.trim();
         if (msg && !/^https?:\/\//.test(msg)) {
-          setPhase({ ...shown(), notice: msg });
+          const cur = shown();
+          const openCode = !cur.submitted && shouldOpenManualCodeInput(cur.url, msg);
+          setPhase({ ...cur, notice: msg, ...(openCode ? { asks: true, codeError: null } : {}) });
         }
       } else if (kind === "done") {
         reset();
@@ -241,7 +251,16 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
         </Match>
         <Match when={phase().t === "browser" && (phase() as Extract<Phase, { t: "browser" }>)}>
           {(p) => {
-            const loopback = () => hasLoopbackRedirect(p().url);
+            const mode = () => manualLoginMode(p().url, p().notice);
+            const title = () =>
+              mode() === "callback_url"
+                ? t("settings.accounts.step_callback_url")
+                : mode() === "hosted_code"
+                  ? t("settings.accounts.step_hosted_code")
+                  : t("settings.accounts.step_code");
+            const hideNotice = () =>
+              p().asks &&
+              (mode() === "callback_url" || (mode() === "hosted_code" && isHeadlessCodeNotice(p().notice)));
             return (
               <div class="grid gap-2 text-sm">
                 <Show when={p().url} fallback={<p role="status" class="m-0 text-xs text-neutral-500">{t("web.onboarding.accounts.starting")}</p>}>
@@ -254,17 +273,20 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
                     </p>
                   )}
                 </Show>
-                <Show when={p().notice && !(p().asks && loopback())}>
+                <Show when={p().notice && !hideNotice()}>
                   {(notice) => <p class="m-0 text-xs text-neutral-500" data-login-notice="">{notice()}</p>}
                 </Show>
                 <Show when={p().asks}>
                   <div class="grid gap-1.5">
-                    <p class="m-0 text-xs font-medium text-neutral-700">
-                      {loopback() ? t("settings.accounts.step_callback_url") : t("settings.accounts.step_code")}
-                    </p>
-                    <Show when={loopback()}>
+                    <p class="m-0 text-xs font-medium text-neutral-700">{title()}</p>
+                    <Show when={mode() === "callback_url"}>
                       <p class="m-0 text-xs text-neutral-500" data-login-loopback-hint="">
                         {t("settings.accounts.step_callback_url_hint")}
+                      </p>
+                    </Show>
+                    <Show when={mode() === "hosted_code"}>
+                      <p class="m-0 text-xs text-neutral-500" data-login-hosted-hint="">
+                        {t("settings.accounts.step_hosted_code_hint")}
                       </p>
                     </Show>
                     <LoginCodeForm
@@ -276,14 +298,14 @@ function ProviderCard(props: { provider: AgentOpt; onConnected: (yes: boolean) =
                       onSubmit={() => void sendCode()}
                       submitting={p().submitting}
                       error={p().codeError}
-                      mode={loopback() ? "callback_url" : "code"}
+                      mode={mode()}
                     />
                   </div>
                 </Show>
                 <Show when={!p().asks && p().submitted}>
                   <p role="status" data-login-code-sent="" class="m-0 flex items-center gap-1.5 text-xs text-neutral-500">
                     <Spinner size={12} />
-                    {loopback() ? t("settings.accounts.verifying_callback_url") : t("settings.accounts.verifying_code")}
+                    {mode() === "code" ? t("settings.accounts.verifying_code") : t("settings.accounts.verifying_callback_url")}
                   </p>
                 </Show>
               </div>
