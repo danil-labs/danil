@@ -7,6 +7,7 @@ Administra cookies de sesión HttpOnly en web, tokens de sesión del motor en De
 ## Qué expone
 Exporta desde sus módulos en `src/`:
 - Identidad y sesión: `PlatformProfile`, `bridgePersonSession`, `clearWebCaches`, `completeSignIn` en `platform-session.ts` y `person-session.ts`.
+- Puentes RPC del shell: `callShellEngine` en `shell-queries.ts` y `callShellViewEngine` en `shell-view-queries.ts` (encapsulan `invoke` de `@danil/engine-client` para `packages/shell`).
 - Sesión de ventana y organizaciones: `window-session.tsx`, `organization-session.ts`.
 - Configuración, preferencias, paquetes de lengua y almacenamiento: `prefs.ts`, `preferenceKeys.ts`, `packs.ts`, `session-config.ts`, `session-storage.ts`, `session-wait.ts`, `sessionRefresh.ts`.
 

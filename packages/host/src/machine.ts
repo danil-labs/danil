@@ -19,3 +19,11 @@ export function machineOf(id: string | null | undefined) {
   const machine = id ? (taskRowMachine(id) ?? capabilities().taskMachine?.(id) ?? (web ? capabilities().windowMachine?.()?.id : null) ?? null) : null;
   return machine ? { headers: { "x-terminus-machine": machine } } : undefined;
 }
+
+export type MachineListEntry = { id: string; local?: boolean; features?: string[] };
+export type LocalMachineEntry = { local?: boolean; features?: unknown };
+
+/** Devuelve la entrada local dentro de una lista de máquinas (`machine_list`). */
+export function findLocalMachine<T extends { local?: boolean }>(machines: readonly T[]): T | undefined {
+  return machines.find((m) => m.local);
+}

@@ -6,7 +6,7 @@ Soporta transporte local mediante IPC de Tauri (inyectado vía `host`) y transpo
 
 ## Qué expone
 Exporta desde `src/client.ts`:
-- Función principal de ejecución RPC1: `invoke`.
+- Función principal de ejecución RPC1: `callEngine` (captura el contexto del workspace cuando hay ruta activa y aplica `untilConnected` + `retrying`), y el alias `invoke` (`invoke = callEngine`).
 - Enrutamiento y conectividad: `setMachineRoute`, `untilConnected`.
 - Políticas de reintento: `canRepeat`, `neverRan`, `retrying`, `WAITS`.
 - Instantáneas de contexto (temporal): `captureWorkspaceContext`, `displayWorkspaceSnapshot`, `requestedWorkspaceSnapshot`.
