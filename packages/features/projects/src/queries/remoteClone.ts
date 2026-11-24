@@ -8,7 +8,7 @@ import { invoke } from "../../../../engine-client/src/client";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { Project } from "../../../../../apps/desktop/src/lib/model";
 import { borrarPref, escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import type { Failure } from "../../../../ui/src/Failure";
 import { REMOTE_CLONES, type RemoteClone } from "../screens/AddWorkdir";
 

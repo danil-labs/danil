@@ -46,6 +46,7 @@
     "packages/shell/src/shell/SessionWorkspaceRows.tsx": ["types"],
     "packages/shell/src/shell/workspace-added-wiring.ts": ["exports"],
     "packages/shell/src/shell/workspace-added-sync.ts": ["exports"],
+    "apps/desktop/src/lib/{danilConnectionEvents,engineConnection}.ts": ["files"],
     "packages/features/machines/src/queries/store.ts": ["exports"],
     "packages/features/machines/src/queries/guestChannels.ts": ["exports"],
     "packages/features/machines/src/queries/guestLink.ts": ["exports"],

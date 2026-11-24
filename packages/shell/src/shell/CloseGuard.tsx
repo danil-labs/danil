@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import { capabilities } from "../../../host/src/platform";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";

@@ -1,6 +1,6 @@
 import { createSignal, onCleanup, onMount, untrack } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import { machineOf } from "../../../features/machines/src/queries/store";
 import { contextAttentionOf, mergeContextAttention } from "./context-attention";
 

@@ -1,6 +1,6 @@
 import { listGovernedMcpLogins, listRadiantConnections, radiantConnectAccount, radiantGovernDisable, radiantGovernEnable, radiantGovernRefresh } from "../queries/engine-harness";
 import { listMcpProviders, mcpLogin } from "../queries/engine-mcp";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createEffect, createSignal, For, on, onCleanup, Show } from "solid-js";
 import { adoptGovernance, governance, type GovernanceStatus, type RemoteConnection } from "../../../../../apps/desktop/src/lib/governance";
 import { df } from "../../../../../apps/desktop/src/lib/format";

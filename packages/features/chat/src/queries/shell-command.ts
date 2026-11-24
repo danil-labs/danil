@@ -1,5 +1,5 @@
 
-import { connected } from "../../../../../apps/desktop/src/lib/engineConnection";
+import { connected } from "../../../../session/src/engineConnection.ts";
 import { type Agent } from "../../../../../apps/desktop/src/lib/model.ts";
 import { esProvisional, tituloProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
 import { invoke } from "../../../../engine-client/src/client.ts";

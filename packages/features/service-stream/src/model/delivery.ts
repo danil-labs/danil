@@ -1,4 +1,4 @@
-import type { JournalEvent } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import type { JournalEvent } from "../../../../host/src/serviceEvents.ts";
 import type { PushedBatch } from "../queries/store.ts";
 
 type StreamPayload = { session?: string; kind?: string; workspace?: string };

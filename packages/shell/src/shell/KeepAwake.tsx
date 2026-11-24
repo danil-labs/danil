@@ -1,4 +1,4 @@
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import Coffee from "lucide-solid/icons/coffee";
 import { createSignal, For, onCleanup, Show } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";

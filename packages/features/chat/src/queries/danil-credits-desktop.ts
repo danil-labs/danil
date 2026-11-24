@@ -1,4 +1,4 @@
-import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
+import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
 import { edgeFetch, ORGANIZATION_CHANGED } from "../../../../platform-client/src/client";
 import { getWorkspaces } from "../../../../platform-client/src/workspaces";
 import { invoke } from "../../../../engine-client/src/client";

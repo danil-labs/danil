@@ -1,4 +1,4 @@
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import type { HandlerStatus, HandlerStatusRow } from "../../../../../apps/desktop/src/lib/model";

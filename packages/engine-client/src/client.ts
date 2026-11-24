@@ -1,11 +1,11 @@
 import { type InvokeArgs, type InvokeOptions, invoke as tauri } from "@tauri-apps/api/core";
-import { connected, whenConnected } from "../../../apps/desktop/src/lib/engineConnection.ts";
+import { connected, whenConnected } from "../../session/src/engineConnection.ts";
 import { withoutAbout } from "../../../apps/desktop/src/lib/taskMentions.ts";
 import { captureWorkspaceContext } from "../../../apps/desktop/src/lib/workspace-context.ts";
 
 export { captureWorkspaceContext, displayWorkspaceSnapshot, requestedWorkspaceSnapshot } from "../../../apps/desktop/src/lib/workspace-context.ts";
 
-import { errorCode } from "../../../apps/desktop/src/lib/errorCode.ts";
+import { errorCode } from "../../ui/src/lib/errorCode.ts";
 
 /**
  * El único `invoke` de la ventana: el de Tauri, que espera al servicio en vez

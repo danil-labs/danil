@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, mapArray, onCleanup } from "solid-js";
-import { watchRoster } from "../../../../apps/desktop/src/lib/handlerRoster";
+import { watchRoster } from "../../../ui/src/lib/handlerRoster.ts";
 import { invoke } from "../../../engine-client/src/client.ts";
 import type { AgentProfile, HandlerList, HandlerStatus } from "../../../../apps/desktop/src/lib/model";
 import { watchHandlerStatuses } from "../../../features/projects/src/queries/handlerPresence";

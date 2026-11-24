@@ -1,4 +1,4 @@
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import Copy from "lucide-solid/icons/copy";
 import { createEffect, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
