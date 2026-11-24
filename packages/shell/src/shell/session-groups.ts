@@ -162,7 +162,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     const free = accounts.free(g.context_id);
     return {
       ...g,
-      ...(g.role === undefined && record?.orgRole ? { role: record.orgRole } : {}),
+      ...(!g.role && record?.orgRole ? { role: record.orgRole } : {}),
       ...(record?.orgType ? { org_type: record.orgType } : {}),
       available,
       free: free && !accounts.known().includes(free.id) ? free : undefined,

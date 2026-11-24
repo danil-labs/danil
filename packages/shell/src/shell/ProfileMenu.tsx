@@ -14,7 +14,7 @@ const OrganizationHarnessLink = lazy(() => import("./OrganizationHarnessLink"));
 
 /** Las preferencias del equipo, el Harness de la organización y, en la web, sus controles de navegador. */
 export default function ProfileMenu(props: {
-  onAccount: () => void;
+  onAccount?: () => void;
   onReportarBug: () => void;
   /** El workspace abierto: también tiene cuadro aunque no esté agregado. */
   open?: string | null;

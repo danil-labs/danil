@@ -50,6 +50,8 @@ export type ResolveSettingsWorkspacesInput = {
   engineWorkspaces: readonly EngineWorkspaceLike[];
   groups: readonly GrupoDelRiel[] | null | undefined;
   otherAccounts?: readonly OtherAccountLike[];
+  /** Si es `false` (Desk con sesión obligatoria), nunca expone workspaces crudos del motor como opciones `Local`. */
+  allowLocalFallback?: boolean;
 };
 
 export type WorkspaceMetadataLabels = {
@@ -93,6 +95,7 @@ export function resolveSettingsWorkspaces(
   active: SettingsWorkspaceOption | null;
 } {
   const { activeId, activeContext, engineWorkspaces, groups, otherAccounts } = input;
+  const allowLocalFallback = input.allowLocalFallback ?? true;
   const byId = new Map<string, EngineWorkspaceLike>();
   for (const w of engineWorkspaces) byId.set(w.id, w);
 
@@ -137,8 +140,8 @@ export function resolveSettingsWorkspaces(
       }
     }
 
-    // Si los grupos aún no poblan su catálogo pero el motor ya entregó lista, no dejar el selector vacío.
-    if (options.length === 0 && engineWorkspaces.length > 0) {
+    // Si los grupos aún no poblan su catálogo y el respaldo local está permitido, no dejar el selector vacío.
+    if (options.length === 0 && allowLocalFallback && engineWorkspaces.length > 0) {
       for (const w of engineWorkspaces) {
         const key = JSON.stringify([null, w.id]);
         if (seen.has(key)) continue;
@@ -160,12 +163,12 @@ export function resolveSettingsWorkspaces(
         });
       }
     } else if (!matchedActive && activeId !== null) {
-      // Si el contexto activo cambió o quedó en un workspace local fuera de grupos, conservarlo visible.
+      // Si el contexto activo cambió o quedó en un workspace fuera de grupos, conservarlo visible solo si corresponde.
       const existing = options.find((o) => o.id === activeId);
       if (existing) {
         existing.active = true;
         matchedActive = true;
-      } else {
+      } else if (allowLocalFallback) {
         const local = byId.get(activeId);
         if (local) {
           matchedActive = true;
@@ -185,7 +188,7 @@ export function resolveSettingsWorkspaces(
         }
       }
     }
-  } else {
+  } else if (allowLocalFallback) {
     for (const w of engineWorkspaces) {
       const key = JSON.stringify([null, w.id]);
       if (seen.has(key)) continue;

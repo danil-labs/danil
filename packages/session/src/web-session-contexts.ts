@@ -45,7 +45,7 @@ function parseStatus(body: unknown): WebSessionStatus {
       const c = (entry ?? {}) as Record<string, unknown>;
       const id = text(c.context_id), org = text(c.org);
       if (!id || !OPAQUE.test(id) || !org) return [];
-      return [{ context_id: id, org, org_name: text(c.org_name), plan: text(c.plan), ...(text(c.role) ? { role: text(c.role) } : {}), ...(c.personal === true ? { personal: true } : {}) }];
+      return [{ context_id: id, org, org_name: text(c.org_name), plan: text(c.plan), ...(text(c.role) ? { role: text(c.role) } : {}), ...(typeof c.personal === "boolean" ? { personal: c.personal } : {}) }];
     });
     return [{ family, sub, email: text(f.email), contexts }];
   });

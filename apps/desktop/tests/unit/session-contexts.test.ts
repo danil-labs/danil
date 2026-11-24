@@ -339,3 +339,31 @@ test("403 becomes an empty state and D1's removed status drops only that context
   await sessions.refresh();
   assert.equal(sessions.removed().length, 1, "repeated status does not duplicate a removal notice");
 });
+
+test("transient refresh failure or connected status without sessions preserves loaded groups until real sign-out", async () => {
+  let reply: SessionStatus = structuredClone(status);
+  const invoke: ContextInvoke = async <T>() => reply as T;
+  const sessions = createSessionContexts(invoke, () => {});
+  await sessions.refresh();
+  assert.deepEqual(sessions.groups()!.map((g) => g.context_id), ["a", "b", "free", "c"]);
+  assert.equal(sessions.connected(), true);
+
+  // Connected status temporarily missing sessions array (e.g. offline / sessions endpoint hiccup)
+  reply = { state: "connected" };
+  await sessions.refresh();
+  assert.deepEqual(sessions.groups()!.map((g) => g.context_id), ["a", "b", "free", "c"]);
+  assert.equal(sessions.connected(), true);
+
+  // Engine IPC hiccup returned as disconnected with error and no sessions array
+  reply = { state: "disconnected", error: "engine_down" } as SessionStatus;
+  await sessions.refresh();
+  assert.deepEqual(sessions.groups()!.map((g) => g.context_id), ["a", "b", "free", "c"]);
+  assert.equal(sessions.connected(), true);
+
+  // Genuine sign-out returns disconnected with empty sessions array and clears groups
+  reply = { state: "disconnected", sessions: [] };
+  await sessions.refresh();
+  assert.deepEqual(sessions.groups(), []);
+  assert.equal(sessions.connected(), false);
+});
+
