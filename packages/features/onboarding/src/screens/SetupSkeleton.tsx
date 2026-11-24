@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { connected } from "../../../../../apps/desktop/src/lib/engineConnection";
+import { connected } from "../../../../session/src/engineConnection.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { CabeceraDelAlta } from "../components/Phases";
 import { Escenario, TituloCambiante } from "../components/Stage";

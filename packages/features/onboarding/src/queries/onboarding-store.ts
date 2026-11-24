@@ -17,6 +17,9 @@ export async function entrarAlWorkspaceFree(sealFirstFreeWorkspace: SellarWorksp
 export const renombrarWorkspace = (id: string, name: string) =>
   invoke("rename_workspace", { id, name });
 
+export type OnboardingMachine = { id: string; active: boolean };
+export const listarMaquinasDelAlta = () => invoke<OnboardingMachine[]>("machine_list");
+
 /** Antigravity lleva también Gemini, que es como más se le conoce. */
 export const nombreDeAgente = (a: { id: string; label: string }) => {
   if (a.id === "antigravity") return t("onboarding.agent.antigravity");

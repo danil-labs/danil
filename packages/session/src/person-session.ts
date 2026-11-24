@@ -4,7 +4,7 @@
  */
 import { emit as tauriEmit } from "@tauri-apps/api/event";
 import { invoke as nativeInvoke } from "../../engine-client/src/client.ts";
-import { listen as serviceListen } from "../../../apps/desktop/src/lib/serviceEvents.ts";
+import { listen as serviceListen } from "../../host/src/serviceEvents.ts";
 
 type Listen = (event: string, handler: (event: { payload: unknown }) => void) => Promise<() => void>;
 type Emit = (event: string, payload: unknown) => Promise<void>;

@@ -1,15 +1,15 @@
-import { parseWorkspaceAddLink } from "../../../apps/desktop/src/lib/workspace-add-link";
+import { parseWorkspaceAddLink } from "./workspace-add-link";
 import { createRoot, createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 import { forgetMachineNames } from './known-machine-names';
 import { aplicarLengua, t } from '../../../apps/desktop/src/lib/i18n';
 import { setShellCacheScope } from '../../../apps/desktop/src/lib/shellCache';
-import { seguirElTema } from '../../../apps/desktop/src/lib/theme';
+import { seguirElTema } from '../../ui/src/lib/theme';
 import { Button } from '../../ui/src/Button';
 import { ToastStack } from '../../ui/src/Toast';
 import { SessionLoading } from '../../../apps/desktop/src/web/auth/SessionLoading';
 import { signInError, WorkosAuthPage } from '../../../apps/desktop/src/web/auth/workos';
-import { webWorkspacePicker } from '../../../apps/desktop/src/web/workspace-picker';
+import { webWorkspacePicker } from './workspace-picker';
 import { webCredentialSource } from '../../platform-client/src/credentials';
 import { webAccountProfile } from '../../../apps/desktop/src/web/account';
 import { contextMachines, type PlatformProfile, PlatformSessionError, platformSession, platformTransport } from './platform-session';

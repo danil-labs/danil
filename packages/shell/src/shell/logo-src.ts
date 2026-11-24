@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { imagenInerte } from "../../../../apps/desktop/src/lib/links";
+import { imagenInerte } from "../../../ui/src/lib/chat/links";
 import { capabilities } from "../../../host/src/platform";
 import { machineOf } from "../../../features/machines/src/queries/store";
 

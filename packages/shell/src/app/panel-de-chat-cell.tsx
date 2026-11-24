@@ -4,10 +4,10 @@ import { type MentionSources } from "../../../../apps/desktop/src/lib/mentions.t
 import { carpetaDeTrabajo } from "../../../../apps/desktop/src/lib/model";
 import { type Agent, type AgentModels, type AgentProfile, type HandlerDefinition, type ModoDePermiso, type Source } from "../../../../apps/desktop/src/lib/model.ts";
 import { type CatalogosDeModelos, type OpcionDeModelo } from "../../../../apps/desktop/src/lib/models.ts";
-import { type Layout, type PanelGroup, type PanelSite, type Side } from "../../../../apps/desktop/src/lib/panels-types.ts";
+import { type Layout, type PanelGroup, type PanelSite, type Side } from "../../../ui/src/lib/panels-types.ts";
 import { type RecipientCandidate, type SenderTask } from "../../../../apps/desktop/src/lib/recipients.ts";
-import { comandosConAlMargen } from "../../../../apps/desktop/src/lib/side-question";
-import { type CliCommand, type Skill } from "../../../../apps/desktop/src/lib/skills.ts";
+import { comandosConAlMargen } from "../../../ui/src/lib/side-question";
+import { type CliCommand, type Skill } from "../../../ui/src/lib/skills.ts";
 import { esProvisional } from "../../../../apps/desktop/src/lib/taskDraft";
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
 import { type PlaceCandidate, type TaskCandidate, type TaskMention, type TextEdit } from "../../../../apps/desktop/src/lib/taskMentions.ts";

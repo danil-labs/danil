@@ -1,5 +1,5 @@
 import { radiantUsageSetOptIn, radiantUsageStatus } from "../queries/engine-harness";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
 import { type Tailscale } from "../../../../../apps/desktop/src/lib/governance";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

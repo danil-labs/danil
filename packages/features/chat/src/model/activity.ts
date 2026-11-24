@@ -1,7 +1,7 @@
-import { observedActivityUpdate, type ActivityObservationKind, type ObservedTurnActivity as TurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
+import { observedActivityUpdate, type ActivityObservationKind, type ObservedTurnActivity as TurnActivity } from "./activityObservation.ts";
 import type { Msg } from "../screens/Chat.tsx";
 import { ActivityAnchor, savedActivityTurn as savedTurn } from "./activityAnchor.ts";
-export type { TurnActivity } from "../../../../../apps/desktop/src/lib/turnActivity.ts";
+export type { TurnActivity } from "./turnActivity.ts";
 type RecordOfActivity = { key: string; active: boolean; startConfirmed: boolean; startedAt: number | null; saved: Set<string>; baseline: readonly string[] | null; lastObserved: Msg | null; lastObservedKind: ActivityObservationKind | null; anchor: ActivityAnchor; alias?: RecordOfActivity };
 const scopeKey = (workspace: string | null, session: string) => JSON.stringify([workspace, session]);
 const epoch = (value: number | null) => value !== null && Number.isFinite(value) && value > 0 ? value : null;
@@ -106,4 +106,4 @@ export function createActivityProjection() {
     drop: (workspace: string | null, session: string) => records.delete(scopeKey(workspace, session)),
     clear: () => records.clear() };
 }
-export { activityElapsed } from "../../../../../apps/desktop/src/lib/turnActivity.ts";
+export { activityElapsed } from "./turnActivity.ts";

@@ -7,7 +7,7 @@ import {
 } from "../queries";
 import { open } from "@tauri-apps/plugin-dialog";
 import { createEffect, createMemo, createSignal, on } from "solid-js";
-import { type ProjectRepository } from "../../../../../apps/desktop/src/lib/projectRepositories";
+import { type ProjectRepository } from "../model/projectRepositories";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";

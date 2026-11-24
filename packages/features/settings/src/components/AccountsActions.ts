@@ -2,7 +2,7 @@ import { createEffect, on, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { listProviders, removeAccount, renameAccount, resumeAwaitingQuota, setActiveAccount, submitLoginCode } from "../queries/engine-accounts";
 import { openExternal } from "../queries/engine-open";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { detalleDe } from "../../../../ui/src/Failure";
 import { type AgentOpt, type LoginEvent } from "../queries/accounts-store";
 import type { createCuentas } from "./AccountsState";

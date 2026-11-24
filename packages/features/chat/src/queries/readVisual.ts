@@ -1,6 +1,6 @@
 import { invoke } from "../../../../engine-client/src/client";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { errorCode } from "../../../../../apps/desktop/src/lib/errorCode.ts";
+import { errorCode } from "../../../../ui/src/lib/errorCode.ts";
 import { readVisualHtml, type VisualPart, type VisualWhole, VISUAL_FILE, VISUAL_TREE } from "../../../../ui/src/lib/chat/visual.ts";
 
 type Scope = { workspace: string; project: string; session: string; machine: { headers: Record<string, string> } | undefined };

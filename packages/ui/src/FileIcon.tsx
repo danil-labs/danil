@@ -1,4 +1,4 @@
-import { temaPintado } from "../../../apps/desktop/src/lib/theme";
+import { temaPintado } from "./lib/theme";
 import { DIBUJOS, EN_CLARO } from "./file-icons";
 import { iconoDe } from "./lib/icons";
 

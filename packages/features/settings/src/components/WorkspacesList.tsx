@@ -7,7 +7,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { FailureNote, asFailure } from "../../../../ui/src/Failure";
 import { Skeleton } from "../../../../ui/src/Skeleton";
-import { enfocarYSeleccionar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocarYSeleccionar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { anunciarMudanza, anunciarRenombrado, createWorkspaces, type Workspace } from "../queries/workspaces-store";
 import { capabilities } from "../../../../host/src/platform";

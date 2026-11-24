@@ -7,7 +7,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { updateSource } from "../queries/engine-environment";
 import { setRoot } from "../queries/engine-misc";
 import { getProfile, getProjectDirectory, listSources, removeSource, setProfile, setProjectDirectory, sourceDetail, sourceFreshness } from "../queries/engine-workspaces";
-import { abbreviateHomePath, remoteHost, remotePathLabel } from "../../../../../apps/desktop/src/lib/remote-path";
+import { abbreviateHomePath, remoteHost, remotePathLabel } from "../../../../ui/src/lib/remote-path";
 import type { Source } from "../../../../../apps/desktop/src/lib/model";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote, prosaDe } from "../../../../ui/src/Failure";

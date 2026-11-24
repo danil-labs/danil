@@ -1,9 +1,9 @@
 import { Pressable } from "../../../ui/src/Pressable";
-import type { WorkspaceAddLink } from "../../../../apps/desktop/src/lib/workspace-add-link";
+import type { WorkspaceAddLink } from "../../../session/src/workspace-add-link";
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { RAIL_MENU_ITEM } from "./rail-menu";
-import type { PickerOrg, PickerRow, WorkspacePicker } from "../../../../apps/desktop/src/web/workspace-picker";
+import type { PickerOrg, PickerRow, WorkspacePicker } from "../../../session/src/workspace-picker";
 
 /**
  * Una sola lista (plan modelo Slack § 20): los workspaces de Danil que la persona ya puede abrir,

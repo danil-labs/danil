@@ -19,7 +19,7 @@ import { Escenario, TituloCambiante } from "../components/Stage";
  * Free; nunca crea uno local (plan de cuentas F1.2).
  */
 // Una computadora gestionada llega preparada y con sus asistentes: en el navegador el alta es otra.
-const AltaGestionada = lazy(() => import("../../../../../apps/desktop/src/web/Onboarding"));
+const AltaGestionada = lazy(() => import("./WebOnboarding"));
 const ConectarCuenta = lazy(() => import("./ConnectAccount"));
 
 type Props = { onListo: () => void; sealFirstFreeWorkspace: SellarWorkspaceFree; ControlesDeVentana: ControlesDeVentanaDelShell };

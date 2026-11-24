@@ -1,5 +1,5 @@
 import { createMemo, createSignal, untrack } from "solid-js";
-import { createResource } from "../../../../../apps/desktop/src/lib/resource.ts";
+import { createResource } from "../model/resource.ts";
 import { conservar, READ_TIMEOUT } from "../../../../session/src/sessionRefresh.ts";
 import type { Project } from "../../../../../apps/desktop/src/lib/model.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";

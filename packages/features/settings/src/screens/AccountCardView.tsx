@@ -8,7 +8,7 @@ import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Spinner, RefreshSpinner } from "../../../../ui/src/Spinner";
 import { Pressable } from "../../../../ui/src/Pressable";
-import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
+import { createNow } from "../../../../ui/src/lib/sharedClock";
 import { accountPresentation, inferAuthenticated, StatusTag } from "./AccountCardStatus";
 import { AccountNameField } from "./AccountNameField";
 

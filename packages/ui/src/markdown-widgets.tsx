@@ -12,7 +12,7 @@ import {
 } from "solid-js";
 import { copyText } from "../../host/src/clipboard";
 import { t } from "../../../apps/desktop/src/lib/i18n";
-import { imagenLocal } from "../../../apps/desktop/src/lib/links";
+import { imagenLocal } from "./lib/chat/links";
 import { cn } from "../../../apps/desktop/src/lib/utils";
 import { Button } from "./Button";
 import { prosaDe } from "./Failure";

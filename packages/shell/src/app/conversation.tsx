@@ -1,7 +1,7 @@
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { MIN_PANEL_HEIGHT, MIN_PANEL_WIDTH, gridTracks, sameSite } from "../../../../apps/desktop/src/lib/panels";
-import { type Layout, type PanelGroup, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../../apps/desktop/src/lib/panels-types.ts";
-import { type ContentTab, type FileTab, type Tab } from "../../../../apps/desktop/src/lib/tabs-types.ts";
+import { type Layout, type PanelGroup, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../ui/src/lib/panels-types.ts";
+import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { type PermissionRequest } from "../../../features/chat/src/screens/Chat.tsx";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions.tsx";

@@ -1,6 +1,6 @@
 /** La persona de la cuenta de Danil según el motor del escritorio (`danil_account_*`). */
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { imagenInerte } from "../../../../../apps/desktop/src/lib/links.ts";
+import { imagenInerte } from "../../../../ui/src/lib/chat/links.ts";
 import { urlDeAvatar } from "../../../../engine-client/src/previewFile.ts";
 import type { AccountProfile, AccountProfileSource } from "../model/account-profile.ts";
 import type { DanilConnectStatus } from "./danil-account.ts";

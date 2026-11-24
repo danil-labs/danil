@@ -11,24 +11,9 @@ import { apiUrl } from "./computers.ts";
 import { type Fetch, refused, sessionCall } from "./control-plane.ts";
 import { WORKSPACES_PATH, workspaceAssetPath } from "../../../../packages/platform-client/src/workspaces.ts";
 import { platformFetch } from "../../../../packages/platform-client/src/client.ts";
+import type { AccountChatBackground, WorkspaceAssetKind, WorkspaceAssetsSource } from "../../../../packages/platform-client/src/workspace-assets.ts";
 
-
-type WorkspaceAssetKind = "logo" | "background";
-
-/** The background setting the account keeps beside the image (`settings.chat_background`). */
-type AccountChatBackground = { preset: string | null; veil: unknown };
-
-export type WorkspaceAssetsSource = {
-  /** The image as `data:`; `null` if the account has none; `undefined` if the account does not know (not linked, older control plane). */
-  read(workspace: string, kind: WorkspaceAssetKind): Promise<string | null | undefined>;
-  /** Preset and veils saved in the account, if any. */
-  setting(workspace: string): Promise<AccountChatBackground | null>;
-  /** `false` if the workspace is not in the account: the caller goes through the engine. */
-  put(workspace: string, kind: WorkspaceAssetKind, image: Blob): Promise<boolean>;
-  remove(workspace: string, kind: WorkspaceAssetKind): Promise<boolean>;
-  /** Read the list again on the next call. */
-  forget(): void;
-};
+export type { AccountChatBackground, WorkspaceAssetKind, WorkspaceAssetsSource };
 
 type Row = Record<string, unknown> & { id: string };
 

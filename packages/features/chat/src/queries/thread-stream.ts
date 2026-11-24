@@ -1,12 +1,12 @@
 
-import { lastRoster, rememberRoster } from "../../../../../apps/desktop/src/lib/handlerRoster";
+import { lastRoster, rememberRoster } from "../../../../ui/src/lib/handlerRoster.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type MentionSources } from "../../../../../apps/desktop/src/lib/mentions";
 import { type HandlerDefinition, type HandlerList, type HandlerStatusRow } from "../../../../../apps/desktop/src/lib/model";
 import { type Project } from "../../../../../apps/desktop/src/lib/model.ts";
 import { recipientCandidatesOf, type RecipientCandidate } from "../../../../../apps/desktop/src/lib/recipients";
 import { type SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import { alHilo } from "../../../../../apps/desktop/src/lib/side-question";
+import { alHilo } from "../../../../ui/src/lib/side-question";
 import { type PlaceCandidate, type TaskCandidate } from "../../../../../apps/desktop/src/lib/taskMentions";
 import { type TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
 import { type Ventana } from "../../../../../apps/desktop/src/lib/usage";

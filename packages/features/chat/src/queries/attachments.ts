@@ -9,7 +9,7 @@ import { shellCacheMatches } from "../../../../../apps/desktop/src/lib/shellCach
 import { type ShellSnapshot } from "../../../../../apps/desktop/src/lib/shellCache.ts";
 import { type Space } from "../../../../../apps/desktop/src/lib/spaces";
 import { isTaskTab } from "../../../../../apps/desktop/src/lib/tabs";
-import { aplicarTemaDeTerminal } from "../../../../../apps/desktop/src/lib/terminal-themes";
+import { aplicarTemaDeTerminal } from "../model/terminal-themes";
 import { displayWorkspaceSnapshot, invoke, requestedWorkspaceSnapshot } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";

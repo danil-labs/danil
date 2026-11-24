@@ -1,6 +1,6 @@
 import { createMemo, type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { tareaEnVuelo } from "../../../../../apps/desktop/src/lib/drag";
+import { tareaEnVuelo } from "../../../../ui/src/lib/drag";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";

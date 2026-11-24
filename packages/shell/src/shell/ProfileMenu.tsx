@@ -1,7 +1,7 @@
 import { createSignal, lazy, Show, Suspense } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
-import { type Apariencia, apariencia } from "../../../../apps/desktop/src/lib/theme";
+import { type Apariencia, apariencia } from "../../../ui/src/lib/theme";
 import { Popover, PopoverAnchor, PopoverContent } from "../../../ui/src/Popover";
 import DanilFooterEntry from "./DanilFooterEntry";
 import { EmptySessionSignOut } from "./EmptySessionSignOut";

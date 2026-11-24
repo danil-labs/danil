@@ -1,12 +1,12 @@
 import { sessionWorkspaceCatalog, workspaceCatalog } from "../../../platform-client/src/workspaces.ts";
 import type { Workspace } from "../../../platform-client/src/workspaces.ts";
-import type { WorkspaceAddLink } from "../../../../apps/desktop/src/lib/workspace-add-link.ts";
+import type { WorkspaceAddLink } from "../../../session/src/workspace-add-link.ts";
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { bridgePersonSession } from "../../../session/src/person-session.ts";
 import { capabilities } from "../../../host/src/platform.ts";
 import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents.ts";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import { createAccountRequests } from "./account-requests.ts";
 import { engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, retryEngineAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";

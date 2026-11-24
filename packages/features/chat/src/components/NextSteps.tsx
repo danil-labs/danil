@@ -2,7 +2,7 @@ import ArrowRight from "lucide-solid/icons/arrow-right";
 import Check from "lucide-solid/icons/check";
 import { Index } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import type { NextStepOption } from "../../../../../apps/desktop/src/lib/nextSteps";
+import type { NextStepOption } from "../../../../ui/src/lib/chat/nextSteps";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Pressable } from "../../../../ui/src/Pressable";
 

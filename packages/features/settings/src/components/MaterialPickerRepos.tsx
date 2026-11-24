@@ -7,7 +7,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { Skeleton } from "../../../../ui/src/Skeleton";
 import { MarcaGitHost } from "../../../../ui/src/icons";
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Badge } from "../../../../ui/src/Badge";
 import { Pressable } from "../../../../ui/src/Pressable";

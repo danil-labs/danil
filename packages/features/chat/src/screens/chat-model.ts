@@ -1,6 +1,6 @@
 import { createSignal, type Signal } from "solid-js";
-import { sharedLazy } from "../../../../../apps/desktop/src/lib/sharedLazy";
-import type { ObservedTurnActivity as TurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation";
+import { sharedLazy } from "../../../../ui/src/lib/sharedLazy";
+import type { ObservedTurnActivity as TurnActivity } from "../model/activityObservation";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type MentionSource } from "../../../../../apps/desktop/src/lib/mentions";
 import { type Clase, type Paso, pasoDe, pasoDePermiso } from "../../../../../apps/desktop/src/lib/steps";

@@ -1,4 +1,4 @@
-import { sharedLazy } from "../../../../apps/desktop/src/lib/sharedLazy";
+import { sharedLazy } from "../../../ui/src/lib/sharedLazy";
 import PuertosAbiertos from "./OpenPorts";
 
 const Almacenamiento = sharedLazy(() => import("./Storage"));

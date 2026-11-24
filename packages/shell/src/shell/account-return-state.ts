@@ -1,5 +1,5 @@
 import { createRoot, createSignal } from "solid-js";
-import { createAccountReturn } from "../../../../apps/desktop/src/lib/account-add-return.ts";
+import { createAccountReturn } from "../../../session/src/account-add-return.ts";
 
 export const [accountReturnRevision, setAccountReturnRevision] = createRoot(() => createSignal(0));
 const changed = () => setAccountReturnRevision((n) => n + 1);

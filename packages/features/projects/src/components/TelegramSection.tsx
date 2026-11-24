@@ -1,4 +1,4 @@
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import Copy from "lucide-solid/icons/copy";
 import { createEffect, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
@@ -14,7 +14,7 @@ import {
 import { Button } from "../../../../ui/src/Button";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
-import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
+import { createNow } from "../../../../ui/src/lib/sharedClock";
 
 type Pairing = { code: string; expires_at_ms: number };
 

@@ -32,13 +32,13 @@ import { settledContextIds } from "../../../../../apps/desktop/src/lib/settled-c
 import { cancelEdgeWrites, setMachineRoute, wokeOf } from "../queries";
 import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
 import { createRoot, createSignal } from "solid-js";
-import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
-import { whenConnected } from "../../../../../apps/desktop/src/lib/engineConnection";
+import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
+import { whenConnected } from "../../../../session/src/engineConnection.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type Capabilities, capabilities, setCapabilities } from "../../../../host/src/platform";
-import { deliver, listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { deliver, listen } from "../../../../host/src/serviceEvents.ts";
 import { isMac } from "../../../../host/src/window";
-import type { MachineStatus } from "../../../../../apps/desktop/src/web/SyncNote";
+import type { MachineStatus } from "../model/SyncNote";
 import AccountMachines from "./AccountMachines";
 import { mergeBridgeInventory } from "../model/bridge-inventory";
 import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS } from "../queries/cloud-machines";
