@@ -10,7 +10,7 @@ import { Skeleton } from "../../../../ui/src/Skeleton";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../../ui/src/Tooltip";
 import { MarcaGitHost } from "../../../../ui/src/icons";
 import { repoDe } from "../../../../ui/src/sources";
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { createSelectorDeMaterial } from "./MaterialPickerState";
 import { createVistasDeMaterial } from "./MaterialPickerRepos";

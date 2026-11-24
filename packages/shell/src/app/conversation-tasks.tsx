@@ -1,10 +1,10 @@
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import type { createUsage } from "../shell/usage";
 import { sameSite } from "../../../../apps/desktop/src/lib/panels";
-import { type Layout, type PanelGroup, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../../apps/desktop/src/lib/panels-types.ts";
-import { type DragPoint } from "../../../../apps/desktop/src/lib/pointer-drag.ts";
+import { type Layout, type PanelGroup, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../ui/src/lib/panels-types.ts";
+import { type DragPoint } from "../../../ui/src/lib/pointer-drag.ts";
 import { moviendoHueco } from "../../../../apps/desktop/src/lib/sites";
-import {    type TaskTab } from "../../../../apps/desktop/src/lib/tabs-types.ts";
+import {    type TaskTab } from "../../../ui/src/lib/tabs-types.ts";
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import SearchPanel from "../../../features/chat/src/components/SearchPanel";

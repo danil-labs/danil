@@ -3,7 +3,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import Copy from "lucide-solid/icons/copy";
 import ExternalLink from "lucide-solid/icons/external-link";
 import { Show } from "solid-js";
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cancelLogin, discardAccount } from "../queries/engine-accounts";
 import { openExternal } from "../queries/engine-open";

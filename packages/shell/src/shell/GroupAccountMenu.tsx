@@ -1,7 +1,7 @@
 import { createResource, type JSX, Show } from "solid-js";
 import { type GroupAccount, type GroupSend, readGroupBalance, redeemGroupCode } from "../../../../apps/desktop/src/lib/group-account";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { canRedeemPromo } from "../../../../apps/desktop/src/lib/promo-role";
+import { canRedeemPromo } from "../../../session/src/promo-role";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { SEPARADOR_DE_MENU } from "../../../ui/src/ContextMenu";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";

@@ -2,7 +2,7 @@ import { SignalDot } from "../../../ui/src/SignalDot";
 import History from "lucide-solid/icons/history";
 import SquarePen from "lucide-solid/icons/square-pen";
 import { createEffect, createSignal, lazy, on, onCleanup, Show, Suspense } from "solid-js";
-import { puntoDelArrastre, tareaEnVuelo } from "../../../../apps/desktop/src/lib/drag";
+import { puntoDelArrastre, tareaEnVuelo } from "../../../ui/src/lib/drag";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { ariaDeAtajo } from "../../../../apps/desktop/src/lib/shortcuts";
 import { KeyedList } from "../../../ui/src/KeyedList";

@@ -1,5 +1,5 @@
 import { Pressable } from "../../../ui/src/Pressable";
-import type { WorkspaceAddLink } from "../../../../apps/desktop/src/lib/workspace-add-link";
+import type { WorkspaceAddLink } from "../../../session/src/workspace-add-link";
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { RAIL_MENU_ITEM } from "./rail-menu";

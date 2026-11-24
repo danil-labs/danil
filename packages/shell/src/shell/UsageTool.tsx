@@ -3,7 +3,7 @@ import { For, Show } from "solid-js";
 import { immediateWindow } from "@terminus/computers";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { left, legible, tono } from "../../../../apps/desktop/src/lib/limits";
-import { sharedLazy } from "../../../../apps/desktop/src/lib/sharedLazy";
+import { sharedLazy } from "../../../ui/src/lib/sharedLazy";
 import { cn } from "../../../../apps/desktop/src/lib/utils";
 import { capabilities } from "../../../host/src/platform";
 import { HEADER_HEIGHT } from "../../../host/src/window";

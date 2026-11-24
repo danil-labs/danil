@@ -1,11 +1,11 @@
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { type Agent, type Project } from "../../../../apps/desktop/src/lib/model.ts";
 import { type CatalogosDeModelos, type OpcionDeModelo } from "../../../../apps/desktop/src/lib/models.ts";
-import { type Layout, type PanelGroup, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../../apps/desktop/src/lib/panels-types.ts";
+import { type Layout, type PanelGroup, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../ui/src/lib/panels-types.ts";
 import { type Space } from "../../../../apps/desktop/src/lib/spaces.ts";
 import { type Superficie } from "../../../../apps/desktop/src/lib/surfaces.ts";
 import { isTaskTab } from "../../../../apps/desktop/src/lib/tabs";
-import { type ContentTab, type FileTab, type Tab } from "../../../../apps/desktop/src/lib/tabs-types.ts";
+import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
 import { type createSendGates as T_createSendGates, type createThreadSide as T_createThreadSide } from "../../../features/chat/src";
 import { apagarVistasDe } from "../../../features/code/src/queries/typst";
 import { type CarryCheck } from "../../../features/machines/src/queries/carry.ts";

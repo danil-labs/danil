@@ -1,4 +1,4 @@
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { searchTasks } from "../../../../../apps/desktop/src/lib/taskMentions";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";

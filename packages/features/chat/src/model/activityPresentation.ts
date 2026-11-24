@@ -1,4 +1,4 @@
-import { activityMessageKind, type ActivityObservationKind } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
+import { activityMessageKind, type ActivityObservationKind } from "./activityObservation.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { pasoDe, rotuloDeFila, type Paso } from "../../../../../apps/desktop/src/lib/steps.ts";
 import type { Msg } from "./messageTypes.ts";

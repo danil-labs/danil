@@ -1,6 +1,6 @@
 import { invoke } from "../../engine-client/src/client";
 import { createResource, Show } from "solid-js";
-import { imagenInerte } from "../../../apps/desktop/src/lib/links";
+import { imagenInerte } from "./lib/chat/links";
 import { EnlargeableImage } from "./EnlargeableImage";
 import { FilePreview } from "./FilePreview";
 import { useFileMachine } from "./fileMachine";

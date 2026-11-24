@@ -5,7 +5,7 @@ import ExternalLink from "lucide-solid/icons/external-link";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { Show, createSignal } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";

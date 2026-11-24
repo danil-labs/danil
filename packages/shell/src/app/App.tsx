@@ -78,7 +78,7 @@ import { createPanelDeChatParts } from "./panel-de-chat-parts.tsx";
 import { createPanelDeChatCell } from "./panel-de-chat-cell.tsx";
 import { createEngineQueue, createTaskQueues } from "../../../features/task-queues/src";
 import { connected } from "../../../../apps/desktop/src/lib/engineConnection";
-import { pedirElCampo } from "../../../../apps/desktop/src/lib/focus";
+import { pedirElCampo } from "../../../ui/src/lib/focus";
 import {
   
   proyectoDeNuevaTarea,

@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { ProjectRepository } from "../../../../../apps/desktop/src/lib/projectRepositories";
+import type { ProjectRepository } from "../model/projectRepositories";
 
 export type RemoteRepository = {
   slug?: string;
