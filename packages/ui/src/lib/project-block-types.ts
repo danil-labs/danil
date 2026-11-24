@@ -26,5 +26,5 @@ export { type Preview } from "../../../features/artifacts/src/components/Preview
 export { type ChatExportado } from "../../../features/chat/src/model/transcript.ts";
 export { type Capabilities } from "../../../host/src/platform.ts";
 export { type SearchFilter } from "../../../shell/src/shell/GlobalSearch.tsx";
-export { clave } from "../../../features/chat/src/model/transcript.ts";
+export { clave } from "./chat/tools.ts";
 export { threadPreview } from "./chat/nextSteps.ts";

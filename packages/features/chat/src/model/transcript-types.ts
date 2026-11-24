@@ -38,9 +38,7 @@ type Piece = { text: string } | { tool: number };
  * con un separador porque los ids de pregunta los escribe el agente, y
  * cualquier separador que se elija puede aparecer dentro de uno.
  */
-export function clave(turno: string, pregunta: string) {
-  return JSON.stringify([turno, pregunta]);
-}
+export { clave } from "../../../../ui/src/lib/chat/tools.ts";
 
 /** Lo que el agente dejó preguntado al cerrar un turno. */
 export type PreguntaEvent = {

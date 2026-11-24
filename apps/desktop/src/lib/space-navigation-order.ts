@@ -1,1 +1,1 @@
-export * from "../../../../packages/ui/src/lib/space-navigation-order.ts";
+export * from "../../../../packages/session/src/space-navigation-order.ts";

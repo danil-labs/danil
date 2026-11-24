@@ -4,15 +4,14 @@
  * pero el bloque entero pasa antes legible por el servidor de Danil.
  */
 
+import { SENSITIVE_NAME, urlWithCredentials } from "../../../../ui/src/lib/secret-url.ts";
+
 /** Las órdenes que llevan un bloque, y su argumento. */
 export const MCP_BLOCK_ARGS: Record<string, string> = { add_mcp_servers: "bloque", set_memory_provider: "block" };
 
-const SENSITIVE_NAME = /(?:^|[_-])(?:token|key|secret|password|passwd|pwd|auth|authorization|bearer|credential|credentials|apikey|api-key|api_key|access-key|private)(?:$|[_-])/i;
 const MARKER = /\$\{secret:[^}\s]+\}/g;
 /** Lo que puede acompañar a un marcador en una cabecera: el esquema de autorización. */
 const SCHEME = /^(?:bearer|basic|token)?$/i;
-
-import { urlWithCredentials } from "../../../../platform-client/src/connections.ts";
 
 export { urlWithCredentials };
 

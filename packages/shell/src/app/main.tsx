@@ -12,7 +12,7 @@ import { Lanzador, sealFirstFreeWorkspace, SessionGate } from "../shell";
 import ControlesDeVentana from "../shell/WindowControls";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { seguirElTema } from "../../../ui/src/lib/theme";
-import { aplicarEscala, atajoDeEscala } from "../../../ui/src/lib/zoom";
+import { aplicarEscala, atajoDeEscala } from "../../../ui/src/lib/window-zoom.ts";
 import { trimNativeMenu } from "../../../host/src/contextMenu";
 import { acotarSeleccionarTodo } from "../../../host/src/selectAll";
 import { activarBarrasAlDesplazar } from "../../../host/src/scrollbars";

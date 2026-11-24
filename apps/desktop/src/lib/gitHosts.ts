@@ -1,1 +1,1 @@
-export * from "../../../../packages/ui/src/lib/gitHosts.ts";
+export * from "../../../../packages/session/src/gitHosts.ts";

@@ -3,7 +3,7 @@
  * devuelve como dato de máquina. Es una heurística: un falso positivo se
  * resuelve con «Pegar como texto»; un falso negativo deja el texto como hoy.
  */
-import { urlWithCredentials } from "../../../../platform-client/src/connections.ts";
+import { SENSITIVE_NAME, urlWithCredentials } from "../../../../ui/src/lib/secret-url.ts";
 
 export type SecretFamily = "prefix" | "jwt" | "pem" | "entropy" | "url";
 
@@ -27,8 +27,6 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TOKEN_CHARS = /^[A-Za-z0-9+/=_.~-]+$/;
 const ENTROPY_MIN_LENGTH = 20;
 const ENTROPY_MIN_BITS = 3.5;
-/** Nombres de campo o bandera que delatan que lo que sigue es un secreto. */
-const SENSITIVE_NAME = /(?:^|[_-])(?:token|key|secret|password|passwd|pwd|auth|authorization|bearer|credential|credentials|apikey|api-key|api_key|access-key|private)(?:$|[_-])/i;
 
 function bitsPerChar(text: string): number {
   const counts = new Map<string, number>();

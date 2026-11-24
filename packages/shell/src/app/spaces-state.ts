@@ -3,7 +3,7 @@ import { invoke } from "../../../engine-client/src/client.ts";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { type Project } from "../../../ui/src/lib/model.ts";
 import { readShellCache, shellCacheWriter } from "../../../session/src/shellCache";
-import { createSpaceNavigationOrder } from "../../../ui/src/lib/space-navigation-order";
+import { createSpaceNavigationOrder } from "../../../session/src/space-navigation-order";
 import { createSpaceCatalog } from "./space-catalog";
 import { type Space } from "../../../ui/src/lib/spaces";
 import { isContentTab, type createTabs } from "../../../ui/src/lib/tabs";

@@ -142,6 +142,8 @@ export default function Settings(props: {
     document.getElementById(idSub(siguiente.id))?.focus();
   }
 
+  const pie = () => ENTRADAS.filter((e) => e.group === "footer");
+
   function Fila(p: { d: Entrada }) {
     return (
       <SidebarMenuItem role="presentation">
@@ -155,7 +157,7 @@ export default function Settings(props: {
           selectionMark={false}
           // El fondo del activo vive en el átomo; la barra de acento pertenece a
           // la navegación principal y aquí duplicaba una señal sobre una lista corta.
-          class="pestana-fundida h-10 min-h-10 grid-cols-[18px_minmax(0,1fr)] gap-2.5 rounded-l-[10px] rounded-r-none border-0 py-0 pl-3.5 pr-3 focus-visible:outline-offset-[-2px] data-[active=true]:bg-surface data-[active=true]:font-semibold data-[active=true]:hover:bg-surface"
+          class="pestana-fundida h-10 min-h-10 grid-cols-[18px_minmax(0,1fr)] gap-2.5 rounded-l-[10px] rounded-r-none border-0 py-0 pl-3.5 pr-3 outline-none focus:outline-none focus-visible:outline-none data-[active=true]:bg-surface data-[active=true]:font-semibold data-[active=true]:hover:bg-surface"
           onClick={() => abrir(p.d)}
           onKeyDown={teclas}
         >
@@ -203,6 +205,9 @@ export default function Settings(props: {
                     </For>
                   </optgroup>
                 )}</For>
+                <For each={pie()}>
+                  {(entry) => <option value={entry.id}>{entry.name}</option>}
+                </For>
               </Select>
               <AdminLink />
             </header>
@@ -234,7 +239,18 @@ export default function Settings(props: {
                   )}
                 </For>
               </SidebarContent>
-              <AdminLink />
+              <Show when={pie().length > 0 || !!capabilities().adminPage}>
+                <div
+                  role="presentation"
+                  data-settings-footer=""
+                  class="mt-auto border-0 border-t border-solid border-border px-0 pb-3 pl-2 pt-2.5"
+                >
+                  <SidebarMenu role="presentation" class="gap-1.5">
+                    <For each={pie()}>{(d) => <Fila d={d} />}</For>
+                    <AdminLink embedded />
+                  </SidebarMenu>
+                </div>
+              </Show>
             </Sidebar>
 
             <div class="relative min-h-0 min-w-0 bg-surface">

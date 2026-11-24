@@ -1,1 +1,1 @@
-export * from "../../../../packages/ui/src/lib/chat-background-engine.ts";
+export * from "../../../../packages/session/src/chat-background-engine.ts";

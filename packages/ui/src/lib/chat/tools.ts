@@ -84,3 +84,13 @@ export function commandSource(cmd: string | null | undefined): CommandSource | n
   const mark = commandMarkId(program);
   return program && mark ? { program, mark, label: TOOL_LABELS[mark] } : null;
 }
+
+/**
+ * La clave con la que una respuesta apunta a su pregunta: el turno que la hizo
+ * y la pregunta dentro de ese turno. Va por `JSON.stringify` y no concatenada
+ * con un separador porque los ids de pregunta los escribe el agente, y
+ * cualquier separador que se elija puede aparecer dentro de uno.
+ */
+export function clave(turno: string, pregunta: string) {
+  return JSON.stringify([turno, pregunta]);
+}

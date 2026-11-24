@@ -1,1 +1,1 @@
-export * from "../../../../packages/ui/src/lib/governance.ts";
+export * from "../../../../packages/session/src/governance.ts";

@@ -25,6 +25,14 @@ export function setupRequired<res = unknown>(args?: InvokeArgs, options?: Invoke
   return invoke<res>("setup_required", args, options);
 }
 
+export function updateInstall<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
+  return invoke<res>("update_install", args, options);
+}
+
+export function updatePending<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
+  return invoke<res>("update_pending", args, options);
+}
+
 export function updateSource<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
   return invoke<res>("update_source", args, options);
 }

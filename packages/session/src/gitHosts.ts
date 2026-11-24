@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { prosa, type Frase } from "./prose.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { invoke } from "../../engine-client/src/client.ts";
+import { prosa, type Frase } from "../../ui/src/lib/prose.ts";
+import { t } from "../../../apps/desktop/src/lib/i18n.ts";
 
 /**
  * Los servicios de código salen del motor y de ningún otro sitio. Una pantalla

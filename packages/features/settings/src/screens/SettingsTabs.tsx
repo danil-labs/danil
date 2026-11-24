@@ -7,6 +7,7 @@ import Plug from "lucide-solid/icons/plug";
 import Shield from "lucide-solid/icons/shield";
 import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
 import Sparkles from "lucide-solid/icons/sparkles";
+import Wrench from "lucide-solid/icons/wrench";
 import { createResource, type JSX, lazy, Show, Suspense } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
@@ -40,7 +41,7 @@ const Appearance = lazy(() => import("../components/Appearance"));
 
 const Agents = lazy(() => import("../components/Agents"));
 
-const AppDownloads = lazy(() => import("../components/AppDownloads"));
+const Maintenance = lazy(() => import("../components/Maintenance"));
 
 /**
  * Configuración: entradas y pestañas definidas en `settings-entries.ts`.
@@ -100,7 +101,6 @@ export const pestanasDe = (
     notify: tab("notify", () => t("settings.tab.notify"), () => <SettingsPanel><SettingsSection title={t("settings.tab.notify")}><NotifyBehavior /></SettingsSection></SettingsPanel>),
     languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
     workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces maquinas={maquinas} sesiones={sesiones} />),
-    download: capabilities().appDownloads ? tab("download", () => t("web.download.tab"), () => <Suspense fallback={null}><AppDownloads /></Suspense>) : undefined,
     "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} piezas={piezas} />; }),
     fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers integraciones={integraciones} maquinas={maquinas} />; }),
     agentes: tab("agentes", () => t("settings.nav.agents"), () => (
@@ -118,6 +118,7 @@ export const pestanasDe = (
     plugins: tab("plugins", () => t("settings.tab.plugins"), () => <SettingsPanel><Integrations /></SettingsPanel>),
     memory: tab("memory", () => t("settings.tab.memory"), () => <SettingsPanel><ProveedorDeMemoria /></SettingsPanel>),
     external: cuenta ? tab("external", () => t("settings.tab.external"), () => <Suspense fallback={null}><Connections /></Suspense>) : undefined,
+    maintenance: tab("maintenance", () => t("settings.entry.maintenance"), () => <Suspense fallback={null}><Maintenance maquinas={maquinas} /></Suspense>),
   };
 };
 
@@ -130,6 +131,7 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
   connections: { name: () => t("settings.nav.connections"), icono: () => <Plug size={15} /> },
   billing: { name: () => t("settings.entry.billing"), icono: () => <CreditCard size={15} /> },
+  maintenance: { name: () => t("settings.entry.maintenance"), icono: () => <Wrench size={15} /> },
 };
 
 /** Una entrada sale si tiene alguna pestaña que ya existe. */
@@ -141,7 +143,7 @@ export const entradasDe = (pestanas: Record<string, Pestana | undefined>): Entra
     return [{ id: e.id, group: e.group, get name() { return h.name(); }, icono: h.icono, tabs }];
   });
 
-export const GRUPOS: { id: SettingsGroup; nombre: () => string }[] = [
+export const GRUPOS: { id: Exclude<SettingsGroup, "footer">; nombre: () => string }[] = [
   { id: "you", nombre: () => t("settings.nav.group_you") },
   { id: "workspace", nombre: () => t("settings.nav.group_workspace") },
 ];
@@ -154,30 +156,38 @@ export const idTab = (id: string) => `cfg-tab-${id}`;
 export const idSub = (id: string) => `cfg-sub-${id}`;
 
 /** Enlace de administracion cuando la plataforma web lo ofrece. */
-export function AdminLink() {
+export function AdminLink(props: { embedded?: boolean }) {
   const page = capabilities().adminPage;
   const [allowed] = createResource(async () => page ? await page.allowed().catch(() => false) : false);
+  const item = () => (
+    <SidebarMenuItem role="presentation">
+      <SidebarMenuButton
+        as="a"
+        href={page?.href}
+        target="_blank"
+        rel="noopener"
+        data-settings-admin=""
+        selectionMark={false}
+        class="h-10 min-h-10 grid-cols-[18px_minmax(0,1fr)_auto] gap-2.5 rounded-l-[10px] rounded-r-none border-0 py-0 pl-3.5 pr-3 outline-none focus:outline-none focus-visible:outline-none"
+      >
+        <span class="flex size-4 items-center justify-center"><Shield size={15} /></span>
+        <span class="truncate">{t("web.admin.title")}</span>
+        <ExternalLink size={13} class="text-neutral-500" />
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
   return (
     <Show when={allowed()}>
-      <div class="mt-auto border-0 border-t border-solid border-border px-0 pb-3 pl-2 pt-2">
-        <SidebarMenu role="presentation">
-          <SidebarMenuItem role="presentation">
-            <SidebarMenuButton
-              as="a"
-              href={page?.href}
-              target="_blank"
-              rel="noopener"
-              data-settings-admin=""
-              selectionMark={false}
-              class="h-10 min-h-10 grid-cols-[18px_minmax(0,1fr)_auto] gap-2.5 rounded-l-[10px] rounded-r-none border-0 py-0 pl-3.5 pr-3"
-            >
-              <span class="flex size-4 items-center justify-center"><Shield size={15} /></span>
-              <span class="truncate">{t("web.admin.title")}</span>
-              <ExternalLink size={13} class="text-neutral-500" />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </div>
+      <Show
+        when={!props.embedded}
+        fallback={item()}
+      >
+        <div class="mt-auto border-0 border-t border-solid border-border px-0 pb-3 pl-2 pt-2">
+          <SidebarMenu role="presentation">
+            {item()}
+          </SidebarMenu>
+        </div>
+      </Show>
     </Show>
   );
 }

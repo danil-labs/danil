@@ -3,10 +3,10 @@
  * bloquea. Espeja `src-tauri/src/workspace/governed.rs`. El backend rechaza la
  * edición igual; aquí solo se pinta de solo lectura.
  */
-import { listen } from "../../../host/src/serviceEvents";
+import { listen } from "../../host/src/serviceEvents.ts";
 import { createSignal } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { capabilities } from "../../../host/src/platform";
+import { invoke } from "../../engine-client/src/client.ts";
+import { capabilities } from "../../host/src/platform.ts";
 
 export type GovernedSection = "context_sources" | "mcp_servers" | "skills" | "agents" | "models";
 

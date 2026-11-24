@@ -17,7 +17,7 @@ import { type JSX, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
-import { changeNumber, changeShort, checksName } from "../../../../ui/src/lib/gitHosts";
+import { changeNumber, changeShort, checksName } from "../../../../session/src/gitHosts";
 import { workLabel } from "../../../../ui/src/lib/workLabel.ts";
 import { type CheckState, compactGitKind, type GitStatus, gitReviewSignals, type KnState, type ReviewState } from "../queries/taskGit";
 

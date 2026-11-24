@@ -5,6 +5,14 @@
  * Sin dependencias de la ventana: las pruebas de Node la importan.
  */
 
+/** `data:` URI de una imagen (con su tipo). */
+export async function blobToDataUrl(blob: Blob, type = blob.type): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return `data:${type};base64,${btoa(binary)}`;
+}
+
 /** Lo que se busca que pese el fondo. */
 export const SHRINK_TARGET = 1_500_000;
 /** El tope duro del fondo en el motor y en la cuenta. */

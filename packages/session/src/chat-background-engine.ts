@@ -9,14 +9,13 @@
  * web, la de un workspace de la cuenta se lee y se sube a la cuenta
  * (`capabilities().accountAssets`); el motor la baja al reconciliar.
  */
-import { type ChatBackgroundChange, chatBackgroundView } from "../../../engine-client/src/index.ts";
-import { blobToDataUrl } from "../../../features/settings/src/model/account-profile.ts";
-import { VELO_DE_FONDO, VELO_DE_PANELES, VELO_DE_PESTANAS, fondoDe, type FondoDeChat } from "./chat-background.ts";
-import * as store from "./chat-background-store.ts";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { capabilities } from "../../../host/src/platform.ts";
-import { shrinkImage } from "./shrink-image.ts";
-import { errorCode, unknownCommand } from "./errorCode.ts";
+import { type ChatBackgroundChange, chatBackgroundView } from "../../engine-client/src/index.ts";
+import { VELO_DE_FONDO, VELO_DE_PANELES, VELO_DE_PESTANAS, fondoDe, type FondoDeChat } from "../../ui/src/lib/chat-background.ts";
+import * as store from "../../ui/src/lib/chat-background-store.ts";
+import { invoke } from "../../engine-client/src/client.ts";
+import { capabilities } from "../../host/src/platform.ts";
+import { blobToDataUrl, shrinkImage } from "../../ui/src/lib/shrink-image.ts";
+import { errorCode, unknownCommand } from "../../ui/src/lib/errorCode.ts";
 
 /** El tope de un motor anterior: si lo rechaza, se reduce hasta ahí y se intenta otra vez. */
 const TOPE_DE_MOTOR_ANTERIOR = 700_000;
