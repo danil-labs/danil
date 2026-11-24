@@ -187,7 +187,17 @@
   "settings.tools.state.silent": "no responde",
   "settings.tools.test": "Probar conexión",
   "settings.tools.testing": "Probando…",
+  "settings.update.available": "Hay una versión nueva:",
+  "settings.update.check": "Buscar actualización",
+  "settings.update.checking": "Mirando si hay una versión nueva…",
+  "settings.update.detail": "Detalle para reportarlo",
+  "settings.update.downloading": "Descargando… No cierres la app.",
   "settings.update.error_download": "No se pudo descargar la versión nueva. Vuelve a intentar.",
+  "settings.update.install": "Actualizar",
+  "settings.update.ready": "Lista. Se aplica al reiniciar; las tareas que están corriendo siguen trabajando.",
+  "settings.update.relaunch": "Reiniciar ahora",
+  "settings.update.unreachable": "No pude comprobar si hay una versión nueva.",
+  "settings.update.unreachable_retry": "Revisa tu conexión a internet y vuelve a intentar.",
   "settings.update.uptodate": "Tienes la versión más reciente.",
   "settings.workspaces.blocked": {
     "one": "Hay {count} tarea contestando ahora mismo. Borrar el workspace se llevaría la carpeta donde está escribiendo.",
@@ -404,5 +414,13 @@
   "settings.ai_providers.no_accounts": "Todavía no hay cuentas. Usa «Agregar cuenta» para conectar la primera.",
   "settings.ai_providers.add_unavailable": "Podrás agregar una cuenta cuando la máquina diga qué proveedores tiene.",
   "settings.ai_providers.zen_go": "OpenCode",
-  "settings.agents.business": "Incluido en Business"
+  "settings.agents.business": "Incluido en Business",
+  "settings.entry.maintenance": "Mantenimiento",
+  "settings.maintenance.updates": "Actualizaciones",
+  "settings.maintenance.app_updates": "Actualizaciones de la app",
+  "settings.maintenance.versions": "Versiones",
+  "settings.maintenance.app_version": "Aplicación",
+  "settings.maintenance.app_value": "Danil v{version}",
+  "settings.maintenance.engine_version": "Motor",
+  "settings.maintenance.unavailable": "No disponible"
 }

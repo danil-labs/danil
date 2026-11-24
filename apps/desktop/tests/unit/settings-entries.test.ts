@@ -26,6 +26,8 @@ test("old settings ids open the entry and tab that now hold them", () => {
   assert.deepEqual(settingsTarget("connections"), { entry: "connections", tab: null });
   assert.deepEqual(settingsTarget("business"), { entry: "billing", tab: "business" });
   assert.deepEqual(settingsTarget("fiscal"), { entry: "billing", tab: "fiscal" });
+  assert.deepEqual(settingsTarget("maintenance"), { entry: "maintenance", tab: null });
+  assert.deepEqual(settingsTarget("download"), { entry: "maintenance", tab: null });
 });
 
 test("unknown or empty ids open nothing in particular", () => {
@@ -33,14 +35,19 @@ test("unknown or empty ids open nothing in particular", () => {
   assert.equal(settingsTarget("bitacora"), null);
 });
 
-test("eight entries, security stands after account in group you, every tab in exactly one", () => {
-  assert.equal(SETTINGS_ENTRIES.length, 8);
+test("nine entries, security stands after account in group you, maintenance in footer, every tab in exactly one", () => {
+  assert.equal(SETTINGS_ENTRIES.length, 9);
   const accountIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "account");
   const securityIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "security");
+  const preferences = SETTINGS_ENTRIES.find((e) => e.id === "preferences");
+  const maintenance = SETTINGS_ENTRIES.find((e) => e.id === "maintenance");
   assert.equal(securityIndex, accountIndex + 1);
   assert.equal(SETTINGS_ENTRIES[securityIndex].group, "you");
   assert.deepEqual([...SETTINGS_ENTRIES[securityIndex].tabs], ["security"]);
   assert.ok(!(SETTINGS_ENTRIES[accountIndex].tabs as readonly string[]).includes("security"));
+  assert.ok(preferences && !(preferences.tabs as readonly string[]).includes("download"));
+  assert.equal(maintenance?.group, "footer");
+  assert.deepEqual(maintenance ? [...maintenance.tabs] : [], ["maintenance"]);
   const tabs = SETTINGS_ENTRIES.flatMap((e) => [...e.tabs]);
   assert.equal(new Set(tabs).size, tabs.length);
 });

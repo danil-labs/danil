@@ -171,7 +171,6 @@
   "web.computers.no_account": "Your session is valid, but your Danil account could not be found. Try again or contact support; you do not need to create another identity.",
   "web.admin.title": "Harness",
   "web.auth.access_required": "Your Danil account cannot sign in yet. Sign in again in a few minutes. If it still fails, contact Danil support.",
-  "web.download.tab": "Get the app",
   "web.download.title": "Get the desktop app",
   "web.download.action": "Download",
   "web.download.all": "See all downloads",
