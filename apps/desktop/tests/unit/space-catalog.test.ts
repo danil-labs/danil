@@ -115,3 +115,38 @@ test("buildInitialSeed normalizes machine-prefixed spaces, folders, and task ass
   });
   assert.equal(buildInitialSeed([], sesiones), null);
 });
+
+test("projectCatalogSessions preserves valid engine row.space when task_spaces has no entry", () => {
+  const catalog = {
+    version: 1,
+    spaces: [
+      { id: "sp_default", name: "Default", folders: [] },
+      { id: "sp_product", name: "Producto", folders: [] },
+    ],
+    order: ["sp_default", "sp_product"],
+    task_spaces: {
+      t_override: "sp_default",
+    },
+  };
+  const sesiones = {
+    "": [
+      { id: "t_bare", space: "sp_product", parent: null },
+      { id: "cmp_vm~t_prefixed", space: "cmp_vm~sp_product", parent: null },
+      { id: "t_override", space: "sp_product", parent: null },
+      { id: "t_cleared", space: "sp_product", parent: null },
+      { id: "t_unknown", space: "sp_deleted", parent: null },
+      { id: "t_empty", space: null, parent: null },
+    ],
+  };
+
+  const projected = projectCatalogSessions(catalog, { t_cleared: null }, sesiones);
+  const byId = Object.fromEntries(projected[""].map((row) => [row.id, row.space]));
+  assert.deepEqual(byId, {
+    t_bare: "sp_product",
+    "cmp_vm~t_prefixed": "sp_product",
+    t_override: "sp_default",
+    t_cleared: "sp_default",
+    t_unknown: "sp_default",
+    t_empty: "sp_default",
+  });
+});

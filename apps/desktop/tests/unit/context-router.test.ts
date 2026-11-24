@@ -4,6 +4,7 @@ import { Fleet, type Link } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { contextAttentionStale, createContextAttention } from "../../../../packages/features/machines/src/queries/context-attention.ts";
 import { createContextRouter } from "../../../../packages/features/machines/src/queries/context-router.ts";
+import { runsWorkspace } from "../../../../packages/features/machines/src/model/runs-workspace.ts";
 import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
 import { scopedFleet } from "../../../../packages/features/machines/src/queries/scoped-fleet.ts";
 import { activeWorkspaceContext, captureWorkspaceContext, displayWorkspaceContext, displayWorkspaceSnapshot, rememberWorkspaceSnapshot, requestedWorkspaceSnapshot, setActiveWorkspaceContext, setDisplayWorkspaceContext } from "../../src/lib/workspace-context.ts";
@@ -604,3 +605,128 @@ test("Web ignores volatile machine_resources changes when comparing progressive 
   }
 });
 
+
+test("stopped wakeable cloud VM with unknown workspace listing stays pickable in machine_list and createsOn (Web and Desktop org)", async () => {
+  const offlineLink = (): Link => ({
+    state: () => "offline",
+    start() {},
+    close() {},
+    subscribe() {},
+    onState: () => () => {},
+    onEvents: () => () => {},
+    async call() {
+      throw { code: "machine_off" };
+    },
+  });
+
+  // Web mode (!local): Mac is online hosting "same"; Cloud VM is asleep (power=off, no listing yet).
+  let picked: string | null = null;
+  const webFleet = new Fleet({
+    self: null,
+    connect: (info) =>
+      info.id === "mac"
+        ? {
+            state: () => "online", start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {},
+            async call(_id, command) {
+              if (command === "list_workspaces") return { value: { workspaces: [{ id: "same", name: "Danil" }], active: "same" }, cached: null };
+              return { value: null, cached: null };
+            },
+          }
+        : offlineLink(),
+  });
+  webFleet.setMachines([
+    { id: "mac", name: "Mac", wakes: false, kind: "personal", context: "a" },
+    { id: "vm_cloud", name: "Nube Danil", wakes: true, kind: "organization", organizationId: "org", context: "a", linked: new Set(["same"]) },
+    { id: "vm_other", name: "Otra Nube", wakes: true, kind: "organization", organizationId: "org", context: "a", linked: new Set(["other_ws"]) },
+  ]);
+  webFleet.setListing("mac", [{ id: "same", name: "Danil" }], "a");
+
+  const webRouter = createRouter({
+    self: null,
+    native: null,
+    fleet: webFleet,
+    pickedFor: () => picked,
+    contextInfo: (context) => (context === "a" ? { org: "org", plan: "teams" } : null),
+  });
+  try {
+    await webRouter.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    const rows = (await webRouter.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean; wakes: boolean; on: boolean;
+    }>;
+    const cloud = rows.find((r) => r.id === "vm_cloud");
+    const other = rows.find((r) => r.id === "vm_other");
+    assert.ok(cloud, "stopped wakeable org VM must appear in machine_list");
+    assert.equal(cloud.hosts, null, "unknown listing while asleep must report hosts: null");
+    assert.equal(cloud.refuses, false, "stopped wakeable VM linked to workspace must not be refused");
+    assert.equal(runsWorkspace(cloud), true, "MachinePicker must offer the stopped wakeable VM");
+    assert.ok(other && other.hosts === false && other.refuses === true && !runsWorkspace(other), "VM linked only to another workspace stays refused");
+
+    picked = "vm_cloud";
+    assert.equal(webRouter.createsOn("same")?.machine, "vm_cloud", "explicit pick of stopped wakeable VM is honored");
+
+    // Once the VM comes online and lists workspaces NOT containing "same", it is refused.
+    webFleet.setListing("vm_cloud", [{ id: "other_ws", name: "Other" }], "a");
+    const afterListing = (await webRouter.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    const cloudAfter = afterListing.find((r) => r.id === "vm_cloud");
+    assert.ok(cloudAfter && cloudAfter.hosts === false && cloudAfter.refuses === true && !runsWorkspace(cloudAfter));
+  } finally {
+    webRouter.close();
+  }
+
+  // Web mode with NO online machine: stopped wakeable VM becomes default lead for createsOn; org-confined VM for another workspace stays refused.
+  const soloFleet = new Fleet({ self: null, connect: () => offlineLink() });
+  soloFleet.setMachines([
+    { id: "vm_cloud", name: "Nube Danil", wakes: true, kind: "organization", organizationId: "org", context: "a", linked: new Set(["same"]) },
+    { id: "vm_confined", name: "Otra Org", wakes: true, kind: "organization", organizationId: "org", context: "a", organization: { id: "org", workspaces: [{ id: "other_ws", name: "Other" }] } },
+  ]);
+  const soloRouter = createRouter({
+    self: null,
+    native: null,
+    fleet: soloFleet,
+    contextInfo: (context) => (context === "a" ? { org: "org", plan: "teams" } : null),
+  });
+  try {
+    await soloRouter.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    assert.deepEqual(soloRouter.createsOn("same"), { machine: "vm_cloud", lead: true }, "stopped wakeable VM becomes default lead when no online machine lists workspace");
+    const rows = (await soloRouter.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      id: string; hosts: boolean | null; refuses?: boolean;
+    }>;
+    const confined = rows.find((r) => r.id === "vm_confined");
+    assert.ok(confined && confined.hosts === false && confined.refuses === true && !runsWorkspace(confined), "VM confined to another org workspace stays refused even with null linked");
+  } finally {
+    soloRouter.close();
+  }
+
+    // Desktop org mode (scopedLocal): local Mac hosts "same"; Cloud VM is asleep with unknown listing.
+  let deskPicked: string | null = "vm_cloud";
+  const deskFleet = new Fleet({ self: "local", connect: () => offlineLink() });
+  deskFleet.setMachines([
+    { id: "vm_cloud", name: "Nube Danil", wakes: true, kind: "organization", organizationId: "org", context: "a", linked: new Set(["same"]) },
+  ]);
+  const deskRouter = createRouter({
+    self: "local",
+    fleet: deskFleet,
+    pickedFor: () => deskPicked,
+    contextInfo: (context) => (context === "a" ? { org: "org", plan: "teams" } : null),
+    native: async (command) => {
+      if (command === "list_workspaces") {
+        return { workspaces: [{ id: "same", name: "Danil", account: { org: "org" } }], active: "same" };
+      }
+      return null;
+    },
+  });
+  try {
+    await deskRouter.handle("list_workspaces", {});
+    await deskRouter.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    const rows = (await deskRouter.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    const cloud = rows.find((r) => r.id === "vm_cloud");
+    assert.ok(cloud && cloud.hosts === null && cloud.refuses === false && runsWorkspace(cloud));
+    assert.equal(deskRouter.createsOn("same")?.machine, "vm_cloud");
+  } finally {
+    deskRouter.close();
+  }
+});

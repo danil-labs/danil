@@ -67,12 +67,20 @@ export function projectCatalogSessions<T extends SessionLike>(
     const saved = catalog.task_spaces[ref];
     return saved && validIds.has(saved) ? saved : undefined;
   };
+  const validEngineSpace = (space: string | null | undefined): string | undefined => {
+    const bare = canonicalRef(space);
+    return bare && validIds.has(bare) ? bare : undefined;
+  };
   let anyChanged = false;
   const next: Record<string, T[]> = {};
   for (const [folder, rows] of Object.entries(sesiones)) {
     let folderChanged = false;
     const mapped = rows.map(row => {
-      const target = lookup(canonicalRef(row.id)) ?? lookup(canonicalRef(row.parent)) ?? defaultSpace;
+      const target =
+        lookup(canonicalRef(row.id)) ??
+        lookup(canonicalRef(row.parent)) ??
+        validEngineSpace(row.space) ??
+        defaultSpace;
       if (row.space === target) return row;
       folderChanged = true;
       return { ...row, space: target };
