@@ -16,7 +16,7 @@ import type { SidebarFilterProps } from "../shell/SidebarFilter";
 export type SpacesStateDeps = { bloqueo: Accessor<Frase | null>; pestanas: ReturnType<typeof createTabs>; projectCatalog: { fromCache: (projects: Project[]) => void }; projectList: Accessor<Project[]>; proyectoAbierto: Accessor<string | null>; sesiones: Accessor<Record<string, SessionRow[]>>; setError: (msg: string) => void; setSesiones: Setter<Record<string, SessionRow[]>>; workspaceActivo: Accessor<string | null>; onCatalogSync?: () => void; };
 
 export function createSpacesState(deps: SpacesStateDeps) {
-  const { bloqueo, pestanas, projectCatalog, projectList, proyectoAbierto, sesiones, setError, setSesiones, workspaceActivo } = deps;
+  const { bloqueo, pestanas, projectCatalog, projectList, proyectoAbierto, sesiones: rawSesiones, setError, setSesiones, workspaceActivo } = deps;
 
   const pestanaActiva = () => (proyectoAbierto() ? null : pestanas.active());
   // Los escritorios del workspace (`lib/spaces.ts`). Sin lista —un servicio
@@ -31,9 +31,13 @@ export function createSpacesState(deps: SpacesStateDeps) {
     save: (ids: string[]) => spaceCatalog.saveOrder(ids, localOrder),
   };
   const spaces = createMemo(() => spaceCatalog.arrange(rawSpaces(), localOrder));
+  const sesiones = createMemo(() => spaceCatalog.projectSessions(rawSesiones()));
   createEffect(() => {
     const rows = rawSpaces();
-    if (rows.length > 0 && spaceCatalog.catalog()) void spaceCatalog.sync(rows);
+    const catalog = spaceCatalog.catalog();
+    if (rows.length > 0 && catalog && catalog.version === 0 && catalog.spaces.length === 0) {
+      void spaceCatalog.sync(rows, rawSesiones());
+    }
   });
   const [escritorio, setEscritorio] = createSignal<string | null>(null);
   const [sidebarFilter, setSidebarFilter] = createSignal<SidebarFilterProps | null>(null);
@@ -101,5 +105,5 @@ export function createSpacesState(deps: SpacesStateDeps) {
     pestanas.open().filter(isContentTab).map((p) => p.id),
   );
 
-  return { activeSpace, bordeDeLaBarra, buscando, enCache, escritorio, guardarCache, idsDeContenido, medirBordeDeLaBarra, multipleSpaces, pestanaActiva, rawSpaces, setBuscando, setEnCache, setEscritorio, setSidebarFilter, setSpaces, shellCache, sidebarFilter, spaceCatalog, spaceOrder, spaces, workspaceActual, workspacesDeLaFranja };
+  return { activeSpace, bordeDeLaBarra, buscando, enCache, escritorio, guardarCache, idsDeContenido, medirBordeDeLaBarra, multipleSpaces, pestanaActiva, rawSpaces, sesiones, setBuscando, setEnCache, setEscritorio, setSidebarFilter, setSpaces, shellCache, sidebarFilter, spaceCatalog, spaceOrder, spaces, workspaceActual, workspacesDeLaFranja };
 }

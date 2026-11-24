@@ -492,6 +492,25 @@ function createRouterCore(config: RouterConfig) {
 
   /** Una lectura de la barra: lo de aquí ya, más lo último de cada otra máquina del workspace. */
   async function fanRead(command: string, args: Args, workspace: string | null, options: Options): Promise<unknown> {
+    if (command === "list_spaces" && workspace && config.readWorkspaceSpaces) {
+      const catalog = await config.readWorkspaceSpaces(workspace).catch(() => null);
+      if (catalog?.spaces.length) {
+        return learning(() => {
+          for (const entry of catalog.spaces) fleet.markShared(entry.id);
+          return arrangeSpaces(
+            catalog.spaces.map(entry => ({
+              id: entry.id,
+              name: entry.name,
+              folders: [...entry.folders],
+              created_at: 0,
+              updated_at: 0,
+              account: true,
+            })),
+            catalog.order,
+          );
+        });
+      }
+    }
     const members = command === "list_workspace_attention" ? fleet.machines().map((m) => m.id) : membersOf(workspace);
     if (elsewhere(workspace) && (!local || scopedLocal) && workspace && !members.length && command !== "list_workspace_attention") throw noMachine();
     // El canal de avance se queda en la ventana: por el relay vuelve solo la respuesta final.
@@ -524,28 +543,8 @@ function createRouterCore(config: RouterConfig) {
           ])).flat();
       slices.push(...result);
     }
-    const catalog = command === "list_spaces" && workspace && config.readWorkspaceSpaces
-      ? await config.readWorkspaceSpaces(workspace).catch(() => null)
-      : null;
     if (command === "list_workspace_attention") for (const s of slices) if (s.has) attention.set(s.machine, fleet.encode(s.machine, s.value));
-    const merged = learning(() => {
-      if (catalog) for (const entry of catalog.spaces) fleet.markShared(entry.id);
-      const base = fleet.merge(command, command === "list_session_git" ? slices.map(gitSlice) : slices, workspace);
-      if (command !== "list_spaces" || !catalog?.spaces.length) return base;
-      const rows = new Map<string, Record<string, unknown>>();
-      if (Array.isArray(base)) {
-        for (const row of base) {
-          if (row && typeof row === "object" && typeof (row as { id?: unknown }).id === "string") {
-            rows.set((row as { id: string }).id, row as Record<string, unknown>);
-          }
-        }
-      }
-      for (const entry of catalog.spaces) {
-        const existing = rows.get(entry.id);
-        rows.set(entry.id, { created_at: 0, updated_at: 0, folders: [], ...existing, id: entry.id, name: entry.name, account: true });
-      }
-      return arrangeSpaces([...rows.values()] as { id: string }[], catalog.order);
-    });
+    const merged = learning(() => fleet.merge(command, command === "list_session_git" ? slices.map(gitSlice) : slices, workspace));
     if (Array.isArray(merged) && unconfirmed.length) markUnconfirmedOpen(merged, unconfirmed);
     if (merged !== undefined) return merged;
     throw noAnswer(slices, workspace);
@@ -662,17 +661,22 @@ function createRouterCore(config: RouterConfig) {
     const isCreate = CREATE.has(command) || command === "create_empty_session";
     const read = config.readWorkspaceSpaces;
     const features = fleet.info(machine)?.features;
-    if (workspace && read && (features === undefined || features.includes("workspace_space_catalog_v1"))) {
+    if (workspace && read) {
       const catalog = await read(workspace).catch(() => null);
       const entry = catalog?.spaces.find(item => item.id === id);
       if (entry) {
-        try {
-          await fleet.call({ machine, workspace, command: "ensure_workspace_space", args: { id, name: entry.name } });
-          fleet.markShared(id);
-          lastRead.delete(JSON.stringify([machine, "list_spaces", workspace, {}]));
-          return { ...args, space: id };
-        } catch (error) {
-          if (!isUnknownCommand(error)) throw error;
+        if (features !== undefined && !features.includes("workspace_space_catalog_v1")) {
+          if (isCreate) return { ...args, space: null };
+        } else {
+          try {
+            await fleet.call({ machine, workspace, command: "ensure_workspace_space", args: { id, name: entry.name } });
+            fleet.markShared(id);
+            lastRead.delete(JSON.stringify([machine, "list_spaces", workspace, {}]));
+            return { ...args, space: id };
+          } catch (error) {
+            if (!isUnknownCommand(error)) throw error;
+            if (isCreate) return { ...args, space: null };
+          }
         }
       }
     }

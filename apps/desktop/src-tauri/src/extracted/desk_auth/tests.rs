@@ -630,6 +630,8 @@ fn only_the_mvp_routes_are_callable() {
         ("POST", "/v1/workspaces"),
         ("POST", "/v1/workspaces/adopt"),
         ("POST", "/v1/workspaces/adopt/challenge"),
+        ("GET", "/v1/workspaces/42/spaces"),
+        ("POST", "/v1/workspaces/42/spaces"),
         ("POST", "/v1/workspaces/42/transfers"),
         (
             "POST",
@@ -644,6 +646,7 @@ fn only_the_mvp_routes_are_callable() {
         assert!(allowed(m, p), "{m} {p}");
     }
     for (m, p) in [
+        ("DELETE", "/v1/workspaces/42/spaces"),
         ("GET", "/v1/messaging/conversations"),
         ("POST", "/v1/credits/balance"),
         ("GET", "/v1/credits/balance?organization=org_other"),
