@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative as invoke } from "../../../host/src/native.ts";
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
 import { listen } from "../../../host/src/serviceEvents.ts";
 import { capabilities } from "../../../host/src/platform";

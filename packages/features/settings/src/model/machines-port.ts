@@ -1,4 +1,4 @@
-import type { InvokeOptions } from "@tauri-apps/api/core";
+import type { InvokeOptions } from "../../../../engine-client/src/client.ts";
 import type { Machine } from "../../../../ui/src/lib/machine";
 
 /**

@@ -1,4 +1,4 @@
-import type { InvokeOptions } from "@tauri-apps/api/core";
+import type { InvokeOptions } from "../../../../host/src/native.ts";
 import type { GitHost } from "../../../../session/src/gitHosts";
 import type { Source } from "../../../../ui/src/lib/model";
 

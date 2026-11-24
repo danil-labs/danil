@@ -218,7 +218,16 @@
     "packages/features/*": {
       "project": ["src/**/*.{ts,tsx}"]
     },
+    "packages/features/{artifacts,chat,code,projects,settings}": {
+      "ignoreDependencies": ["@tauri-apps/api"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/shell": {
+      "ignoreDependencies": ["@tauri-apps/api"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
     "packages/features/machines": {
+      "ignoreDependencies": ["@tauri-apps/api"],
       "entry": [
         // Lo que reexporta el shim packages/carry para apps/mobile.
         "src/model/carryTypes.ts",

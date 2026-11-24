@@ -1,4 +1,5 @@
 import { type InvokeArgs, type InvokeOptions, invoke as tauri } from "@tauri-apps/api/core";
+export { Channel, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
 import { connected, whenConnected } from "../../session/src/engineConnection.ts";
 import { withoutAbout } from "../../ui/src/lib/taskMentions.ts";
 import { captureWorkspaceContext } from "../../session/src/workspace-context.ts";

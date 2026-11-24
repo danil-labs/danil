@@ -1,4 +1,4 @@
-import { getVersion } from "@tauri-apps/api/app";
+import { getVersion } from "../../../../host/src/native.ts";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
