@@ -343,7 +343,7 @@
   "settings.tab.security": "Security",
   "settings.security.title": "Sign-in and sessions",
   "settings.security.status": "Sign-in controls, active sessions, and account security options will appear here.",
-  "settings.nav.connections": "Connections",
+  "settings.nav.connections": "Connectors",
   "settings.tab.emails": "Emails",
   "settings.tab.customers": "Customer service",
   "settings.tab.plugins": "Plugins",
