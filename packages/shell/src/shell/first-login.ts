@@ -33,13 +33,13 @@ type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>
  * Los locales sin organización que este motor puede ligar. `0` con un motor que no sabe adoptar;
  * `null` si no se sabe (sin respuesta del motor): quien marca el login como hecho no debe adivinar.
  */
-export async function localCandidateCount(invoke: Invoke, features?: () => Promise<readonly string[] | null>): Promise<number | null> {
+export async function localCandidateCount(rpc: Invoke, features?: () => Promise<readonly string[] | null>): Promise<number | null> {
   try {
-    const self = (await invoke<{ id: string; local?: boolean; features?: string[] }[]>("machine_list")).find((m) => m.local);
+    const self = (await rpc<{ id: string; local?: boolean; features?: string[] }[]>("machine_list")).find((m) => m.local);
     const announced = features ? await features().catch(() => null) : self?.features ?? null;
     if (!self || !announced) return null;
     if (!announced.includes("account_adoption_v1") || !announced.includes("account_adoption_proof_v1")) return 0;
-    return (await invoke<{ adoptable?: boolean }[]>("adoption_candidates", { "x-terminus-machine": self.id })).filter((c) => c.adoptable !== false).length;
+    return (await rpc<{ adoptable?: boolean }[]>("adoption_candidates", { "x-terminus-machine": self.id })).filter((c) => c.adoptable !== false).length;
   } catch {
     return null;
   }

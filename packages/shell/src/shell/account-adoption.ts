@@ -98,7 +98,7 @@ async function platformByEngine(send: Send, context: string): Promise<Map<string
  * pedido no se sella.
  */
 export async function adoptLocals(
-  invoke: Invoke,
+  rpc: Invoke,
   header: Record<string, unknown>,
   send: Send,
   free: { context_id: string; org: string },
@@ -114,7 +114,7 @@ export async function adoptLocals(
   const empty = { adopted, already, refused, failed, unavailable: false, cause: null, attempted: 0 };
   let candidates: AdoptionCandidate[];
   try {
-    candidates = await invoke<AdoptionCandidate[]>("adoption_candidates", header);
+    candidates = await rpc<AdoptionCandidate[]>("adoption_candidates", header);
   } catch {
     return { ...empty, cause: "engine" };
   }
@@ -135,7 +135,7 @@ export async function adoptLocals(
     if (known) {
       // La plataforma ya la tiene: no se reclama otra vez, solo se recupera el sello local.
       try {
-        await invoke("adopt_account_workspace", { ...header, id: c.id, account: { org: free.org, account_id: known } });
+        await rpc("adopt_account_workspace", { ...header, id: c.id, account: { org: free.org, account_id: known } });
         already.push({ id: c.id, name: c.name });
         progress(c.id, c.name, "done");
         pending.add({ id: c.id, context: free.context_id, org: free.org, account_id: known });
@@ -159,7 +159,7 @@ export async function adoptLocals(
         continue;
       }
       nonce = value;
-      proof = proofOf(await invoke("adoption_proof", { ...header, id: c.id, nonce, org: free.org, sub }));
+      proof = proofOf(await rpc("adoption_proof", { ...header, id: c.id, nonce, org: free.org, sub }));
       if (!proof) {
         failed.push({ id: c.id, name: c.name, reason: "proof" });
         continue;
@@ -193,7 +193,7 @@ export async function adoptLocals(
       continue;
     }
     try {
-      await invoke("adopt_account_workspace", { ...header, id: c.id, account: { org: free.org, account_id: accountId } });
+      await rpc("adopt_account_workspace", { ...header, id: c.id, account: { org: free.org, account_id: accountId } });
     } catch {
       // La cuenta ya es de la persona en la plataforma: el siguiente repaso la sella (`already`).
       failed.push({ id: c.id, name: c.name, reason: "seal" });

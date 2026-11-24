@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { t } from "../../../ui/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { legible, type Query, type Read } from "../../../ui/src/lib/limits";
 import { detalleDe } from "../../../ui/src/Failure";
 import { displayWorkspaceContext } from "../../../session/src/workspace-context";
@@ -62,7 +62,7 @@ export function createUsage(props: {
     const k = usageKey(agent, id);
     setInProgress((p) => ({ ...p, [k]: true }));
     try {
-      const r = await invoke<Query>("account_limits", {
+      const r = await callShellEngine<Query>("account_limits", {
         provider: agent,
         id,
         // force es el nombre del parámetro del puente; otro nombre no forzaría la consulta.
@@ -127,7 +127,7 @@ export function createUsage(props: {
         const rowCount = await Promise.all(
           ids.split(",").map(async (id): Promise<AccountsByAgent | null> => {
             try {
-              const l = await invoke<AccountList>("list_accounts", { provider: id }, accountOptions);
+              const l = await callShellEngine<AccountList>("list_accounts", { provider: id }, accountOptions);
               return {
                 agent: id,
                 label: accountLabel(id),
@@ -177,7 +177,7 @@ export function createUsage(props: {
       void Promise.all(
         cards.map(async (p) => {
           try {
-            const status = await invoke<AccountStatus>("account_status", {
+            const status = await callShellEngine<AccountStatus>("account_status", {
               provider: p.agent,
               id: p.cuenta.id,
             }, machineOf(p.cuenta.id));
@@ -227,7 +227,7 @@ export function createUsage(props: {
 
   async function rename(agent: string, id: string, label: string) {
     try {
-      const updated = await invoke<Account>(
+      const updated = await callShellEngine<Account>(
         "rename_account",
         { provider: agent, id, label },
         machineOf(id),

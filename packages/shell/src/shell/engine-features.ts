@@ -4,12 +4,12 @@
  * inventario de computers, que puede no traerlos. Espera al motor mientras la ventana está
  * en `connecting` para no confundir el arranque con un motor sin `person_session_v1`.
  */
-import { invokeNative as invoke } from "../../../host/src/native.ts";
+import { invokeNative } from "../../../host/src/native.ts";
 import { untilConnected } from "../../../engine-client/src/client.ts";
 
 export async function engineFeatures(): Promise<string[] | null> {
   try {
-    const self = (await untilConnected(() => invoke<{ local?: boolean; features?: unknown }[]>("machine_list"))).find((m) => m.local);
+    const self = (await untilConnected(() => invokeNative<{ local?: boolean; features?: unknown }[]>("machine_list"))).find((m) => m.local);
     return Array.isArray(self?.features) ? self.features.filter((f): f is string => typeof f === "string") : null;
   } catch {
     return null;
