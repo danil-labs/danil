@@ -55,6 +55,13 @@ test("kind: la personal se lista junto a la de la organización y no se ofrece d
   // Sin kind o con uno desconocido cuenta como de organización.
   assert.equal(machineToComputer({ ...mac, kind: undefined }).wakeable, true);
   assert.equal(machineToComputer({ ...mac, kind: "shared" }).wakeable, true);
+  // `machine-provisioning` devuelve `hosted | connected`; se normalizan a `organization | personal`.
+  const hosted = machineToComputer({ ...machine, machine_id: "cmp_vm", state: "stopped", connection: "disconnected", kind: "hosted", person_id: null });
+  assert.equal(hosted.kind, "organization");
+  assert.equal(hosted.wakeable, true);
+  const connected = machineToComputer({ ...machine, machine_id: "cmp_conn", state: "running", connection: "connected", kind: "connected", person_id: "user_1" });
+  assert.equal(connected.kind, "personal");
+  assert.equal(connected.wakeable, false);
 });
 
 test("404 y 501 son «no disponible», no un error; 401 sigue siendo 401", async () => {

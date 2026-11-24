@@ -97,3 +97,17 @@ test("the list shows another personal computer by its name and without wake; thi
   // Sin su motor, la personal se pinta sin conexión, no apagada (D-D).
   assert.equal(machineToComputer({ machine_id: "cmp_pc", state: "running", connection: "disconnected", kind: "personal" }).state, "offline");
 });
+
+test("hosted and connected rows from machine-provisioning normalize to organization and personal in Desk", () => {
+  const rows = [
+    { machine_id: "mch_vm", name: "Nube Danil", state: "stopped", connection: "disconnected", kind: "hosted", organization_id: "org_danil" },
+    { machine_id: "mch_alien", name: "Otra Org", state: "running", connection: "connected", kind: "hosted", organization_id: "org_other" },
+    { machine_id: "mch_pc", name: "PC-de-Ana", state: "running", connection: "disconnected", kind: "connected", person_id: "user_01A", organization_id: "org_danil" },
+    { machine_id: "mch_mac_danil", name: "MacBook-de-Ana", state: "running", connection: "connected", kind: "connected", person_id: "user_01A", organization_id: "org_danil" },
+  ].map(machineToComputer);
+  const merged = mergeContextMachines([{ context: DANIL, computers: rows }], new Set(["mch_mac_danil"]));
+  assert.deepEqual(merged.map(infoOf).map((m) => [m.id, m.name, m.wakes, m.kind]), [
+    ["mch_vm", "Nube Danil", true, "organization"],
+    ["mch_pc", "PC-de-Ana", false, "personal"],
+  ]);
+});

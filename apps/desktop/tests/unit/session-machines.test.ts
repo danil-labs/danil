@@ -14,6 +14,13 @@ const machine = (id: string, org: string) => ({ computer_id: id, organization_id
 test("one machine retains each context and rejects mismatched organization endpoints", () => {
   const contexts = [{ context_id: "a", org: "A" }, { context_id: "b", org: "A" }];
   assert.deepEqual(mergeContextMachines(contexts.map((context) => ({ context, computers: [{ ...machine("same", "A"), kind: "organization" }, { ...machine("alien", "B"), kind: "organization" }] }))).map((m) => [m.computer_id, m.context]), [["same", "a"], ["same", "b"]]);
+  const normalized = mergeContextMachines([{ context: { context_id: "a", org: "A" }, computers: [
+    { ...machine("vm", "A"), kind: "hosted" },
+    { ...machine("alien_vm", "B"), kind: "hosted" },
+    { ...machine("own_mac", "A"), kind: "connected" },
+    { ...machine("other_pc", "A"), kind: "connected" },
+  ] }], new Set(["own_mac"]));
+  assert.deepEqual(normalized.map((m) => [m.computer_id, m.kind]), [["vm", "organization"], ["other_pc", "personal"]]);
 });
 
 test("one inventory per context, admission and wake use the selected row, expired contexts cannot buy tickets", async () => {

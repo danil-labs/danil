@@ -1,4 +1,5 @@
 import type { Computer } from "../../../../platform-client/src/api.ts";
+import { normalizeMachineKind } from "../../../../platform-client/src/machines.ts";
 import { reportOrganizationProblem } from "../../../../session/src/organization-problems.ts";
 import { settledContextIds } from "../../../../session/src/settled-contexts.ts";
 import { createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines.ts";
@@ -12,9 +13,10 @@ export type ContextComputer = Computer & { context?: string };
 export function mergeContextMachines(groups: { context: Context; computers: Computer[] }[], own: ReadonlySet<string> = new Set()): ContextComputer[] {
   const rows = new Map<string, ContextComputer>();
   for (const { context, computers } of groups) for (const row of computers) {
-    if (row.kind === "organization" && row.organization_id !== context.org) continue;
-    if (row.kind === "personal" && own.has(row.computer_id)) continue;
-    rows.set(contextMachineKey(row.computer_id, context.context_id), { ...row, context: context.context_id });
+    const kind = normalizeMachineKind(row.kind);
+    if (kind === "organization" && row.organization_id !== context.org) continue;
+    if (kind === "personal" && own.has(row.computer_id)) continue;
+    rows.set(contextMachineKey(row.computer_id, context.context_id), { ...row, ...(kind !== undefined ? { kind } : {}), context: context.context_id });
   }
   return [...rows.values()];
 }
