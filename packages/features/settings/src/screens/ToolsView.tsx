@@ -1,12 +1,10 @@
 import type { MaquinasDeAjustes } from "../model/machines-port";
-import { Show, Suspense } from "solid-js";
+import { Show } from "solid-js";
 import { FailureNote } from "../../../../ui/src/Failure";
-import { t } from "../../../../ui/src/lib/i18n";
 import { GovernedNotice } from "../../../../ui/src/Governed";
 import { createHerramientas } from "./ToolsState";
 import { createListaDeHerramientas } from "./ToolsList";
 import { createAgentesDeHerramientas } from "./ToolsAgents";
-import { LocalKeysBanner, CredentialsInUse } from "./ToolsModel";
 
 export default function Herramientas(props: { solo?: string | string[]; maquinas: MaquinasDeAjustes }) {
   const herramientas = createHerramientas(props);
@@ -26,13 +24,6 @@ export default function Herramientas(props: { solo?: string | string[]; maquinas
           que puso alguien a mano — sin él el botón quedaba colgando debajo
           de la última tarjeta como si le perteneciera. */}
       <Agentes />
-
-      <Show when={!props.solo}>
-        <Suspense fallback={null}>
-          <LocalKeysBanner kinds={["mcp_secret"]} maquinas={props.maquinas} />
-          <CredentialsInUse kinds={["mcp_secret"]} title={t("danil.credentials.mcp_title")} />
-        </Suspense>
-      </Show>
 
       {/* Lo que contestó el inicio de sesión. Con caja y no como párrafo suelto:
           aparece al final de una lista de tarjetas y sin superficie propia se
