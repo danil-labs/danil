@@ -3,7 +3,7 @@
  * `Idempotency-Key` los lleva `@terminus/computers` (`organizations.ts`); aquí solo se espera un `busy`.
  * Un status que no es 2xx se vuelve `{status, code}`; uno desconocido se trata por su status.
  */
-import type { OrganizationSource } from "@terminus/computers";
+import type { OrganizationSource } from "../../../platform-client/src/organizations.ts";
 import { fetchEdgeOrganizations, selectEdgeOrganization } from "../../../platform-client/src/identity.ts";
 import { type BusyOptions, retryBusy } from "./select-busy.ts";
 import { CAPABILITIES_PATH } from "../../../platform-client/src/machines.ts";

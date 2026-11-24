@@ -1,4 +1,4 @@
-import { screenEnd, type ScreenEnd } from "@terminus/computers";
+import { screenEnd, type ScreenEnd } from "../model/screen.ts";
 
 export type Phase = "connecting" | "live" | ScreenEnd | "failed";
 

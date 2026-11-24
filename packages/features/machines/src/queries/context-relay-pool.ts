@@ -1,4 +1,5 @@
-import type { Blocked, DeferredFrame, EngineInfo, EventsPage, MachineState } from "@terminus/computers";
+import type { MachineState } from "../../../../platform-client/src/machine.ts";
+import type { Blocked, DeferredFrame, EngineInfo, EventsPage } from "../model/relay-frames.ts";
 import type { Link } from "../model/fleet/index.ts";
 
 type Clock = { now(): number; set(callback: () => void, ms: number): unknown; clear(timer: unknown): void };

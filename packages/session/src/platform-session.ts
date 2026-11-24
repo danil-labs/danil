@@ -1,4 +1,4 @@
-import { edgeIdentity, edgeTransport } from "@terminus/computers";
+import { edgeIdentity, edgeTransport } from "../../platform-client/src/edge.ts";
 import { z } from "zod";
 import { availableDanilCredits, scopedCreditsRead } from "../../platform-client/src/treasury.ts";
 import { webGroupAccount } from "../../../apps/desktop/src/web/group-account.ts";
@@ -10,7 +10,7 @@ const profile = z.object({ id: z.string().startsWith("user_"), name: z.string(),
 export type PlatformProfile = z.infer<typeof profile>;
 
 /** The edge's cookie transport and its error are shared with the phone on the web (`@terminus/computers`). */
-export { EdgeError as PlatformSessionError } from "@terminus/computers";
+export { EdgeError as PlatformSessionError } from "../../platform-client/src/edge.ts";
 export type { PlatformWorkspace } from "../../../apps/desktop/src/web/platform-workspaces.ts";
 export const platformTransport = edgeTransport;
 

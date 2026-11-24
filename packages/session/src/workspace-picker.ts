@@ -1,6 +1,6 @@
 import type { WorkspaceAddLink } from "../../../apps/desktop/src/lib/workspace-add-link.ts";
 import { z } from "zod";
-import type { EdgeTransport } from "@terminus/computers";
+import type { EdgeTransport } from "../../platform-client/src/edge.ts";
 import { workspaceId } from "../../../apps/desktop/src/web/platform-workspaces.ts";
 
 const id = z.string().min(1);

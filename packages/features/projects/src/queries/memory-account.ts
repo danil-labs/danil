@@ -8,14 +8,17 @@
  *   de Danil no tiene historial: solo su memoria local.
  */
 import {
-  entriesIn,
+  deleteMemoryFile,
   type MemoryFileRef,
-  type MemorySource,
-  memoryDirs,
   memoryFiles,
-  parseMemoryEntry,
+  memoryHistory,
+  type MemorySource,
+  type MemoryVersion,
   readMemoryFile,
-} from "@terminus/computers";
+  writeMemoryFile,
+} from "../../../../platform-client/src/memory.ts";
+import { entriesIn, memoryDirs, parseMemoryEntry } from "../model/memory.ts";
+export { deleteMemoryFile, memoryHistory, type MemoryVersion, readMemoryFile, writeMemoryFile };
 import { invoke } from "../../../../engine-client/src/client.ts";
 import type { MemoriaEntrada, MemoriaScope } from "../../../../ui/src/lib/model";
 import { capabilities } from "../../../../host/src/platform";

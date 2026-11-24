@@ -6,7 +6,6 @@
   "dependencies": {
     "@kobalte/core": "^0.13.13",
     "@tauri-apps/api": "^2.12.4",
-    "@terminus/computers": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "embla-carousel-solid": "^8.6.0",

@@ -1,4 +1,4 @@
-import type { MachineState, SystemId } from "@terminus/computers";
+import type { MachineState, SystemId } from "../../../platform-client/src/machine.ts";
 
 /**
  * `machine_list`: `hosts` es si tiene el workspace abierto (`null`, que no se sabe
