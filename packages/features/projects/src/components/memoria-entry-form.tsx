@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { asFailure, FailureNote, type Failure } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
 import { Textarea } from "../../../../ui/src/Textarea";
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { MemoriaEntrada, MemoriaScope } from "../../../../../apps/desktop/src/lib/model";
 import type { EntradaDeCuenta, MemoriaDeCuenta } from "../queries/memory-account";

@@ -3,7 +3,7 @@ import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { destinoAbrible } from "../../../../../apps/desktop/src/lib/links";
+import { destinoAbrible } from "../../../../ui/src/lib/chat/links";
 import { prosa } from "../../../../../apps/desktop/src/lib/prose";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";

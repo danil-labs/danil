@@ -1,8 +1,8 @@
 import { Show, createMemo } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { formatearDuracion, type Paso } from "../../../../../apps/desktop/src/lib/steps";
-import { activityElapsed } from "../../../../../apps/desktop/src/lib/turnActivity";
-import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
+import { activityElapsed } from "../model/turnActivity";
+import { createNow } from "../../../../ui/src/lib/sharedClock";
 import { MachineIcon } from "../../../../ui/src/MachineIcon";
 import { ActivityDots } from "./ActivityDots";
 

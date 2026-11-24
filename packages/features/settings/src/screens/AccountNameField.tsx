@@ -1,6 +1,6 @@
 import { Show, createSignal } from "solid-js";
 import { Input } from "../../../../ui/src/Input";
-import { enfocarYSeleccionar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocarYSeleccionar } from "../../../../ui/src/lib/focus";
 import { cn } from "../../../../../apps/desktop/src/lib/utils";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 

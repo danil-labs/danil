@@ -8,7 +8,7 @@ import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { SesionesDeAjustes } from "../model/sessions-port";
 import { LogoCrop } from "./LogoCrop";
-import { imagenInerte } from "../../../../../apps/desktop/src/lib/links";
+import { imagenInerte } from "../../../../ui/src/lib/chat/links";
 import { anunciarRenombrado, type Workspace } from "../queries/workspaces-store";
 import { capabilities } from "../../../../host/src/platform";
 import { elegirArchivoDeImagen } from "../../../../host/src/pick-image";

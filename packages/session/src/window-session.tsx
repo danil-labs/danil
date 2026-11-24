@@ -1,10 +1,10 @@
-import { parseWorkspaceAddLink } from "../../../apps/desktop/src/lib/workspace-add-link";
+import { parseWorkspaceAddLink } from "./workspace-add-link";
 import { createRoot, createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 import { forgetMachineNames } from './known-machine-names';
 import { aplicarLengua, t } from '../../../apps/desktop/src/lib/i18n';
 import { setShellCacheScope } from '../../../apps/desktop/src/lib/shellCache';
-import { seguirElTema } from '../../../apps/desktop/src/lib/theme';
+import { seguirElTema } from '../../ui/src/lib/theme';
 import { Button } from '../../ui/src/Button';
 import { ToastStack } from '../../ui/src/Toast';
 import { SessionLoading } from '../../../apps/desktop/src/web/auth/SessionLoading';

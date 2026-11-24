@@ -4,10 +4,10 @@ import Trash2 from "lucide-solid/icons/trash-2";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import type { Project } from "../../../../../apps/desktop/src/lib/model";
-import { PROJECT_NAME_MAX_LENGTH } from "../../../../../apps/desktop/src/lib/projectNames";
+import { PROJECT_NAME_MAX_LENGTH } from "../../../../ui/src/lib/projectNames";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { Pressable } from "../../../../ui/src/Pressable";
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
+import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 
 // ----------------------------------------------------------------- proyectos

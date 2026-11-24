@@ -14,7 +14,7 @@ import {
 import { Button } from "../../../../ui/src/Button";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
-import { createNow } from "../../../../../apps/desktop/src/lib/sharedClock";
+import { createNow } from "../../../../ui/src/lib/sharedClock";
 
 type Pairing = { code: string; expires_at_ms: number };
 

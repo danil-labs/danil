@@ -1,8 +1,8 @@
-import { atenderElCampo, enfocarSiNadieEscribe } from "../../../../../apps/desktop/src/lib/focus";
+import { atenderElCampo, enfocarSiNadieEscribe } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { applySuggestion } from "../../../../../apps/desktop/src/lib/mentions";
 import { groupRecipients, recipientId, recipientLabel, type RecipientCandidate } from "../../../../../apps/desktop/src/lib/recipients";
-import { slashPick, slashRows } from "../../../../../apps/desktop/src/lib/skills";
+import { slashPick, slashRows } from "../../../../ui/src/lib/skills";
 import { placeLabel, referenceId, searchPlaces, searchTasks, taskLabel, taskTarget, type MentionTarget } from "../../../../../apps/desktop/src/lib/taskMentions";
 import { workLabel } from "../../../../ui/src/lib/workLabel.ts";
 import type { Suggestion } from "../components/Suggestions";

@@ -1,7 +1,7 @@
 import { machineOf } from "../../../../host/src/machine";
 import { createMemo, createResource, createSignal } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { pooled, TASK_HISTORY_AT_ONCE } from "../../../../../apps/desktop/src/lib/pool";
+import { pooled, TASK_HISTORY_AT_ONCE } from "../model/pool";
 
 type Row = { id: string; updated_at: unknown };
 const shared = new Map<string, Promise<unknown>>();

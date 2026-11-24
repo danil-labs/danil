@@ -11,18 +11,18 @@ import { listWorkspaces } from "../../../features/settings/src/queries/engine-wo
 import { Lanzador, sealFirstFreeWorkspace, SessionGate } from "../shell";
 import ControlesDeVentana from "../shell/WindowControls";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { seguirElTema } from "../../../../apps/desktop/src/lib/theme";
+import { seguirElTema } from "../../../ui/src/lib/theme";
 import { aplicarEscala, atajoDeEscala } from "../../../../apps/desktop/src/lib/zoom";
-import { trimNativeMenu } from "../../../../apps/desktop/src/lib/contextMenu";
-import { acotarSeleccionarTodo } from "../../../../apps/desktop/src/lib/selectAll";
-import { activarBarrasAlDesplazar } from "../../../../apps/desktop/src/lib/scrollbars";
+import { trimNativeMenu } from "../../../host/src/contextMenu";
+import { acotarSeleccionarTodo } from "../../../host/src/selectAll";
+import { activarBarrasAlDesplazar } from "../../../host/src/scrollbars";
 import { aplicarVeloDePestanas } from "../../../../apps/desktop/src/lib/chat-background-store";
 import { aplicarLengua, refreshLanguage, lenguasDisponibles, semillaDelAlta } from "../../../../apps/desktop/src/lib/i18n";
 import { cargarPaquetes } from "../../../../apps/desktop/src/locales/packs";
 import { mountAfterLanguagePacks } from "../../../../apps/desktop/src/locales/startup";
 import { capabilities, setCapabilities } from "../../../host/src/platform";
 import { askGuestChannels } from "../../../features/machines/src/queries/guestChannels";
-import "../../../../apps/desktop/src/lib/sharedClock";
+import "../../../ui/src/lib/sharedClock";
 // Antes de montar nada: las pantallas de projects leen machines, code y chat por aquí.
 enchufarProyectos();
 enchufarAlta();

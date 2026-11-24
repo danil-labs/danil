@@ -3,7 +3,7 @@ import type { InvokeOptions } from "@tauri-apps/api/core";
 import { type JSX } from "solid-js";
 import type { ThreadSearchTarget } from "./ThreadSearch";
 import type { OlderState } from "../model/history";
-import type { ObservedTurnActivity as TurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation";
+import type { ObservedTurnActivity as TurnActivity } from "../model/activityObservation";
 import { type Lectura } from "../model/threadWindow";
 import { type MentionTarget, type PlaceCandidate, type TextEdit, type TaskCandidate, type TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
 import { type Recipient, type RecipientCandidate, type SenderTask } from "../../../../../apps/desktop/src/lib/recipients";
@@ -12,7 +12,7 @@ import type { Agent, AgentModels, HandlerStatus, ModoDePermiso, Source } from ".
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import type { MachineOf } from "../queries/history-details";
 import { type CatalogosDeModelos, type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
-import { type CliCommand, type Skill } from "../../../../../apps/desktop/src/lib/skills";
+import { type CliCommand, type Skill } from "../../../../ui/src/lib/skills";
 import type { Superficie } from "../../../../../apps/desktop/src/lib/surfaces";
 import type { Ventana } from "../../../../../apps/desktop/src/lib/usage";
 import { type AlMargen } from "../components/SideQuestion";

@@ -1,11 +1,11 @@
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { type Project, type Source } from "../../../../apps/desktop/src/lib/model.ts";
 import { sameSite, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../../apps/desktop/src/lib/panels";
-import { type Layout, type PanelGroup } from "../../../../apps/desktop/src/lib/panels-types.ts";
-import { createPointerDrag } from "../../../../apps/desktop/src/lib/pointer-drag";
+import { type Layout, type PanelGroup } from "../../../ui/src/lib/panels-types.ts";
+import { createPointerDrag } from "../../../ui/src/lib/pointer-drag";
 import { type Space } from "../../../../apps/desktop/src/lib/spaces.ts";
 import { isTaskTab } from "../../../../apps/desktop/src/lib/tabs";
-import { type ContentTab, type FileTab, type Tab } from "../../../../apps/desktop/src/lib/tabs-types.ts";
+import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
 import { esProvisional } from "../../../../apps/desktop/src/lib/taskDraft";
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
 import { arbolesDe, contiene, ubicar } from "../../../features/code/src/queries/treeKind";
