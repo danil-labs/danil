@@ -8,8 +8,8 @@ import { createRoot, createSignal, type JSX } from "solid-js";
 import type { AccountEmailsSource } from "../../features/settings/src/model/account-emails";
 import type { AccountProfileSource } from "../../features/settings/src/model/account-profile";
 import type { Account } from "../../features/settings/src/queries/accounts-store";
-import type { AuditLogSource } from "../../../apps/desktop/src/web/audit-log";
-import type { WorkspaceAssetsSource } from "../../../apps/desktop/src/web/workspace-assets";
+import type { AuditLogSource } from "../../platform-client/src/audit-log";
+import type { WorkspaceAssetsSource } from "../../platform-client/src/workspace-assets";
 
 /** Una cuenta agrupada (web y escritorio): las máquinas donde tiene sesión (`@terminus/fleet`, `merge.ts`). */
 export type AccountMachinesProps = {
@@ -61,7 +61,7 @@ export type WebAccountsSource = {
 export type Capabilities = import("../../../apps/desktop/src/lib/group-account").GroupAccountCapabilities & {
   revokeWorkspaceAccess?: (context: string, workspace: string) => Promise<"revoked" | "unavailable">;
   webPromo?: (code: string, idempotencyKey: string) => Promise<{ machine?: { state?: string }; unavailable?: boolean }>;
-  webWorkspacePicker?: import("../../../apps/desktop/src/web/workspace-picker").WorkspacePicker;
+  webWorkspacePicker?: import("../../session/src/workspace-picker").WorkspacePicker;
   webReauth?: { needed: () => boolean; signIn: () => void; failed?: () => boolean };
   /** Saldo de la cuenta Danil desde un BFF autenticado; ausente hasta verificar el adaptador. */
   danilCredits?: import("../../features/chat/src/model/danil-credits").DanilCreditsSource;

@@ -1,26 +1,9 @@
 import { checkoutReturn } from "./billing-v2-return";
+import { BILLING_LOGIN_KEY as LOGIN, BILLING_PAYMENT_KEY as PAYMENT, billingHref } from "../../../../packages/platform-client/src/billing-route.ts";
 
-const LOGIN = "danil.billing.login";
-const PAYMENT = "danil.billing.payment";
-const MAX_AGE_MS = 60 * 60_000;
-const billingPath = () => `${import.meta.env.BASE_URL}billing`;
+export { billingHref, rememberBillingLogin, rememberBillingReturn } from "../../../../packages/platform-client/src/billing-route.ts";
 
-export function billingHref() {
-  return billingPath();
-}
-
-export function rememberBillingLogin() {
-  const url = new URL(location.href);
-  url.searchParams.delete("error");
-  sessionStorage.setItem(LOGIN, JSON.stringify({ href: url.href, expires: Date.now() + MAX_AGE_MS }));
-}
-
-export function rememberBillingReturn(checkoutId?: string) {
-  if (location.pathname !== billingPath()) return;
-  const url = new URL(location.href);
-  url.searchParams.delete("promo");
-  sessionStorage.setItem(PAYMENT, JSON.stringify({ href: url.href, checkoutId, expires: Date.now() + MAX_AGE_MS }));
-}
+const billingPath = billingHref;
 
 function resume(store: Storage, key: string, current: URL, checkoutId?: string) {
   const raw = store.getItem(key);

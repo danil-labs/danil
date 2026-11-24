@@ -28,7 +28,12 @@
     // prohíbe. Se van cuando se retire esa pantalla con su propia revisión de paridad.
     "packages/features/settings/src/components/{AuditLog,BusinessBilling,BusinessBillingFiscal,BusinessBillingPlan}.tsx": ["files"],
     "packages/features/settings/src/model/{business-billing,fiscal}.ts": ["files"],
-    "apps/desktop/src/web/audit-log.ts": ["types"],
+    "apps/desktop/src/web/audit-log.ts": ["files", "types"],
+    "apps/desktop/src/web/Onboarding.tsx": ["files"],
+    "apps/desktop/src/web/workspace-assets.ts": ["types"],
+    "packages/features/settings/src/components/AccountCredentials.tsx": ["exports"],
+    "packages/features/settings/src/queries/credentials-store.ts": ["exports"],
+    "packages/platform-client/src/audit-log.ts": ["types"],
     "packages/shell/src/shell/OrganizationPositionMenu.tsx": ["files"],
     "packages/shell/src/shell/SpaceBar.tsx": ["exports"],
     // BARRA_DE_TERMINAL, TerminalName, TerminalCursor y TerminusMark: lo mismo (JSX y CSS).
@@ -69,11 +74,19 @@
     "packages/features/code/src/model/tree.ts": ["exports"],          // estadoLocal: tree.test.ts
     "packages/features/code/src/screens/FileViewer.tsx": ["exports"], // esMarkdown: command-output.test.ts
     "packages/features/machines/src/index.ts": ["exports"],           // danilAvailableContext, readDanilContext: danil-source.test.ts
-    "packages/features/machines/src/model/wsl.ts": ["exports"],       // wslFailureCode, WSL_INSTALL, WSL_INSTALL_UBUNTU: wsl-detection.test.ts
+    "packages/features/machines/src/model/wsl.ts": ["exports", "types"], // wslFailureCode, WSL_INSTALL, WSL_INSTALL_UBUNTU: wsl-detection.test.ts; tipos sin Wsl*.tsx (#1148)
+    "packages/features/machines/src/queries/guestChannels.ts": ["exports"], // offersGuests (#1148)
+    "packages/features/machines/src/queries/workspace-computers.ts": ["exports"], // workspaceComputersSource (#1148)
+    "packages/features/settings/package.json": ["dependencies"],      // @tauri-apps/plugin-updater (#1148)
+    "packages/features/settings/src/model/environment-store.ts": ["files"], // sin Environment.tsx (#1148)
+    "packages/ui/src/Table.tsx": ["files"],                           // sin SecretsList/Environment (#1147/#1148)
+    "packages/ui/src/lib/bundled.ts": ["exports", "types"],           // sin Environment.tsx (#1148)
     "packages/features/machines/src/queries/cloud-machines.ts": ["exports"], // edgeFetch: cloud-machines, edge-client, organization-selection, mvp-contracts
     "packages/features/machines/src/queries/connected-status.ts": ["exports"], // CONNECTED_MACHINES_FEATURE: connected-status.test.ts
     "packages/features/machines/src/queries/danil-source.ts": ["exports"], // listedOf, noteListing, danilAvailableContext, readDanilContext: danil-source.test.ts
-    "packages/features/machines/src/queries/engine-workspaces.ts": ["exports"], // LIGHT_STATE_MACHINES_FEATURE: engine-workspaces.test.ts
+    "packages/features/machines/src/queries/engine-workspaces.ts": ["exports", "types"], // LIGHT_STATE_MACHINES_FEATURE, RailWorkspace: engine-workspaces.test.ts (#1111/#1136)
+    "packages/shell/src/shell/danil-rail.ts": ["exports"],            // columnDanil: Alberto (#1111/#1136)
+    "packages/shell/src/shell/SessionWorkspaceRows.tsx": ["types"],   // SessionWorkspaceRowsProps: Alberto (#1111/#1136)
     "packages/features/machines/src/queries/router.ts": ["exports"],  // unconfirmedOpen: machine-router.test.ts
     "packages/features/machines/src/queries/session-cloud.ts": ["exports"], // mergeContextMachines: connected-status, session-machines
     "packages/features/onboarding/src/model/account-welcome.ts": ["exports"], // ACCOUNT_WELCOME_KEY: account-welcome.test.ts
@@ -126,7 +139,9 @@
         "@typescript/native-preview",
         // Los importa eslint.solid.config.mjs, que no tiene el nombre que el plugin de ESLint de knip busca.
         "eslint-plugin-solid",
-        "typescript-eslint"
+        "typescript-eslint",
+        // Movido con Onboarding.tsx a packages/features/onboarding/src/screens/WebOnboarding.tsx (F4.4 lote 1).
+        "lucide-solid"
       ]
     },
     // apps/mobile está fuera del pnpm workspace (npm propio). Se analiza solo para que cuente lo

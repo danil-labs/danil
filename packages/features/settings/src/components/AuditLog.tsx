@@ -4,7 +4,7 @@ import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { Select } from "../../../../ui/src/Select";
 import { Skeleton } from "../../../../ui/src/Skeleton";
-import type { AuditActorType, AuditEntry, AuditLogSource } from "../../../../../apps/desktop/src/web/audit-log";
+import type { AuditActorType, AuditEntry, AuditLogSource } from "../../../../platform-client/src/audit-log";
 import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 const FILTERS: AuditActorType[] = ["ai", "user", "member", "danil_support", "system"];

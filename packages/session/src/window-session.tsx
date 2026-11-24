@@ -9,7 +9,7 @@ import { Button } from '../../ui/src/Button';
 import { ToastStack } from '../../ui/src/Toast';
 import { SessionLoading } from '../../../apps/desktop/src/web/auth/SessionLoading';
 import { signInError, WorkosAuthPage } from '../../../apps/desktop/src/web/auth/workos';
-import { webWorkspacePicker } from '../../../apps/desktop/src/web/workspace-picker';
+import { webWorkspacePicker } from './workspace-picker';
 import { webCredentialSource } from '../../platform-client/src/credentials';
 import { webAccountProfile } from '../../../apps/desktop/src/web/account';
 import { contextMachines, type PlatformProfile, PlatformSessionError, platformSession, platformTransport } from './platform-session';
