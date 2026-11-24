@@ -7,12 +7,13 @@ import {
   handOverReason,
   handoverInForce,
   handoverMatches,
+  handoverProviderLabel,
   MACHINE_UNANNOUNCED,
   shellCli,
   type HandoverGate,
   type HandoverState,
-} from "../../src/features/chat/handover.ts";
-import { sendWithHandover } from "../../src/features/chat/handoverSend.ts";
+} from "../../../../packages/features/chat/src/model/handover.ts";
+import { sendWithHandover } from "../../../../packages/features/chat/src/queries/handoverSend.ts";
 
 const estado = (over: Partial<HandoverState> = {}): HandoverState => ({
   can: true,
@@ -240,4 +241,16 @@ test("un `!` corre con el CLI de la sesión, no con el traspaso pendiente", () =
   assert.equal(shellCli("codex", "claude"), "codex");
   assert.equal(shellCli(null, "claude"), "claude");
   assert.equal(shellCli(undefined, "claude"), "claude");
+});
+
+test("la confirmación de traspaso nombra Danil Credits en lugar de OpenCode al cambiar hacia o desde Danil Credits", () => {
+  const agents = [
+    { id: "antigravity", label: "Antigravity" },
+    { id: "opencode", label: "OpenCode" },
+  ];
+  assert.equal(handoverProviderLabel("antigravity", "gemini-4-neon", agents, "Danil Credits"), "Antigravity");
+  assert.equal(handoverProviderLabel("opencode", "danil-credits/danil/equilibrado", agents, "Danil Credits"), "Danil Credits");
+  assert.equal(handoverProviderLabel("opencode", "danil-credits/danil/ligero", agents, "Danil Credits"), "Danil Credits");
+  assert.equal(handoverProviderLabel("opencode", "opencode-go/kimi", agents, "Danil Credits"), "OpenCode");
+  assert.equal(handoverProviderLabel("opencode", null, agents, "Danil Credits"), "OpenCode");
 });
