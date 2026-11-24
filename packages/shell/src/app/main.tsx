@@ -10,7 +10,7 @@ import { checkEnvironment, installTool, prepareRuntime, restartApp, servicePoll,
 import { listWorkspaces } from "../../../features/settings/src/queries/engine-workspaces";
 import { Lanzador, sealFirstFreeWorkspace, SessionGate } from "../shell";
 import ControlesDeVentana from "../shell/WindowControls";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { seguirElTema } from "../../../ui/src/lib/theme";
 import { aplicarEscala, atajoDeEscala } from "../../../ui/src/lib/window-zoom.ts";
 import { trimNativeMenu } from "../../../host/src/contextMenu";
@@ -53,7 +53,7 @@ if (capabilities().nativeWindow) {
 seguirElTema();
 // Rust crea la próxima ventana de este color (`appearance.rs`): sin él abre en blanco.
 const reportarFondo = () =>
-  void invoke("window_background", {
+  void callShellViewEngine("window_background", {
     color: getComputedStyle(document.documentElement).getPropertyValue("--color-bg").trim(),
   }).catch(() => {});
 reportarFondo();

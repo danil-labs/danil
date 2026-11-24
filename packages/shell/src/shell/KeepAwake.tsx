@@ -1,7 +1,7 @@
 import { listen } from "../../../host/src/serviceEvents.ts";
 import Coffee from "lucide-solid/icons/coffee";
 import { createSignal, For, onCleanup, Show } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { t } from "../../../ui/src/lib/i18n";
 import { cn } from "../../../ui/src/lib/utils";
 import type { SignalTone } from "../../../ui/src/SignalDot";
@@ -48,12 +48,12 @@ function descriptionOf(mode: Mode): string {
 function watchKeepAwake() {
   const [status, setStatus] = createSignal<Status | null>(null);
 
-  void invoke<Status>("keep_awake_status").then(setStatus).catch(() => {});
+  void callShellViewEngine<Status>("keep_awake_status").then(setStatus).catch(() => {});
   const unlisten = listen<Status>("keep-awake-changed", (e) => setStatus(e.payload));
   onCleanup(() => void unlisten.then((u) => u()));
 
   const choose = (mode: Mode) => {
-    void invoke<Status>("set_keep_awake", { mode }).then(setStatus).catch(() => {});
+    void callShellViewEngine<Status>("set_keep_awake", { mode }).then(setStatus).catch(() => {});
   };
   return { status, choose };
 }

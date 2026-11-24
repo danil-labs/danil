@@ -1,9 +1,9 @@
-import { invokeNative as invoke } from "../../../host/src/native.ts";
+import { invokeNative } from "../../../host/src/native.ts";
 import { Show, createSignal, onCleanup, onMount } from "solid-js";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
 import { t } from "../../../ui/src/lib/i18n";
-import { invoke as routedInvoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { quietFinished } from "./TaskNotifier";
 import {
   setWaitRows,
@@ -33,13 +33,13 @@ async function check() {
   if (checking || !waitingThen()) return;
   checking = true;
   try {
-    const turns = await invoke<LiveTurn[]>("list_live_turns");
+    const turns = await invokeNative<LiveTurn[]>("list_live_turns");
     const then = waitingThen();
     if (!then) return;
     if (turns.length === 0) {
       cancelWait();
-      if (then === "restart") await invoke("restart_app");
-      else await invoke("quit_completely");
+      if (then === "restart") await invokeNative("restart_app");
+      else await invokeNative("quit_completely");
       return;
     }
     setWaitRows(await titled(turns));
@@ -76,7 +76,7 @@ export function Aplicar(props: { onLater: () => void }) {
   const [deteniendo, setDeteniendo] = createSignal(false);
   const [fallo, setFallo] = createSignal(false);
   async function mirar() {
-    const turnos = (await routedInvoke("list_live_turns").catch(() => [])) as LiveTurn[];
+    const turnos = (await callShellViewEngine("list_live_turns").catch(() => [])) as LiveTurn[];
     setVivas(turnos);
     return turnos;
   }
@@ -87,7 +87,7 @@ export function Aplicar(props: { onLater: () => void }) {
   });
   async function reiniciar() {
     // Una tarea pudo arrancar desde la última mirada: entonces se ofrece esperar.
-    if ((await mirar()).length === 0) void routedInvoke("restart_app");
+    if ((await mirar()).length === 0) void callShellViewEngine("restart_app");
   }
   async function esperar() {
     waitThen("restart", await titled(vivas()));
@@ -106,7 +106,7 @@ export function Aplicar(props: { onLater: () => void }) {
       setFallo(true);
       return;
     }
-    void routedInvoke("restart_app");
+    void callShellViewEngine("restart_app");
   }
   return (
     <Show
