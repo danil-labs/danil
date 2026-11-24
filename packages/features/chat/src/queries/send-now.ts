@@ -2,7 +2,7 @@
 import { t } from "../../../../ui/src/lib/i18n";
 import { type Recipient } from "../../../../ui/src/lib/recipients";
 import { type TaskMention } from "../../../../ui/src/lib/taskMentions";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { claveDe, detalleDe, prosaDe } from "../../../../ui/src/Failure";
 import { mensajeDeFallo } from "../model/failures";
 import { type Msg } from "../model/messageTypes.ts";
@@ -95,7 +95,7 @@ export function createSendNow(deps: SendNowDeps) {
         const abierta = sessionId();
         if (!abierta) return;
         try {
-          await invoke("reintentar_reanudacion_por_entregas", { project: project(), session: abierta }, deLaTarea(abierta));
+          await callEngine("reintentar_reanudacion_por_entregas", { project: project(), session: abierta }, deLaTarea(abierta));
         } catch (e) {
           setError(prosaDe(e));
         }
@@ -196,7 +196,7 @@ export function createSendNow(deps: SendNowDeps) {
     try {
       const attachments = await attachmentsFor(m.attachments, deLaTarea(abierta), sourceProject);
       // El turno tal como queda en la transcripción; `null` en un motor que todavía no lo devuelve.
-      const guardado = await invoke<Turn | null>("inject_message", {
+      const guardado = await callEngine<Turn | null>("inject_message", {
         project: sourceProject,
         session: abierta,
         prompt: m.text,

@@ -1,4 +1,4 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { t } from "../../../../ui/src/lib/i18n";
 import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelStartup } from "../../../../session/src/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
@@ -29,9 +29,9 @@ export function crearConsentimiento(estado: EstadoDeConexiones, carga: CargaDeCo
     setGuardando(true);
     try {
       const policy = q.texto.policy;
-      const startup = await invoke<FreeModelStartup>("workspaces_startup");
+      const startup = await callEngine<FreeModelStartup>("workspaces_startup");
       if (startup.active !== policy.workspace_id || !sameFreeModelPolicy(policy, await loadFreeModelPolicy(policy))) throw new Error(t("settings.accounts.free.policy_changed"));
-      const workspace = await invoke<{ free_model_consent?: FreeModelConsent }>("set_provider_consent", {
+      const workspace = await callEngine<{ free_model_consent?: FreeModelConsent }>("set_provider_consent", {
         provider: policy.acceptance_ref, accepted: true,
       }, freeModelScope(policy));
       if (!acceptedFreeModelPolicy(policy, workspace.free_model_consent)) throw new Error(t("settings.accounts.free.policy_changed"));

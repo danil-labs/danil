@@ -1,4 +1,4 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import type { Query } from "../../../../ui/src/lib/limits";
 
 export type AccountList = {
@@ -10,7 +10,7 @@ export const listAccounts = (
   provider: string,
   options?: { headers: Record<string, string> },
 ): Promise<(AccountList)> =>
-  invoke<(AccountList)>("list_accounts", { provider }, options);
+  callEngine<(AccountList)>("list_accounts", { provider }, options);
 
 export const getAccountLimits = (
   provider: string,
@@ -18,4 +18,4 @@ export const getAccountLimits = (
   force: boolean = false,
   options?: { headers: Record<string, string> },
 ): Promise<(Query)> =>
-  invoke<(Query)>("account_limits", { provider, id, force }, options);
+  callEngine<(Query)>("account_limits", { provider, id, force }, options);

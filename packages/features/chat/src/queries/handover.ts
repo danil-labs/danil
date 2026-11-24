@@ -1,7 +1,7 @@
 
 import { type OpcionDeModelo } from "../../../../ui/src/lib/models";
 import { idProvisional } from "../../../../ui/src/lib/taskDraft";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { canHandOverTask, handoverMatches, shellCli, type HandoverPending } from "../model/handover";
@@ -72,7 +72,7 @@ export function createHandover(deps: HandoverDeps) {
     // entonces y no lo relee.
     const sesion = sessionId();
     if (sesion && busy()) {
-      void invoke("set_effort", {
+      void callEngine("set_effort", {
         project: project(),
         session: sesion,
         effort: effortDelTurno(),
@@ -84,7 +84,7 @@ export function createHandover(deps: HandoverDeps) {
     // Como el modelo en `elegirModelo`: es lo que heredan sus temas nuevos.
     const fila = sessionId() ? filaDe(sessionId()!) : undefined;
     if (fila && esChatDeAgente(fila) && fila.agent) {
-      void invoke("set_agent_model", {
+      void callEngine("set_agent_model", {
         project: project(),
         name: fila.agent,
         provider: agent(),
@@ -196,7 +196,7 @@ export function createHandover(deps: HandoverDeps) {
     const nivel = aplicarOpcionDeModelo(opcion, claveAbierta());
     if (abierta) guardarModeloEnLaTarea(abierta, opcion.agent, opcion.model.id, nivel || null);
     if (chatDeAgente && fila.agent) {
-      void invoke("set_agent_model", {
+      void callEngine("set_agent_model", {
         project: project(),
         name: fila.agent,
         provider: opcion.agent,
@@ -239,7 +239,7 @@ export function createHandover(deps: HandoverDeps) {
     if (!sesion || !busy()) return;
     // El turno vivo arrancó con el modo de entonces y no lo relee: sin
     // pedírselo al proceso, la caja diría una cosa y el agente haría otra.
-    void invoke("set_permission_mode", {
+    void callEngine("set_permission_mode", {
       project: project(),
       session: sesion,
       mode: id,

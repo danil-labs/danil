@@ -1,5 +1,5 @@
 import { t } from "../../../../ui/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { detalleDe, prosaDe } from "../../../../ui/src/Failure";
 import { canonicalAgentId, OPENCODE } from "../../../../ui/src/lib/tasks/agents.ts";
 
@@ -48,7 +48,7 @@ const ORDEN = ["claude", "codex", "antigravity", "grok", OPENCODE];
 export const AL_FINAL = "zcode";
 
 export const openExternal = (target: string) =>
-  invoke("open_external", { target });
+  callEngine("open_external", { target });
 export const posicion = (id: string) => {
   if (id === AL_FINAL) return ORDEN.length + 1;
   const i = ORDEN.indexOf(id);

@@ -1,7 +1,7 @@
 import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
 import { edgeFetch, ORGANIZATION_CHANGED } from "../../../../platform-client/src/client";
 import { getWorkspaces } from "../../../../platform-client/src/workspaces";
-import { invoke } from "../../../../engine-client/src/client";
+import { callEngine } from "../../../../engine-client/src/client";
 import { availableDanilCredits, type DanilCreditsSource } from "../model/danil-credits";
 import { readCreditsBalance } from "../../../../platform-client/src/treasury";
 
@@ -11,7 +11,7 @@ const RETRY_BUDGET_MS = 5_000;
 /** Solo un vínculo publicado por Workspaces atribuye el saldo al workspace del motor. */
 export const desktopCredits: DanilCreditsSource = {
   async readBalance(signal) {
-    const { active } = await invoke<{ active: string | null }>("list_workspaces");
+    const { active } = await callEngine<{ active: string | null }>("list_workspaces");
     if (!active || signal.aborted) return null;
 
     const deadline = Date.now() + RETRY_BUDGET_MS;
