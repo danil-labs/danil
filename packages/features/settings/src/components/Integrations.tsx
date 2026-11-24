@@ -35,7 +35,7 @@ type Readiness = {
   screen_recording?: boolean;
   reset_command?: string | null;
 };
-type Operation = "install" | "update" | "enable" | "uninstall" | "check";
+type IntegrationOperation = "install" | "update" | "enable" | "uninstall" | "check";
 
 const ICONOS = {
   drawio: Workflow,
@@ -82,7 +82,7 @@ const pidePermisos = (plugin: IntegrationStatus) => plugin.id === "computer-use"
 
 export default function Integrations() {
   const [catalog, setCatalog] = createSignal<Catalog | null>(null);
-  const [busy, setBusy] = createSignal<{ id: Plugin; operation: Operation } | null>(null);
+  const [busy, setBusy] = createSignal<{ id: Plugin; operation: IntegrationOperation } | null>(null);
   const [readiness, setReadiness] = createSignal<Readiness | null>(null);
   const [failure, setFailure] = createSignal<Failure | null>(null);
   const [removing, setRemoving] = createSignal<Plugin | null>(null);
@@ -103,7 +103,7 @@ export default function Integrations() {
     }
   }
 
-  async function operate(id: Plugin, operation: Operation, enabled = false) {
+  async function operate(id: Plugin, operation: IntegrationOperation, enabled = false) {
     const workspace = catalog()?.workspace;
     if (!workspace || busy()) return;
     setBusy({ id, operation });

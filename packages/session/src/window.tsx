@@ -1,5 +1,6 @@
 import { RelaySession } from "../../features/machines/src/queries/relay.ts";
-import { type Machine, machineToComputer } from "../../platform-client/src/machines.ts";
+import type { Machine } from "../../platform-client/src/machines.ts";
+import { machineToComputer } from "../../platform-client/src/machines.ts";
 import { readContextSpaces } from "../../platform-client/src/workspace-spaces.ts";
 import type { MachinesQuery } from "../../features/machines/src/queries/machines-query.ts";
 import { Fleet, memberKey, relayLink, type StorageLike, unwrap } from "../../features/machines/src/model/fleet/index.ts";

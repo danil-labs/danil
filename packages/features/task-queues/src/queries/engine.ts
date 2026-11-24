@@ -1,13 +1,7 @@
-/** What an engine announces in `status.service_features` for `get_turn`, `stop_turn_if` and its queue. */
-export const QUEUE_FEATURE = "chat_queue_v1";
-/** Only an engine with its queue dispatch switched on announces it. */
-export const QUEUE_DISPATCH_FEATURE = "chat_queue_dispatch_v1";
+import { QUEUE_DISPATCH_FEATURE, QUEUE_FEATURE } from "../model.ts";
+import type { EngineScope, Machine, Route } from "../model.ts";
 
-type Route = { headers: Record<string, string> } | undefined;
 type Invoke = <T>(command: string, args: Record<string, unknown>, options?: Route) => Promise<T>;
-type Machine = { id: string; local: boolean; features?: readonly string[] };
-/** A task and the envelope of its machine (`conversationScope` in `App.tsx`). */
-export type EngineScope = { project: string; session: string; route?: Route };
 type TurnState = { state?: string; turn_id?: string };
 // How long Stop keeps trying a turn the engine cannot stop yet (`starting`, a relief).
 const STOP_RETRY_MS = 2000;

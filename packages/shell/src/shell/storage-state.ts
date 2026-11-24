@@ -8,7 +8,8 @@ import { listen } from "../../../host/src/serviceEvents.ts";
 import { prosaDe } from "../../../ui/src/Failure";
 import type { Power, TaskLookup } from "./MachineCard";
 import { USAGE_FEATURE, hasUsage, remember, worst } from "./machineUsage";
-import { type Almacen, type Machine, type Summary, type TareaConPeso, type Target, fleetMachines, machineName } from "./storage-model";
+import type { Almacen, Machine, Summary, TareaConPeso, Target } from "./storage-model";
+import { fleetMachines, machineName } from "./storage-model";
 
 export type StorageProps = {
 workspace: string | null;
