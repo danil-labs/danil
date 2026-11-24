@@ -28,7 +28,7 @@ export default function UsageTool(props: {
   pressed: boolean;
   onToggle: () => void;
 }) {
-  const card = () => props.usage.activeCards().find((c) => c.agent === props.agent);
+  const card = () => props.usage.activeCards().find((c) => c.agent === props.agent) ?? props.usage.activeCards()[0];
   const read = () => {
     const c = card();
     if (!c) return null;
