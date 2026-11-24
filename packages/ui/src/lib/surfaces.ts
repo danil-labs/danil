@@ -29,7 +29,7 @@ export type Superficie = {
 
 // Las reglas de qué modelo es de qué superficie y cuál se enseña las comparte
 // el teléfono (`packages/ui/src/lib/tasks/index.ts`); aquí quedan con su nombre de la ventana.
-export { surfaceHas as esDe, menuSurfaces as paraElMenu, surfaceOf as superficieDe } from "./tasks/surfaces.ts";
+export { defaultSurfaceModel as modeloPredeterminadoDe, surfaceHas as esDe, menuSurfaces as paraElMenu, surfaceOf as superficieDe } from "./tasks/surfaces.ts";
 
 /**
  * El rótulo de una superficie, traducido cuando el nombre es nuestro: «Claude

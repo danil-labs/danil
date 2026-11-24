@@ -36,13 +36,17 @@ export default function DanilServices(props: {
             )}
           </Show>
         </div>
-        <Show when={tiers().length > 1}>
+        <Show
+          when={tiers().length > 1}
+          fallback={<UseButton service={props.credits} unavailable={t("chat.credits.unavailable")} />}
+        >
           <div role="group" aria-label={t("chat.credits.label")} class="grid grid-cols-3 gap-0.5 rounded-md bg-surface-muted p-0.5">
             <For each={tiers()}>
               {(tier) => (
                 <Pressable
                   aria-pressed={tier.selected}
                   disabled={!tier.ready}
+                  title={tier.ready ? undefined : t("chat.credits.unavailable")}
                   class={cn(
                     "h-7 truncate rounded-sm px-2 text-xs text-neutral-500 outline-none hover:text-neutral-950 disabled:cursor-not-allowed disabled:opacity-50",
                     tier.selected && "bg-surface-raised font-semibold text-neutral-950 shadow-sm",
@@ -55,7 +59,6 @@ export default function DanilServices(props: {
             </For>
           </div>
         </Show>
-        <UseButton service={props.credits} unavailable={t("chat.credits.unavailable")} />
       </section>
       <section class="grid min-w-0 gap-2 p-3" aria-label={t("surfaces.label.free")} data-router-state={props.router.state}>
         <div class="flex items-center justify-between gap-2">
