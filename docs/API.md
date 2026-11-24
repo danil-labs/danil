@@ -1,8 +1,8 @@
 # API que consume el front
 
 Qué pide el front de Danil al borde `/v1` y al motor (RPC1), tal como está **hoy** en `dev`
-(después del merge 09e6ca7b de `rebuild/move`). Cada afirmación cita su archivo; lo que no está
-construido dice **propuesta**. Regla R16 de
+(con F4.2 y F4.4 cerradas). Cada afirmación cita su archivo; lo que no está construido dice
+**propuesta**. Regla R16 de
 [03-structure.md](https://github.com/danil-labs/terminus-workspace/blob/main/docs/plans/2026-11-20-front-rebuild/03-structure.md).
 
 El front es uno: `packages/shell` + `packages/features/*`, compilado desde `apps/desktop`.
@@ -11,6 +11,13 @@ El front es uno: `packages/shell` + `packages/features/*`, compilado desde `apps
 
 No existen `apps/workspace`, `apps/auth` ni `apps/desk`, aunque `pnpm-workspace.yaml` y el script
 `front:build` del `package.json` raíz los nombran.
+
+**Cierre de F4.4:** `packages/**` tiene **0 imports** hacia `apps/desktop/src/**`,
+`@terminus/computers` y `@terminus/fleet` (salvo los `import.meta.glob` de archivos JSON de locales
+en `packages/ui/src`). Los clientes de borde y utilidades que vivían ahí se consolidaron en
+`packages/platform-client`, `packages/session`, `packages/host`, `packages/ui` y
+`packages/features/machines`. `packages/computers` y `packages/fleet` quedan solo como shims de
+reexportación para `apps/mobile` y pruebas heredadas.
 
 ## 1. Borde `/v1` (`packages/platform-client`)
 
@@ -22,120 +29,141 @@ No existen `apps/workspace`, `apps/auth` ni `apps/desk`, aunque `pnpm-workspace.
 | `edgeUntil` reintenta **404, 429, 501 y 503** con backoff (×2, tope 60 s, respeta `retry_after_ms`) y repite la misma `Idempotency-Key` en las escrituras. Un 404 con `code` `not_found` o `*_not_found` no se reintenta. | `src/client.ts:31-34`, `:45`, `:92-122`; la llave sale de `newIdempotencyKey` (`:95`) |
 | `cancelEdgeWrites()` aborta las escrituras en curso al cambiar de organización o workspace. | `src/client.ts:25-28`; lo llaman `selectOrganization` (`src/identity.ts:28-29`) y `selectWorkspace` (`src/workspaces.ts:68-69`) |
 | Web: `platformFetch` añade `X-Danil-Session` (el grupo activo, `setEdgeContext`) a toda ruta `/v1/` con organización. | `src/client.ts:142-164` |
-| Rutas sin organización (no llevan `X-Danil-Session`). | `contextFree`, `src/client.ts:131-140` |
+| Rutas sin organización (no llevan `X-Danil-Session`). | `contextFree`, `src/client.ts:131-139` |
+| Web (cookie + CSRF): `edgeTransport` usa `credentials: "include"` y pide `X-CSRF-Token` a `identity/csrf` antes de cada escritura; `edgeIdentity` expone `loginUrl`, `me` y `logout`. | `src/edge.ts:35-69`, `:96-115` |
 | Lectura compartida: una lectura en curso, o de hace menos de 3 s, sirve a todos; un fallo no se guarda; `invalidate()` tras escribir. | `src/shared-read.ts` (`SHARED_READ_FRESH_MS`, `sharedRead`, `sharedReads`) |
+| Idempotencia: `newIdempotencyKey()` genera una llave (`crypto.randomUUID()`) por operación lógica y `withIdempotencyKey(headers, key?)` pone `Idempotency-Key` salvo que ya venga (sin distinguir mayúsculas). | `src/idempotency.ts:7`, `:10-12` |
 
-**No hay** `createPlatformClient`, `usePlatform()`, `src/http.ts`, `contract/openapi.json` ni `src/generated/`.
-Los tipos de respuesta están escritos a mano en cada dominio (`Me`, `Workspace`, `Machine`…).
-Generar el cliente del OpenAPI de `danil-contracts` es **propuesta** (plan front-move 4.2, R2 y R7).
+Los tipos de respuesta de los cinco dominios principales salen de los OpenAPI vendorizados en
+`packages/platform-client/contract/` (`openapi.json` y `billing-v2/`, fijados en `contract/PIN`)
+mediante `packages/platform-client/scripts/generate.mjs` → `src/generated/{types,billing,contract}.ts`
+(plan front-move 4.2, R2 y R7). **No hay** `createPlatformClient` ni `usePlatform()`: las features
+importan los módulos de dominio desde `queries/` (R12 = 0).
 
 ### Rutas por dominio
 
-#### identity (`src/identity.ts`)
+#### identity (`src/identity.ts`, `src/edge.ts`, `src/organizations.ts`)
 
 | Método y ruta | Función | Línea |
 |---|---|---|
-| `GET /v1/identity/me` | `me`, `fetchIdentityMe`, `sendIdentityMe`, `probeIdentityMe` | 26, 39-43, 46-51, 65-70 |
-| `GET /v1/identity/organizations` | `fetchEdgeOrganizations` | 81-83 |
-| `POST /v1/identity/organizations/select` | `selectOrganization`, `selectOrganizationWithContext`, `selectEdgeOrganization` | 28-36, 54-62, 86-92 |
-| `GET /v1/identity/sessions/catalog` | `fetchSessionsCatalog` (por `danil_edge_fetch`) | 95-102 |
+| `GET /v1/identity/me` | `me`, `fetchIdentityMe`, `sendIdentityMe`, `probeIdentityMe` | `src/identity.ts`: 26, 39-43, 46-51, 65-70 |
+| `GET /v1/identity/organizations` | `fetchEdgeOrganizations` | `src/identity.ts`: 81-83 |
+| `POST /v1/identity/organizations/select` | `selectOrganization`, `selectOrganizationWithContext`, `selectEdgeOrganization` | `src/identity.ts`: 28-36, 54-62, 86-92 |
+| `GET /v1/identity/sessions/catalog` | `fetchSessionsCatalog` (por `danil_edge_fetch`) | `src/identity.ts`: 95-102 |
+| `GET /v1/identity/csrf`, `GET /v1/identity/login`, `GET /v1/identity/me`, `POST /v1/identity/logout` | `edgeTransport` (`mutation`), `edgeIdentity` (`loginUrl`, `me`, `logout`) | `src/edge.ts`: 62-67, 96-115 |
 
-`identity.ts` ya no escribe `GET /v1/identity/sessions`, `POST /v1/identity/contexts` ni
-`GET /v1/identity/login`: la web los pide desde `apps/desktop/src/web/` y `packages/computers/src/edge.ts:100`
-(ver la deuda de R11 más abajo). `SESSION_ROUTES` (105-110) y `SHARED_SESSION_READS` (113: `me` y
+`SESSION_ROUTES` (`src/identity.ts:105-110`) y `SHARED_SESSION_READS` (`src/identity.ts:113`: `me` y
 `sessions/catalog`) marcan qué rutas no son de una organización y cuáles se comparten en una carga.
+El selector tolerante de organización vive en `src/organizations.ts` (`createOrganizationSelection`,
+`announcesOrganizations`, `isOrganizationSelectionRequired`).
 
-#### workspaces (`src/workspaces.ts`)
+#### workspaces (`src/workspaces.ts`, `src/workspace-spaces.ts`, `src/space-order.ts`, `src/workspace-assets.ts`)
 
 | Método y ruta | Función o constante | Línea |
 |---|---|---|
-| `GET /v1/workspaces[?cursor=]` | `workspaces`, `getWorkspaces`, `workspacesPagePath` | 21, 33, 40-41 |
-| `POST /v1/workspaces/select` | `selectWorkspace` (`{ workspace }`) | 12, 34-37 |
-| `/v1/workspaces` (alta), `/v1/workspaces/adopt`, `/v1/workspaces/adopt/challenge`, `/v1/workspaces/promo/redeem` | constantes `WORKSPACES_*_PATH`; el método lo pone quien llama | 11-15 |
-| `/v1/workspaces/{account}/transfers`, `/v1/workspaces/transfers/{id}/accept` | `workspaceTransfersPath`, `workspaceTransferAcceptPath` | 23, 25 |
-| `/v1/workspaces/{account}/free-router` | `workspaceFreeRouterPath` | 27 |
-| `/v1/workspaces/{workspace}/{kind}` (logo, fondo) | `workspaceAssetPath` | 29 |
+| `GET /v1/workspaces[?cursor=]` | `workspaces`, `getWorkspaces`, `workspacesPagePath`, `workspaceCatalog`, `sessionWorkspaceCatalog` | `src/workspaces.ts`: 23, 29-39, 67, 74-75 |
+| `POST /v1/workspaces/select` | `selectWorkspace` (`{ workspace }`) | `src/workspaces.ts`: 17, 68-71 |
+| `/v1/workspaces` (alta), `/v1/workspaces/adopt`, `/v1/workspaces/adopt/challenge`, `/v1/workspaces/promo/redeem` | constantes `WORKSPACES_*_PATH`; el método lo pone quien llama | `src/workspaces.ts`: 16-20 |
+| `/v1/workspaces/{account}/transfers`, `/v1/workspaces/transfers/{id}/accept` | `workspaceTransfersPath`, `workspaceTransferAcceptPath` | `src/workspaces.ts`: 57, 59 |
+| `/v1/workspaces/{account}/free-router` | `workspaceFreeRouterPath` | `src/workspaces.ts`: 61 |
+| `/v1/workspaces/{workspace}/{kind}` (logo, fondo) | `workspaceAssetPath` (contrato `WorkspaceAssetsSource` en `src/workspace-assets.ts`) | `src/workspaces.ts`: 63 |
+| `GET` · `POST /v1/workspaces/{workspace}/spaces` | `workspaceSpacesClient`, `workspaceSpacesForEngine`, `readContextSpaces` | `src/workspace-spaces.ts`: 38-54, 57-88 |
+| `PATCH /v1/workspaces/{id}` (`settings.space_order`) | `createSpaceOrderSource` (`spaceOrder`, `arrangeSpaces`) | `src/space-order.ts`: 9-29, 32-63 |
 
-#### machines (`src/machines.ts`)
+#### machines (`src/machines.ts`, `src/capabilities.ts`)
 
-Es el único cliente de máquinas (plan front-move 3.2). `machinesClient(config)` (149) usa el
-`transport` de la web (cookie y CSRF), `getToken` (Bearer) o `fetch` inyectado.
+Es el único cliente de máquinas (plan front-move 3.2). `machinesClient(config)` (`src/machines.ts:112`)
+usa el `transport` de la web (cookie y CSRF), `getToken` (Bearer) o `fetch` inyectado.
 
 | Método y ruta | Función | Línea | Respuestas que entiende |
 |---|---|---|---|
-| `GET /v1/machines[?cursor=]` | `list` (sigue `next_cursor`, corta si se repite) | 213-232 | 200; 404/501 de la colección = `unavailable` |
-| `GET /v1/machines/{id}` | `get` | 234 | 404 = `missing` |
-| `POST /v1/machines/{id}/start` | `start`: 202 con `operation` y `Location`, sondea hasta `succeeded`, `failed` o `cancelled` (tope 330 s) | 241-269 | `409 not_remotely_startable` conserva su código |
-| `GET /v1/operations/{id}` | sondeo de `start` (solo ids `[A-Za-z0-9_-]`) | 204, 256-260 | |
-| `POST /v1/machines/{id}/tickets` `{"wake":true}` | `wake`: solo por una acción de la persona; reintenta `503 machine_starting` con la misma clave | 277-287 | sin `wake`, una VM apagada contesta `409 machine_stopped` |
-| `POST /v1/machines/{id}/tickets` | `admission`: ticket de un solo uso; la URL tiene que ser `wss://<origen permitido>/v1/machines/{id}/session` | 290-309, 126-144 | |
-| `GET /v1/capabilities` | `CAPABILITIES_PATH`, `capabilitiesUrl` | 18-21 | |
+| `GET /v1/machines[?cursor=]` | `list` (sigue `next_cursor`, corta si se repite) | `src/machines.ts`: 176-195 | 200; 404/501 de la colección = `unavailable` |
+| `GET /v1/machines/{id}` | `get` | `src/machines.ts`: 197 | 404 = `missing` |
+| `POST /v1/machines/{id}/start` | `start`: 202 con `operation` y `Location`, sondea hasta `succeeded`, `failed` o `cancelled` (tope 330 s) | `src/machines.ts`: 204-232 | `409 not_remotely_startable` conserva su código |
+| `GET /v1/operations/{id}` | sondeo de `start` (solo ids `[A-Za-z0-9_-]`) | `src/machines.ts`: 167, 219-223 | |
+| `POST /v1/machines/{id}/tickets` `{"wake":true}` | `wake`: solo por una acción de la persona; reintenta `503 machine_starting` con la misma `Idempotency-Key` | `src/machines.ts`: 240-250 | sin `wake`, una VM apagada contesta `409 machine_stopped` |
+| `POST /v1/machines/{id}/tickets` | `admission`: ticket de un solo uso; la URL tiene que ser `wss://<origen permitido>/v1/machines/{id}/session` | `src/machines.ts`: 253-271, 89-107 | |
+| `GET /v1/capabilities` | `CAPABILITIES_PATH`, `capabilitiesUrl`; lectura tolerante en `src/capabilities.ts` (`capabilityList`, `announces`, `mayCall`) | `src/machines.ts`: 20-23; `src/capabilities.ts`: 18-37 | |
 
-Otros códigos: 401 = `unauthorized`, `403 license_required` = `license` (157-165). Los relays
-permitidos son `DEFAULT_RELAY_ORIGINS` (75). `retryUnavailable` (313-323) reintenta `unavailable`
-desde 5 s hasta 5 min. **No hay ruta de apagado** (`/stop`) en el cliente.
+Otros códigos: 401 = `unauthorized`, `403 license_required` = `license` (`src/machines.ts:120-128`).
+Los relays permitidos son `DEFAULT_RELAY_ORIGINS` (`src/machines.ts:33`). **No hay ruta de apagado**
+(`/stop`) en el cliente.
 
 La lista compartida por contexto vive en `packages/features/machines/src/queries/machines-query.ts`
-(`machinesQuery`, `contextMachinesQuery`). La regresión `machines=2` medida al fusionar en dev está en
-el registro del plan (front-req-1).
+(`machinesQuery`, `contextMachinesQuery`), con 1 petición por carga (`requests.mjs`: `machines=1`).
 
-#### treasury: créditos y facturación (`src/treasury.ts`)
+#### treasury: créditos y facturación (`src/treasury.ts`, `src/billing-route.ts`)
 
 | Método y ruta | Función | Línea |
 |---|---|---|
-| `GET /v1/credits/balance` | `readCreditsBalance` (Desk), `billingV2().balance`, `scopedCreditsRead` (web, por contexto, 30 s, exige el eco `X-Danil-Session-Applied[-Org]`) | 6, 12, 54-58, 94-111 |
-| `GET /v1/billing/catalog` | `billingV2().catalog` | 48 |
-| `GET /v1/billing/organization` | `billingV2().organization` | 49-53 |
-| `GET /v1/credits/transactions[?cursor=]` | `billingV2().transactions` | 59 |
-| `POST /v1/billing/checkout-sessions` | `checkout` (`intent: "upgrade"`), `createOrganization` (`intent: "new_organization"`) | 60-66 |
-| `GET /v1/billing/checkout-sessions/{id}` | `checkoutStatus` | 67-71 |
-| `POST /v1/credits/purchases` · `GET /v1/credits/purchases/{id}` | `purchase`, `purchaseStatus` | 72-77 |
-| `POST /v1/billing/portal-sessions` | `portal` | 78 |
+| `GET /v1/credits/balance` | `readCreditsBalance` (Desk), `billingV2().balance`, `scopedCreditsRead` (web, por contexto, 30 s, exige el eco `X-Danil-Session-Applied[-Org]`) | `src/treasury.ts`: 18, 21, 70-74, 110-127 |
+| `GET /v1/billing/catalog` | `billingV2().catalog` | `src/treasury.ts`: 64 |
+| `GET /v1/billing/organization` | `billingV2().organization` | `src/treasury.ts`: 65-69 |
+| `GET /v1/credits/transactions[?cursor=]` | `billingV2().transactions` | `src/treasury.ts`: 75 |
+| `POST /v1/billing/checkout-sessions` | `checkout` (`intent: "upgrade"`), `createOrganization` (`intent: "new_organization"`) | `src/treasury.ts`: 76-82 |
+| `GET /v1/billing/checkout-sessions/{id}` | `checkoutStatus` | `src/treasury.ts`: 83-87 |
+| `POST /v1/credits/purchases` · `GET /v1/credits/purchases/{id}` | `purchase`, `purchaseStatus` | `src/treasury.ts`: 88-93 |
+| `POST /v1/billing/portal-sessions` | `portal` | `src/treasury.ts`: 94 |
 
-Las respuestas se validan con `zod` (15-28). `billingV2` recibe el transporte de la web y añade el `/v1/`.
+Las respuestas se validan con `zod` comprobado contra `src/generated/billing.ts` mediante `fits<C>()`
+(`src/treasury.ts:30-44`). `billingV2` añade `/v1/` e `Idempotency-Key` en cada escritura (`:59-61`).
+El estado de retorno web de `/billing` vive en `src/billing-route.ts`.
 
 #### idempotency (`src/idempotency.ts`)
 
 | Qué | Línea |
 |---|---|
-| `newIdempotencyKey()`: una llave nueva (`crypto.randomUUID()`) por operación lógica. La usan `edgeUntil` (`src/client.ts:95`) y `wake` de `src/machines.ts`, que la guarda para todo su bucle. | 7 |
-| `withIdempotencyKey(headers, key?)`: añade `Idempotency-Key` (la de `key` o una nueva) salvo que ya venga en las cabeceras, sin distinguir mayúsculas. La usan `src/credentials.ts:30`, `src/machines.ts` y `src/treasury.ts`. | 10-12 |
+| `newIdempotencyKey()`: una llave nueva (`crypto.randomUUID()`) por operación lógica. La usan `edgeUntil` (`src/client.ts:95`) y `wake` de `src/machines.ts` (`:241`), que la guarda para todo su bucle. | `src/idempotency.ts`: 7 |
+| `withIdempotencyKey(headers, key?)`: añade `Idempotency-Key` (la de `key` o una nueva) salvo que ya venga en las cabeceras, sin distinguir mayúsculas. La usan `src/credentials.ts:31`, `src/machines.ts:134` y `src/treasury.ts:60`. | `src/idempotency.ts`: 10-12 |
 
 Quien reintenta una escritura guarda la llave y la vuelve a pasar; no hay reintento que estrene otra.
 
-#### credentials (`src/credentials.ts`)
+#### credentials (`src/credentials.ts`, `src/account-credentials.ts`, `src/seal.ts`)
 
-`webCredentialSource` (18-39) adapta el transporte de la web (cookie y CSRF) a la `CredentialSource`
-de `@terminus/computers`. **Las rutas no están aquí**: las escribe `packages/computers/src/credentials.ts`.
+`webCredentialSource` (`src/credentials.ts:19-40`) adapta el transporte de la web (cookie y CSRF) a
+`CredentialSource` (`src/account-credentials.ts`, movido de `packages/computers` en F4.4). El sellado
+WebCrypto (`TERMINUS-SECRET/1`) vive en `src/seal.ts`.
 
-| Método y ruta | Dónde |
-|---|---|
-| `GET` · `PUT /v1/credentials/workspaces/{ws}/accounts` | `packages/computers/src/credentials.ts:203`, `:211-212`, `:221-225` (sellar con `PUT` es solo de Desk, `src/credentials.ts:4`) |
-| `DELETE …/accounts/{credential}` | `packages/computers/src/credentials.ts:228-229` |
-| `DELETE …/accounts/{credential}/machines/{machine}` · `POST …/restore` | `packages/computers/src/credentials.ts:233-234`, `:238-239` |
+| Método y ruta | Cabecera | Dónde |
+|---|---|---|
+| `GET /v1/credentials/workspaces/{ws}/accounts` | — | `src/account-credentials.ts:201`, `:209-211` |
+| `PUT /v1/credentials/workspaces/{ws}/accounts` | `Idempotency-Key` | `src/account-credentials.ts:219-223` (sellar con `PUT` es solo de Desk, `src/credentials.ts:4`) |
+| `DELETE /v1/credentials/workspaces/{ws}/accounts/{credential}` | `Idempotency-Key` | `src/account-credentials.ts:226-228` |
+| `DELETE /v1/credentials/workspaces/{ws}/accounts/{credential}/machines/{machine}` | `Idempotency-Key` | `src/account-credentials.ts:231-233` |
+| `POST /v1/credentials/workspaces/{ws}/accounts/{credential}/machines/{machine}/restore` | `Idempotency-Key` | `src/account-credentials.ts:236-238` |
 
 Las cuatro escrituras (`PUT`, los dos `DELETE` y `POST …/restore`) mandan la cabecera `Idempotency-Key`:
 `putCredential`, `deleteCredential`, `removeCredentialMachine` y `restoreCredentialMachine` aceptan `key`
 (el llamador que reintenta pasa la misma) y, si no viene, estrenan una por operación
-(`packages/computers/src/credentials.ts:221-239`); `call` la pone en `init.headers` (`:109-110`) y
-`webCredentialSource` la respeta con `withIdempotencyKey` (`src/credentials.ts:30`). Prueba:
-`test/idempotency.test.ts`.
+(`src/account-credentials.ts:219-238`); `call` la pasa a `bearerCall` (`:107-108`) y
+`webCredentialSource` la respeta con `withIdempotencyKey` (`src/credentials.ts:31`). Prueba:
+`packages/platform-client/test/idempotency.test.ts`.
 
-### Rutas `/v1` escritas fuera de `platform-client` (deuda de R11)
+#### Otros dominios incorporados en F4.4 (`github.ts`, `memory.ts`, `connections.ts`, `audit-log.ts`)
 
-Salen de `grep` sobre `packages/` y `apps/desktop/src` (sin tests). Pasarlas a su dominio es
-**propuesta** (plan front-move 3.4).
+| Módulo | Rutas o contrato |
+|---|---|
+| `src/github.ts` | `GET`/`DELETE /v1/workspaces/{ws}/github`, `POST …/authorize`, `GET …/installations`, `PUT …/areas`, y `DELETE`/`POST …/restore` sobre `/v1/credentials/workspaces/{ws}/accounts/{cred}/machines/{machine}` (`:162-209`). |
+| `src/memory.ts` | `GET /v1/workspaces/{ws}/memory/{files,file,history,log}`, `PUT`/`DELETE …/file` (`:85-155`). |
+| `src/connections.ts` | `GET /v1/connections`, `GET /v1/connections/capabilities`, `GET`/`PATCH`/`DELETE /v1/connections/{id}`, `GET /v1/connections/{id}/audit` (`:45-86`, cliente MCP N1 `:122-309`). |
+| `src/audit-log.ts` | Contrato de lectura `AuditLogSource` (`AuditEntry`, `AuditActorType`) para `/admin`. |
+| `src/api.ts`, `src/machine.ts` | Utilidades `bearerCall`/`apiUrl`/`errorCodeOf`, estados `MachineState` y rutas heredadas `/v1/computers*` aún usadas por Desk mientras se retiran (plan 3.4). |
+
+### Rutas `/v1` escritas fuera de `platform-client` (deuda restante de R11 / 3.4)
+
+Con F4.4 cerrada, `packages/**` ya no importa de `apps/desktop/src/**`, `@terminus/computers` ni
+`@terminus/fleet`. Las rutas `/v1` literales que aún quedan fuera de `packages/platform-client` se
+reducen a:
 
 | Rutas | Archivos |
 |---|---|
-| `/v1/computers*`, `/v1/connections*` (lista negra R8) | `packages/computers/src/api.ts`, `connections.ts`, `machine.ts`; `packages/features/machines/src/screens/account.tsx` |
-| `/v1/workspaces/{id}/github*`, credenciales por máquina | `packages/computers/src/github.ts:162-208` |
-| `/v1/workspaces/{id}/memory` | `packages/computers/src/memory.ts`, `packages/features/projects/src/queries/memory-account.ts` |
-| `identity/csrf`, `identity/logout`, `identity/me` | `packages/computers/src/edge.ts` |
-| `/v1/machines` | `packages/fleet/src/fleet.ts`, `packages/features/machines/src/queries/{cloud-machines,danil-source}.ts`, `src/model/machine-info.ts`, `packages/features/settings/src/components/DanilAccount.tsx` |
-| `/v1/workspaces…` | `packages/host/src/platform.ts`, `packages/features/settings/src/queries/free-router-session.ts`, `packages/shell/src/shell/workspace-added-transport.ts` (`workspaces/preferences`) |
-| `/v1/identity/me`, `credits/balance` | `packages/shell/src/shell/account-move.ts`, `packages/session/src/platform-session.ts` |
-| `identity/*`, `workspaces/promo/redeem` | `apps/desktop/src/web/` (`account.ts`, `organizations.ts`, `organization-context.ts`, `web-session-contexts.ts`, `workspace-picker.ts`, `group-account.ts`, `group-promo.ts`, `BillingPage.tsx`, `auth/workos.tsx`) |
+| `/v1/computers/{id}/session` (relay heredado, lista negra R8) | `packages/features/machines/src/model/relay-frames.ts:128` |
+| `/v1/identity/me` (vía `danil_edge_fetch`) | `packages/session/src/window-session.tsx:151`, `packages/shell/src/shell/account-move.ts` |
+| `/v1/identity/*`, `/v1/workspaces/*` en la capa de sesión web | `packages/session/src/` (`web-session-contexts.ts`, `workspace-picker.ts`, `group-account.ts`, `group-promo.ts`, `organizations.ts`, `platform-session.ts`) |
+| `/v1/workspaces/preferences` | `packages/shell/src/shell/workspace-added-transport.ts` |
+
+Pasar las rutas restantes a funciones de dominio de `platform-client` y retirar el relay `/v1/computers`
+corresponde al plan front-move 3.4.
 
 ## 2. Motor RPC1 (`packages/engine-client`)
 
@@ -150,11 +178,13 @@ Salen de `grep` sobre `packages/` y `apps/desktop/src` (sin tests). Pasarlas a s
 | `urlDeAvatar`: `preview_file` cacheado por ruta, se vacía con `harness:profiles`. | `src/previewFile.ts` |
 
 La ruta por máquina (relay WebSocket y ticket) **no está en `engine-client`**: la arman
-`packages/features/machines/src/queries/router.ts` (con `context-router.ts` y `context-relay*.ts`) y `apps/desktop/src/web/window.tsx` con
-`RelaySession` (`@terminus/computers`) y `Fleet` (`@terminus/fleet`).
+`packages/features/machines/src/queries/router.ts` (con `context-router.ts`, `context-relay*.ts` y
+`relay.ts`) y `packages/session/src/window.tsx` sobre el núcleo de flota y relay en
+`packages/features/machines/src/model/fleet/` y `packages/features/machines/src/queries/relay.ts`.
 
-`engine-client` importa `apps/desktop/src/lib/{engineConnection,taskMentions,workspace-context,errorCode}.ts`
-(`src/client.ts:2-8`, `src/retries.ts:1`).
+Tras F4.4, `engine-client` ya no importa de `apps/desktop/src/lib/`: consume
+`packages/session/src/{engineConnection,workspace-context}.ts` y
+`packages/ui/src/lib/{taskMentions,errorCode}.ts` (`src/client.ts:2-8`, `src/retries.ts:1`).
 
 ### Contrato
 
