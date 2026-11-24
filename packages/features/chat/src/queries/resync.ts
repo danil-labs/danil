@@ -3,6 +3,7 @@ import { t } from "../../../../ui/src/lib/i18n";
 import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
 import { esProvisional } from "../../../../ui/src/lib/taskDraft";
 import { callEngine } from "../../../../engine-client/src/client.ts";
+import { isNoMachines } from "../../../../host/src/platform.ts";
 import { claveDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
 import { type LiveTurn } from "./sleepSession.ts";
@@ -74,9 +75,11 @@ export function createResync(deps: ResyncDeps) {
         if (affectedTurns) setError(t("chat.error.service_restarted"));
         void reconcileActiveTurns();
       }
-      // Un reinicio sin turnos vivos también corta el stream (`page.gap`); sin
-      // esta guarda el aviso de hueco sale sin que nada se haya perdido.
-      if (page.gap && !page.reset && affectedTurns) setError(t("chat.error.service_gap"));
+      // Un hueco del buffer en vivo se sana releyendo lo guardado y conciliando turnos activos.
+      if (page.gap && !page.reset && affectedTurns) {
+        for (const session of vivas()) releerUna(session);
+        void reconcileActiveTurns();
+      }
     },
     classifyFailure: (error) => {
       const code = claveDe(error);
@@ -92,7 +95,7 @@ export function createResync(deps: ResyncDeps) {
 
   async function reconcileActiveTurns() {
     const workspace = workspaceActivo();
-    if (!workspace) return;
+    if (!workspace || isNoMachines()) return;
     const revision = deps.lifecycleRevision;
     const generation = workspaceContext.generation();
     try {

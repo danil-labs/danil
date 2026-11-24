@@ -1,4 +1,5 @@
-import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform";
 import { listLanguagePacks, setWorkspaceOutputLanguage } from "../queries/engine-language";
 import { listWorkspaces } from "../queries/engine-workspaces";
 import { Select } from "../../../../ui/src/Select";
@@ -42,6 +43,10 @@ export function SalidaDelAgente() {
    * preguntar.
    */
   function cargarTodo() {
+    if (isNoMachines()) {
+      setInstalados([]);
+      return;
+    }
     void listWorkspaces<Startup>().then((s) => {
       const activo = s.workspaces.find((w) => w.id === s.active);
       if (!activo) {
@@ -62,6 +67,18 @@ export function SalidaDelAgente() {
     window.addEventListener("harness:language-pack", cargarTodo);
     onCleanup(() => window.removeEventListener("harness:language-pack", cargarTodo));
   });
+
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setInstalados([]);
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) cargarTodo();
+  }, { defer: true }));
 
   async function elegir(codigo: string, control?: HTMLInputElement | HTMLSelectElement) {
     const id = workspace();

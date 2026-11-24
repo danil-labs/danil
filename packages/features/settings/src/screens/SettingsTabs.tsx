@@ -9,7 +9,7 @@ import Sparkles from "lucide-solid/icons/sparkles";
 import Wrench from "lucide-solid/icons/wrench";
 import { type JSX, lazy, Suspense } from "solid-js";
 import { machineAction } from "../../../../host/src/machine-action";
-import { capabilities } from "../../../../host/src/platform";
+import { capabilities, isNoMachines } from "../../../../host/src/platform";
 import { GitMark } from "../../../../ui/src/icons";
 import { t } from "../../../../ui/src/lib/i18n";
 import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
@@ -89,9 +89,9 @@ export const pestanasDe = (
     "cuenta-danil": cuenta ? tab("cuenta-danil", () => t("settings.nav.danil_account"), () => <Suspense fallback={null}><DanilAccount workspace={workspace()} context={context()} sesiones={sesiones} /></Suspense>) : undefined,
     security: tab("security", () => t("settings.tab.security"), () => <LoginSecurity />),
     general: tab("general", () => t("settings.nav.general"), () => <General maquinas={maquinas} />),
-    appearance: tab("appearance", () => t("settings.nav.appearance"), () => { machineAction(); return <Suspense fallback={null}><Appearance workspace={workspace()} proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} /></Suspense>; }),
-    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} piezas={piezas} />; }),
-    fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers integraciones={integraciones} maquinas={maquinas} />; }),
+    appearance: tab("appearance", () => t("settings.nav.appearance"), () => { if (!isNoMachines()) machineAction(); return <Suspense fallback={null}><Appearance workspace={workspace()} proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} /></Suspense>; }),
+    "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { if (!isNoMachines()) machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} piezas={piezas} />; }),
+    fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { if (!isNoMachines()) machineAction(); return <Providers workspace={workspace()} integraciones={integraciones} maquinas={maquinas} />; }),
     agentes: tab("agentes", () => t("settings.nav.agents"), () => (
       <Suspense fallback={null}>
         <Agents

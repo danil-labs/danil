@@ -3,6 +3,7 @@ import ImagePlus from "lucide-solid/icons/image-plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import X from "lucide-solid/icons/x";
 import { For, Show } from "solid-js";
+import { isNoMachines } from "../../../../host/src/platform";
 import { t } from "../../../../ui/src/lib/i18n";
 import { elegirVeloDeFondo, elegirVeloDePaneles, elegirVeloDePestanas, imagenDelWorkspace, ponerFondoPropio } from "../../../../ui/src/lib/chat-background-store";
 import { VELO_DE_PANELES_MAX, VELO_DE_PANELES_MIN, VELO_DE_PESTANAS_MAX, VELO_DE_PESTANAS_MIN } from "../../../../ui/src/lib/chat-background";
@@ -16,6 +17,7 @@ import type { PiezasDeAjustes } from "../model/features-port";
 import { createApariencia } from "./AppearanceState";
 import { temas, darkStyles, lightStyles, motor, fondos, VISIBILITY_ID, TABS_VEIL_ID, PANELS_VEIL_ID } from "./AppearanceOptions";
 import { StylePicker } from "./AppearanceStylePicker";
+import { MachineRequiredNotice } from "./MachineRequiredNotice";
 import { Input } from "../../../../ui/src/Input";
 
 /**
@@ -78,7 +80,7 @@ export default function Appearance(props: { workspace?: string | null; proyecto:
           label={t("settings.appearance.background.title")}
           description={t("settings.appearance.background.description")}
         >
-          <Show when={hayPropia()}>
+          <Show when={!isNoMachines() && hayPropia()}>
             <Button size="sm" variant="ghost" onClick={() => void elegirImagenPropia()}>
               <ImagePlus size={14} />
               {t("settings.appearance.background.change")}
@@ -96,7 +98,7 @@ export default function Appearance(props: { workspace?: string | null; proyecto:
             </Button>
           </Show>
           <div class="flex gap-2" role="list">
-            <For each={fondos()}>
+            <For each={fondos().filter((item) => !isNoMachines() || item.id !== "propia")}>
               {({ id, label }) => (
                 <div role="listitem">
                   <Pressable
@@ -178,7 +180,7 @@ export default function Appearance(props: { workspace?: string | null; proyecto:
             value={visibilidad()}
             onInput={(e) => {
               elegirVeloDeFondo(1 - Number(e.currentTarget.value) / 100);
-              void motor().then((m) => m.guardarVelos());
+              if (!isNoMachines()) void motor().then((m) => m.guardarVelos());
             }}
           />
         </SettingsRow>
@@ -201,7 +203,7 @@ export default function Appearance(props: { workspace?: string | null; proyecto:
             value={Math.round(veloPestanas() * 100)}
             onInput={(e) => {
               elegirVeloDePestanas(Number(e.currentTarget.value) / 100);
-              void motor().then((m) => m.guardarVelos());
+              if (!isNoMachines()) void motor().then((m) => m.guardarVelos());
             }}
           />
         </SettingsRow>
@@ -224,7 +226,7 @@ export default function Appearance(props: { workspace?: string | null; proyecto:
             value={Math.round(veloPaneles() * 100)}
             onInput={(e) => {
               elegirVeloDePaneles(Number(e.currentTarget.value) / 100);
-              void motor().then((m) => m.guardarVelos());
+              if (!isNoMachines()) void motor().then((m) => m.guardarVelos());
             }}
           />
         </SettingsRow>
@@ -234,6 +236,7 @@ export default function Appearance(props: { workspace?: string | null; proyecto:
       </SettingsSection>
 
       <SettingsSection title={t("settings.appearance.avatar.title")}>
+        <Show when={!isNoMachines()} fallback={<MachineRequiredNotice compact />}>
         <Show when={cargado() && filas().length === 0}>
           <p class="m-0 py-3.5 text-ui text-neutral-500">
             {t("settings.appearance.avatar.empty")}
@@ -283,6 +286,7 @@ export default function Appearance(props: { workspace?: string | null; proyecto:
           </For>
         </div>
         <Show when={fallo()}>{(text) => <p class="m-0 text-xs text-error-strong">{text()}</p>}</Show>
+        </Show>
       </SettingsSection>
     </SettingsPanel>
   );

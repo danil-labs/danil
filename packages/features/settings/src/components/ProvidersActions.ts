@@ -1,4 +1,5 @@
 import { createEffect, on, onCleanup, onMount } from "solid-js";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform.ts";
 import { attachRepo, gitHostProjects } from "../queries/engine-git";
 import { asFailure } from "../../../../ui/src/Failure";
 import { listGitHosts } from "../../../../session/src/gitHosts.ts";
@@ -6,14 +7,39 @@ import { type Provider, type ProyectoRemoto, rankOf } from "./ProvidersModel";
 import type { ProvidersProps } from "./ProvidersView";
 import type { createProveedores } from "./ProvidersState";
 
+const GITHUB_ACCOUNT_ONLY: Provider = {
+  id: "github",
+  name: "GitHub",
+  connected: null,
+  unverified: null,
+  browser_login: false,
+  select_area: false,
+  fields: [],
+  token_label: "",
+  token_url: null,
+  setup_url: null,
+  source: null,
+} as unknown as Provider;
+
 export function createAccionesDeProveedores(props: ProvidersProps, proveedores: ReturnType<typeof createProveedores>) {
   const { setCargando, setLista, scope, setFallo, lista, montajes, actualizarAcceso, ocupado, setRepos, verAreas, comprobado, setComprobado, comprobar, abierta, setAbierta, repos, setOcupado, setFallas, setTrayendo, setTraidos } = proveedores;
   async function cargar() {
+    if (isNoMachines()) {
+      setLista([GITHUB_ACCOUNT_ONLY]);
+      setFallo(null);
+      setCargando(false);
+      return;
+    }
     setCargando(true);
     try {
       setLista(await listGitHosts<Provider>(await scope));
       setFallo(null);
     } catch (e) {
+      if (isNoMachines()) {
+        setLista([GITHUB_ACCOUNT_ONLY]);
+        setFallo(null);
+        return;
+      }
       // Cargando, vacío y error son tres pantallas distintas: dejar la lista
       // vacía haría que el catálogo apareciera como si no hubiera proveedores.
       setLista(null);
@@ -26,6 +52,20 @@ export function createAccionesDeProveedores(props: ProvidersProps, proveedores: 
   onMount(() => {
     void cargar();
   });
+
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setLista([GITHUB_ACCOUNT_ONLY]);
+      setFallo(null);
+      setCargando(false);
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) void cargar();
+  }, { defer: true }));
 
   onMount(() => {
     const refresh = () => {

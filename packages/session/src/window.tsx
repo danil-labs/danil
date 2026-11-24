@@ -16,6 +16,8 @@ import { deliver } from "../../host/src/serviceEvents";
 import { installIpc } from "./ipc";
 import type { MachineStatus } from "../../features/machines/src/model/SyncNote";
 import { createWebTransport } from "./transport";
+import { composeControlPlane, webEdgeGithubAccount } from "./github-account";
+import type { EdgeTransport } from "../../platform-client/src/edge";
 import { browser, takeSettingsParam } from "./window-browser";
 import { webMachineCall } from "./workspace-runtime";
 import { MACHINE_ACTION } from "../../host/src/machine-action";
@@ -24,7 +26,7 @@ import { openWorkspaceUrl } from "./open-workspace-url";
 import { activeWorkspaceContext } from "./workspace-context";
 
 declare const __TERMINUS_VERSION__: string;
-type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => MachinesQuery; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
+type Base = { billing: ReturnType<typeof import("./window-billing").windowBilling>; contextMachines: (context: string) => MachinesQuery; sessions: import("./web-session-contexts").WebSessionCommands; active: ReturnType<typeof import("./window-active-context").windowActiveContext>; rail?: Capabilities["webRailCatalog"]; relayOrigin: string; origin?: string; transport?: EdgeTransport; credentials?: Capabilities["accountCredentials"]; permits: (name: string) => boolean; organizations?: Capabilities["organizations"]; promo?: Capabilities["webPromo"]; groupAccount?: Capabilities["groupAccount"]; reauth?: Capabilities["webReauth"]; preparing?: () => boolean; profile: AccountProfileSource; services: Pick<Capabilities, "webWorkspacePicker" | "danilCredits">; onUnavailable: () => void; };
 const Picker = lazy(() => import("../../features/machines/src/screens/MachinePicker").then(m => ({ default: m.MachinePicker })));
 const AccountMachines = lazy(() => import("../../features/machines/src/screens/AccountMachines"));
 /** Another machine's slice changed: the window rereads just that. */
@@ -180,11 +182,11 @@ export function mountWindow(base: Base, mounted: Mounted) {
     listed = new Map(rows.map(({ machine, group }) => [memberKey(machine.machine_id, group.context), machine]));
     setServiceError(false);
     setSettled(true);
-    bump(n => n + 1);
     fleet.setMachines(remoteGuests.syncHosts(rows.map(({ machine, group }) => ({ id: machine.machine_id, name: scope.machineName(machine, group, rows),
       wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: scope.fleetKind(machine, group), hosted: scope.hosted(machine), context: group.context, organizationId: machine.organization_id ?? null,
     }))));
     for (const { machine, group } of rows) fleet.observe(machine.machine_id, machineToComputer(machine).state, group.context);
+    bump(n => n + 1);
     machinesListed(fleet);
     fleet.subscribeEvents();
     active.registryChanged();
@@ -241,7 +243,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
     webRailCatalog: base.rail, webPromo: base.promo, groupAccount: base.groupAccount, webReauth: base.reauth,
     retryMachines: () => { fleet.retry(); void refresh(); },
   });
-  installIpc(window, createWebTransport(scope.engine(active), __TERMINUS_VERSION__, browser, base.sessions));
+  const github = base.origin && base.transport
+    ? webEdgeGithubAccount(base.origin, base.transport, () => window.location.href)
+    : undefined;
+  installIpc(window, createWebTransport(scope.engine(active), __TERMINUS_VERSION__, browser, composeControlPlane(base.sessions, github)));
   let disposeApp: (() => void) | undefined;
   let disposeNotice: (() => void) | undefined;
   let noticeLayer: HTMLElement | undefined;
@@ -263,6 +268,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
         .finally(() => { waking.delete(key); bump(n => n + 1); }));
     }
   };
+  const onFocus = () => {
+    if (availability().kind === "no_machines") void refresh();
+  };
+  window.addEventListener("focus", onFocus);
   window.addEventListener(MACHINE_ACTION, onMachineAction);
   void Promise.all([import("solid-js/web"), import("../../features/machines/src/model/SyncNote"), import("./UpdateNotice"), import("./ReauthNote"), import("../../ui/src/phrases")]).then(([{ render }, { MachineStates, MachinesUnavailableNote }, { UpdateNotice }, { ReauthNote, WorkspaceNote }]) => {
     if (stopped) return;
@@ -276,5 +285,5 @@ export function mountWindow(base: Base, mounted: Mounted) {
       </>
     ), layer);
   });
-  return { refresh, close: () => { stopped = true; window.removeEventListener(MACHINE_ACTION, onMachineAction); stopListing(); remoteGuests.close(); url.close(); active.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
+  return { refresh, close: () => { stopped = true; window.removeEventListener("focus", onFocus); window.removeEventListener(MACHINE_ACTION, onMachineAction); stopListing(); remoteGuests.close(); url.close(); active.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
 }

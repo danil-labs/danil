@@ -1,6 +1,7 @@
 import Plus from "lucide-solid/icons/plus";
-import { createSignal, For, type JSX, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createSignal, For, type JSX, on, onCleanup, onMount, Show } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform";
 import { t } from "../../../../ui/src/lib/i18n";
 import { deleteAgent, listMachineAgents } from "../queries/engine-agents";
 import type { AgenteDeMaquina, CatalogoDeAgentes } from "../../../../ui/src/lib/model";
@@ -12,6 +13,7 @@ import { prosaDe } from "../../../../ui/src/Failure";
 import type { ModelChoices } from "../../../../ui/src/lib/model-choices";
 import { createFreeRouterConsent } from "./free-router-consent";
 import type { PiezasDeAjustes } from "../model/features-port";
+import { MachineRequiredState } from "./MachineRequiredNotice";
 import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 export default function Agents(props: {
@@ -31,12 +33,18 @@ export default function Agents(props: {
   let generation = 0;
   async function refresh() {
     const current = ++generation;
+    if (isNoMachines()) {
+      setAgents(reconcile([], { key: "id" }));
+      setError(null);
+      setReady(true);
+      return;
+    }
     try {
       const catalog = await listMachineAgents<CatalogoDeAgentes>();
       if (current !== generation) return;
       setAgents(reconcile(catalog.own.filter((row) => row.agent.own_scope?.kind === "workspace").map(row => ({ ...row, id: row.agent.name })), { key: "id" }));
       setError(null);
-    } catch (e) { if (current === generation) setError(prosaDe(e)); }
+    } catch (e) { if (current === generation && !isNoMachines()) setError(prosaDe(e)); }
     finally { if (current === generation) setReady(true); }
   }
   onMount(() => {
@@ -48,6 +56,19 @@ export default function Agents(props: {
       for (const event of ["harness:encargados", "harness:profiles", "harness:workspace"]) window.removeEventListener(event, reload);
     });
   });
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setAgents(reconcile([], { key: "id" }));
+      setError(null);
+      setReady(true);
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) void refresh();
+  }, { defer: true }));
   async function remove() {
     const row = deleting();
     if (!row || row.agent.package === "business" || busy()) return;
@@ -63,8 +84,11 @@ export default function Agents(props: {
   }
   return <SettingsPanel>
     <SettingsSection aria-labelledby="agents-own" title={<span id="agents-own">{t("settings.agents.own_title")}</span>} aside={
-      <Button variant="secondary" size="sm" onClick={() => setCreating(true)}><Plus size={14} />{t("settings.agents.new")}</Button>
+      <Show when={!isNoMachines()}>
+        <Button variant="secondary" size="sm" onClick={() => setCreating(true)}><Plus size={14} />{t("settings.agents.new")}</Button>
+      </Show>
     }>
+      <Show when={!isNoMachines()} fallback={<MachineRequiredState />}>
       <Show when={error()}>{message => <p role="alert" class="text-caption text-error-strong">{message()}</p>}</Show>
       <Show when={ready() && !agents.length && !error()}><EmptyState title={t("settings.agents.own_empty")} /></Show>
       <div role="list">
@@ -85,6 +109,7 @@ export default function Agents(props: {
           </Show>
         </SettingsRow>}</For>
       </div>
+      </Show>
     </SettingsSection>
     <NewAgent abierto={creating()} onAbrir={setCreating} project="" workspaceOnly modelos={props.modelos} createFreeRouterConsent={createFreeRouterConsent} onCreado={() => { void refresh(); }} />
     <Dialog open={deleting() !== null} onOpenChange={open => { if (!open && !busy()) setDeleting(null); }}>

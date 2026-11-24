@@ -1,4 +1,5 @@
-import { Show, createSignal, onMount } from "solid-js";
+import { Show, createEffect, createSignal, on, onMount } from "solid-js";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform";
 import { listWorkspaces, setWorkspacePermissionMode } from "../queries/engine-workspaces";
 import { Select } from "../../../../ui/src/Select";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
@@ -23,7 +24,12 @@ export function DefaultPermissions() {
   const [value, setValue] = createSignal(DEFAULT_PERMISSION_MODE);
   const [failure, setFailure] = createSignal<Failure | null>(null);
 
-  onMount(() => {
+  const load = () => {
+    if (isNoMachines()) {
+      setWorkspace(null);
+      setFailure(null);
+      return;
+    }
     void listWorkspaces<Startup>()
       .then((s) => {
         const active = s.workspaces.find((w) => w.id === s.active);
@@ -31,8 +37,23 @@ export function DefaultPermissions() {
         setWorkspace(active.id);
         setValue(active.default_permission_mode ?? DEFAULT_PERMISSION_MODE);
       })
-      .catch((e) => setFailure(asFailure(e)));
-  });
+      .catch((e) => { if (!isNoMachines()) setFailure(asFailure(e)); });
+  };
+
+  onMount(load);
+
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setWorkspace(null);
+      setFailure(null);
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) load();
+  }, { defer: true }));
 
   async function choose(mode: string, control: HTMLSelectElement) {
     const id = workspace();
