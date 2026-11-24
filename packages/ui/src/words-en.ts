@@ -249,7 +249,7 @@ export const en: Record<WordKey, Word> = {
   "shell.keep_awake.on.description": "Keep this computer awake continuously, and keep Danil serving with its window closed",
   "shell.keep_awake.off.description": "Allow normal system sleep behavior",
   "usage.manage_accounts": "Manage accounts",
-  "settings.nav.connections": "Connections",
+  "settings.nav.connections": "Connectors",
   "shell.ports.title": "Ports",
   "settings.title": "Settings",
   "danil.account.title": "Danil account",
