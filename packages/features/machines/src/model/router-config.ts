@@ -13,6 +13,12 @@ export type RouterConfig = {
   native: Invoke | null;
   /** En un contexto de organización, solo se usa el IPC para workspaces vinculados a esa organización. */
   localWorkspace?: (workspace: string) => boolean;
+  /**
+   * En un contexto de organización de pago, el catálogo de workspaces vive en
+   * el servicio de workspaces y sus máquinas autorizadas (`kind: "organization"`)
+   * son elegibles bajo demanda sin exigir que ya tengan el workspace en disco.
+   */
+  organizationCatalog?: boolean;
   readWorkspaceSpaces?: (workspace: string) => Promise<WorkspaceSpaceCatalog | null>;
   deliverRemote?: boolean;
   /** El registro de la cuenta (`GET /v1/workspaces`), o `null` si no se pudo leer. */

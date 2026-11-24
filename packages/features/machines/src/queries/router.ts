@@ -198,6 +198,22 @@ function createRouterCore(config: RouterConfig) {
    */
   const childHosted = (m: MachineInfo, workspace: string) =>
     m.child === true && (!m.host ? hasHere(workspace) : fleet.lists(m.host, workspace) === true);
+  const hostsHere = (m: MachineInfo, workspace: string) =>
+    fleet.lists(m.id, workspace) === true || childHosted(m, workspace);
+  /**
+   * En un contexto de organización de pago, el catálogo de workspaces vive en
+   * el servicio de workspaces y cualquier máquina autorizada de esa organización
+   * (ya filtrada por `/v1/machines`) puede atenderlos bajo demanda sin exigir
+   * que ya tenga `workspaces/<id>` en disco.
+   */
+  const catalogMember = (m: MachineInfo, workspace: string | null): boolean =>
+    !!config.organizationCatalog
+    && !!workspace
+    && !m.child
+    && m.kind === "organization"
+    && !!m.organizationId
+    && (!m.organization || m.organization.workspaces.some((w) => w.id === workspace))
+    && (!m.linked || m.linked.has(workspace));
   /** Una VM que despierta sola y sigue apagada sin lista conocida sigue elegible para despertar al enviar. */
   const wakeableFor = (m: MachineInfo, workspace: string | null): boolean =>
     !!workspace
@@ -210,15 +226,27 @@ function createRouterCore(config: RouterConfig) {
     if (!workspace) return fleet.machines().map((m) => m.id);
     return local && !scopedLocal
       ? fleet.membersOf(workspace)
-      : fleet.machines().filter((m) => fleet.lists(m.id, workspace) === true || childHosted(m, workspace)).map((m) => m.id);
+      : fleet.machines().filter((m) => hostsHere(m, workspace) || catalogMember(m, workspace)).map((m) => m.id);
   };
   /** En la web: sin máquina que lo liste, se dice y no se intenta nada. */
   const noMachine = () => ({ what: t("web.machines.none_for_workspace"), detail: "no_machine" });
-  /** La máquina que atiende un workspace que no está aquí: la primera encendida de sus miembros, o la primera. */
+  /** La máquina que atiende un workspace que no está aquí: encendida que ya lo tiene > encendida elegible > apagada que ya lo tiene > despertable > resto. */
   const leadOf = (workspace: string | null): string | null => {
     const members = membersOf(workspace).filter((m) => fleet.power(m) !== "outdated");
     const primary = members.filter((m) => !fleet.info(m)?.child);
-    const pick = (list: string[]) => list.find((m) => fleet.power(m) === "on") ?? list[0] ?? null;
+    const pick = (list: string[]) => {
+      if (!workspace) return list.find((m) => fleet.power(m) === "on") ?? list[0] ?? null;
+      const hosted = (id: string) => {
+        const info = fleet.info(id);
+        return !!info && hostsHere(info, workspace);
+      };
+      return list.find((m) => fleet.power(m) === "on" && hosted(m))
+        ?? list.find((m) => fleet.power(m) === "on")
+        ?? list.find((m) => hosted(m))
+        ?? list.find((m) => fleet.info(m)?.wakes)
+        ?? list[0]
+        ?? null;
+    };
     const found = pick(primary) ?? pick(members);
     if (found || !workspace) return found;
     return fleet.machines().find((m) => fleet.power(m.id) !== "outdated" && !m.child && wakeableFor(m, workspace))?.id ?? null;
@@ -656,6 +684,14 @@ function createRouterCore(config: RouterConfig) {
       // Con la máquina apagada el relay la guardó y su copia ya la refleja: la lista se relee de allá.
       if (isDeferrable(command)) deferredChanged(machine);
       if (SESSION_WRITE.has(command)) sessionsChanged(machine, workspace);
+      if (
+        config.organizationCatalog
+        && workspace
+        && fleet.lists(machine, workspace) !== true
+        && fleet.power(machine) === "on"
+      ) {
+        void fleet.read({ machine, workspace: null, command: "list_workspaces", args: {} }).catch(() => {});
+      }
       return value;
     }
     const slice = await fleet.read(envelope);
@@ -842,7 +878,7 @@ function createRouterCore(config: RouterConfig) {
     const workspace = active;
     const lead = defaultMachine(workspace);
     const members = new Set(membersOf(workspace));
-    // En la web, una máquina que no lista el workspace no lo sirve ni lo hace suyo.
+    // En la web o en contexto de organización, las máquinas no elegibles no sirven ni adoptan el workspace.
     const owned = (!local || !!scopedLocal) && !!workspace;
     const home = config.home?.();
     const selfOs = systemOf(home?.os);
@@ -852,6 +888,9 @@ function createRouterCore(config: RouterConfig) {
       // Una de otro contrato no corre tareas nuevas hasta actualizarse.
       ...fleet.machines().filter((m) => fleet.power(m.id) !== "outdated").map((m) => {
         const os = systemOf(m.os);
+        const listedHere = workspace ? fleet.lists(m.id, workspace) : null;
+        const hostedHere = !!workspace && (owned ? hostsHere(m, workspace) : members.has(m.id));
+        const eligible = catalogMember(m, workspace);
         const wakeable = owned && wakeableFor(m, workspace);
         return {
           id: m.id,
@@ -860,9 +899,9 @@ function createRouterCore(config: RouterConfig) {
           on: fleet.power(m.id) === "on",
           connection: fleet.state(m.id),
           power: fleet.power(m.id),
-          hosts: workspace ? (members.has(m.id) ? true : wakeable ? null : false) : null,
-          materializes: owned ? members.has(m.id) : adopts(m, workspace),
-          refuses: owned ? !members.has(m.id) && !wakeable : !permitted(m, workspace) && m.kind !== "organization",
+          hosts: workspace ? (hostedHere ? true : listedHere === null && (eligible || wakeable) ? null : false) : null,
+          materializes: owned ? (hostedHere || eligible) : adopts(m, workspace),
+          refuses: owned ? (!hostedHere && !eligible && !wakeable) : !permitted(m, workspace) && m.kind !== "organization",
           wakes: m.wakes,
           ...(m.features?.length ? { features: [...m.features] } : {}),
           ...(m.version ? { version: m.version } : {}),

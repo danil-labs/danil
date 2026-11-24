@@ -86,6 +86,31 @@ for (const failure of ["token", "401", "403"]) test(`Desk keeps the cloud picker
   assert.deepEqual(app.failures, []);
 });
 
+test("Desk normalizes machine-provisioning kind: hosted so cloud tasks reach the sidebar", async () => {
+  const context = { context_id: "danil", org: "org_danil", org_name: "Danil", plan: "pro" };
+  const { app, requests } = await mount("hosted-kind", () => ok([
+    { ...cloud(), kind: "hosted", organization_id: context.org },
+    { machine_id: "mch_self", name: "Esta Mac", state: "running", connection: "connected", kind: "connected", person_id: "person", organization_id: context.org },
+  ]), {
+    signed: true,
+    organization: context.org,
+    extra: {
+      danil_session_status: { state: "connected", sessions: [{ family: "family", contexts: [context] }] },
+      account_relay_token: () => { throw { detail: "service_retired" }; },
+    },
+    relay: () => new Response("{}", { status: 401 }),
+  });
+  assert.ok(await until(() => requests() > 0), "Desk reads the organization catalog");
+  const doc = app.w.document;
+  const tile = () => doc.querySelector('[data-workspace-context="danil"][data-workspace-tile="w"]');
+  assert.ok(await until(tile), "Desk shows the organization's workspace");
+  tile().click();
+  assert.ok(await until(() => tile().getAttribute("aria-current") === "true"));
+  await ready(app);
+  assert.ok(await until(() => app.w.document.querySelector('[data-sesion="cmp_cloud~t1"]')), "hosted cloud VM tasks reach the sidebar");
+  assert.deepEqual(app.failures, []);
+});
+
 test("C1 R: inicial pendiente sin recordada conserva local y no monta selector", async () => {
   const gate = deferred(); const { app } = await mount("C1", () => gate.promise);
   const observed = watch(app);
