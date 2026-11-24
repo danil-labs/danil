@@ -72,8 +72,8 @@ Regla general para cualquier archivo viejo: `Terminus-<resto>` →
 - **npx** (`npx @danil-labs/terminus`) también resuelve por
   `updater-stable/latest-<target>.json`. Enlaza a `https://danil.ai/download/`
   solo como descarga manual.
-- **La web** (`app.danil.ai/terminus` → `alfa-app.danil.ai`) es otra cosa; sus
-  redirecciones están en `web-redirect/`.
+- **La web** es `beta.danil.ai`. `app.danil.ai/terminus` ya no redirige: el
+  Worker que lo hacía se retiró junto con `alfa-app.danil.ai`.
 
 ## Comprobación tras promover
 
