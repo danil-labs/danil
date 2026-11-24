@@ -13,7 +13,7 @@ import { Input } from "../../../../ui/src/Input";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { AstroAvatar } from "./AstroAvatar";
 import { BodyPicker } from "../components/BodyPicker";
-import { TelegramSection } from "../components/TelegramSection";
+import { TelegramSection } from "./TelegramSection";
 import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { LABEL, SECTION, type AgentProfileProps } from "./agent-profile-model";

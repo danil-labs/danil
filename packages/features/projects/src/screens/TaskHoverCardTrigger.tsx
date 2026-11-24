@@ -1,6 +1,6 @@
 import { createSignal, createUniqueId, type JSX, lazy, onCleanup, Suspense } from "solid-js";
 import { Popover, PopoverContent } from "../../../../ui/src/Popover";
-import { threadTitle } from "../screens/Sessions";
+import { threadTitle } from "./Sessions";
 import type { TaskHoverCardProps } from "./TaskHoverCard";
 
 const TASK_HOVER_CARD_DELAY = 400;

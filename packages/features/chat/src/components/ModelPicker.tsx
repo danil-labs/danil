@@ -1,1 +1,1 @@
-export { default } from "./model-picker-view";
+export { default } from "../screens/model-picker-view";

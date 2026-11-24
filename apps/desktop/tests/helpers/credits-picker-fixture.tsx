@@ -1,7 +1,7 @@
 import "../../src/locales/catalogs";
 import { render } from "solid-js/web";
-import DanilServices from "../../../../packages/features/chat/src/components/DanilServices.tsx";
-import SelectorDeModelo from "../../../../packages/features/chat/src/components/model-picker-view.tsx";
+import DanilServices from "../../../../packages/features/chat/src/screens/DanilServices.tsx";
+import SelectorDeModelo from "../../../../packages/features/chat/src/screens/model-picker-view.tsx";
 import { aplicarLengua } from "../../src/lib/i18n";
 
 export function mountServices(root: HTMLElement, props: Parameters<typeof DanilServices>[0]) {

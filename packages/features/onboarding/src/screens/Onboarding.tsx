@@ -4,7 +4,7 @@ import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, prosaDe } from "../../../../ui/src/Failure";
 import { crearConexiones } from "../queries/connect-store";
-import { Comprobacion, MapaDeConexiones, PanelDeIA } from "../components/ConnectAI";
+import { Comprobacion, MapaDeConexiones, PanelDeIA } from "./ConnectAI";
 import { accountWelcomeAnswered } from "../model/account-welcome";
 import { entrarAlWorkspaceFree } from "../queries/onboarding-store";
 import type { ControlesDeVentanaDelShell, SellarWorkspaceFree } from "../model/shell-port";

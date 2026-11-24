@@ -41,7 +41,7 @@ import {
   numerosMarcados,
   saltoMarcado,
   type MarcaDelEditor,
-} from "./editor-extensions";
+} from "../components/editor-extensions";
 
 /**
  * El archivo abierto para escribir, con CodeMirror 6 montado a mano. Entra con

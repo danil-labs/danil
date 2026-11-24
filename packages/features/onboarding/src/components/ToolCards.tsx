@@ -1,2 +1,1 @@
-export { Integraciones } from "./Integrations";
-export { Plugins } from "./ToolPlugins";
+export { Integraciones } from "../screens/Integrations";

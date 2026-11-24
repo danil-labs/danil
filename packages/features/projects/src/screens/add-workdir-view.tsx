@@ -12,7 +12,7 @@ import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
 import type { AnadirCarpetaProps } from "./add-workdir-model";
 import { createAnadirCarpeta } from "./add-workdir-state";
 
-const RepositoryPicker = retryableLazy(() => import("../components/RepositoryPicker"));
+const RepositoryPicker = retryableLazy(() => import("./RepositoryPicker"));
 
 /**
  * Añadir una carpeta de trabajo: la que ya está en el disco, una clonada de un

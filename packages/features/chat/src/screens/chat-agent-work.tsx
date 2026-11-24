@@ -1,4 +1,4 @@
-import { HistoryDetails } from "../components/HistoryDetails";
+import { HistoryDetails } from "./HistoryDetails";
 import Split from "lucide-solid/icons/split";
 import { Index, Show } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
@@ -16,7 +16,7 @@ import { type Respuesta } from "../components/Questions";
 import { HoraDelTurno, LineaDeProveedor, BotonCopiar } from "../components/thread/MessageDecorations";
 import { TextoConSiguientes, ImagenesEntregadas, type RespuestaRapida } from "../components/thread/AgentAnswer";
 import type { Msg } from "../model/messageTypes";
-import { RegistroDeTrabajo } from "../components/activity/TurnActivity";
+import { RegistroDeTrabajo } from "./activity/TurnActivity";
 import { type Avance, textoVisible, FILA_DEL_MENSAJE } from "./chat-model";
 
 
