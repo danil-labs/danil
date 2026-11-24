@@ -172,5 +172,5 @@ export type ListaBastaPort = (lista: Startup) => boolean;
 export type ReconciliarPort = (previa: Startup | null, arranque: Startup) => "aplicar" | "nada";
 
 /** `packages/shell`: el consumo por cuenta y el riel. */
-export type CreateUsagePort<Usage> = (props: { agents: () => Agent[]; agent: () => string; busy: () => boolean; reload: () => number; workspace: () => string | null }) => Usage;
+export type CreateUsagePort<Usage> = (props: { agents: () => Agent[]; agent: () => string; model?: () => string | null; busy: () => boolean; reload: () => number; workspace: () => string | null }) => Usage;
 export type CreateSidebarPort = () => { colapsado: () => boolean; alternar: () => boolean | void };

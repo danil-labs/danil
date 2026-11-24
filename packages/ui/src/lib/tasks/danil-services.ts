@@ -52,3 +52,11 @@ export function creditsBalanceState(amount: number | null | undefined): CreditsB
   if (amount === null || !Number.isFinite(amount)) return { kind: "unavailable" };
   return { kind: "amount", count: amount };
 }
+
+/** Formato compacto del saldo (máximo 2 decimales sin ceros sobrantes; nunca redondea un saldo positivo a 0). */
+export function formatCreditsCount(value: number): string {
+  if (!Number.isFinite(value)) return "0";
+  if (value > 0 && value < 0.01) return "<0.01";
+  const rounded = Math.round(value * 100) / 100;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0$/, "");
+}

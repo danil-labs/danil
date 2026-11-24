@@ -199,7 +199,11 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         onUnavailable: () => { setError('web.platform.unavailable'); mounted = false; gate(); later(); },
         services: {
           webWorkspacePicker: picker,
-          danilCredits: { readBalance: async signal => { const group = active.current(); return group ? api.creditsBalance(group.org, signal, group.context) : null; } },
+          danilCredits: {
+            readBalance: async signal => { const group = active.current(); return group ? api.creditsBalance(group.org, signal, group.context) : null; },
+            scope: () => active.current()?.context ?? null,
+            clearCache: () => api.clearCreditsCache(),
+          },
         },
         // W4: una organización con la sesión vencida ofrece volver a entrar a esa organización.
         // Admite solo esa organización (como el «+»): un login completo reemplazaría todo el conjunto de la cookie. Solo

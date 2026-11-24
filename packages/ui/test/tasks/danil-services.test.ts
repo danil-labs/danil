@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DANIL_CREDITS_MODEL, DANIL_CREDITS_TIERS, FREE_ROUTER_MODEL, creditsBalanceState, danilCreditsTierLabel, danilServiceOf, isDanilCreditsModel } from "../../src/lib/tasks/index.ts";
+import { DANIL_CREDITS_MODEL, DANIL_CREDITS_TIERS, FREE_ROUTER_MODEL, creditsBalanceState, danilCreditsTierLabel, danilServiceOf, formatCreditsCount, isDanilCreditsModel } from "../../src/lib/tasks/index.ts";
 
 test("only the canonical Danil Credits tiers and Free Router are presented as services", () => {
   assert.equal(DANIL_CREDITS_MODEL, "danil-credits/danil/equilibrado");
@@ -32,4 +32,13 @@ test("an unknown balance is unavailable, never zero", () => {
   assert.deepEqual(creditsBalanceState(Number.NaN), { kind: "unavailable" });
   assert.deepEqual(creditsBalanceState(0), { kind: "amount", count: 0 });
   assert.deepEqual(creditsBalanceState(42), { kind: "amount", count: 42 });
+});
+
+test("formatCreditsCount rounds cleanly to 2 decimals without hiding positive micro-balances", () => {
+  assert.equal(formatCreditsCount(0), "0");
+  assert.equal(formatCreditsCount(42), "42");
+  assert.equal(formatCreditsCount(974.879097), "974.88");
+  assert.equal(formatCreditsCount(12.5), "12.5");
+  assert.equal(formatCreditsCount(12.001), "12");
+  assert.equal(formatCreditsCount(0.004), "<0.01");
 });

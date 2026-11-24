@@ -29,6 +29,7 @@ export function platformSession(options: { origin: string; timeoutMs: number }, 
       const body = context ? (await credits.read(context)).body : await (await call("credits/balance", { signal })).json();
       return signal.aborted ? null : availableDanilCredits(body, organizationId);
     },
+    clearCreditsCache: () => credits.clear(),
     workspaces: () => listWorkspaces(call),
     redeemPromo: async (code: string, key: string) => { const result = await webRedeemPromo(transport)(code, key); credits.clear(); return result; },
     logout: async () => { credits.clear(); return identity.logout(); },

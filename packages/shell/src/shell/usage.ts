@@ -7,6 +7,8 @@ import { displayWorkspaceContext } from "../../../session/src/workspace-context"
 import { workspaceMachineSources } from "../../../features/machines/src/queries/danil-source";
 import { machines, machineOf } from "../../../features/machines/src/queries/store";
 import type { Account, AccountList, AccountStatus } from "../../../features/settings/src/queries/accounts-store";
+import { isDanilCreditsModel } from "../../../ui/src/lib/tasks/danil-services.ts";
+import { refreshDanilCreditsBalance } from "../../../features/chat/src/queries/danil-credits-balance";
 
 // Consumo de las cuentas activas; las lecturas fallidas conservan el último dato marcado como antiguo.
 // El refresco automático debe respetar el caché y evitar cuentas sin consumo disponible.
@@ -35,6 +37,7 @@ const REFRESH_INTERVAL_MS = 5 * 60_000;
 export function createUsage(props: {
   agents: () => AgentOpt[];
   agent: () => string;
+  model?: () => string | null;
   busy: () => boolean;
   // Conectar una cuenta desde Configuración debe invalidar la lista visible.
   reload: () => number;
@@ -198,6 +201,10 @@ export function createUsage(props: {
       const justFinished = running && !busy;
       running = busy;
       if (!justFinished) return;
+      if (isDanilCreditsModel(props.model?.())) {
+        void refreshDanilCreditsBalance({ force: true });
+        return;
+      }
       const agent = props.agent();
       const id = accountsByAgent().find((p) => p.agent === agent)?.active;
       if (!id) return;
@@ -261,7 +268,10 @@ export function createUsage(props: {
     updating,
     rename,
     refresh: (agent: string, id: string) => void querySequentially([[agent, id]], true),
-    refreshAll: () => void querySequentially(activeAccounts(), true),
+    refreshAll: () => {
+      void refreshDanilCreditsBalance({ force: true });
+      void querySequentially(activeAccounts(), true);
+    },
   };
 }
 

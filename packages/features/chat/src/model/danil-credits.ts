@@ -10,6 +10,10 @@ export const DANIL_CREDITS = Object.freeze({
 export type DanilCreditsSource = {
   readBalance: (signal: AbortSignal) => Promise<number | null>;
   subscribe?: (clear: () => void) => () => void;
+  /** Clave reactiva del contexto/organización activa para aislar el caché de saldo sin mezclar orgs. */
+  scope?: () => string | null;
+  /** Invalida cachés de transporte antes de una recarga explícita o tras un turno. */
+  clearCache?: () => void;
   /** Abre la recarga en el navegador para la cuenta autenticada; sin ella no se ofrece. */
   recharge?: () => Promise<void>;
 };
