@@ -6,11 +6,11 @@
  */
 import "../../src/locales/catalogs";
 import { render } from "solid-js/web";
-import Almacenamiento from "../../src/features/shell/Storage";
-import { setMachineRoute } from "../../src/lib/invoke";
-import { refetchMachines } from "../../src/features/machines/store";
+import Almacenamiento from "../../../../packages/shell/src/shell/Storage";
+import { setMachineRoute } from "../../../../packages/engine-client/src/client";
+import { refetchMachines } from "../../../../packages/features/machines/src/queries/store";
 import { type Mode, WORKSPACE, resources, route } from "./fixtures/machine-usage";
-import "../../src/styles/global.css";
+import "../../../../packages/ui/src/styles/global.css";
 
 const params = new URLSearchParams(location.search);
 const mode = (params.get("mode") ?? "high") as Mode;

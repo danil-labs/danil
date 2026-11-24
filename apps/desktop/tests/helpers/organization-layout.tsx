@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { OrganizationRailLayout } from "../../src/features/shell/OrganizationRailLayout";
-import { changeOrgPreference, parseOrgPreference } from "../../src/features/shell/organization-rail-model";
+import { OrganizationRailLayout } from "../../../../packages/shell/src/shell/OrganizationRailLayout";
+import { changeOrgPreference, parseOrgPreference } from "../../../../packages/shell/src/shell/organization-rail-model";
 
 export function mountOrganizationLayout(root: HTMLElement, controlled = true) {
   let viewport = 100;
