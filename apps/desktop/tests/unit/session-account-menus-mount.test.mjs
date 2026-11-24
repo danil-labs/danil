@@ -142,3 +142,82 @@ test("Desk group can redeem only when its context says owner or admin", async ()
     escape(app); await sleep(50);
   }
 });
+
+test("profile menu shows one bug report entry and Sistema theme without focus rings", async () => {
+  const contexts = [{ context_id: "personal", org: "org-personal", org_name: "Personal", plan: "free", workspaces: "all", role: "owner", personal: true }];
+  const app = await boot("listo", "profile-bug-and-theme", {
+    ...RESPONSES,
+    ...contextWorkspaces(contexts),
+    danil_session_status: { state: "connected", default_context: "personal", sessions: [{ family: "f", email: "one@example.com", contexts }] },
+    danil_edge_fetch: ({ path }) =>
+      path === "/v1/identity/me" ? { status: 200, body: { id: "person", organizations: [{ id: "org-personal", type: "personal", role: "owner", plan: "free" }] } }
+      : path === "/v1/workspaces" ? contextCatalog(contexts)
+      : { status: 404 },
+  });
+  const doc = app.w.document;
+  assert.ok(await until(() => doc.querySelector('[data-danil-foot="preferences"]')));
+  doc.querySelector('[data-danil-foot="preferences"]').click();
+  assert.ok(await until(() => doc.querySelector("[data-report-bug]")));
+  const bugs = [...doc.querySelectorAll("[data-report-bug]")];
+  assert.equal(bugs.length, 1, "one bug action, not two");
+  assert.equal(bugs[0].textContent.trim(), "Reportar un bug de Danil");
+  assert.ok(!doc.body.textContent.includes("Abrir un issue en blanco"), "blank-issue shortcut is gone");
+  assert.ok(!doc.body.textContent.includes("Pídeselo al agente"), "ask-agent label is gone");
+  const radios = [...doc.querySelectorAll('[role="radiogroup"] [role="radio"]')];
+  assert.deepEqual(radios.map((b) => b.textContent.trim()), ["Claro", "Oscuro", "Sistema"]);
+  for (const radio of radios) {
+    assert.ok(!radio.className.includes("focus-visible:outline"), "no focus ring on theme options");
+  }
+  assert.deepEqual(app.failures, []);
+});
+
+test("Organization Harness link appears only for owner and admin on organization workspaces, never for member or personal", async () => {
+  const cases = [
+    { name: "owner", role: "owner", plan: "business", type: "organization", personal: false, expected: true },
+    { name: "admin", role: "admin", plan: "pro", type: "organization", personal: false, expected: true },
+    { name: "member", role: "member", plan: "enterprise", type: "organization", personal: false, expected: false },
+    { name: "personal", role: "owner", plan: "free", type: "personal", personal: true, expected: false },
+  ];
+  for (const scenario of cases) {
+    const ctx = {
+      context_id: `ctx-${scenario.name}`,
+      org: `org-${scenario.name}`,
+      org_name: `Org ${scenario.name}`,
+      plan: scenario.plan,
+      workspaces: "all",
+      role: scenario.role,
+      ...(scenario.personal ? { personal: true } : {}),
+    };
+    const opened = [];
+    const wsId = `workspace-${ctx.context_id}`;
+    const app = await boot("listo", `profile-harness-${scenario.name}`, {
+      ...RESPONSES,
+      machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true }],
+      list_workspaces: { active: wsId, workspaces: [{ id: wsId, name: ctx.org_name, account: { org: ctx.org, account_id: ctx.context_id } }] },
+      workspaces_startup: { active: wsId, workspaces: [{ id: wsId, name: ctx.org_name }] },
+      danil_session_status: { state: "connected", default_context: ctx.context_id, sessions: [{ family: "f", email: "one@example.com", contexts: [ctx] }] },
+      danil_edge_fetch: ({ path }) =>
+        path === "/v1/identity/me" ? { status: 200, body: { id: "person", organizations: [{ id: ctx.org, type: scenario.type, role: scenario.role, plan: scenario.plan }] } }
+        : path === "/v1/workspaces" ? contextCatalog([ctx])
+        : { status: 404 },
+      open_external: (args) => { opened.push(args.target); return null; },
+    });
+    const doc = app.w.document;
+    assert.ok(await until(() => doc.querySelector(`[data-workspace-context="${ctx.context_id}"]`)), `${scenario.name}: rail ready`);
+    doc.querySelector('[data-danil-foot="preferences"]').click();
+    assert.ok(await until(() => doc.querySelector("[data-report-bug]")), `${scenario.name}: profile menu opened`);
+    if (scenario.expected) {
+      assert.ok(await until(() => doc.querySelector("[data-profile-harness]")), `${scenario.name}: sees Harness link`);
+      const link = doc.querySelector("[data-profile-harness]");
+      assert.equal(link.getAttribute("href"), "https://harness.danil.ai/");
+      assert.equal(link.textContent.trim(), "Ir a Harness de Organización");
+      link.click();
+      await sleep(100);
+      assert.deepEqual(opened, ["https://harness.danil.ai/"], `${scenario.name}: opens Harness externally`);
+    } else {
+      await sleep(250);
+      assert.equal(doc.querySelector("[data-profile-harness]"), null, `${scenario.name}: does not see Harness link`);
+    }
+    assert.deepEqual(app.failures, []);
+  }
+});

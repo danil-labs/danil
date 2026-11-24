@@ -1,7 +1,7 @@
 import X from "lucide-solid/icons/x";
 import { Show } from "solid-js";
 import { t } from "../../../ui/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { createPref } from "../../../session/src/prefs";
 import { Button } from "../../../ui/src/Button";
 import { GitHubMark } from "../../../ui/src/icons";
@@ -33,7 +33,7 @@ export default function GitHubStar() {
   const abrir = () => {
     if (abriendo) return;
     abriendo = true;
-    void invoke("site_open_external", { url: REPOSITORIO })
+    void callShellViewEngine("site_open_external", { url: REPOSITORIO })
       .then(ocultar)
       .catch(() => {})
       .finally(() => {

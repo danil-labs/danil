@@ -73,9 +73,9 @@ export function engineAdoptionReport(a: EngineAdoption, context = "", orgName: s
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 type Listen = <T>(event: string, on: (e: { payload: T }) => void) => Promise<() => void>;
 
-export const readEngineAdoption = async (invoke: Invoke) => engineAdoptionOf(await invoke<unknown>("engine_adoption_status").catch(() => null));
+export const readEngineAdoption = async (rpc: Invoke) => engineAdoptionOf(await rpc<unknown>("engine_adoption_status").catch(() => null));
 /** Otro repaso del motor: el «Reintentar» del aviso. */
-export const retryEngineAdoption = async (invoke: Invoke) => engineAdoptionOf(await invoke<unknown>("engine_adoption_retry").catch(() => null));
+export const retryEngineAdoption = async (rpc: Invoke) => engineAdoptionOf(await rpc<unknown>("engine_adoption_retry").catch(() => null));
 
 export function onEngineAdoption(listen: Listen, on: (a: EngineAdoption) => void): Promise<() => void> {
   return listen<unknown>("engine-adoption", (e) => { const a = engineAdoptionOf(e.payload); if (a) on(a); });

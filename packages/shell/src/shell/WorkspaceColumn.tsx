@@ -186,7 +186,7 @@ export default function WorkspaceColumn(props: {
       </div>
       <RemoveWorkspaceDialog workspace={removing()} onCancel={() => setRemoving(null)} onRemove={remove} onUnavailable={() => setRevokeUnavailable(true)} />
       <ToastPortal><Show when={revokeUnavailable()}><Toast onDismiss={() => setRevokeUnavailable(false)}>{t("shell.workspaces.revoke_unavailable")}</Toast></Show></ToastPortal>
-      <ColumnFoot tools={props.tools} open={ws.activo() ?? null} onSettings={props.onSettings} onReportarBug={props.onReportarBug} />
+      <ColumnFoot tools={props.tools} open={ws.activo() ?? null} activeContext={ws.activoContexto()} onSettings={props.onSettings} onReportarBug={props.onReportarBug} />
     </nav>
   );
 }
@@ -197,6 +197,7 @@ function ColumnFoot(props: {
   onSettings: (panel?: string) => void;
   onReportarBug: () => void;
   open: string | null;
+  activeContext?: string | null;
 }) {
   const boton = "grid size-8 shrink-0 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
   // Leer `props.tools` dos veces montaría dos copias, y cada una consulta por su cuenta.
@@ -212,7 +213,7 @@ function ColumnFoot(props: {
       <Pressable class={boton} aria-label={t("settings.title")} title={t("settings.title")} onClick={() => props.onSettings()}>
         <SettingsIcon size={17} aria-hidden="true" />
       </Pressable>
-      <ProfileMenu open={props.open} onAccount={() => props.onSettings("cuenta-danil")} onReportarBug={props.onReportarBug} />
+      <ProfileMenu open={props.open} context={props.activeContext} onAccount={() => props.onSettings("cuenta-danil")} onReportarBug={props.onReportarBug} />
     </div>
   );
 }

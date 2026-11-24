@@ -43,8 +43,17 @@ import { createRouter, type Invoke } from "../queries/router";
 import { createSessionCloud } from "../queries/session-cloud";
 import { machineNamesChanged, refetchMachines, setCloudInventory } from "../queries/store";
 import { normalizeWslChildren, type WslChild } from "../model/wsl";
-import { RELIST, TOKEN_MARGIN, LOCAL, LOCAL_KEY, windowSystem, type ClientToken, type DanilStatus, type Installed } from "./account-helpers";
+import { RELIST, TOKEN_MARGIN, LOCAL, LOCAL_KEY, windowSystem, type ClientToken, type Installed } from "./account-helpers";
 import { refresh, slicesChanged, pickedFor } from "../queries/account-events";
+import {
+  fetchAccountRelayToken,
+  listNativeMachines,
+  readDanilConnectStatusOrNull,
+  readDanilSessionStatusOrNull,
+  readDanilSessionsOrNull,
+  readDanilWorkspaceAccountOrNull,
+  readListedWorkspacesOrNull,
+} from "../queries/account-queries.ts";
 import { invokeNative, nativeInternals, type NativeInternals } from "../../../../host/src/native";
 
 let started = false;
@@ -88,15 +97,13 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
   started = true;
   setCloudInventory("initial");
   const native: Invoke = internals.invoke.bind(internals);
-  // The window's own IPC under its usual name: the command guards read these two literally.
-  const invoke = native;
   let token: ClientToken | null = null;
   // Las máquinas de la organización por el borde (`/v1/machines`); el motor local sigue por su RPC.
-  const cloud = createSessionCloud(invoke, (e) => {
+  const cloud = createSessionCloud(native, (e) => {
     // `403 organization_selection_required`: se abre el selector de organización (si esta ventana lo tiene).
     const organizations = (capabilities() as { organizations?: () => Promise<{ report: (e: unknown) => unknown }> }).organizations;
     void organizations?.().then((selector) => selector.report(e));
-  }, undefined, contexts => { installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts); }, createConnectedStatus(invoke));
+  }, undefined, contexts => { installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts); }, createConnectedStatus(native));
   let cloudIds = new Set<string>();
   /** `machines.session.renew` anunciada por el borde: el relay renueva dentro del canal. */
   let cloudRenew = false;
@@ -164,10 +171,10 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
   let account: string | null = null;
   // Los workspaces de otras máquinas que el motor de aquí conoce, de todas sus sesiones: el riel es de la persona, no del workspace abierto.
   const engineWorkspaces = createEngineWorkspaces({
-    invoke,
+    invoke: native,
     listen,
     features: async () => {
-      const rows = (await invoke("machine_list", {})) as { features?: unknown }[] | null;
+      const rows = await listNativeMachines();
       const features = Array.isArray(rows) ? rows[0]?.features : null;
       return Array.isArray(features) ? features.filter((f): f is string => typeof f === "string") : [];
     },
@@ -186,7 +193,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
   const getToken = async (): Promise<ClientToken> => {
     if (token && token.expires_at - Date.now() > TOKEN_MARGIN) return token;
     const asked = account;
-    const next = (await invoke("account_relay_token", asked ? { account: asked } : {})) as ClientToken;
+    const next = await fetchAccountRelayToken(asked);
     if (asked === account) token = next;
     return next;
   };
@@ -369,15 +376,15 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
    * without `danil_sessions` has one session, the one of `danil_connect_status`.
    */
   async function whoAmI(): Promise<{ self: string | null; account: string | null }> {
-    const sessions = (await invoke("danil_sessions", {}).catch(() => null)) as DanilSessionInfo[] | null;
+    const sessions = (await readDanilSessionsOrNull()) as DanilSessionInfo[] | null;
     if (Array.isArray(sessions)) {
-      const listed = installed ? null : ((await invoke("list_workspaces", {}).catch(() => null)) as { active?: unknown } | null);
+      const listed = installed ? null : await readListedWorkspacesOrNull();
       const workspace = installed?.router.activeWorkspace() ?? (typeof listed?.active === "string" ? listed.active : null);
-      const of = (await invoke("danil_workspace_account", workspace ? { workspace } : {}).catch(() => null)) as WorkspaceAccount | null;
+      const of = (await readDanilWorkspaceAccountOrNull(workspace)) as WorkspaceAccount | null;
       const session = railSession(sessions, of);
       return { self: session?.computer_id ?? null, account: session?.account ?? session?.computer_id ?? null };
     }
-    const status = (await invoke("danil_connect_status", {}).catch(() => null)) as DanilStatus | null;
+    const status = await readDanilConnectStatusOrNull();
     return { self: status?.state === "connected" ? (status.computer_id ?? null) : null, account: null };
   }
 
@@ -453,7 +460,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
   const sync = async (): Promise<void> => {
     const identity = ++identityRead;
     const epoch = cloudEpoch;
-    const status = await invoke("danil_session_status").catch(() => null) as { state?: string; sessions?: unknown } | null;
+    const status = await readDanilSessionStatusOrNull();
     const scoped = status?.state === "connected" && settledContextIds(status.sessions) !== null;
     const who = scoped ? { self: null, account: null } : await whoAmI();
     if (identity !== identityRead || epoch !== cloudEpoch) return;

@@ -1,5 +1,5 @@
 import { createMemo } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { t } from "../../../ui/src/lib/i18n";
 import { peso } from "../../../ui/src/lib/format";
 import { conservar } from "../../../session/src/sessionRefresh";
@@ -51,7 +51,7 @@ export function createStorageTasks(s: StorageState) {
     setFallo((prev) => ({ ...prev, [key]: "" }));
     setLiberado((prev) => ({ ...prev, [key]: "" }));
     try {
-      const list = await invoke<Machine[]>("machine_list", {}, {
+      const list = await callShellEngine<Machine[]>("machine_list", {}, {
         headers: { "x-terminus-workspace": captured.workspace },
       });
       if (!current(captured)) return;
@@ -82,17 +82,17 @@ export function createStorageTasks(s: StorageState) {
     const project = tarea.project;
     const session = tarea.session;
     const paths = [...rutas];
-    await clean(`${project}/${session}`, (captured) => invoke<Liberado>("reclaim_storage", {
+    await clean(`${project}/${session}`, (captured) => callShellEngine<Liberado>("reclaim_storage", {
       project, session, rutas: paths,
     }, destination(captured)));
   }
 
   async function vaciarCache() {
-    await clean("cache", (captured) => invoke<Liberado>("empty_build_cache", {}, destination(captured)));
+    await clean("cache", (captured) => callShellEngine<Liberado>("empty_build_cache", {}, destination(captured)));
   }
 
   async function recoger() {
-    await clean("orphans", (captured) => invoke<Liberado>("collect_orphans", {}, destination(captured)));
+    await clean("orphans", (captured) => callShellEngine<Liberado>("collect_orphans", {}, destination(captured)));
   }
 
   return { tareas, tope, grupos, grupoAbierto, cuantasTareas, fraccionRecuperable, vaciar, vaciarCache, recoger };

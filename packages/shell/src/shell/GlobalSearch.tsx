@@ -5,7 +5,7 @@ import Search from "lucide-solid/icons/search";
 import SquarePen from "lucide-solid/icons/square-pen";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, on, Show } from "solid-js";
 import { t } from "../../../ui/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import type { Project } from "../../../ui/src/lib/model";
 import { type Space, type SpaceRef, spaceName } from "../../../ui/src/lib/spaces";
 import { cn } from "../../../ui/src/lib/utils";
@@ -72,7 +72,7 @@ function Panel(props: Parameters<typeof GlobalSearch>[0] & { initial: SearchFilt
   const [text, setText] = createSignal("");
   const [filter, setFilter] = createSignal<SearchFilter>(props.initial);
   const [active, setActive] = createSignal(0);
-  const [archived] = createResource(() => invoke<Archivadas>("archived_tasks"));
+  const [archived] = createResource(() => callShellViewEngine<Archivadas>("archived_tasks"));
   const query = () => text().trim();
   // Leer un recurso fallido lanza: un fallo de Archivadas no apaga los demás grupos.
   const archivadas = () => (archived.error ? undefined : archived());

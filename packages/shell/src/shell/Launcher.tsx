@@ -2,7 +2,7 @@ import { listen } from "../../../host/src/serviceEvents.ts";
 import { createEffect, For, type JSX, Match, onCleanup, onMount, Show, Switch, createSignal } from "solid-js";
 import { markConnected } from "../../../session/src/engineConnection.ts";
 import { t } from "../../../ui/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { cn } from "../../../ui/src/lib/utils";
 import {
   createFullscreen,
@@ -66,7 +66,7 @@ export default function Lanzador(props: { children: JSX.Element }) {
   onMount(() => {
     const escucha = listen<Fase>("launcher", (e) => setFase(e.payload));
     // Sin lanzador que conteste no hay nada que esperar: la ventana abrió con una selección.
-    void invoke<Fase>("launcher_state")
+    void callShellViewEngine<Fase>("launcher_state")
       .then((actual) => setFase((visto) => visto ?? actual))
       .catch(() => setFase({ phase: "ready" }));
     onCleanup(() => void escucha.then((f) => f()));
@@ -77,7 +77,7 @@ export default function Lanzador(props: { children: JSX.Element }) {
   // Esperar a la versión anterior no tapa la ventana: es un aviso sobre la app que conecta.
   const montada = () => ["ready", "connecting", "previous"].includes(fase()?.phase ?? "");
 
-  const seguir = () => void invoke("launcher_continue");
+  const seguir = () => void callShellViewEngine("launcher_continue");
   // «Detener y entrar ya» corta turnos: se confirma diciendo cuántos.
   const [confirmando, setConfirmando] = createSignal(false);
   const traspaso = () => {

@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { imagenInerte } from "../../../ui/src/lib/chat/links";
 import { capabilities } from "../../../host/src/platform";
 import { machineOf } from "../../../features/machines/src/queries/store";
@@ -54,7 +54,7 @@ export function urlDeLogo(path: string | null, workspace: string | null = null):
 function delMotor(path: string): Promise<string | null> {
   let pendiente = urls.get(path);
   if (!pendiente) {
-    pendiente = invoke<{ data_url: string | null }>("preview_file", { path, rel: path }, machineOf(path))
+    pendiente = callShellEngine<{ data_url: string | null }>("preview_file", { path, rel: path }, machineOf(path))
       .then((v) => imagenInerte(v.data_url))
       .catch(() => {
         urls.delete(path);

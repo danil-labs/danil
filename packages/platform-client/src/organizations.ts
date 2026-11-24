@@ -11,7 +11,7 @@
  */
 import { announces, capabilityList } from "./capabilities.ts";
 
-export type Organization = { id: string; name: string; plan?: string; role?: string };
+export type Organization = { id: string; name: string; plan?: string; role?: string; type?: string };
 
 export type OrganizationSource = {
   /** El cuerpo de `GET /v1/capabilities`; sin esto, la ruta misma dice si existe. */
@@ -47,7 +47,7 @@ function organizationOf(raw: unknown): Organization | null {
   const id = text(r?.id);
   if (!r || !id) return null;
   // Solo lo declarado; lo demás se ignora (consumidor tolerante).
-  return { id, name: text(r.name) ?? id, ...(text(r.plan) ? { plan: r.plan as string } : {}), ...(text(r.role) ? { role: r.role as string } : {}) };
+  return { id, name: text(r.name) ?? id, ...(text(r.plan) ? { plan: r.plan as string } : {}), ...(text(r.role) ? { role: r.role as string } : {}), ...(text(r.type) ? { type: r.type as string } : {}) };
 }
 
 /** `status` HTTP (web) o `detail` del `invoke` de Desk. */

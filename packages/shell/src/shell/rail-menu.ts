@@ -1,6 +1,6 @@
 import { capabilities } from "../../../host/src/platform.ts";
 import { openNativeExternal } from "../../../host/src/native-workspace-add-link.ts";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 
 export const RAIL_MENU_ITEM =
   "block w-full rounded-sm px-2 py-1.5 text-left text-ui text-neutral-950 outline-none hover:bg-surface-muted focus-visible:bg-surface-muted disabled:opacity-50";
@@ -15,5 +15,5 @@ export function openHarnessWorkspaces(organization: string, create = false) {
     target.searchParams.set("create", "1");
     target.searchParams.set("from", capabilities().nativeWindow ? "desk" : "web");
   }
-  return capabilities().nativeWindow ? openNativeExternal(target.href) : invoke("open_external", { target: target.href });
+  return capabilities().nativeWindow ? openNativeExternal(target.href) : callShellEngine("open_external", { target: target.href });
 }

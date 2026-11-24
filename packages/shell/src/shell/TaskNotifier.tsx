@@ -1,6 +1,6 @@
 import { For, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
 import { listen } from "../../../host/src/serviceEvents.ts";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { leerPref } from "../../../session/src/prefs";
 import { t } from "../../../ui/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";
@@ -92,7 +92,7 @@ export default function TaskNotifier(props: {
       if (pending.get(notice.key) !== notice) return;
     }
     // Rust decide con el foco nativo: aviso del sistema, parpadeo, o este panel.
-    const where = await invoke<string>("tray_notify", {
+    const where = await callShellViewEngine<string>("tray_notify", {
       title: heading(notice.state, notice.title),
       body: hint(notice.state),
       needsYou: NEEDS_YOU.includes(notice.state),

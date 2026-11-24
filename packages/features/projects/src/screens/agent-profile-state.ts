@@ -1,11 +1,20 @@
-import { invokeNative as invoke } from "../../../../host/src/native.ts";
 import { open } from "@tauri-apps/plugin-dialog";
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
-import type { AgentProfile as Profile, HandlerDefinition } from "../../../../ui/src/lib/model";
+import type { AgentProfile as Profile } from "../../../../ui/src/lib/model";
 import { type OpcionDeModelo, opcionesDeModelos } from "../../../../ui/src/lib/models";
 import { prosaDe } from "../../../../ui/src/Failure";
-import { DEFAULT_PROFILE, notifyProfiles } from "../queries/profiles";
+import {
+  DEFAULT_PROFILE,
+  deleteAgentProfile,
+  notifyProfiles,
+  saveAgentDeclaration,
+  saveAgentProfile,
+  setAgentAvatar,
+  setAgentBackground,
+  setAgentHidden,
+  setAgentModel,
+} from "../queries/profiles.ts";
 import { IMAGES, type AgentProfileProps } from "./agent-profile-model";
 
 export function createAgentProfile(props: AgentProfileProps) {
@@ -65,7 +74,7 @@ export function createAgentProfile(props: AgentProfileProps) {
   async function guardarModelo(agent: string | null, model: string | null) {
     setFailure(null);
     try {
-      await invoke<Profile>("set_agent_model", {
+      await setAgentModel({
         project: props.project,
         name: props.agent.name,
         provider: agent,
@@ -95,7 +104,7 @@ export function createAgentProfile(props: AgentProfileProps) {
     setFailure(null);
     const base = profile();
     try {
-      await invoke<Profile>("save_agent_profile", {
+      await saveAgentProfile({
         project: props.project,
         name: props.agent.name,
         displayName:
@@ -114,7 +123,7 @@ export function createAgentProfile(props: AgentProfileProps) {
   async function saveDeclaration(change: { description?: string; instructions?: string }) {
     setFailure(null);
     try {
-      await invoke<HandlerDefinition>("save_agent_declaration", {
+      await saveAgentDeclaration({
         project: props.project,
         name: props.agent.name,
         description: change.description ?? description(),
@@ -133,7 +142,7 @@ export function createAgentProfile(props: AgentProfileProps) {
     setFailure(null);
     setBorrando(true);
     try {
-      await invoke("delete_agent", {
+      await deleteAgentProfile({
         project: props.project,
         name: props.agent.name,
       });
@@ -151,7 +160,7 @@ export function createAgentProfile(props: AgentProfileProps) {
   async function ocultar(hidden: boolean) {
     setFailure(null);
     try {
-      await invoke<Profile>("set_agent_hidden", {
+      await setAgentHidden({
         project: props.project,
         name: props.agent.name,
         hidden,
@@ -186,7 +195,7 @@ export function createAgentProfile(props: AgentProfileProps) {
   async function setAvatar(source: string | null): Promise<boolean> {
     setFailure(null);
     try {
-      await invoke<Profile>("set_agent_avatar", {
+      await setAgentAvatar({
         project: props.project,
         name: props.agent.name,
         source,
@@ -207,7 +216,7 @@ export function createAgentProfile(props: AgentProfileProps) {
   async function setBackground(source: string | null) {
     setFailure(null);
     try {
-      await invoke<Profile>("set_agent_background", {
+      await setAgentBackground({
         project: props.project,
         name: props.agent.name,
         source,

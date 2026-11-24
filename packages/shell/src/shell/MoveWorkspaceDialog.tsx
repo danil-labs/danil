@@ -12,8 +12,8 @@ async function openHarness() {
     window.open(HARNESS, "_blank", "noopener,noreferrer");
     return;
   }
-  const { invoke } = await import("../../../engine-client/src/client.ts");
-  await invoke("open_external", { target: HARNESS }).catch(() => {});
+  const { callShellViewEngine } = await import("../../../session/src/shell-view-queries.ts");
+  await callShellViewEngine("open_external", { target: HARNESS }).catch(() => {});
 }
 
 type Source = { context_id: string; org: string };

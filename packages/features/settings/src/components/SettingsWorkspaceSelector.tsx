@@ -6,6 +6,7 @@ import { cn } from "../../../../ui/src/lib/utils";
 import { capabilities } from "../../../../host/src/platform";
 import { FailureNote, type Failure } from "../../../../ui/src/Failure";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
+import { Pressable } from "../../../../ui/src/Pressable";
 import type { SesionesDeAjustes } from "../model/sessions-port";
 import {
   type SettingsWorkspaceOption,
@@ -172,8 +173,7 @@ export function SettingsWorkspaceSelector(props: {
                 >
                   <For each={props.options}>
                     {(option) => (
-                      <button
-                        type="button"
+                      <Pressable
                         role="option"
                         aria-selected={option.active}
                         data-settings-workspace-option={option.id}
@@ -211,7 +211,7 @@ export function SettingsWorkspaceSelector(props: {
                         <Show when={option.active}>
                           <Check size={14} class="shrink-0 text-neutral-950" aria-hidden="true" />
                         </Show>
-                      </button>
+                      </Pressable>
                     )}
                   </For>
                 </div>

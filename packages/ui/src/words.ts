@@ -247,7 +247,7 @@ const es = {
   "spaces.menu.rename": "Renombrar",
   "spaces.menu.delete": "Eliminar…",
   "shell.profile.theme": "Tema",
-  "shell.theme.name.system": "El del sistema",
+  "shell.theme.name.system": "Sistema",
   "shell.theme.name.light": "Claro",
   "shell.theme.name.dark": "Oscuro",
   "shell.keep_awake.title": "Mantener despierta la computadora",

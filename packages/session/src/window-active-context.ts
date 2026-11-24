@@ -45,7 +45,7 @@ export function windowActiveContext(sessions: Pick<WebSessionCommands, "last">) 
   const organizations = (refresh: () => Promise<unknown>): OrganizationSelection => {
     // La vuelta del pago «elige» la organización pagada solo en este cliente: relee el conjunto, donde aparece si es nueva.
     let chosen: string | null = null;
-    const state = () => ({ kind: "ready" as const, items: groups().map((g) => ({ id: g.org, name: g.name, plan: g.plan ?? "", role: g.role ?? "" })), active: chosen ?? current()?.org ?? null });
+    const state = () => ({ kind: "ready" as const, items: groups().map((g) => ({ id: g.org, name: g.name, plan: g.plan ?? "", role: g.role ?? "", ...(g.personal ? { type: "personal" } : {}) })), active: chosen ?? current()?.org ?? null });
     const choose = async (id: string) => { await refresh(); if (groups().some((g) => g.org === id)) chosen = id; };
     return { state, load: async () => {}, choose, subscribe: () => () => {}, needed: () => false, report: () => false, dismiss: () => {}, stop: () => {} } as unknown as OrganizationSelection;
   };
