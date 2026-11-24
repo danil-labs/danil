@@ -2,11 +2,12 @@ import { canonicalAgentId, danilCreditsTierLabel, danilServiceOf, isDanilCredits
 
 type ModelCatalog = Parameters<typeof modelName>[1];
 
-type SurfaceIdentity = { provider: string; catalogo: string; label: string };
+type SurfaceIdentity = { id?: string; provider: string; catalogo: string; label: string };
 
 /** Presentación móvil; los ids de proveedor, superficie y modelo no cambian. */
-export function surfacePresentation(surface: SurfaceIdentity, labels: { free: string }) {
+export function surfacePresentation(surface: SurfaceIdentity, labels: { free: string; credits?: string }) {
   const provider = canonicalAgentId(surface.provider);
+  if (surface.id === "danil-credits") return { label: labels.credits ?? surface.label, mark: "danil" };
   if (surface.catalogo === "gratuitos" || isFreeRouterAgent(provider)) return { label: labels.free, mark: "danil" };
   if (provider === OPENCODE) return { label: "OpenCode", mark: OPENCODE };
   return { label: surface.label, mark: surface.provider };
