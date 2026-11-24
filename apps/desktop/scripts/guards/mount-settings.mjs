@@ -604,7 +604,14 @@ const pickLanguage = async (code) => {
   select.dispatchEvent(new languageApp.w.Event("change", { bubbles: true }));
   await sleep(80);
 };
+assert.equal(languageDoc.querySelector("#cfg-sub-languages"), null, "Languages tab was removed from Preferences");
 assert.ok(languageSelect(), "General shows the language select");
+assert.equal(languageSelect().querySelector("optgroup"), null, "no uninstalled language pack optgroup");
+assert.equal(languageSelect().querySelector('option[value="yua"]')?.textContent, "Maayatʼaan", "Maayatʼaan is available out of the box");
+await pickLanguage("yua");
+assert.equal(languageDoc.documentElement.lang, "yua");
+assert.equal(languageSelect().value, "yua", "the select names Maayatʼaan right after switching");
+assert.equal(languageSelect().getAttribute("aria-label"), "Tʼaan", "UI switches to Maayatʼaan");
 await pickLanguage("en");
 assert.equal(languageDoc.documentElement.lang, "en");
 assert.equal(languageSelect().value, "en", "the select names the language just applied");

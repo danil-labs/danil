@@ -649,7 +649,8 @@ def prepare(args, target, budget, compilers):
 def resources_inventory(output, targets):
     """Inventory of every resource the Linux AppImage copies, keyed by its final relative path."""
     files, symlinks = [], []
-    for prefix, root in [("lenguas", LANGUAGES)] + [(f"work-tools/{t}", output / t) for t in targets]:
+    roots = ([("lenguas", LANGUAGES)] if LANGUAGES.exists() else []) + [(f"work-tools/{t}", output / t) for t in targets]
+    for prefix, root in roots:
         found_files, found_links = scan(root)
         files += [{**row, "path": f"{prefix}/{row['path']}"} for row in found_files]
         symlinks += [{**row, "path": f"{prefix}/{row['path']}"} for row in found_links]
@@ -713,7 +714,8 @@ def write_tauri_config(output, targets, config):
         inventory.write_bytes(resources_inventory(output, targets))
         # linuxdeploy recorre usr/bin y usr/lib: en usr/share no copia dependencias ni toca un ELF.
         files = {f"/usr/share/Danil/work-tools/{target}": path for target, path in trees.items()}
-        files["/usr/share/Danil/lenguas"] = str(LANGUAGES.resolve())
+        if LANGUAGES.exists():
+            files["/usr/share/Danil/lenguas"] = str(LANGUAGES.resolve())
         files["/usr/share/Danil/resources-inventory.json"] = str(inventory.resolve())
         bundle = {"linux": {"appimage": {"files": files}}}
     else:

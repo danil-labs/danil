@@ -96,7 +96,7 @@ const config = {
     createUpdaterArtifacts: false,
     externalBin: [join(binaries, "seldon-runtime")],
     ...(process.platform === "linux"
-      ? { linux: { appimage: { files: { [`/usr/share/Danil/work-tools/${target}`]: stagedResources, "/usr/share/Danil/lenguas": join(root, "plugins", "languages"), "/usr/share/Danil/resources-inventory.json": join(output, "resources", "resources-inventory.json") } } } }
+      ? { linux: { appimage: { files: { [`/usr/share/Danil/work-tools/${target}`]: stagedResources, ...(existsSync(join(root, "plugins", "languages")) ? { "/usr/share/Danil/lenguas": join(root, "plugins", "languages") } : {}), "/usr/share/Danil/resources-inventory.json": join(output, "resources", "resources-inventory.json") } } } }
       : process.platform === "darwin"
         ? { macOS: { files: { [`Resources/work-tools/${target}`]: stagedResources } } }
         : { resources: { [stagedResources]: `work-tools/${target}` } }),

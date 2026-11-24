@@ -25,7 +25,6 @@ import Connections from "../components/Connections";
 import ConnectionsOperation from "../components/ConnectionsOperation";
 import General from "../components/General";
 import Integrations from "../components/Integrations";
-import { PaquetesDeLengua } from "../components/LanguagePacks";
 import LoginSecurity from "../components/LoginSecurity";
 import { SettingsPanel } from "../../../../ui/src/SettingsLayout";
 import ProveedorDeMemoria from "../components/MemoryProvider";
@@ -98,7 +97,6 @@ export const pestanasDe = (
     security: tab("security", () => t("settings.tab.security"), () => <LoginSecurity />),
     general: tab("general", () => t("settings.nav.general"), () => <General maquinas={maquinas} />),
     appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} sesiones={sesiones} /></Suspense>),
-    languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
     workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces maquinas={maquinas} sesiones={sesiones} />),
     "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} piezas={piezas} />; }),
     fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers integraciones={integraciones} maquinas={maquinas} />; }),

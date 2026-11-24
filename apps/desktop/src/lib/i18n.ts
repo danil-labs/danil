@@ -160,34 +160,6 @@ export function sumarFrases(codigo: string, frases: Record<string, string | Plur
 }
 
 /**
- * Saca del motor una lengua de disco y vuelve al respaldo si era la puesta:
- * `t()` seguiría contestando desde el `Map` y el cambio se vería solo en el
- * siguiente arranque. `es` no se puede olvidar: dejaría la app sin texto.
- */
-export function olvidarCatalogo(codigo: string) {
-  if (codigo === BASE || !catalogos.delete(codigo)) return;
-  setRevision((n) => n + 1);
-  // Al respaldo del sistema, que es el default del producto: la lengua que
-  // manda es la del workspace y `App.tsx` la vuelve a aplicar al leerla.
-  setLengua(resolver("sistema"));
-  aplicarLengua();
-}
-
-/**
- * En qué lengua quedaría la app si se quitara esta, sin quitarla. Solo
- * `resolver` conoce la cascada; calcularlo en la pantalla sería una segunda
- * definición. Quita y repone en el mismo tick: nadie observa el hueco.
- */
-export function respaldoSiSeQuita(codigo: string): Manifiesto {
-  const guardado = catalogos.get(codigo);
-  if (!guardado) return manifiesto();
-  catalogos.delete(codigo);
-  const cae = catalogos.get(resolver("sistema"))?.manifiesto ?? sinManifiesto(BASE);
-  catalogos.set(codigo, guardado);
-  return cae;
-}
-
-/**
  * Las claves de `es` y solo las de `es`. Un paquete escrito contra una versión
  * anterior trae claves que ya no existen; metidas en el motor no las pinta ni
  * las cuenta nada.
@@ -241,13 +213,13 @@ function resolver(pref: string): string {
   return BASE;
 }
 
-let requestedLanguage = semillaDelAlta();
+let requestedLanguage = almacen()?.getItem(ULTIMA) ?? semillaDelAlta();
 const [lengua, setLengua] = createSignal(
   // Lo último pintado, que es de un workspace o del alta: la ventana tiene que
   // poder pintarse antes de leer el disco. Sin nada, el sistema. Si ese código
   // ya no tiene catálogo —el paquete se quitó—, `resolver` lo devuelve al
   // respaldo.
-  resolver(almacen()?.getItem(ULTIMA) ?? semillaDelAlta()),
+  resolver(requestedLanguage),
 );
 export { lengua };
 
@@ -307,13 +279,15 @@ export function aplicarLengua() {
 
 /**
  * Lee `lengua()`: en JSX `{t("x")}` se repinta sola al cambiar de idioma.
- * Respaldo en cascada —activo, base, la clave misma—: un paquete de la
- * comunidad siempre va por detrás de la app, y un hueco sería peor que una
- * frase en español.
+ * Respaldo en cascada —activo, base (`es`), lengua franca (`en`), la clave misma—:
+ * una lengua con traducción parcial nunca deja huecos.
  */
 export function t(clave: string, datos?: Record<string, string | number>): string {
   const activo = catalogos.get(lengua());
-  const cruda = activo?.frases[clave] ?? catalogos.get(BASE)?.frases[clave];
+  const cruda =
+    activo?.frases[clave] ??
+    catalogos.get(BASE)?.frases[clave] ??
+    catalogos.get(FRANCA)?.frases[clave];
   if (cruda === undefined) {
     if (import.meta.env.DEV) console.warn(`[lenguas] sin frase para «${clave}»`);
     return clave;

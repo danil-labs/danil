@@ -13,7 +13,7 @@ también pertenece al workspace.
 
 | Id | Capacidad | Ficha |
 |---|---|---|
-| `yua` | Catálogo y perfil de salida en maya yucateco | [Lengua](languages/yua/README.md) |
+| `yua` | Catálogo embebido en maya yucateco | [Lengua](../src/locales/yua/README.md) |
 | `libreoffice` | Conversión de documentos | LibreOffice (motor) |
 | `drawio` | Visor de diagramas en el chat | draw.io (motor) |
 | `computer-use` | Pantalla y acciones de escritorio por MCP | Cua Driver (motor) |
@@ -21,17 +21,8 @@ también pertenece al workspace.
 
 ## Lenguas
 
-El paquete contiene `manifiesto.json` y catálogos JSON. El bundle ofrece los
-paquetes de `plugins/languages/`; la persona también puede elegir una carpeta o
-un ZIP. Ambas entradas las valida el motor.
-No hay descarga de paquetes de lengua por red.
-
-Instalar copia los JSON; los Markdown permanecen en el repositorio.
-`remove_language_pack` retira el paquete instalado. `scripts/guards/plugins.mjs`
-valida manifiestos, claves, placeholders y ortografía del saltillo; reporta
-cobertura sin exigir que el paquete traduzca todo el catálogo. No corre en
-`pnpm verify` ni en CI: un cambio del catálogo de la app no se bloquea por un
-paquete de lengua. Córrelo a mano al tocar un paquete.
+Maayatʼaan (`yua`) viaja embebido en `src/locales/yua/` junto con `es` y `en`,
+listo por defecto en Desk y Web sin instalación aparte.
 
 Los plugins binarios (descarga, hash, instalación y activación) los gestiona el
 motor de Terminus; la ventana solo los muestra en Configuración → Conexiones

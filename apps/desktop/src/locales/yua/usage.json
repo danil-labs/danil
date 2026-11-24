@@ -1,0 +1,11 @@
+{
+  "usage.bar.aria": "Baʼax pʼáatal teech tiʼ le ookbaloʼob nupʼaʼanoʼ",
+  "usage.context.bar_label": "U kʼaʼajsajil le tsikbal chuʼupoʼ",
+  "usage.context.label": "Kʼaʼajsaj",
+  "usage.context.measured_title": "{used} tiʼ {limit} token tiʼ u kʼaʼajsajil le tsikbaloʼ.",
+  "usage.context.this_agent": "Le ajmeyajaʼ",
+  "usage.context.unmeasured_title": "Ku chʼíikil {limit} token tiʼ le tsikbalaʼ. {agent} maʼ tu yaʼalik bukaʼaj tsʼoʼok u bisik, le beetikoʼ maʼ tu páajtal u pʼiisaʼal bukaʼaj pʼáatal.",
+  "usage.manage_accounts": "Nuʼukbes le ookbaloʼoboʼ",
+  "usage.query.failed": "Maʼ páajchaj u kʼáataʼal tiʼ {agent} bukaʼaj pʼáatal teech.",
+  "usage.refresh": "Kaʼa kʼáatej bukaʼaj pʼáatal teech"
+}

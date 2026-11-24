@@ -18,7 +18,7 @@
  * esto devuelve la clave, y lo que lo caza es `scripts/guards/mount-frontend.mjs`, que monta el
  * árbol de verdad y busca los rótulos en español.
  */
-import { registrarCatalogo, type Manifiesto } from "../lib/i18n.ts";
+import { refreshLanguage, registrarCatalogo, type Manifiesto } from "../lib/i18n.ts";
 
 // `web.json` y `audit.json` los lleva la entrada web (`src/web/phrases.ts`);
 // `danil.json`, `work.json`, todos los `settings.<sección>.json`, `cli.json`, `chat.notice.json`, `chat.session_model.json` y `chat.handover.confirm.json`, los trozos
@@ -42,6 +42,7 @@ for (const [codigo, { manifiesto, frases }] of porLengua) {
   if (!manifiesto) throw new Error(`src/locales/${codigo}/ no tiene manifiesto.json`);
   registrarCatalogo(manifiesto, frases);
 }
+refreshLanguage();
 
 /**
  * Cuáles viajan dentro del binario.

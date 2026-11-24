@@ -250,6 +250,9 @@ const marcas = (v) =>
     )].map((m) => m[1]),
   );
 
+/** Lenguas embebidas cuya traducción parcial cae al respaldo (`es`) de forma explícita. */
+const PARCIALES = new Set(["yua"]);
+
 const descuadres = [];
 for (const [codigo, cat] of catalogos) {
   if (codigo === BASE) continue;
@@ -261,20 +264,20 @@ for (const [codigo, cat] of catalogos) {
    * inglés se ve entera, correcta, y con un renglón en otra lengua — sin dar
    * error en ningún sitio.
    *
-   * **Solo vale para los empotrados**, que son los que viven en esta carpeta:
-   * `en` es el puente desde el que traduce cualquier comunidad, así que se
-   * mantiene al día como parte del trabajo. Un paquete de disco siempre va por
-   * detrás de la app —cada versión añade claves que él no tiene— y por eso el
-   * respaldo en cascada existe; ese caso es legítimo y no se mira aquí.
+   * Se exige cobertura completa a `en` (puente desde el que traduce cualquier
+   * comunidad). Las lenguas embebidas en `PARCIALES` (como `yua`) viven en el
+   * bundle con cobertura parcial y caen al respaldo para las claves faltantes.
    */
-  for (const clave of base.frases.keys()) {
-    if (!cat.frases.has(clave))
-      descuadres.push({
-        codigo,
-        clave,
-        archivo: `src/locales/${codigo}/`,
-        que: `no está traducida, así que se pinta en «${BASE}»`,
-      });
+  if (!PARCIALES.has(codigo)) {
+    for (const clave of base.frases.keys()) {
+      if (!cat.frases.has(clave))
+        descuadres.push({
+          codigo,
+          clave,
+          archivo: `src/locales/${codigo}/`,
+          que: `no está traducida, así que se pinta en «${BASE}»`,
+        });
+    }
   }
 
   for (const [clave, { valor, archivo }] of cat.frases) {

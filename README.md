@@ -120,7 +120,6 @@ apps/desktop/             the window (this is what the installers ship)
   src-tauri/              Tauri window (Rust)
     crates/engine-client    RPC client for the engine, no Tauri dependency
     crates/engine-protocol  contract: commands, events, phrase keys
-  plugins/languages/      bundled language packs
   scripts/                guards, tests and dev tooling (pnpm verify)
   npx/                    the npx installer
 apps/mobile/              the iOS and Android app (Expo) and its dev bridge

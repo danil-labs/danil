@@ -1,16 +1,12 @@
 {
-  "code.changes.truncated": "Le kʼexoʼ jach nojoch utiʼal u yeʼesaʼal tuláakal: teʼ kaabaloʼ yaan u chuun.",
   "code.comparing": "Táan u keetkuunsaʼal…",
   "code.empty": "Le meyajaʼ maʼ tu jelbesik mix jumpʼéel código.",
   "code.file.binary": "Lelaʼ jumpʼéel juʼun binario: minaʼan u xóotʼtsʼíibiloʼob utiʼal u keetkuunsaʼal.",
-  "code.file.deleted_open": "Le kʼexaʼ tu lukʼsaj le juʼunoʼ: minaʼan baʼax u jeʼesaʼal.",
   "code.file.discard": "Pulej",
   "code.file.discard.keep_agent": "Pʼat baʼax tu tsʼíibtaj le ajmeyajoʼ",
   "code.file.discard.leave": "Pʼat le juʼun jeʼex yanikoʼ",
   "code.file.gone_from_diff": "Le juʼunaʼ maʼ tu chíikpajal tiʼ le kʼexoʼ.",
   "code.file.image_too_big": "Le oochelaʼ ku bisik {size} ka maʼ tu chʼíikil wayeʼ.",
-  "code.file.open": "Jeʼej le juʼunoʼ",
-  "code.file.open_aria": "Jeʼej «{ruta}»",
   "code.file.opening": "Táan u jeʼesaʼal…",
   "code.file.raced": "Le ajmeyajoʼ tu kʼexaj le juʼunaʼ táan a tsʼíib. Wa ka kanáantikeʼ ku tsʼíibtaʼal a tiʼal yóokʼol; wa ka pulikeʼ ku pʼáatal u tiʼal letiʼ.",
   "code.file.save.over_agent": "Tsʼíibtej a tiʼal yóokʼol baʼax tu beetaj le ajmeyajoʼ",
@@ -18,21 +14,15 @@
   "code.file.saving": "Táan u kanáantaʼal…",
   "code.file.too_big": "Le juʼunaʼ jach nojoch utiʼal u yeʼesaʼal tuláakal: teʼ kaabaloʼ yaan u chuun.",
   "code.file.unreadable": "Maʼ páajchaj u xoʼokol le juʼunaʼ.",
-  "code.files.count": {
-    "other": "{count} juʼun"
-  },
   "code.gap.lines": {
     "other": "{count} xóotʼtsʼíib maʼ kʼexaʼaniʼ"
   },
   "code.gap.title": "Taasej le xóotʼtsʼíibaʼ",
-  "code.status.deleted": "lukʼsaʼab",
-  "code.status.new": "túumben",
-  "code.status.renamed": "kʼexaʼab u kʼaabaʼ",
+  "code.panel.export_chat": "Jóoksej le tsikbaloʼ",
+  "code.panel.export_chat.busy": "Táan u jóoksaʼal…",
   "code.tree.dirty_before": {
     "other": "Yaan kaʼach {count} juʼun kʼexaʼan ka káaj le meyajaʼ; leloʼob maʼ u tiʼal le ajmeyajiʼ."
   },
   "code.tree.missing": "Le kúuchil juʼunoʼobaʼ minaʼan tiʼ {path}. Kaʼa yéeyej tiʼ le noj meyajoʼ, wa lukʼsej.",
-  "code.tree.truncated": "Le repositorioaʼ yaan yaʼab juʼunoʼob tiʼ utiʼal u xoʼokol tuláakal: teʼ kaʼanaloʼ yaan u chuun.",
-  "code.panel.export_chat": "Jóoksej le tsikbaloʼ",
-  "code.panel.export_chat.busy": "Táan u jóoksaʼal…"
+  "code.tree.truncated": "Le repositorioaʼ yaan yaʼab juʼunoʼob tiʼ utiʼal u xoʼokol tuláakal: teʼ kaʼanaloʼ yaan u chuun."
 }
