@@ -1,5 +1,5 @@
 /**
- * R0 de la tarjeta de pregunta (2026-11-20): la persona elige una respuesta,
+ * R0 de la tarjeta de pregunta: la persona elige una respuesta,
  * la respuesta llega y la tarjeta sigue visible hasta «Omitir».
  *
  * Usa el store de hilos real (`createThreadsCore`), sin ventana. La tarjeta se

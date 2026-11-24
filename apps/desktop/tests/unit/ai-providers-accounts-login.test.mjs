@@ -1,7 +1,6 @@
 /**
- * Las altas y logins de un grupo de Proveedores de IA (T2,
- * `docs/testing/2026-11-19-proveedores-ia.md` § 2): mientras hay algo que la
- * persona tiene que ver (alta, instalación, fallo del alta o del login)
+ * Las altas y logins de un grupo de Proveedores de IA (T2): mientras hay algo
+ * que la persona tiene que ver (alta, instalación, fallo del alta o del login)
  * el grupo avisa `vivo`, y plegarlo, ocultarlo o reordenarlo no corta el login.
  * Monta los grupos sobre `dist/`.
  */
@@ -227,7 +226,7 @@ test("P38: removing the only account leaves the provider at 0 with nothing alive
   sinFallos(s);
 });
 
-// Decisión de Alberto (2026-11-19): las tareas en espera no sostienen un grupo sin cuentas.
+// Las tareas en espera no sostienen un grupo sin cuentas.
 test("P39: removing the last account leaves the provider with nothing alive even with tasks waiting for quota", async () => {
   const m = motor();
   m.provs.claude = { cuentas: [cuenta("c1")], active: "c1", espera: [{ project: "p", session: "t1", title: "T1", account: "c1" }] };

@@ -1,7 +1,6 @@
 /**
- * Configuración › Proveedores de IA completa (T3,
- * `docs/testing/2026-11-19-proveedores-ia.md` § 3, P50–P67): bloque Danil
- * arriba, un solo «Agregar cuenta» con su selector, y solo los grupos con
+ * Configuración › Proveedores de IA completa (T3): bloque Danil arriba, un
+ * solo «Agregar cuenta» con su selector, y solo los grupos con
  * cuentas, algo vivo o un fallo de lectura. Monta `dist/` con el motor simulado
  * por proveedor de `ai-providers-fixture.mjs`.
  */
