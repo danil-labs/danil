@@ -220,14 +220,20 @@ export default function Settings(props: {
           selectionMark={false}
           // El fondo del activo vive en el átomo; la barra de acento pertenece a
           // la navegación principal y aquí duplicaba una señal sobre una lista corta.
-          class="pestana-fundida h-10 min-h-10 grid-cols-[18px_minmax(0,1fr)] gap-2.5 rounded-l-[10px] rounded-r-none border-0 py-0 pl-3.5 pr-3 outline-none focus:outline-none focus-visible:outline-none data-[active=true]:bg-surface data-[active=true]:font-semibold data-[active=true]:hover:bg-surface"
+          class={cn(
+            "pestana-fundida min-h-10 grid-cols-[18px_minmax(0,1fr)] gap-2.5 rounded-l-[10px] rounded-r-none border-0 pl-3.5 pr-3 outline-none focus:outline-none focus-visible:outline-none data-[active=true]:bg-surface data-[active=true]:font-semibold data-[active=true]:hover:bg-surface",
+            p.d.subtitle ? "h-auto py-1.5" : "h-10 py-0",
+          )}
           onClick={() => abrir(p.d)}
           onKeyDown={teclas}
         >
-          {/* Sin color propio: hereda el del botón, que sale de `@theme` y se
-              invierte con el tema. */}
           <span class="flex size-4 items-center justify-center">{p.d.icono()}</span>
-          <span class="truncate">{p.d.name}</span>
+          <span class="flex min-w-0 flex-col">
+            <span class="truncate">{p.d.name}</span>
+            <Show when={p.d.subtitle}>
+              {(subtitle) => <span data-settings-entry-subtitle="" class="truncate text-caption leading-tight font-normal text-neutral-500">{subtitle()}</span>}
+            </Show>
+          </span>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
