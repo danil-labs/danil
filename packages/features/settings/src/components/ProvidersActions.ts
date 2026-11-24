@@ -1,7 +1,7 @@
 import { createEffect, on, onCleanup, onMount } from "solid-js";
 import { attachRepo, gitHostProjects } from "../queries/engine-git";
 import { asFailure } from "../../../../ui/src/Failure";
-import { listGitHosts } from "../../../../../apps/desktop/src/lib/gitHosts.ts";
+import { listGitHosts } from "../../../../session/src/gitHosts.ts";
 import { type Provider, type ProyectoRemoto, rankOf } from "./ProvidersModel";
 import type { ProvidersProps } from "./ProvidersView";
 import type { createProveedores } from "./ProvidersState";

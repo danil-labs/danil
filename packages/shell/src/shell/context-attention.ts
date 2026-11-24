@@ -1,5 +1,5 @@
 import { mergeAttention } from "../../../engine-client/src/index.ts";
-import { displayWorkspaceContext } from "../../../../apps/desktop/src/lib/workspace-context.ts";
+import { displayWorkspaceContext } from "../../../session/src/workspace-context.ts";
 
 export function mergeContextAttention<E extends { workspace: string; context?: string }>(current: E[], next: E[]): E[] {
   const contexts = new Set([...current, ...next].map((row) => row.context));

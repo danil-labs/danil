@@ -1,7 +1,7 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelStartup } from "../../../../../apps/desktop/src/lib/free-model-policy.ts";
-import { loadFreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-model-policy-load.ts";
+import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelStartup } from "../../../../session/src/free-model-policy.ts";
+import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
 import { prosaDe } from "../../../../ui/src/Failure";
 import type { CargaDeConexiones } from "./connect-load";
 import type { EstadoDeConexiones } from "./connect-state";

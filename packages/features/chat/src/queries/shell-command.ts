@@ -1,7 +1,7 @@
 
 import { connected } from "../../../../session/src/engineConnection.ts";
 import { type Agent } from "../../../../ui/src/lib/model.ts";
-import { esProvisional, tituloProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
+import { esProvisional, tituloProvisional } from "../../../../ui/src/lib/taskDraft";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { claveDe } from "../../../../ui/src/Failure";
 import { type Encolado } from "../components/MessageQueue";

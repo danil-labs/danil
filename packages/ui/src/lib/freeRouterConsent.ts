@@ -1,5 +1,5 @@
 import type { JSX } from "solid-js";
-import type { FreeModelPolicy } from "../../../../apps/desktop/src/lib/free-model-policy.ts";
+import type { FreeModelPolicy } from "../../../session/src/free-model-policy.ts";
 import type { Frase } from "./prose";
 
 /** Lo que el selector de modelos usa del consentimiento de Router IA gratis. */

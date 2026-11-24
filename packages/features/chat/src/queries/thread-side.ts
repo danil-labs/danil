@@ -1,8 +1,8 @@
 import { carpetaDeTrabajo } from "../../../../ui/src/lib/model";
 import { type Project } from "../../../../ui/src/lib/model.ts";
 import { listen } from "../../../../host/src/serviceEvents.ts";
-import { accionDeAtajo, navegacionDePestanas, ventanaVecina } from "../../../../../apps/desktop/src/lib/shortcuts";
-import { type NavegacionDePestanas } from "../../../../../apps/desktop/src/lib/shortcuts.ts";
+import { accionDeAtajo, navegacionDePestanas, ventanaVecina } from "../../../../ui/src/lib/shortcuts";
+import { type NavegacionDePestanas } from "../../../../ui/src/lib/shortcuts.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { type ActivityEvent } from "../../../../engine-client/src/index.ts";
 import { createEffect, createSignal, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";

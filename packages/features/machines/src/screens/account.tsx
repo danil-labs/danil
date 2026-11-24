@@ -18,7 +18,7 @@ import { serviceFeatures } from "../model/links.ts";
 import { RelaySession } from "../queries/relay.ts";
 import { createScreenAccess } from "../queries/screen-access.ts";
 import { isRetiredComputersEndpoint } from "../../../../platform-client/src/api.ts";
-import { settledContextIds } from "../../../../../apps/desktop/src/lib/settled-contexts.ts";
+import { settledContextIds } from "../../../../session/src/settled-contexts.ts";
 import { cancelEdgeWrites, listComputers, sessionProbe, setMachineRoute, startComputer, startedOf, wokeOf } from "../queries";
 import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
 import { createRoot, createSignal } from "solid-js";

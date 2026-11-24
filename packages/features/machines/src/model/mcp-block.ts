@@ -4,26 +4,16 @@
  * pero el bloque entero pasa antes legible por el servidor de Danil.
  */
 
+import { SENSITIVE_NAME, urlWithCredentials } from "../../../../ui/src/lib/secret-url.ts";
+
 /** Las órdenes que llevan un bloque, y su argumento. */
 export const MCP_BLOCK_ARGS: Record<string, string> = { add_mcp_servers: "bloque", set_memory_provider: "block" };
 
-const SENSITIVE_NAME = /(?:^|[_-])(?:token|key|secret|password|passwd|pwd|auth|authorization|bearer|credential|credentials|apikey|api-key|api_key|access-key|private)(?:$|[_-])/i;
 const MARKER = /\$\{secret:[^}\s]+\}/g;
 /** Lo que puede acompañar a un marcador en una cabecera: el esquema de autorización. */
 const SCHEME = /^(?:bearer|basic|token)?$/i;
 
-/** Una URL con contraseña o con un parámetro de nombre sensible. */
-export function urlWithCredentials(text: string): boolean {
-  let url: URL;
-  try {
-    url = new URL(text.trim());
-  } catch {
-    return false;
-  }
-  if (url.password) return true;
-  for (const [name, value] of url.searchParams) if (value && SENSITIVE_NAME.test(name)) return true;
-  return false;
-}
+export { urlWithCredentials };
 
 /** Un valor de `env`/`headers` que no sea solo marcadores `${secret:…}`; números y booleanos cuentan. */
 function literal(value: unknown): boolean {

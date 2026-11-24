@@ -1,7 +1,7 @@
 /** Lo que se guarda de un turno y de una tarea, tal como lo lee la ventana. */
 import type { HistoryRef } from "../../../../engine-client/src/index.ts";
 import type { CodeRange } from "../../../../ui/src/lib/model.ts";
-import type { Recipient, ReplyTo, SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
+import type { Recipient, ReplyTo, SenderTask } from "../../../../ui/src/lib/recipients.ts";
 import type {
   CambioPorCupo,
   FalloDelTurno
@@ -31,16 +31,6 @@ export type Tool = {
  * `tool` indexa `Turn.tools`. Ver `sessions::Piece`.
  */
 type Piece = { text: string } | { tool: number };
-
-/**
- * La clave con la que una respuesta apunta a su pregunta: el turno que la hizo
- * y la pregunta dentro de ese turno. Va por `JSON.stringify` y no concatenada
- * con un separador porque los ids de pregunta los escribe el agente, y
- * cualquier separador que se elija puede aparecer dentro de uno.
- */
-export function clave(turno: string, pregunta: string) {
-  return JSON.stringify([turno, pregunta]);
-}
 
 /** Lo que el agente dejó preguntado al cerrar un turno. */
 export type PreguntaEvent = {
@@ -85,7 +75,7 @@ export type TurnReasoning = {
 };
 
 export type Turn = {
-  task_mentions?: import("../../../../../apps/desktop/src/lib/taskMentions.ts").TaskMention[];
+  task_mentions?: import("../../../../ui/src/lib/taskMentions.ts").TaskMention[];
   role: string;
   text: string;
   /** Lo que la persona adjuntó a ESTE mensaje. Ver `sessions::Turn`. */

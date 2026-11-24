@@ -1,7 +1,7 @@
 
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import { esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
+import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
+import { esProvisional } from "../../../../ui/src/lib/taskDraft";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { claveDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";

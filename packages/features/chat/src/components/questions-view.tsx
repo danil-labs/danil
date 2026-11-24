@@ -8,7 +8,7 @@ import Pencil from "lucide-solid/icons/pencil";
 import { Button } from "../../../../ui/src/Button";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { TeclaDeAtajo } from "../../../../ui/src/Shortcut";
-import { ariaDeAtajo } from "../../../../../apps/desktop/src/lib/shortcuts";
+import { ariaDeAtajo } from "../../../../ui/src/lib/shortcuts";
 import { cn } from "../../../../ui/src/lib/utils";
 import { enfocar, enfocarSiNadieEscribe } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";

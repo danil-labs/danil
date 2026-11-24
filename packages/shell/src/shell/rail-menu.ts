@@ -1,5 +1,5 @@
 import { capabilities } from "../../../host/src/platform.ts";
-import { openNativeExternal } from "../../../../apps/desktop/src/lib/native-workspace-add-link.ts";
+import { openNativeExternal } from "../../../host/src/native-workspace-add-link.ts";
 import { invoke } from "../../../engine-client/src/client.ts";
 
 export const RAIL_MENU_ITEM =

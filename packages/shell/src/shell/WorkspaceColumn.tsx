@@ -3,7 +3,7 @@ import { children, createEffect, createSignal, For, type JSX, Show } from "solid
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { capabilities, type OtherAccount, type OtherWorkspace } from "../../../host/src/platform";
 import { deleteLayout, spacesWithLayout } from "../../../ui/src/lib/panels";
-import { workspaceViewKey } from "../../../../apps/desktop/src/lib/workspace-view-scope";
+import { workspaceViewKey } from "../../../session/src/workspace-view-scope";
 import { cn } from "../../../ui/src/lib/utils";
 import { Toast, ToastPortal } from "../../../ui/src/Toast";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../ui/src/Tooltip";

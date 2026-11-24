@@ -1,5 +1,5 @@
 /** El Free router de plataforma de esta ventana: un anfitrión (Desk o web) y un cliente por motor; sin anfitrión, cerrado. */
-import type { FreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-model-policy.ts";
+import type { FreeModelPolicy } from "../../../../session/src/free-model-policy.ts";
 import { createFreeRouterPlatform, platformScope, type EdgeSend, type EngineCall, type FreeRouterPlatform, type FreeRouterScope } from "./free-router-platform.ts";
 import type { WorkspaceList } from "../../../../platform-client/src/workspaces.ts";
 

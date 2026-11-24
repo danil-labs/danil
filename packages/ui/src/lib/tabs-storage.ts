@@ -1,5 +1,5 @@
 import { borrarPref, escribirPref, hayPref, leerPref, prefsQueEmpiezan } from "../../../../apps/desktop/src/lib/prefs.ts";
-import { tabViewKey as key, workspaceViewKey } from "../../../../apps/desktop/src/lib/workspace-view-scope.ts";
+import { tabViewKey as key, workspaceViewKey } from "../../../session/src/workspace-view-scope.ts";
 import type { Tab, TaskTab } from "./tabs-types.ts";
 
 // Las temporales vuelven temporales: el siguiente clic las sigue sustituyendo.

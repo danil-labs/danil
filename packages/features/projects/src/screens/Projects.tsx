@@ -13,7 +13,7 @@ import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type Project, type Source } from "../../../../ui/src/lib/model";
 import { cn } from "../../../../ui/src/lib/utils";
-import { lineaDeProcedencia, procedencia } from "../../../../../apps/desktop/src/lib/sourceOrigin";
+import { lineaDeProcedencia, procedencia } from "../../../../ui/src/lib/sourceOrigin";
 import { Badge } from "../../../../ui/src/Badge";
 import WorkdirIcon, { workdirKindLabel } from "../../../../ui/src/WorkdirIcon";
 import PickerRow from "../components/PickerRow";

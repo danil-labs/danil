@@ -1,5 +1,5 @@
 import { type JSX, Show } from "solid-js";
-import { type GovernedSection, lockedBy } from "../../../apps/desktop/src/lib/governance";
+import { type GovernedSection, lockedBy } from "../../session/src/governance.ts";
 import { t } from "../../../apps/desktop/src/lib/i18n";
 
 /** El aviso de una sección que gobierna Harness. */

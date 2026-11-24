@@ -1,9 +1,9 @@
 
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type Project } from "../../../../ui/src/lib/model.ts";
-import { trimDraft } from "../../../../../apps/desktop/src/lib/recipients";
+import { trimDraft } from "../../../../ui/src/lib/recipients";
 import { preguntaAlMargen } from "../../../../ui/src/lib/side-question";
-import { type TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
+import { type TextEdit } from "../../../../ui/src/lib/taskMentions.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";

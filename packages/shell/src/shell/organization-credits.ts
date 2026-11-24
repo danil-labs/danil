@@ -1,4 +1,4 @@
-import { type GroupAccount, type GroupSend, readGroupBalance } from "../../../../apps/desktop/src/lib/group-account.ts";
+import { type GroupAccount, type GroupSend, readGroupBalance } from "../../../session/src/group-account.ts";
 
 /** El tooltip nunca reutiliza un saldo de otro contexto u organización. */
 export function organizationCredits() {

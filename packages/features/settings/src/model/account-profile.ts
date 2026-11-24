@@ -49,13 +49,9 @@ export class PhotoError extends Error {
   }
 }
 
-/** `data:` URI de una imagen (con su tipo). */
-export async function blobToDataUrl(blob: Blob, type = blob.type): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return `data:${type};base64,${btoa(binary)}`;
-}
+import { blobToDataUrl } from "../../../../ui/src/lib/shrink-image.ts";
+
+export { blobToDataUrl };
 
 /** Recorte cuadrado al centro, re-codificado a PNG: quita metadatos (EXIF, ubicación). */
 async function reencode(file: Blob): Promise<Blob | null> {

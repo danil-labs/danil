@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { lockedBy } from "../../../../../apps/desktop/src/lib/governance";
+import { lockedBy } from "../../../../session/src/governance";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { createAgent, saveAgentProfile, setAgentModel } from "../queries";
 import type { CreatedHandler, HandlerScope } from "../../../../ui/src/lib/model";

@@ -1,7 +1,7 @@
 
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type Recipient } from "../../../../../apps/desktop/src/lib/recipients";
-import { type TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
+import { type Recipient } from "../../../../ui/src/lib/recipients";
+import { type TaskMention } from "../../../../ui/src/lib/taskMentions";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { claveDe, detalleDe, prosaDe } from "../../../../ui/src/Failure";
 import { mensajeDeFallo } from "../model/failures";

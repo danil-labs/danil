@@ -1,5 +1,5 @@
-import { displayWorkspaceContext } from "../../../../../apps/desktop/src/lib/workspace-context.ts";
-import { createContextViews } from "../../../../../apps/desktop/src/lib/workspace-view-scope.ts";
+import { displayWorkspaceContext } from "../../../../session/src/workspace-context.ts";
+import { createContextViews } from "../../../../session/src/workspace-view-scope.ts";
 import { createThreadsCore } from "./threads-store-core.ts";
 
 const contexts = new WeakMap<object, string | null>();

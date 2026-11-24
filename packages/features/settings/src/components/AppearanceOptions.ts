@@ -8,7 +8,7 @@ import { FONDOS, type FondoDeChat } from "../../../../ui/src/lib/chat-background
 import { type Apariencia, type DarkStyle, type LightStyle } from "../../../../ui/src/lib/theme";
 
 /** Guardar en el workspace va en su propio trozo: la carga inicial solo pinta. */
-export const motor = () => import("../../../../../apps/desktop/src/lib/chat-background-engine");
+export const motor = () => import("../../../../session/src/chat-background-engine");
 
 export const IMAGES = ["png", "jpg", "jpeg", "webp"];
 

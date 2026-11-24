@@ -2,10 +2,10 @@ import { batch, createEffect, createMemo, createSignal, onCleanup, type Accessor
 import { invoke } from "../../../engine-client/src/client.ts";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { type Project } from "../../../ui/src/lib/model.ts";
-import { readShellCache, shellCacheWriter } from "../../../../apps/desktop/src/lib/shellCache";
-import { createSpaceNavigationOrder } from "../../../../apps/desktop/src/lib/space-navigation-order";
+import { readShellCache, shellCacheWriter } from "../../../session/src/shellCache";
+import { createSpaceNavigationOrder } from "../../../session/src/space-navigation-order";
 import { createSpaceCatalog } from "./space-catalog";
-import { type Space } from "../../../../apps/desktop/src/lib/spaces";
+import { type Space } from "../../../ui/src/lib/spaces";
 import { isContentTab, type createTabs } from "../../../ui/src/lib/tabs";
 import { createWorkspaces } from "../../../features/settings/src/queries/workspaces-store";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions";

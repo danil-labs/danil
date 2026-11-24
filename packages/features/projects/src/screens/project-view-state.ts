@@ -13,7 +13,7 @@ import {
   type Project,
   type Source,
 } from "../../../../ui/src/lib/model";
-import { lineaDeProcedencia, procedencia } from "../../../../../apps/desktop/src/lib/sourceOrigin";
+import { lineaDeProcedencia, procedencia } from "../../../../ui/src/lib/sourceOrigin";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { agentsWithDifferentReaders } from "../model/agentReaders";
 import { watchHandlerStatuses } from "../queries/handlerPresence";

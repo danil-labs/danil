@@ -6,7 +6,7 @@ import type { Agent, AgentProfile, Project, Source } from "../../../../ui/src/li
 import type { OpcionDeModelo } from "../../../../ui/src/lib/models";
 import type { JournalEvent } from "../../../../host/src/serviceEvents.ts";
 import type { Tab } from "../../../../ui/src/lib/tabs-types";
-import type { TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
+import type { TaskMention } from "../../../../ui/src/lib/taskMentions";
 import type { Carry, CarriedBase, CarryCheck } from "../../../../ui/src/lib/carry.ts";
 import type { Draft, DraftConfiguration, HistoryEntry } from "../../../../ui/src/lib/draft.ts";
 import type { ConversationHandoffDeps, ConversationScope, HandoffFact, HandoffPresentation, HandoffView } from "../../../../ui/src/lib/handoff.ts";

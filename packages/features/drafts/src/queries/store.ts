@@ -1,9 +1,9 @@
 import { createMemo, createSignal, untrack } from "solid-js";
 import type { Project, Source } from "../../../../ui/src/lib/model";
-import type { Trigger } from "../../../../../apps/desktop/src/lib/mentions";
-import { editDraft, insertMention, insertRecipient } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import type { MentionTarget, TaskMention, TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions";
-import { adjuntosDevueltos, adjuntosSinMandar, fuentesHeredadas, sameSources, unirFuentes } from "../../../../../apps/desktop/src/lib/taskDraft.ts";
+import type { Trigger } from "../../../../ui/src/lib/mentions";
+import { editDraft, insertMention, insertRecipient } from "../../../../ui/src/lib/recipients.ts";
+import type { MentionTarget, TaskMention, TextEdit } from "../../../../ui/src/lib/taskMentions";
+import { adjuntosDevueltos, adjuntosSinMandar, fuentesHeredadas, sameSources, unirFuentes } from "../../../../ui/src/lib/taskDraft.ts";
 
 import type { Draft, DraftConfiguration, HandoverPending, HistoryEntry } from "../../../../ui/src/lib/draft.ts"; export type { Draft, DraftConfiguration, HandoverPending, HistoryEntry };
 

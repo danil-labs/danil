@@ -3,7 +3,7 @@ import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { legible, type Query, type Read } from "../../../ui/src/lib/limits";
 import { detalleDe } from "../../../ui/src/Failure";
-import { displayWorkspaceContext } from "../../../../apps/desktop/src/lib/workspace-context";
+import { displayWorkspaceContext } from "../../../session/src/workspace-context";
 import { workspaceMachineSources } from "../../../features/machines/src/queries/danil-source";
 import { machines, machineOf } from "../../../features/machines/src/queries/store";
 import type { Account, AccountList, AccountStatus } from "../../../features/settings/src/queries/accounts-store";

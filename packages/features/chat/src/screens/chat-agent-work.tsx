@@ -4,7 +4,7 @@ import { Index, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { AgentModels } from "../../../../ui/src/lib/model";
 import type { MachineOf } from "../queries/history-details";
-import { formatearDuracion, type Paso } from "../../../../../apps/desktop/src/lib/steps";
+import { formatearDuracion, type Paso } from "../../../../ui/src/lib/steps";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { type VisualBudget } from "../model/visualBudget";

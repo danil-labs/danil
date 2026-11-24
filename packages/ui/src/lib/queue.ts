@@ -1,5 +1,5 @@
-import type { Recipient, ReplyTo, SenderTask } from "../../../../apps/desktop/src/lib/recipients.ts";
-import type { TaskMention } from "../../../../apps/desktop/src/lib/taskMentions.ts";
+import type { Recipient, ReplyTo, SenderTask } from "./recipients.ts";
+import type { TaskMention } from "./taskMentions.ts";
 
 // Conserva la configuración al encolar; el lote adopta la del último mensaje.
 export type Encolado = {

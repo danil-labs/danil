@@ -4,7 +4,7 @@ import { invoke } from "../../../engine-client/src/client.ts";
 import type { AgentProfile, HandlerList, HandlerStatus } from "../../../ui/src/lib/model";
 import { watchHandlerStatuses } from "../../../features/projects/src/queries/handlerPresence";
 import { notifyProfiles, watchProfiles } from "../../../features/projects/src/queries/profiles";
-import { agentOptions } from "../../../../apps/desktop/src/lib/sidebarView";
+import { agentOptions } from "../../../ui/src/lib/sidebarView";
 import { type DockAgent } from "./dockLayout";
 import type { SidebarFilterProps } from "./SidebarFilter";
 import type { SidebarProps } from "./sidebar-rows";

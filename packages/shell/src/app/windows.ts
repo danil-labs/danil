@@ -1,7 +1,7 @@
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { panelReadingOrder, sameSite, type PanelSite as SitioDePanel } from "../../../ui/src/lib/panels";
 import { type Layout, type PanelGroup, type Side } from "../../../ui/src/lib/panels-types.ts";
-import { destinoDePestana, type NavegacionDePestanas } from "../../../../apps/desktop/src/lib/shortcuts";
+import { destinoDePestana, type NavegacionDePestanas } from "../../../ui/src/lib/shortcuts";
 import { isContentTab, isTaskTab, screenTabId, type Tab } from "../../../ui/src/lib/tabs";
 import { type ContentTab, type FileTab } from "../../../ui/src/lib/tabs-types.ts";
 import { machineName } from "../../../features/machines/src/queries/store";

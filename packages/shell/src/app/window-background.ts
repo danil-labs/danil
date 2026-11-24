@@ -1,6 +1,6 @@
 import { createEffect, on, type Accessor } from "solid-js";
 import { VELO_DE_FONDO } from "../../../ui/src/lib/chat-background";
-import { fondoDeChat, imagenDelWorkspace, veloDeFondo } from "../../../../apps/desktop/src/lib/chat-background-store";
+import { fondoDeChat, imagenDelWorkspace, veloDeFondo } from "../../../ui/src/lib/chat-background-store";
 import { createChatBackground } from "../../../features/chat/src";
 import type { machineOf as T_machineOf } from "../../../features/machines/src/queries/store";
 
@@ -21,7 +21,7 @@ export function createWindowBackground(deps: WindowBackgroundDeps) {
 
   /* El fondo, la imagen y los velos son del workspace: su motor los recuerda
      y se leen al abrirlo, aquí y en la web. */
-  createEffect(on(workspaceActivo, (workspace) => void import("../../../../apps/desktop/src/lib/chat-background-engine").then((m) => m.cargarFondoDelWorkspace(workspace))));
+  createEffect(on(workspaceActivo, (workspace) => void import("../../../session/src/chat-background-engine").then((m) => m.cargarFondoDelWorkspace(workspace))));
 
   /* El fondo de Estilo cubre la ventana entera, detrás de las columnas de
      vidrio (`.glass-panel`): así se ve también tras el historial, el árbol y

@@ -4,10 +4,10 @@ import { aplicarLenguaDeWorkspace, t } from "../../../../../apps/desktop/src/lib
 import { type Source } from "../../../../ui/src/lib/model";
 import { readLayout } from "../../../../ui/src/lib/panels";
 import { type Frase } from "../../../../ui/src/lib/prose.ts";
-import { NotMovable, attachmentsOn } from "../../../../../apps/desktop/src/lib/remoteAttachments";
-import { shellCacheMatches } from "../../../../../apps/desktop/src/lib/shellCache";
-import { type ShellSnapshot } from "../../../../../apps/desktop/src/lib/shellCache.ts";
-import { type Space } from "../../../../../apps/desktop/src/lib/spaces";
+import { NotMovable, attachmentsOn } from "./remoteAttachments";
+import { shellCacheMatches } from "../../../../session/src/shellCache";
+import { type ShellSnapshot } from "../../../../session/src/shellCache.ts";
+import { type Space } from "../../../../ui/src/lib/spaces";
 import { isTaskTab } from "../../../../ui/src/lib/tabs";
 import { aplicarTemaDeTerminal } from "../model/terminal-themes";
 import { displayWorkspaceSnapshot, invoke, requestedWorkspaceSnapshot } from "../../../../engine-client/src/client.ts";

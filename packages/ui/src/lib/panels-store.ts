@@ -1,5 +1,5 @@
 import { batch, createSignal } from "solid-js";
-import { workspaceViewKey } from "../../../../apps/desktop/src/lib/workspace-view-scope.ts";
+import { workspaceViewKey } from "../../../session/src/workspace-view-scope.ts";
 import { emptyGroup, type Layout, MAX_COLUMNS, MAX_ROWS, type PanelGroup, type PanelSite } from "./panels-types.ts";
 import { saveLayout } from "./panels-storage.ts";
 import { geometry, sameSite, siteIn } from "./panels-grid.ts";

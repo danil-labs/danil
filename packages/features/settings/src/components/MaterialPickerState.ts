@@ -2,7 +2,7 @@ import { createSignal, onMount } from "solid-js";
 import { addFolder, gitHostAreas, gitHostProjects, repoBranches } from "../queries/engine-git";
 import { open } from "@tauri-apps/plugin-dialog";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
-import { listGitHosts } from "../../../../../apps/desktop/src/lib/gitHosts";
+import { listGitHosts } from "../../../../session/src/gitHosts";
 import type { Proveedor, Area, RepoRemoto, ObjetivoRamas, RamasRemotas } from "./MaterialPickerTypes";
 import type MaterialPicker from "./MaterialPickerView";
 

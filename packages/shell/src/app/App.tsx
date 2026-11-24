@@ -82,7 +82,7 @@ import { pedirElCampo } from "../../../ui/src/lib/focus";
 import {
   
   proyectoDeNuevaTarea,
-} from "../../../../apps/desktop/src/lib/taskDraft";
+} from "../../../ui/src/lib/taskDraft";
 import { createChatEvents, createSleepSession, createThreadStream, createThreadSide, createAttachments, createAttachmentsMount, createResync, createResyncCommands, createShellCommand, createDraftSend, createHandover, createSend, createSendGates, createSendNow, createPanelDeChat } from "../../../features/chat/src";
 
 createSleepSession({ machineOf });

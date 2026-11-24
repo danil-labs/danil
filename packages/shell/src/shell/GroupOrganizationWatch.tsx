@@ -1,5 +1,5 @@
 import { createResource, createRoot, createSignal, onCleanup, onMount, Show } from "solid-js";
-import { subscribeOrganizationProblems } from "../../../../apps/desktop/src/lib/organization-problems";
+import { subscribeOrganizationProblems } from "../../../session/src/organization-problems";
 import { capabilities } from "../../../host/src/platform";
 import { sessionRailState } from "./session-groups";
 

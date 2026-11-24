@@ -3,7 +3,7 @@ import GitBranch from "lucide-solid/icons/git-branch";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
-import type { SenderTask } from "../../../../../apps/desktop/src/lib/recipients";
+import type { SenderTask } from "../../../../ui/src/lib/recipients";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, FailureNote } from "../../../../ui/src/Failure";
 import Sessions, { readableSessionTitle, type SessionRow } from "./Sessions";

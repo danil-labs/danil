@@ -1,6 +1,6 @@
 import { workStateOf } from "../../../ui/src/lib/tasks/index.ts";
 import { createEffect, createMemo, mapArray, on, onCleanup } from "solid-js";
-import { recordarCarpetas } from "../../../../apps/desktop/src/lib/folderKinds";
+import { recordarCarpetas } from "../../../ui/src/lib/folderKinds";
 import { createPref } from "../../../../apps/desktop/src/lib/prefs";
 import { effectiveTaskGit, watchSessionGit } from "../../../features/projects/src/queries/taskGit";
 import {
@@ -9,7 +9,7 @@ import {
   sidebarView,
   type SidebarGroup,
   type SidebarView,
-} from "../../../../apps/desktop/src/lib/sidebarView";
+} from "../../../ui/src/lib/sidebarView";
 import { flattenTasks, folderCounts } from "./sidebarTasks";
 import { machineName, machines } from "../../../features/machines/src/queries/store";
 import type { SessionRow, SidebarProps } from "./sidebar-rows";

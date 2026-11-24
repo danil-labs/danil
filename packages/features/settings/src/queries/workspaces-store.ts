@@ -10,8 +10,8 @@
 import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { createNavigationOrder } from "../../../../../apps/desktop/src/lib/navigation-order";
-import { activeWorkspaceContext, workspaceContextOptions } from "../../../../../apps/desktop/src/lib/workspace-context.ts";
+import { createNavigationOrder } from "../../../../ui/src/lib/navigation-order";
+import { activeWorkspaceContext, workspaceContextOptions } from "../../../../session/src/workspace-context.ts";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
 import type { Workspace, MemoriaProveedor, Startup } from "../../../../ui/src/lib/workspace-startup.ts"; export type { Workspace, MemoriaProveedor, Startup };
 

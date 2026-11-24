@@ -1,5 +1,5 @@
 import { borrarPref, escribirPref, leerPref, prefsQueEmpiezan } from "../../../../apps/desktop/src/lib/prefs.ts";
-import { panelViewKey as layoutKey, workspaceViewKey } from "../../../../apps/desktop/src/lib/workspace-view-scope.ts";
+import { panelViewKey as layoutKey, workspaceViewKey } from "../../../session/src/workspace-view-scope.ts";
 import type { Layout } from "./panels-types.ts";
 
 export function saveLayout(workspace: string, space: string, r: Layout) {

@@ -1,5 +1,5 @@
-import type { Recipient } from "../../../../apps/desktop/src/lib/recipients.ts";
-import type { TaskMention } from "../../../../apps/desktop/src/lib/taskMentions";
+import type { Recipient } from "./recipients.ts";
+import type { TaskMention } from "./taskMentions";
 
 export type HandoverPending = { from: string; to: string };
 

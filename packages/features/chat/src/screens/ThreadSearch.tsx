@@ -3,7 +3,7 @@ import { fromMarkdown } from "mdast-util-from-markdown";
 import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show, type Accessor, type JSX } from "solid-js";
 import { Portal } from "solid-js/web";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { textoDeAtajo, ariaDeAtajo } from "../../../../../apps/desktop/src/lib/shortcuts";
+import { textoDeAtajo, ariaDeAtajo } from "../../../../ui/src/lib/shortcuts";
 import { Button } from "../../../../ui/src/Button";
 import { searchMatchCards, type SearchHit } from "../model/searchCards";
 

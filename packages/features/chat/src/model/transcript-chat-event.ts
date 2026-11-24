@@ -1,6 +1,6 @@
 /** Los eventos del turno: Rust normaliza claude y codex a estas formas. */
-import type { SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import type { Detalle } from "../../../../../apps/desktop/src/lib/steps.ts";
+import type { SenderTask } from "../../../../ui/src/lib/recipients.ts";
+import type { Detalle } from "../../../../ui/src/lib/steps.ts";
 import type { PermissionOrigin } from "./messageTypes";
 
 /** Modelo de eventos propio: Rust normaliza claude y codex a estas formas. */

@@ -1,7 +1,7 @@
 import { batch } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { loadFreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-model-policy-load.ts";
+import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
 import type { Superficie } from "../../../../ui/src/lib/surfaces.ts";
 import { textoDeFalta } from "../../../../ui/src/lib/no-space";
 import { prosaDe } from "../../../../ui/src/Failure";

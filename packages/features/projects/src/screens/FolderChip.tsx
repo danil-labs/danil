@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { tipoDeCarpeta } from "../../../../../apps/desktop/src/lib/folderKinds";
+import { tipoDeCarpeta } from "../../../../ui/src/lib/folderKinds";
 import { cn } from "../../../../ui/src/lib/utils";
 import WorkdirIcon from "../../../../ui/src/WorkdirIcon";
 
