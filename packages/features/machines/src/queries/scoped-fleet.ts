@@ -1,7 +1,8 @@
-import { type Envelope, type Fleet, FleetError } from "@terminus/fleet";
+import { type Envelope, type Fleet, FleetError, type MachineInfo } from "../model/fleet/index.ts";
 
-type Scope = { context?: string; org?: string; localOnly?: boolean };
+type Scope = { context?: string; org?: string; localOnly?: boolean; includeLocalChildren?: boolean };
 const ENVELOPE = new Set(["read", "readLive", "call", "raw", "peek"]);
+const MACHINE_SCOPED = new Set(["name", "state", "power", "wake", "untilOnline", "deferred", "blocked", "setListing", "lists", "observe", "rename", "closeMember"]);
 const SCOPE_AT: Record<string, number> = {
   has: 1, info: 1, name: 1, state: 1, power: 1, wake: 1, untilOnline: 1, deferred: 1, blocked: 1,
   setListing: 2, lists: 2, organizationMachines: 1, available: 1, observe: 2, membersOf: 1, leadOf: 1,
@@ -12,21 +13,25 @@ const SCOPE_AT: Record<string, number> = {
 
 /** Cada router ve una identidad; nunca elige el primer contexto de una máquina. */
 export function scopedFleet(fleet: Fleet, scope: Scope): Fleet {
-  const machines = () => fleet.machines().filter(row => row.context === scope.context && !scope.localOnly &&
-    (!scope.context || row.kind === "organization" && row.organizationId === scope.org));
+  const isLocalChild = (row: MachineInfo) => !!scope.includeLocalChildren && row.child === true && !row.host && !row.context;
+  const machines = () => fleet.machines().filter(row => isLocalChild(row) || (row.context === scope.context && !scope.localOnly &&
+    (!scope.context || row.kind === "organization" && row.organizationId === scope.org)));
+  const contextFor = (machine: string) => machines().some(row => row.id === machine && isLocalChild(row)) ? undefined : scope.context;
   const allowed = (machine: string) => machines().some(row => row.id === machine);
   const members = (workspace: string | null) => (workspace ? fleet.membersOf(workspace, scope.context).filter(allowed) : machines().map(m => m.id));
   return new Proxy(fleet, {
     get(target, property) {
       if (property === "machines") return machines;
-      if (property === "has") return (machine: string) => allowed(machine) && fleet.has(machine, scope.context);
-      if (property === "info") return (machine: string) => allowed(machine) ? fleet.info(machine, scope.context) : undefined;
+      if (property === "has") return (machine: string) => allowed(machine) && fleet.has(machine, contextFor(machine));
+      if (property === "info") return (machine: string) => allowed(machine) ? fleet.info(machine, contextFor(machine)) : undefined;
       if (property === "membersOf") return members;
       if (property === "leadOf") return (workspace: string | null) => {
-        const rows = (workspace ? members(workspace) : machines().map(machine => machine.id)).filter(machine => fleet.power(machine, scope.context) !== "outdated");
-        return rows.find(machine => fleet.power(machine, scope.context) === "on") ?? rows[0] ?? null;
+        const rows = (workspace ? members(workspace) : machines().map(machine => machine.id)).filter(machine => fleet.power(machine, contextFor(machine)) !== "outdated");
+        const primary = rows.filter(machine => !fleet.info(machine, contextFor(machine))?.child);
+        const pick = (list: string[]) => list.find(machine => fleet.power(machine, contextFor(machine)) === "on") ?? list[0] ?? null;
+        return pick(primary) ?? pick(rows);
       };
-      if (property === "license") return () => machines().map(machine => fleet.blocked(machine.id, scope.context)).find(Boolean) ?? null;
+      if (property === "license") return () => machines().map(machine => fleet.blocked(machine.id, contextFor(machine.id))).find(Boolean) ?? null;
       if (property === "remotes") return () => new Set(machines().map(machine => machine.id));
       if (property === "organizationMachines") return (org: string) => fleet.organizationMachines(org, scope.context).filter(allowed);
       if (property === "available") return (org: string) => scope.localOnly || scope.org && org !== scope.org ? null : fleet.available(org, scope.context);
@@ -36,14 +41,15 @@ export function scopedFleet(fleet: Fleet, scope: Scope): Fleet {
       if (typeof method !== "function" || typeof property !== "string") return method;
       if (ENVELOPE.has(property)) return (envelope: Envelope) => {
         if (!allowed(envelope.machine)) throw new FleetError("unknown_machine", envelope.machine);
-        return Reflect.apply(method, target, [{ ...envelope, context: scope.context }]);
+        return Reflect.apply(method, target, [{ ...envelope, context: contextFor(envelope.machine) }]);
       };
       const index = SCOPE_AT[property];
       if (index === undefined) return method.bind(target);
       return (...input: unknown[]) => {
         const args = input.slice(0, index);
         while (args.length < index) args.push(undefined);
-        args.push(scope.context);
+        const ctx = MACHINE_SCOPED.has(property) && typeof input[0] === "string" ? contextFor(input[0]) : scope.context;
+        args.push(ctx);
         return Reflect.apply(method, target, args);
       };
     },

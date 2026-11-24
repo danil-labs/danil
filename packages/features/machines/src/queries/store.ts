@@ -1,4 +1,4 @@
-import { SEP } from "@terminus/fleet";
+import { SEP } from "../model/fleet/index.ts";
 import { REMOTE_CHILD_FEATURE, type RemoteScope } from "../../../../ui/src/lib/tasks/index.ts";
 import { createRoot, createSignal } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client";

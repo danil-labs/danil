@@ -584,11 +584,8 @@ pub struct ChildInfo {
     pub version: Option<String>,
 }
 
-/// `disk`: leer el descriptor del huésped. En WSL eso enciende una distro
-/// apagada. Sin
-/// `disk` sólo se pregunta al puerto que ya se conocía.
-pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
-    let mut info = ChildInfo {
+fn offline_info(entry: &ChildEntry) -> ChildInfo {
+    ChildInfo {
         id: entry.id(),
         channel: entry.channel,
         distro: entry.distro.clone(),
@@ -599,7 +596,18 @@ pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
         features: Vec::new(),
         contract: None,
         version: None,
-    };
+    }
+}
+
+fn evict_conn(id: &str) {
+    conns().lock().unwrap_or_else(|p| p.into_inner()).remove(id);
+}
+
+/// `disk`: leer el descriptor del huésped. En WSL eso enciende una distro
+/// apagada. Sin
+/// `disk` sólo se pregunta al puerto que ya se conocía.
+pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
+    let mut info = offline_info(entry);
     let known = conns()
         .lock()
         .unwrap_or_else(|p| p.into_inner())
@@ -608,7 +616,10 @@ pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
     let conn = match (known, disk) {
         (_, true) => match read_conn(entry) {
             Ok(c) => c,
-            Err(_) => return info,
+            Err(_) => {
+                evict_conn(&entry.id());
+                return info;
+            }
         },
         (Some(c), false) => c,
         (None, false) => return info,
@@ -637,12 +648,25 @@ pub fn status(entry: &ChildEntry, disk: bool) -> ChildInfo {
             .lock()
             .unwrap_or_else(|p| p.into_inner())
             .insert(entry.id(), conn);
+    } else {
+        evict_conn(&entry.id());
     }
     info
 }
 
+fn status_for_listing(entry: &ChildEntry, disk: bool, running: Option<&[String]>) -> ChildInfo {
+    match (disk, running) {
+        (false, Some(list)) if !list.iter().any(|d| d == &entry.distro) => {
+            evict_conn(&entry.id());
+            offline_info(entry)
+        }
+        (false, Some(_)) => status(entry, true),
+        _ => status(entry, disk),
+    }
+}
+
 /// Sin `disk`, una distribución que ya corre se lee igual (no se enciende nada);
-/// una apagada se queda apagada.
+/// una apagada se queda apagada y limpia su conexión previa en caché.
 pub fn children(app: &AppHandle, disk: bool) -> Vec<ChildInfo> {
     let entries = load(app);
     if entries.is_empty() {
@@ -650,14 +674,14 @@ pub fn children(app: &AppHandle, disk: bool) -> Vec<ChildInfo> {
     }
     let wsl = entries.iter().any(|e| e.channel == ChannelKind::Wsl);
     let running = if disk || !wsl {
-        Vec::new()
+        None
     } else {
         running_distros()
     };
     entries
         .iter()
         .map(|e| match e.channel {
-            ChannelKind::Wsl => status(e, disk || running.contains(&e.distro)),
+            ChannelKind::Wsl => status_for_listing(e, disk, running.as_deref()),
         })
         .collect()
 }
@@ -1349,5 +1373,31 @@ mod tests {
         assert!(url.starts_with("https://"));
         assert_eq!(sha.len(), 64);
         assert!(version.contains('-'));
+    }
+
+    #[test]
+    fn stopped_distro_evicts_cached_connection_and_reports_offline() {
+        let entry = sample("StoppedProbeTest");
+        let id = entry.id();
+        conns().lock().unwrap_or_else(|p| p.into_inner()).insert(
+            id.clone(),
+            Conn {
+                address: "127.0.0.1:1".parse().expect("addr"),
+                token: "tok".to_string(),
+                runtime: "rt".to_string(),
+                contract: "c".to_string(),
+            },
+        );
+        let running = vec!["OtherDistro".to_string()];
+        let info = status_for_listing(&entry, false, Some(&running));
+        assert!(!info.online);
+        assert_eq!(info.id, id);
+        assert!(
+            !conns()
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .contains_key(&id),
+            "una distro detenida debe descartar el puerto previo en caché"
+        );
     }
 }
