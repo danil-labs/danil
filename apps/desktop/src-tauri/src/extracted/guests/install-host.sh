@@ -73,7 +73,7 @@ case "$home" in /*) ;; *) fail instalador "La carpeta debe ser absoluta: $home" 
 # --- paquete
 base=${SELDON_HOST_BASE_URL:-$BASE_URL}
 case "$base" in @*|'') fail descarga "Este instalador no trae de dónde bajar el motor." \
-  "usa el que publica Danil (alfa-app.danil.ai/install.sh) o pon SELDON_HOST_BASE_URL.";; esac
+  "usa el que publica Danil (beta.danil.ai/install.sh) o pon SELDON_HOST_BASE_URL.";; esac
 base=${base%/}
 asset="seldon-host-$target.tar.gz"
 case "$target" in
