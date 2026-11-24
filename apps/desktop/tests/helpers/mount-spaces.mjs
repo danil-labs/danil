@@ -597,6 +597,16 @@ export async function spaceScenarios({ boot, sleep, withTask: WITH_TASK }) {
     const dialog = () => u.doc.querySelector("[data-delete-space]");
     assert.equal(dialog()?.getAttribute("role"), "alertdialog");
     assert.equal(u.doc.activeElement?.textContent.trim(), "Cancelar", "el foco empieza en Cancelar");
+    // Lo que se pregunta son totales: el detalle solo si se pide.
+    const totals = () => [...dialog().querySelectorAll("[data-delete-total]")].map((el) => el.dataset.deleteTotal);
+    assert.deepEqual(totals(), ["working", "uncommitted", "unsaved"]);
+    assert.match(dialog().textContent, /Sus 3 tareas se archivan/);
+    assert.equal(dialog().querySelector("[data-delete-section]"), null, "el detalle empieza plegado");
+    const details = () => [...dialog().querySelectorAll("button")].find((b) => b.getAttribute("aria-expanded") !== null);
+    assert.equal(details().textContent.trim(), "Ver qué no está guardado");
+    details().click();
+    await sleep(100);
+    assert.equal(details().getAttribute("aria-expanded"), "true");
     const sectionEls = () => [...dialog().querySelectorAll("[data-delete-section]")].map((el) => [el.dataset.deleteSection, [...el.querySelectorAll("[data-delete-row]")].map((r) => r.dataset.deleteRow)]);
     assert.deepEqual(sectionEls(), [["working", ["t3"]], ["uncommitted", ["t6"]], ["unsaved", ["t7"]]]);
     const confirmDialog = () => [...dialog().querySelectorAll("button")].at(-1);
@@ -622,7 +632,8 @@ export async function spaceScenarios({ boot, sleep, withTask: WITH_TASK }) {
     await sleep(300);
     const failures = dialog()?.querySelector("[data-delete-failures]");
     assert.match(failures?.textContent ?? "", /Hay un turno o una operación en curso/, "el fallo se lee dentro del diálogo");
-    assert.equal(dialog().querySelector('[data-delete-section="working"]'), null, "tras un fallo se pinta la previa de ahora, no la que volvió");
+    assert.equal(dialog().querySelector('[data-delete-total="working"]'), null, "tras un fallo se pinta la previa de ahora, no la que volvió");
+    assert.equal(dialog().querySelector('[data-delete-section="working"]'), null);
     assert.equal(u.doc.querySelector('[data-sesion="t3"]'), null, "lo ya archivado sale del riel con el diálogo abierto");
     assert.equal(u.doc.querySelector("[data-space-toast]"), null);
     confirmDialog().click();
@@ -709,6 +720,65 @@ export async function spaceScenarios({ boot, sleep, withTask: WITH_TASK }) {
     assert.ok(u.caja(), "y deja una caja para escribirle");
     assert.equal(s.llamadas.some(([c]) => c === "send_message"), false, "sin mandar nada por su cuenta");
     assert.deepEqual(app.failures, []);
+    app.w.close();
+  }
+
+  /**
+   * Un espacio vacío se elimina sin preguntar nada, y lo hace una sola vez:
+   * releer la lista a media previa —lo que hace cada aviso del CLI— no puede
+   * reiniciarla, que era la previa que nunca terminaba.
+   */
+  {
+    const s = service({
+      spaces: [
+        { id: "i1", name: null, folders: ["pa"], created_at: 1, updated_at: 1 },
+        { id: "i2", name: "Móvil", folders: ["pb"], created_at: 2, updated_at: 2 },
+      ],
+      filas: [rowEl("t1", "pa", "i1")],
+    });
+    const preview = s.respuestas.space_delete_preview;
+    s.respuestas.space_delete_preview = (args) => new Promise((resolve) => setTimeout(() => resolve(preview(args)), 250));
+    const app = await boot("listo", "spaces-delete-empty", base(s, { "space.w": "i2" }));
+    await sleep(500);
+    const u = usable(app);
+    (await u.accion("Eliminar…")).click();
+    await sleep(80);
+    assert.equal(u.doc.querySelector("[data-delete-space]"), null, "un espacio vacío no abre diálogo");
+    app.emit("cli-changed", { workspace: "w", command: "task.send" });
+    await sleep(500);
+    assert.deepEqual((await u.espacios()).map((e) => e.id), ["i1"], "se borró");
+    assert.equal(s.llamadas.filter(([c]) => c === "space_delete_preview").length, 1, "una sola previa: releer la lista no la reinicia");
+    assert.match(u.doc.querySelector("[data-space-toast]")?.textContent ?? "", /«Móvil» eliminado$/);
+    saveCall("borrar-vacio", app, s);
+    assert.deepEqual(app.failures, []);
+    app.w.close();
+  }
+
+  /**
+   * Si la previa no contesta, no se queda en «Leyendo qué tiene…» para
+   * siempre: a los 8 s lo dice y ofrece reintentar, que es lo que faltaba
+   * cuando un espacio de otra máquina no respondía.
+   */
+  {
+    const s = service({
+      spaces: [
+        { id: "i1", name: null, folders: ["pa"], created_at: 1, updated_at: 1 },
+        { id: "i2", name: "Móvil", folders: ["pb"], created_at: 2, updated_at: 2 },
+      ],
+      filas: [rowEl("t1", "pa", "i1")],
+    });
+    s.respuestas.space_delete_preview = () => new Promise(() => {});
+    const app = await boot("listo", "spaces-delete-no-answer", base(s, { "space.w": "i2" }));
+    await sleep(500);
+    const u = usable(app);
+    (await u.accion("Eliminar…")).click();
+    await sleep(2000);
+    const dialog = () => u.doc.querySelector("[data-delete-space]");
+    assert.match(dialog()?.textContent ?? "", /Leyendo qué tiene…/, "mientras se espera lo dice");
+    await sleep(6500);
+    assert.match(dialog()?.textContent ?? "", /El servicio no contestó/, "y pasado el límite deja de decir que lee");
+    assert.ok(u.boton("Reintentar"), "ofrece reintentar");
+    assert.equal([...dialog().querySelectorAll("button")].at(-1).disabled, true, "sin previa no se borra a ciegas");
     app.w.close();
   }
 

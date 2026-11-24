@@ -113,11 +113,13 @@ export function createSpaceOps(deps: SpaceOpsDeps) {
     if (!ungrouped) {
       void catalog?.remove(i.id).catch(() => {});
       void reloadSpaces();
-      setAviso({
-        texto: t("spaces.delete.toast", { name: spaceName(i), count }),
-        boton: t("spaces.delete.see_archived"),
-        ir: () => setBuscando("archived"),
-      });
+      setAviso(count > 0
+        ? {
+          texto: t("spaces.delete.toast", { name: spaceName(i), count }),
+          boton: t("spaces.delete.see_archived"),
+          ir: () => setBuscando("archived"),
+        }
+        : { texto: t("spaces.delete.toast_removed", { name: spaceName(i) }) });
       return;
     }
     setAviso({
