@@ -1,58 +1,61 @@
-import type { AccountWorkspace, Computer } from "../../../../platform-client/src/api.ts";
-import type { Connection, ConnectionCapabilities } from "../../../../platform-client/src/connections.ts";
+import type { McpConnection } from "../../../../platform-client/src/connections.ts";
 import { MCP_URL } from "../model/connections.ts";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../ui/src/lib/i18n";
-import { accountRelayToken, connectionCapabilities, listComputers, listConnections, revokeConnection, updateConnection } from "../queries/engine-connections";
+import {
+  listConnectionAuditN1,
+  loadConnectionsData,
+  patchConnectionN1,
+  revokeConnectionN1,
+} from "../queries/engine-connections";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { ConnectionRow } from "./ConnectionsRow";
 
-/** `account_relay_token` (`proxy.rs`): el token de cliente de la cuenta y el plano de control. */
-type ClientToken = { token: string; expires_at: number; endpoint: string };
+const DOMAIN_ERROR_KEYS = new Set([
+  "organization_unavailable",
+  "relay_unavailable",
+  "connection_revoked",
+  "connection_needs_setup",
+  "organization_mismatch",
+  "organization_access_denied",
+]);
 
-type Loaded = { connections: Connection[]; computers: Computer[]; workspaces: AccountWorkspace[]; capabilities: ConnectionCapabilities | null } | { failed: string };
-
-async function token(): Promise<ClientToken> {
-  return (await accountRelayToken({})) as ClientToken;
-}
-
-async function load(): Promise<Loaded> {
-  try {
-    const { token: tok, endpoint } = await token();
-    const [connections, computers, capabilities] = await Promise.all([listConnections(endpoint, tok), listComputers(endpoint, tok), connectionCapabilities(endpoint, tok)]);
-    if (connections.kind !== "ok") return { failed: connections.kind };
-    if (computers.kind !== "ok") return { failed: computers.kind };
-    if (capabilities.kind !== "ok" && capabilities.kind !== "missing") return { failed: capabilities.kind };
-    return { capabilities: capabilities.kind === "ok" ? capabilities.value : null, connections: connections.value, computers: computers.value, workspaces: [] };
-  } catch {
-    return { failed: "no_account" };
+function errorMessage(code: string | null): string {
+  if (code && DOMAIN_ERROR_KEYS.has(code)) {
+    return t(`settings.connections.error.${code}`);
   }
+  return t("settings.connections.failed");
 }
 
 export default function Connections() {
-  const [data, { refetch }] = createResource(load);
+  const [data, { refetch }] = createResource(loadConnectionsData);
   const [busy, setBusy] = createSignal<string | null>(null);
   const [failure, setFailure] = createSignal<string | null>(null);
-  const [revoking, setRevoking] = createSignal<Connection | null>(null);
+  const [revoking, setRevoking] = createSignal<McpConnection | null>(null);
   const { copied, copy } = createCopied(2_000);
 
   const ready = () => {
     const d = data();
-    return d && !("failed" in d) ? d : null;
+    return d?.ok ? d.data : null;
   };
 
-  async function act<A extends { kind: string }>(id: string, run: (endpoint: string, tok: string) => Promise<A>): Promise<A | null> {
+  async function act<A extends { kind: string; code?: string }>(
+    id: string,
+    run: () => Promise<A>,
+  ): Promise<A | null> {
     setBusy(id);
     setFailure(null);
     try {
-      const { token: tok, endpoint } = await token();
-      const answer = await run(endpoint, tok);
-      if (answer.kind !== "ok") setFailure(answer.kind);
-      if (answer.kind === "ok") await refetch();
+      const answer = await run();
+      if (answer.kind !== "ok") {
+        setFailure(answer.code ?? answer.kind);
+      } else {
+        await refetch();
+      }
       return answer;
     } catch {
       setFailure("error");
@@ -62,9 +65,6 @@ export default function Connections() {
     }
   }
 
-  const machineName = (computers: Computer[], id: string) =>
-    computers.find((c) => c.computer_id === id)?.name ?? id;
-
   return (
     <SettingsPanel>
       <SettingsSection
@@ -72,30 +72,41 @@ export default function Connections() {
         description={t("settings.connections.description")}
         aside={
           <Show when={ready()}>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void copy(MCP_URL)}
-            >
+            <Button variant="secondary" size="sm" onClick={() => void copy(MCP_URL)}>
               {copied() ? t("settings.connections.copied") : t("settings.connections.copy_url")}
             </Button>
           </Show>
         }
       >
         <Show when={failure()}>
-          <p class="m-0 py-2 text-ui text-error-strong" role="alert">
-            {t("settings.connections.failed")}
-          </p>
+          {(code) => (
+            <p class="m-0 py-2 text-ui text-error-strong" role="alert">
+              {errorMessage(code())}
+            </p>
+          )}
         </Show>
         <Show when={data.loading}>
           <p class="m-0 py-3 text-sm text-neutral-500">{t("settings.connections.loading")}</p>
         </Show>
-        <Show when={(() => { const d = data(); return d && "failed" in d ? d : null; })()}>
+        <Show
+          when={(() => {
+            const d = data();
+            return d && !d.ok ? d : null;
+          })()}
+        >
           {(d) => (
             <div class="grid gap-3">
-              <EmptyState title={d().failed === "no_account" ? t("settings.connections.unavailable") : t("settings.connections.failed")}
-                description={t("settings.connections.unavailable_hint")} />
-              <Button variant="secondary" class="justify-self-start" onClick={() => void refetch()}>{t("settings.connections.retry")}</Button>
+              <EmptyState
+                title={
+                  d().reason === "no_account"
+                    ? t("settings.connections.unavailable")
+                    : errorMessage(d().reason)
+                }
+                description={t("settings.connections.unavailable_hint")}
+              />
+              <Button variant="secondary" class="justify-self-start" onClick={() => void refetch()}>
+                {t("settings.connections.retry")}
+              </Button>
             </div>
           )}
         </Show>
@@ -110,30 +121,29 @@ export default function Connections() {
                 />
               }
             >
-              <For each={d().connections.map(c => c.id)}>
+              <For each={d().connections.map((c) => c.id)}>
                 {(id) => {
-                  const connection = () => d().connections.find(c => c.id === id)!;
+                  const connection = () => d().connections.find((c) => c.id === id)!;
                   return (
-                  <ConnectionRow
-                    connection={connection()}
-                    computers={d().computers}
-                    workspaces={d().workspaces}
-                    capabilities={d().capabilities}
-                    busy={busy() === id}
-                    machineName={(id) => machineName(d().computers, id)}
-                    onSave={async (patch) => {
-                      const answer = await act(id, (e, tok) => updateConnection(e, tok, id, patch));
-                      return answer?.kind === "ok" && answer.value?.id === id;
-                    }}
-                    onPause={() => act(id, (e, tok) => updateConnection(e, tok, id, { state: "paused" }))}
-                    onResume={() => act(id, (e, tok) => updateConnection(e, tok, id, { state: "active" }))}
-                    onRevoke={() => setRevoking(connection())}
-                    onWebhook={async (webhook) => {
-                      const answer = await act(id, (e, tok) => updateConnection(e, tok, id, { webhook }));
-                      return answer?.kind === "ok" ? (answer.value?.webhook_secret ?? null) : null;
-                    }}
-                  />
-                );
+                    <ConnectionRow
+                      connection={connection()}
+                      organizations={d().organizations}
+                      activeOrganizationId={d().activeOrganizationId}
+                      workspaces={d().workspaces}
+                      busy={busy() === id}
+                      onSave={async (patch) => {
+                        const answer = await act(id, () => patchConnectionN1(id, patch));
+                        return answer?.kind === "ok";
+                      }}
+                      onPause={() => void act(id, () => patchConnectionN1(id, { action: "pause" }))}
+                      onResume={() => void act(id, () => patchConnectionN1(id, { action: "resume" }))}
+                      onRevoke={() => setRevoking(connection())}
+                      onLoadAudit={async () => {
+                        const res = await listConnectionAuditN1(id);
+                        return res.kind === "ok" ? res.value : null;
+                      }}
+                    />
+                  );
                 }}
               </For>
             </Show>
@@ -141,9 +151,16 @@ export default function Connections() {
         </Show>
       </SettingsSection>
 
-      <Dialog open={revoking() !== null} onOpenChange={(open) => { if (!open) setRevoking(null); }}>
+      <Dialog
+        open={revoking() !== null}
+        onOpenChange={(open) => {
+          if (!open) setRevoking(null);
+        }}
+      >
         <DialogContent>
-          <DialogTitle>{t("settings.connections.revoke_title", { name: revoking()?.client_name ?? "" })}</DialogTitle>
+          <DialogTitle>
+            {t("settings.connections.revoke_title", { name: revoking()?.client_id ?? "" })}
+          </DialogTitle>
           <p class="m-0 text-sm text-neutral-700">{t("settings.connections.revoke_body")}</p>
           <div class="mt-4 flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setRevoking(null)}>
@@ -155,7 +172,7 @@ export default function Connections() {
               onClick={async () => {
                 const c = revoking();
                 if (!c) return;
-                await act(c.id, (e, tok) => revokeConnection(e, tok, c.id));
+                await act(c.id, () => revokeConnectionN1(c.id));
                 setRevoking(null);
               }}
             >

@@ -34,7 +34,7 @@ export function nextDelay(attempt: number, hintMs: number | undefined, minDelayM
 }
 
 /** Los métodos que `danil_edge_fetch` envía tal cual; todo lo que no es GET es una escritura. */
-export type EdgeMethod = "GET" | "POST" | "PUT" | "DELETE";
+export type EdgeMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /** La respuesta del borde, sin tocar: el status, el cuerpo y `Location` si la hay. */
 export type EdgeReply<T = unknown> = { status: number; body: T; location?: string; idempotency_key?: string; retry_after_ms?: number };

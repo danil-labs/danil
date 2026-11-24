@@ -1234,3 +1234,35 @@ fn loopback_accepts_a_callback_split_across_tcp_reads() {
     sender.join().unwrap();
     assert_eq!(returned, Some(Returned::Code("abc".into())));
 }
+
+#[test]
+fn mcp_n1_connections_routes_are_allowed_and_patch_sends_patch_method() {
+    assert!(allowed("GET", "/v1/connections"));
+    assert!(!allowed("POST", "/v1/connections"));
+    assert!(allowed("GET", "/v1/connections/conn_123"));
+    assert!(allowed("PATCH", "/v1/connections/conn_123"));
+    assert!(allowed("DELETE", "/v1/connections/conn_123"));
+    assert!(allowed("GET", "/v1/connections/conn_123/audit"));
+    assert!(!allowed("POST", "/v1/connections/conn_123/audit"));
+    assert!(!allowed("DELETE", "/v1/connections/conn_123/audit"));
+
+    let (base, seen) = serve(Arc::new(|req, _| {
+        assert_eq!(req.method, "PATCH");
+        assert_eq!(req.path, "/v1/connections/conn_123");
+        assert_eq!(req.body, json!({ "action": "pause" }));
+        (200, json!({ "id": "conn_123", "state": "paused" }))
+    }));
+    let reply = session::request_keyed(
+        &format!("{base}/v1/connections/conn_123"),
+        "PATCH",
+        Some("tok"),
+        Some(&json!({ "action": "pause" })),
+        "idem-1",
+    )
+    .expect("PATCH should succeed");
+    assert_eq!(reply.status, 200);
+    let logged = seen.lock().unwrap();
+    assert_eq!(logged.len(), 1);
+    assert_eq!(logged[0].method, "PATCH");
+    assert_eq!(logged[0].idempotency_key.as_deref(), Some("idem-1"));
+}
