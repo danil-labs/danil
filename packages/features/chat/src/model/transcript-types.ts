@@ -32,14 +32,6 @@ export type Tool = {
  */
 type Piece = { text: string } | { tool: number };
 
-/**
- * La clave con la que una respuesta apunta a su pregunta: el turno que la hizo
- * y la pregunta dentro de ese turno. Va por `JSON.stringify` y no concatenada
- * con un separador porque los ids de pregunta los escribe el agente, y
- * cualquier separador que se elija puede aparecer dentro de uno.
- */
-export { clave } from "../../../../ui/src/lib/chat/tools.ts";
-
 /** Lo que el agente dejó preguntado al cerrar un turno. */
 export type PreguntaEvent = {
   /** Ver `ChatEvent.workspace`. */

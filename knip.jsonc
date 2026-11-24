@@ -94,7 +94,7 @@
     "packages/features/machines/src/queries/engine-workspaces.ts": ["exports", "types"], // LIGHT_STATE_MACHINES_FEATURE, RailWorkspace: engine-workspaces.test.ts / #1136
     "apps/desktop/src/lib/{activityObservation,projectNames,promo-role,sales-contact,scrollbars,sharedLazy,terminal-themes,turnActivity}.ts": ["files"], // reexportaciones de F4.4 lote 3
     "apps/desktop/src/lib/{panels-grid,panels-split,panels-storage,panels-store,panels-types,tabs-close,tabs-files,tabs-storage,tabs-store,tabs-types}.ts": ["files"], // reexportaciones de F4.4 lote 8a
-    "apps/desktop/src/lib/{context-snapshot,folderKinds,gitHosts,governance,group-promo-reply,native-workspace-add-link,navigation-order,project-block-types,space-navigation-order,steps-group,steps-label,steps-model,workspace-view-scope,wrap,zoom}.ts": ["files"], // reexportaciones de F4.4 lote 8b
+    "apps/desktop/src/lib/{context-snapshot,folderKinds,gitHosts,governance,group-promo-reply,native-workspace-add-link,navigation-order,pointer-drag,project-block-types,serviceEvents,settled-contexts,space-navigation-order,steps-group,steps-label,steps-model,workspace-view-scope,wrap,zoom}.ts": ["files"], // reexportaciones de F4.4 lotes 5 y 8b
     "apps/desktop/src/web/{group-promo,ipc,OnboardingAccounts,open-workspace-url,platform-workspaces,ReauthNote,SyncNote,UpdateNotice,web-rail-catalog,window-browser,window}.{ts,tsx}": ["files"], // reexportaciones de F4.4 lotes 1 y 7
     "packages/features/machines/src/queries/router.ts": ["exports"],  // unconfirmedOpen: machine-router.test.ts
     "packages/features/machines/src/queries/session-cloud.ts": ["exports"], // mergeContextMachines: connected-status, session-machines
@@ -102,6 +102,7 @@
     "packages/features/projects/src/model/recent.ts": ["exports"],    // recentProjects: project-picker-recent.test.ts
     "packages/features/projects/src/queries/taskGit.ts": ["exports"], // mergeRemoteGit, GIT_READ_DEADLINE: tabs.test.ts
     "packages/features/settings/src/components/Accounts.tsx": ["exports"], // ESPERA_ANTES_DE_LA_TERMINAL_MS: helpers/ai-providers-accounts.tsx
+    "packages/features/settings/src/components/AppDownloads.tsx": ["exports"], // default: #1151 Maintenance.tsx usa el export nombrado AppDownloads
     "packages/features/settings/src/model/ai-providers-groups.ts": ["exports"], // idsDeGrupos, sinCuentas: ai-providers-groups.test.ts
     "packages/features/settings/src/queries/free-router-platform.ts": ["exports"], // supportsPlatformFreeRouter: free-router-platform.test.ts
     "packages/host/src/downloads.ts": ["exports"],                    // DESKTOP_DOWNLOADS, platformOf: account-welcome.test.ts
@@ -211,10 +212,6 @@
         "src/model/carryPlan.ts",
         "src/queries/carryRun.ts"
       ],
-      "project": ["src/**/*.{ts,tsx}"]
-    },
-    "packages/features/settings": {
-      "ignoreDependencies": ["@tauri-apps/plugin-updater"],
       "project": ["src/**/*.{ts,tsx}"]
     }
   }
