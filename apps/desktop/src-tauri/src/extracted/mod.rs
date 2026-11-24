@@ -500,8 +500,6 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             proxy::service_filter,
             proxy::load_history,
             handler_policy::handler_action,
-            proxy::service_prepare_update,
-            proxy::service_cancel_update,
             sites::site_sweep,
             sites::site_open,
             sites::site_place,

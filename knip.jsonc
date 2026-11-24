@@ -69,7 +69,13 @@
     "packages/features/code/src/model/tree.ts": ["exports"],          // estadoLocal: tree.test.ts
     "packages/features/code/src/screens/FileViewer.tsx": ["exports"], // esMarkdown: command-output.test.ts
     "packages/features/machines/src/index.ts": ["exports"],           // danilAvailableContext, readDanilContext: danil-source.test.ts
-    "packages/features/machines/src/model/wsl.ts": ["exports"],       // wslFailureCode, WSL_INSTALL, WSL_INSTALL_UBUNTU: wsl-detection.test.ts
+    "packages/features/machines/src/model/wsl.ts": ["exports", "types"], // wslFailureCode, WSL_INSTALL, WSL_INSTALL_UBUNTU: wsl-detection.test.ts; tipos sin Wsl*.tsx (#1148)
+    "packages/features/machines/src/queries/guestChannels.ts": ["exports"], // offersGuests (#1148)
+    "packages/features/machines/src/queries/workspace-computers.ts": ["exports"], // workspaceComputersSource (#1148)
+    "packages/features/settings/package.json": ["dependencies"],      // @tauri-apps/plugin-updater (#1148)
+    "packages/features/settings/src/model/environment-store.ts": ["files"], // sin Environment.tsx (#1148)
+    "packages/ui/src/Table.tsx": ["files"],                           // sin SecretsList/Environment (#1147/#1148)
+    "packages/ui/src/lib/bundled.ts": ["exports", "types"],           // sin Environment.tsx (#1148)
     "packages/features/machines/src/queries/cloud-machines.ts": ["exports"], // edgeFetch: cloud-machines, edge-client, organization-selection, mvp-contracts
     "packages/features/machines/src/queries/connected-status.ts": ["exports"], // CONNECTED_MACHINES_FEATURE: connected-status.test.ts
     "packages/features/machines/src/queries/danil-source.ts": ["exports"], // listedOf, noteListing, danilAvailableContext, readDanilContext: danil-source.test.ts

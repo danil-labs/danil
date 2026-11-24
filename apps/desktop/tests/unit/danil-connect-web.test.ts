@@ -15,9 +15,13 @@ import { platformTransport, PlatformSessionError } from "../../src/web/platform-
 // Como el teléfono: un motor con otro contrato sigue en servicio y solo falla la
 // orden que no conoce. Ni la ventana ni la web lo marcan desactualizado por su hash.
 test("neither the window nor the web gates a machine by its engine contract", () => {
-  const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
-  for (const file of ["src/features/machines/account.tsx", "src/web/main.tsx", "src/features/machines/ConnectMachine.tsx", "src/features/machines/AccountComputers.tsx"]) {
-    const source = readFileSync(join(root, file), "utf8");
+  const repo = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
+  for (const file of [
+    "packages/features/machines/src/queries/account.tsx",
+    "apps/desktop/src/web/main.tsx",
+    "packages/features/machines/src/screens/ConnectMachine.tsx",
+  ]) {
+    const source = readFileSync(join(repo, file), "utf8");
     assert.doesNotMatch(source, /machineCompatibility|machineContracts|__TERMINUS_CONTRACT__/, file);
     assert.doesNotMatch(source, /^\s*(contracts|compatible):/m, file);
   }
