@@ -160,14 +160,14 @@ test("computes governed sections and discrete scope badges", () => {
     { kind: "policy", tone: "info", label: "Política de organización" },
   );
 
-  assert.deepEqual(
+  assert.equal(
     settingsScopeBadge({
-      entryId: "billing",
+      entryId: "account",
       workspace: { isOrg: true },
       governed: false,
       labels: SCOPE_LABELS,
     }),
-    { kind: "org", tone: "info", label: "Organización" },
+    null,
   );
 
   assert.deepEqual(

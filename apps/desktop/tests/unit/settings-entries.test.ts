@@ -7,7 +7,14 @@ test("old settings ids open the entry and tab that now hold them", () => {
   assert.deepEqual(settingsTarget("notify"), { entry: "general", tab: null });
   assert.deepEqual(settingsTarget("notifications"), { entry: "general", tab: null });
   assert.deepEqual(settingsTarget("appearance"), { entry: "appearance", tab: null });
+  assert.deepEqual(settingsTarget("account"), { entry: "account", tab: null });
   assert.deepEqual(settingsTarget("cuenta-danil"), { entry: "account", tab: "cuenta-danil" });
+  assert.deepEqual(settingsTarget("emails"), { entry: "account", tab: "cuenta-danil" });
+  assert.deepEqual(settingsTarget("usage"), { entry: "account", tab: "cuenta-danil" });
+  assert.deepEqual(settingsTarget("plan"), { entry: "account", tab: "cuenta-danil" });
+  assert.deepEqual(settingsTarget("billing"), { entry: "account", tab: "cuenta-danil" });
+  assert.deepEqual(settingsTarget("business"), { entry: "account", tab: "cuenta-danil" });
+  assert.deepEqual(settingsTarget("fiscal"), { entry: "account", tab: "cuenta-danil" });
   assert.deepEqual(settingsTarget("security"), { entry: "security", tab: null });
   assert.equal(settingsTarget("workspaces"), null);
   assert.equal(settingsTarget("preferences"), null);
@@ -30,8 +37,6 @@ test("old settings ids open the entry and tab that now hold them", () => {
   assert.equal(settingsTarget("support"), null);
   assert.equal(settingsTarget("customers"), null);
   assert.deepEqual(settingsTarget("connections"), { entry: "connections", tab: null });
-  assert.deepEqual(settingsTarget("business"), { entry: "billing", tab: "business" });
-  assert.deepEqual(settingsTarget("fiscal"), { entry: "billing", tab: "fiscal" });
   assert.deepEqual(settingsTarget("maintenance"), { entry: "maintenance", tab: null });
   assert.deepEqual(settingsTarget("download"), { entry: "maintenance", tab: null });
 });
@@ -41,7 +46,7 @@ test("unknown or empty ids open nothing in particular", () => {
   assert.equal(settingsTarget("bitacora"), null);
 });
 
-test("ten flat entries in final order, no preferences or workspaces/languages tabs, maintenance in footer, every tab in exactly one", () => {
+test("nine flat entries in final order, account unified without sub-tabs, no billing entry, maintenance in footer, every tab in exactly one", () => {
   assert.deepEqual(
     SETTINGS_ENTRIES.map((e) => e.id),
     [
@@ -53,7 +58,6 @@ test("ten flat entries in final order, no preferences or workspaces/languages ta
       "source-control",
       "agents-skills",
       "connections",
-      "billing",
       "maintenance",
     ],
   );
@@ -62,6 +66,7 @@ test("ten flat entries in final order, no preferences or workspaces/languages ta
   const accountIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "account");
   const securityIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "security");
   const maintenance = SETTINGS_ENTRIES.find((e) => e.id === "maintenance");
+  assert.deepEqual([...SETTINGS_ENTRIES[accountIndex].tabs], ["cuenta-danil"]);
   assert.equal(securityIndex, accountIndex + 1);
   assert.deepEqual([...SETTINGS_ENTRIES[securityIndex].tabs], ["security"]);
   assert.ok(!(SETTINGS_ENTRIES[accountIndex].tabs as readonly string[]).includes("security"));
@@ -72,5 +77,10 @@ test("ten flat entries in final order, no preferences or workspaces/languages ta
   assert.ok(!tabs.includes("workspaces"));
   assert.ok(!tabs.includes("notify"));
   assert.ok(!tabs.includes("download"));
+  assert.ok(!tabs.includes("emails"));
+  assert.ok(!tabs.includes("usage"));
+  assert.ok(!tabs.includes("plan"));
+  assert.ok(!tabs.includes("business"));
+  assert.ok(!tabs.includes("fiscal"));
   assert.equal(new Set(tabs).size, tabs.length);
 });

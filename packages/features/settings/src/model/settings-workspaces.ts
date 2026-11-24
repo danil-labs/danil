@@ -308,9 +308,6 @@ export function settingsScopeBadge(input: {
   if (governed) {
     return { kind: "policy", tone: "info", label: labels.orgPolicy };
   }
-  if (entryId === "billing" && workspace?.isOrg) {
-    return { kind: "org", tone: "info", label: labels.organization };
-  }
   if (workspace && WORKSPACE_SCOPED_ENTRIES.has(entryId)) {
     return { kind: "workspace", tone: "neutral", label: labels.workspace };
   }

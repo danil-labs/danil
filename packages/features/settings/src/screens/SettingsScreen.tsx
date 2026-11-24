@@ -1,4 +1,4 @@
-import { createMemo, createResource, createSignal, For, type JSX, onCleanup, onMount, Show } from "solid-js";
+import { createMemo, createSignal, For, type JSX, onCleanup, onMount, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { lockedBy } from "../../../../session/src/governance";
 import { t } from "../../../../ui/src/lib/i18n";
@@ -27,7 +27,7 @@ import {
 } from "../model/settings-workspaces";
 import { createWorkspaces } from "../queries/workspaces-store";
 import { createSuperficiesDeAjustes } from "./SettingsSurfaces";
-import { AdminLink, type Entrada, idSub, idTab, type Pestana, SIN_PESTANA } from "./SettingsTabs";
+import { type Entrada, idSub, idTab, type Pestana, SIN_PESTANA } from "./SettingsTabs";
 
 export default function Settings(props: {
   workspace?: string | null;
@@ -79,13 +79,10 @@ export default function Settings(props: {
     void ws.cambiarA(option.id, option.context ?? undefined);
   }
 
-  const { ENTRADAS } = createSuperficiesDeAjustes(props, activeWorkspaceId);
-  const [personal] = createResource(
-    subpanelKey,
-    async () => (await capabilities().personalAccount?.isPersonal().catch(() => false)) ?? false,
-  );
-  const dePersonal = (p: Pestana) => p.id === "support" || (p.id === "plan" && !capabilities().nativeWindow);
-  const pestanaVisible = (p: Pestana) => (!dePersonal(p) || personal() === true);
+  const { ENTRADAS } = createSuperficiesDeAjustes(props, {
+    workspace: activeWorkspaceId,
+    context: activeContext,
+  });
   const pedido = settingsTarget(props.panel);
   const inicial = ENTRADAS.find((e) => e.id === pedido?.entry) ?? ENTRADAS[0];
   const [activo, setActivo] = createSignal<SettingsEntryId>(inicial.id);
@@ -173,7 +170,7 @@ export default function Settings(props: {
   const entrada = () => ENTRADAS.find((d) => d.id === activo()) ?? ENTRADAS[0];
   const pestana = () => {
     const e = entrada();
-    return e.tabs.find((p) => p.id === subs()[e.id] && p.panel && (!dePersonal(p) || pestanaVisible(p))) ?? e.tabs.find((p) => p.panel && pestanaVisible(p)) ?? SIN_PESTANA;
+    return e.tabs.find((p) => p.id === subs()[e.id] && p.panel) ?? e.tabs.find((p) => p.panel) ?? SIN_PESTANA;
   };
   const elegir = (p: Pestana) => {
     if (p.panel) setSubs((antes) => ({ ...antes, [entrada().id]: p.id }));
@@ -200,7 +197,7 @@ export default function Settings(props: {
     const paso = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
     if (paso === 0) return;
     e.preventDefault();
-    const usables = entrada().tabs.filter((p) => p.panel && pestanaVisible(p));
+    const usables = entrada().tabs.filter((p) => p.panel);
     const i = usables.findIndex((p) => p.id === pestana().id);
     const siguiente = usables[(i + paso + usables.length) % usables.length];
     elegir(siguiente);
@@ -277,7 +274,6 @@ export default function Settings(props: {
                 {(entry) => <option value={entry.id}>{entry.name}</option>}
               </For>
             </Select>
-            <AdminLink />
           </header>
           <Sidebar
             role="tablist"
@@ -307,7 +303,7 @@ export default function Settings(props: {
                 <For each={principales()}>{(d) => <Fila d={d} />}</For>
               </SidebarMenu>
             </SidebarContent>
-            <Show when={pie().length > 0 || !!capabilities().adminPage}>
+            <Show when={pie().length > 0}>
               <div
                 role="presentation"
                 data-settings-footer=""
@@ -315,7 +311,6 @@ export default function Settings(props: {
               >
                 <SidebarMenu role="presentation" class="gap-1.5">
                   <For each={pie()}>{(d) => <Fila d={d} />}</For>
-                  <AdminLink embedded />
                 </SidebarMenu>
               </div>
             </Show>
@@ -355,7 +350,7 @@ export default function Settings(props: {
                     onKeyDown={moverPestana}
                     class="flex items-end gap-5 overflow-x-auto border-0 border-b border-solid border-border"
                   >
-                    <For each={entrada().tabs.filter(pestanaVisible)}>
+                    <For each={entrada().tabs}>
                       {(p) => (
                         <Pressable
                           role="tab"

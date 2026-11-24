@@ -8,10 +8,8 @@ import type { CredentialSource } from "../../platform-client/src/account-credent
 import type { MemorySource } from "../../platform-client/src/memory.ts";
 import type { SpaceOrderSource } from "../../platform-client/src/space-order.ts";
 import { createRoot, createSignal, type JSX } from "solid-js";
-import type { AccountEmailsSource } from "../../features/settings/src/model/account-emails";
 import type { AccountProfileSource } from "../../features/settings/src/model/account-profile";
 import type { Account } from "../../features/settings/src/queries/accounts-store";
-import type { AuditLogSource } from "../../platform-client/src/audit-log";
 import type { WorkspaceAssetsSource } from "../../platform-client/src/workspace-assets";
 
 /** Una cuenta agrupada (web y escritorio): las máquinas donde tiene sesión (`@terminus/fleet`, `merge.ts`). */
@@ -87,22 +85,12 @@ export type Capabilities = import("../../session/src/group-account").GroupAccoun
   danilAccount?: boolean;
   /** La persona de la cuenta de Danil leída sin el motor (la web, con su sesión): pie y Configuración. */
   accountProfile?: AccountProfileSource;
-  /** Los correos de la cuenta con la sesión (la web de alfa, por su proxy al BFF). */
-  accountEmails?: AccountEmailsSource;
   /** El panel de Configuración que la página pidió abrir al cargar (`?settings=`). */
   initialSettings?: string;
-  /** La bitácora de cambios de la cuenta de Danil activa, con la sesión (la web en alfa); la muestra `/admin`. */
-  accountAuditLog?: AuditLogSource;
   /** El selector de organización (`identity.organizations`); sin esto, o sin la ruta en el servidor, no sale. */
   organizations?: () => Promise<import("../../platform-client/src/organizations.ts").OrganizationSelection>;
-  /** `/admin` dentro de esta web (alfa); `allowed` dice si la persona es owner o admin de algún workspace de Danil. Sin esto, el escritorio la abre en el navegador. */
-  adminPage?: { href: string; allowed: () => Promise<boolean> };
-  /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `plan`, esa pestaña no sale. */
+  /** Lo de una cuenta personal. */
   personalAccount?: { isPersonal: () => Promise<boolean>; plan?: () => JSX.Element };
-  /** El consumo propio en Configuración › Cuenta. Sin fuente, la pestaña no sale. */
-  accountUsage?: () => JSX.Element;
-  /** Plan y cobro de Danil Business del workspace activo (solo la web). Sin esto, la entrada no sale. */
-  businessBilling?: (part: "plan" | "fiscal") => JSX.Element;
   /** El logo y el fondo de los workspaces leídos y cambiados en la cuenta con la sesión (la web). */
   accountAssets?: WorkspaceAssetsSource;
   /** Botón extra al lado de la búsqueda de la barra lateral (en la web, volver a Danil Agents). */

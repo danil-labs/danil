@@ -9,7 +9,7 @@ import type Settings from "./SettingsScreen";
 
 export function createSuperficiesDeAjustes(
   props: Parameters<typeof Settings>[0],
-  workspace: () => string | null = () => props.workspace ?? null,
+  scope?: { workspace: () => string | null; context: () => string | null },
 ) {
   // Lo que se puede elegir para trabajar, que es lo que decide qué proveedores
   // tienen pantalla. Con su estado: aquí no apaga nada, lo enseña.
@@ -96,22 +96,31 @@ export function createSuperficiesDeAjustes(
       void cuenta.then((f) => f());
     });
   });
-  const pestanas = pestanasDe(superficies, {
-    get modelos() {
-      return props.modelos;
+  const pestanas = pestanasDe(
+    superficies,
+    {
+      get modelos() {
+        return props.modelos;
+      },
+      get proyecto() {
+        return props.proyecto ?? "";
+      },
+      onAgentProfile: (project, name) => props.onAgentProfile?.(project, name),
+      get estadoSuperficies() {
+        return estadoSuperficies();
+      },
+      reintentarSuperficies: () => {
+        setEstadoSuperficies({ k: "loading" });
+        cargarSuperficies();
+      },
     },
-    get proyecto() {
-      return props.proyecto ?? "";
-    },
-    onAgentProfile: (project, name) => props.onAgentProfile?.(project, name),
-    get estadoSuperficies() {
-      return estadoSuperficies();
-    },
-    reintentarSuperficies: () => {
-      setEstadoSuperficies({ k: "loading" });
-      cargarSuperficies();
-    },
-  }, workspace, props.maquinas, props.piezas, props.sesiones, props.integraciones);
+    scope?.workspace ?? (() => props.workspace ?? null),
+    scope?.context ?? (() => null),
+    props.maquinas,
+    props.piezas,
+    props.sesiones,
+    props.integraciones,
+  );
   const ENTRADAS = entradasDe(pestanas);
   return { ENTRADAS };
 }
