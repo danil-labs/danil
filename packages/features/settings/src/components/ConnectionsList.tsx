@@ -9,7 +9,6 @@ import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
-import { LocalSection } from "./ConnectionsLocal";
 import { ConnectionRow } from "./ConnectionsRow";
 
 /** `account_relay_token` (`proxy.rs`): el token de cliente de la cuenta y el plano de control. */
@@ -34,7 +33,7 @@ async function load(): Promise<Loaded> {
   }
 }
 
-export default function Connections(props: { workspace?: string | null }) {
+export default function Connections() {
   const [data, { refetch }] = createResource(load);
   const [busy, setBusy] = createSignal<string | null>(null);
   const [failure, setFailure] = createSignal<string | null>(null);
@@ -68,7 +67,6 @@ export default function Connections(props: { workspace?: string | null }) {
 
   return (
     <SettingsPanel>
-      <LocalSection workspace={props.workspace ?? null} />
       <SettingsSection
         title={t("settings.connections.title")}
         description={t("settings.connections.description")}

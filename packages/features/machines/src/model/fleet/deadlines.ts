@@ -35,7 +35,7 @@ export const isRead = (command: string) => classOf(command) === "read";
 export const PASSIVE: ReadonlySet<string> = new Set([
   "watch_task_tree", "unwatch_task_tree", "mark_task_seen", "cli_task_opened", "site_sweep", "service_poll",
   "kn_pending", "kn_cloud_state", "source_freshness", "skill_source_freshness", "source_detail", "sync_workspace_context",
-  "install_size", "provider_download_size", "machine_list", "env_secrets_list", "tasks_awaiting_quota",
+  "install_size", "provider_download_size", "machine_list", "tasks_awaiting_quota",
   "git_host_projects", "git_host_areas", "git_host_available_areas", "repo_branches", "publications_of",
   "chat_visual_part", "artifact_read_part", "tree_read_part", "has_mcp_app", "space_delete_preview", "task_lifecycle_preview",
   "wsl_state", "launcher_state", "zotero_bib_links",

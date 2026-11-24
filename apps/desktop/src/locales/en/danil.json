@@ -216,7 +216,6 @@
   "danil.credentials.state.unsupported": "not compatible",
   "danil.credentials.state.unsupported_why": "That machine's engine doesn't know about secrets. The rest of the machine keeps working.",
   "danil.credentials.unsupported_on": "not compatible on {machines}",
-  "danil.secrets.no_recipients": "None of your machines supports secrets yet, so there's nowhere to deliver it. Update Danil on one of them and try again.",
   "danil.welcome.title": "Connect your Danil account",
   "danil.welcome.connect": "Connect account",
   "danil.welcome.connect_effect": "Use your Danil workspace, agents and machines.",

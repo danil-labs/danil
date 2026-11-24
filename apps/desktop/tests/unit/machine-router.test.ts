@@ -686,7 +686,7 @@ test("the router does not judge an MCP block: a link that is not the relay (a WS
   await other.router.handle("list_workspaces");
   await assert.rejects(other.router.handle("add_mcp_servers", { bloque: plain }, on("cmp_vm")), (e: { detail: string; what: string }) => {
     assert.equal(e.detail, "mcp_values_over_relay");
-    assert.ok(e.what.includes("${secret:env/*/"), "the catalog phrase, with the marker");
+    assert.ok(e.what.includes("env") && !e.what.includes("${secret:env/*/"), "the catalog phrase, without retired env secret marker");
     return true;
   });
 });

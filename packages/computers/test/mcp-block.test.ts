@@ -23,9 +23,9 @@ test("una URL con contraseña o parámetro sensible y un argumento con valor cue
 });
 
 test("marcadores, esquemas, vacíos y URLs limpias pasan", () => {
-  assert.equal(kind({ mcpServers: { a: { command: "npx", env: { API_KEY: "${secret:env/*/API_KEY}" } } } }), "clean");
-  assert.equal(kind({ a: { url: "https://x", headers: { Authorization: "Bearer ${secret:env/*/TOKEN}" } } }), "clean");
-  assert.equal(kind({ a: { command: "npx", args: ["-y", "pkg", "--token", "${secret:env/*/T}"], env: {} } }), "clean");
+  assert.equal(kind({ mcpServers: { a: { command: "npx", env: { API_KEY: "${secret:mcp/a/env/API_KEY}" } } } }), "clean");
+  assert.equal(kind({ a: { url: "https://x", headers: { Authorization: "Bearer ${secret:mcp/a/headers/Authorization}" } } }), "clean");
+  assert.equal(kind({ a: { command: "npx", args: ["-y", "pkg", "--token", "${secret:mcp/a/env/T}"], env: {} } }), "clean");
   assert.equal(kind({ a: { command: "npx", env: { EMPTY: "", NONE: null } } }), "clean");
   assert.equal(kind({ a: { url: "https://mcp.x.com/sse?region=us" } }), "clean");
   assert.equal(kind("{ not json"), "invalid");

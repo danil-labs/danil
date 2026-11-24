@@ -22,8 +22,8 @@ const LOCK = fileURLToPath(new URL("../../seldon-runtime.lock", import.meta.url)
 
 /** El contrato copiado cuyo motor aún no tiene release publicada, y qué falta. */
 const MOTOR_PENDIENTE = {
-  contract: "7e93081ea2f2d246943fdf5486cb4714a225df2a89371e11ed483aa868a08eae",
-  why: "falta fijar un binario que hable el contrato nuevo",
+  contract: "3aa165a22b88d4c99d30f93776c37468e9f017d201477019eaa1bba2717ccdad",
+  why: "falta fijar un binario que hable el contrato nuevo (danil-engine#541)",
 };
 
 const vendored = createHash("sha256").update(readFileSync(CONTRACT)).digest("hex");
