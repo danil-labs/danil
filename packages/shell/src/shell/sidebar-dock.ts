@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, mapArray, onCleanup } from "solid-js";
 import { watchRoster } from "../../../ui/src/lib/handlerRoster.ts";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import type { AgentProfile, HandlerList, HandlerStatus } from "../../../ui/src/lib/model";
 import { watchHandlerStatuses } from "../../../features/projects/src/queries/handlerPresence";
 import { notifyProfiles, watchProfiles } from "../../../features/projects/src/queries/profiles";
@@ -56,7 +56,7 @@ export function createDockDelRiel(props: SidebarProps, tareas: TareasDelRiel) {
     const roster = watchRoster(
       machine ? `${project}@${machine}` : project,
       async () => {
-        const { agents } = await invoke<HandlerList>("list_agents", { project }, machine ? { headers: { "x-terminus-machine": machine } } : undefined);
+        const { agents } = await callShellEngine<HandlerList>("list_agents", { project }, machine ? { headers: { "x-terminus-machine": machine } } : undefined);
         return project ? agents : agents.filter((agent) => agent.own_scope?.kind === "workspace");
       },
       altas,

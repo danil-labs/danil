@@ -2,7 +2,6 @@ import Bug from "lucide-solid/icons/bug";
 import LogOut from "lucide-solid/icons/log-out";
 import { type Accessor, For, Show } from "solid-js";
 import { t } from "../../../ui/src/lib/i18n";
-import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { capabilities } from "../../../host/src/platform";
 import { type Apariencia, elegirApariencia } from "../../../ui/src/lib/theme";
 import { cn } from "../../../ui/src/lib/utils";
@@ -10,8 +9,6 @@ import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import { Pressable } from "../../../ui/src/Pressable";
 
 // Las entradas comunes del menú del avatar (ProfileMenu y LegacyProfileMenu): tema, reportar un bug y cerrar sesión en la web.
-
-const BUG_REPORT_URL = "https://github.com/danil-labs/danil/issues/new?template=bug_report.yml";
 
 const TEMAS: Apariencia[] = ["claro", "oscuro", "sistema"];
 function nombreDeTema(a: Apariencia): string {
@@ -26,8 +23,10 @@ function nombreDeTema(a: Apariencia): string {
 }
 
 const SEGMENTO = "flex min-w-0 gap-0.5 rounded-md bg-surface-muted p-0.5";
-const OPCION = "h-6 min-w-0 flex-1 truncate rounded-sm px-2 text-xs text-neutral-500 outline-none hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary";
+const OPCION = "h-6 min-w-0 flex-1 truncate rounded-sm px-2 text-xs text-neutral-500 outline-none hover:text-neutral-950";
 const ELEGIDA = "bg-surface-raised font-semibold text-neutral-950 shadow-sm";
+const REPORTAR_BUG =
+  "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-ui text-error-strong outline-none hover:bg-surface-muted focus-visible:bg-surface-muted";
 
 /** El tema y reportar un bug. */
 export function ProfileThemeAndBug(props: {
@@ -55,21 +54,13 @@ export function ProfileThemeAndBug(props: {
         </For>
       </div>
       <div class="my-1 h-px bg-border" />
-      <p class="m-0 flex items-center gap-1.5 px-2 pt-1 pb-1 text-caption font-medium text-error-strong">
-        <Bug size={12} aria-hidden="true" />
-        {t("usage.bug_report")}
-      </p>
-      <Pressable class={ITEM_DE_MENU} onClick={() => { setOpen(false); props.onReportarBug(); }}>
-        {t("usage.bug_report.ask_agent")}
-      </Pressable>
       <Pressable
-        class={ITEM_DE_MENU}
-        onClick={() => {
-          setOpen(false);
-          void callShellViewEngine("site_open_external", { url: BUG_REPORT_URL }).catch(() => {});
-        }}
+        class={REPORTAR_BUG}
+        data-report-bug=""
+        onClick={() => { setOpen(false); props.onReportarBug(); }}
       >
-        {t("usage.bug_report.open_web")}
+        <Bug size={13} aria-hidden="true" class="shrink-0" />
+        <span class="min-w-0 flex-1 truncate">{t("usage.bug_report")}</span>
       </Pressable>
     </>
   );

@@ -12,6 +12,8 @@ export * from "./queries/repositories.ts";
 export * from "./queries/telegram.ts";
 export * from "./queries/workdir.ts";
 export * from "./queries/project-ops.ts";
+export { setAgentHidden } from "./queries/project-ops.ts";
 export * from "./queries/session-ops.ts";
 export * from "./queries/agent-creation.ts";
+export { saveAgentProfile, setAgentModel } from "./queries/agent-creation.ts";
 export * from "./queries/base-branches.ts";

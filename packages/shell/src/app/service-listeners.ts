@@ -4,7 +4,7 @@ import { listen } from "../../../host/src/serviceEvents.ts";
 import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
 import { type UsageRecord, ventanaDe } from "../../../ui/src/lib/usage";
 import { type Ventana } from "../../../ui/src/lib/usage.ts";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { mountLoopbackLoginBridge } from "../../../engine-client/src/loopbackLogin.ts";
 import { type createChatEvents as T_createChatEvents } from "../../../features/chat/src";
 import { type ChatEvent, type PreguntaEvent, type SessionEvent } from "../../../features/chat/src/model/transcript";
@@ -171,7 +171,7 @@ export function createServiceListeners(deps: ServiceListenersDeps) {
     // navegador de la persona por una puerta más estrecha que la de dentro.
     // Ver `sites::abrible_fuera`.
     const enlaceFuera = (e: Event) => {
-      void invoke("site_open_external", {
+      void callShellEngine("site_open_external", {
         url: (e as CustomEvent<string>).detail,
       }).catch(() => {});
     };
@@ -197,7 +197,7 @@ export function createServiceListeners(deps: ServiceListenersDeps) {
       }
       if (e.payload.command === "config.set") {
         const modeGeneration = workspaceContext.generation();
-        void invoke<Startup>("list_workspaces").then((startup) => {
+        void callShellEngine<Startup>("list_workspaces").then((startup) => {
           if (workspace !== workspaceActivo()) return;
           const current = startup.workspaces.find((w) => w.id === workspace);
           aplicarLenguaDeWorkspace(current?.lengua ?? null);
@@ -213,18 +213,18 @@ export function createServiceListeners(deps: ServiceListenersDeps) {
           // Un agente que abre una tarea de otro workspace no se lleva a la
           // persona del que está mirando: lo pidió ella para lo suyo.
           if (e.payload.by_agent) {
-            await invoke("cli_task_opened", { operation: e.payload.operation, error: "workspace_not_shown" });
+            await callShellEngine("cli_task_opened", { operation: e.payload.operation, error: "workspace_not_shown" });
             return;
           }
-          await invoke("set_active_workspace", { id: e.payload.workspace });
-          await aplicar(await invoke<Startup>("list_workspaces"));
+          await callShellEngine("set_active_workspace", { id: e.payload.workspace });
+          await aplicar(await callShellEngine<Startup>("list_workspaces"));
         }
         await abrirSesion(e.payload.folder, e.payload.task, e.payload.task, true);
         const opened = sessionId() === e.payload.task && project() === e.payload.folder;
-        await invoke("cli_task_opened", { operation: e.payload.operation, error: opened ? null : "open_superseded" });
+        await callShellEngine("cli_task_opened", { operation: e.payload.operation, error: opened ? null : "open_superseded" });
       })().catch((error) => {
         setError(prosaDe(error));
-        void invoke("cli_task_opened", { operation: e.payload.operation, error: prosaDe(error) }).catch(() => {});
+        void callShellEngine("cli_task_opened", { operation: e.payload.operation, error: prosaDe(error) }).catch(() => {});
       });
     });
     onCleanup(() => void cliOpen.then((stop) => stop()));

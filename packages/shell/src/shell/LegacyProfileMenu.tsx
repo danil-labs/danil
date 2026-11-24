@@ -15,13 +15,16 @@ const PromoRedeem = lazy(() => import("./PromoRedeem"));
 const DanilFooterEntry = lazy(() => import("./LegacyDanilFooterEntry"));
 const OrganizationWatch = lazy(() => import("./OrganizationMenu").then((m) => ({ default: m.OrganizationWatch })));
 const OrganizationSection = lazy(() => import("./OrganizationMenu").then((m) => ({ default: m.OrganizationSection })));
+const OrganizationHarnessLink = lazy(() => import("./OrganizationHarnessLink"));
 
 
-/** El avatar al pie de la columna: la cuenta, el tema, reportar un bug y, en la web, cerrar sesión. */
+/** El avatar al pie de la columna: la cuenta, el tema, el Harness de la organización, reportar un bug y, en la web, cerrar sesión. */
 export default function ProfileMenu(props: {
   initialOpen?: boolean;
   onAccount: () => void;
   onReportarBug: () => void;
+  open?: string | null;
+  context?: string | null;
 }) {
   const [open, setOpen] = createSignal(untrack(() => props.initialOpen ?? false));
   const [tema, setTema] = createSignal<Apariencia>(apariencia());
@@ -82,6 +85,9 @@ export default function ProfileMenu(props: {
         </Show>
         <Show when={canRedeemPromo(capabilities().webPromoRole) ? capabilities().webPromo : undefined}>{redeem => <Suspense fallback={null}><PromoRedeem redeem={redeem()} /></Suspense>}</Show>
         <ProfileThemeAndBug tema={tema} setTema={setTema} setOpen={setOpen} onReportarBug={props.onReportarBug} />
+        <Suspense fallback={null}>
+          <OrganizationHarnessLink workspace={props.open} context={props.context} onNavigate={() => setOpen(false)} />
+        </Suspense>
         <ProfileWebSignOut setOpen={setOpen} />
       </PopoverContent>
     </Popover>

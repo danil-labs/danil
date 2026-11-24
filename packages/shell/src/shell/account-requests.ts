@@ -27,18 +27,18 @@ function runAccountRequest(row: AccountRequest, deps: AccountRequestDeps): Accou
 }
 
 /** Toma y liquida las peticiones pendientes; una a la vez para no despachar dos veces. */
-export function createAccountRequests(invoke: Invoke, deps: AccountRequestDeps) {
+export function createAccountRequests(rpc: Invoke, deps: AccountRequestDeps) {
   let running: Promise<void> | null = null;
   let again = false;
   async function drain() {
     do {
       again = false;
       let rows: AccountRequest[] = [];
-      try { rows = await invoke<AccountRequest[]>("account_request_take", {}); } catch { return; }
+      try { rows = await rpc<AccountRequest[]>("account_request_take", {}); } catch { return; }
       for (const row of rows) {
         const outcome = runAccountRequest(row, deps);
         try {
-          await invoke("account_request_settle", { requestId: row.request_id, ...outcome });
+          await rpc("account_request_settle", { requestId: row.request_id, ...outcome });
         } catch { /* La CLI ya recibió `request_timeout`; su reintento con la misma llave vuelve a pasar por aquí. */ }
       }
     } while (again);
