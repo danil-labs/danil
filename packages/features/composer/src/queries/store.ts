@@ -9,6 +9,8 @@ export type ComposerConfiguration = { agent: string; surface: string; model: str
 type DraftSelection = { configuration?: ComposerConfiguration; provider?: { from: string; to: string } };
 type Scope = { workspace: () => string | null; machine: () => string | null; machineOn: () => boolean | undefined; connected: () => boolean; session: () => string | null };
 
+const DEFAULT_PERMISSION_MODE = "auto";
+
 /** Owns the composer selection and the catalogs that make it executable. Task sending owns persistence. */
 export function createComposerStore(deps: {
   invoke: Invoke;
@@ -17,10 +19,10 @@ export function createComposerStore(deps: {
   workspaceMode: () => string | null;
   draftConfiguration: () => ComposerConfiguration | undefined;
   modoInicial: (modos: ModoDePermiso[], recordado: string) => string;
-  modoRecordado: () => string;
+  modoRecordado?: () => string;
   recordarModo: (id: string) => void;
 }) {
-  const { invoke, withLastAnswer, modoInicial, modoRecordado, recordarModo } = deps;
+  const { invoke, withLastAnswer, modoInicial, recordarModo } = deps;
   const composerMachine = deps.scope.machine;
   const workspaceActivo = deps.scope.workspace;
   const connected = deps.scope.connected;
@@ -133,8 +135,8 @@ export function createComposerStore(deps: {
   }
   function startWithWorkspaceMode() {
     if (disposed) return;
-    const mode = workspaceMode();
-    if (!mode || sessionId() || borrador().configuration?.mode) return;
+    const mode = workspaceMode() ?? DEFAULT_PERMISSION_MODE;
+    if (sessionId() || borrador().configuration?.mode) return;
     const list = modos();
     setModo(list.some((m) => !m.falta) ? modoInicial(list, mode) : mode);
   }
@@ -234,7 +236,7 @@ export function createComposerStore(deps: {
             setModos(lista);
             const puede = lista.filter((m) => !m.falta);
             if (!puede.some((m) => m.id === modo())) {
-              setModo(modoInicial(lista, workspaceMode() ?? modoRecordado()));
+              setModo(modoInicial(lista, workspaceMode() ?? DEFAULT_PERMISSION_MODE));
             }
           });
         })

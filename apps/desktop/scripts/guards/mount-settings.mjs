@@ -64,6 +64,11 @@ const selectedKeys = (scope) => (selections.get(scope) ?? []).map(({ key }) => k
 providers.w.document.querySelector('button[aria-label="Configuración"]')?.click();
 await sleep(100);
 const navTabs = [...providers.w.document.querySelectorAll('[id^="cfg-tab-"]')].map((el) => el.id);
+assert.equal(navTabs[0], "cfg-tab-general", "General debe ser la primera entrada de Configuración");
+assert.equal(navTabs[1], "cfg-tab-appearance", "Apariencia va justo debajo de General");
+assert.equal(providers.w.document.querySelector("#cfg-tab-general")?.textContent?.trim(), "General");
+assert.equal(providers.w.document.querySelector("#cfg-tab-appearance")?.textContent?.trim(), "Apariencia");
+assert.ok(providers.w.document.querySelector('[data-setting="notify-behavior"]'), "Notificaciones vive dentro de General");
 assert.ok(navTabs.includes("cfg-tab-security"), "Login y seguridad debe aparecer como entrada propia en Configuración");
 if (navTabs.includes("cfg-tab-account")) {
   assert.equal(navTabs.indexOf("cfg-tab-security"), navTabs.indexOf("cfg-tab-account") + 1, "Login y seguridad va justo después de Cuenta");
@@ -589,7 +594,7 @@ const languageApp = await boot("listo", "language-select", {
 const languageDoc = languageApp.w.document;
 languageDoc.querySelector('button[aria-label="Configuración"]')?.click();
 await sleep(100);
-languageDoc.querySelector("#cfg-tab-preferences")?.click();
+languageDoc.querySelector("#cfg-tab-general")?.click();
 await sleep(50);
 const languageSelect = () =>
   [...languageDoc.querySelectorAll("select")].find((s) => s.querySelector('option[value="en"]') && s.querySelector('option[value=""]'));

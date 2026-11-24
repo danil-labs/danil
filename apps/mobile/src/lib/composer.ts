@@ -29,7 +29,12 @@ export function hasSomethingToSend(text: string, uploaded: number): boolean {
  */
 export function initialMode(modes: readonly PermissionModeOption[], preferred: string | null): string | null {
   const usable = modes.filter((m) => !m.falta);
-  return (usable.find((m) => m.id === preferred) ?? usable.find((m) => m.por_omision) ?? usable[0])?.id ?? null;
+  return (
+    usable.find((m) => m.id === preferred) ??
+    usable.find((m) => m.por_omision) ??
+    usable.find((m) => m.id === AUTO_MODE) ??
+    usable[0]
+  )?.id ?? null;
 }
 
 /** El id de `agents::Modo::Auto`: el motor lo sostiene con todo proveedor. */

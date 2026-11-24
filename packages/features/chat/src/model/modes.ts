@@ -44,13 +44,18 @@ export function modoRecordado(): string {
 }
 
 /**
- * Con cuál arranca una tarea que no dice cuál: el último elegido a mano si
- * este agente lo sostiene, y si no, el que resolvió el backend
- * (`agents::Permisos::resolver`). El primero de la lista es «manual», que
- * arrancaría pidiendo aprobación por todo.
+ * Con cuál arranca una tarea que no dice cuál: el modo preferido (del
+ * workspace o elegido a mano) si este agente lo sostiene; si no, el que
+ * resolvió el backend (`agents::Permisos::resolver`, por omisión `auto`), o
+ * `auto` antes de caer al primero utilizable.
  */
 export function modoInicial(modos: ModoDePermiso[], recordado: string): string {
   const puede = modos.filter((m) => !m.falta);
   const recuerdo = puede.find((m) => m.id === recordado);
-  return (recuerdo ?? puede.find((m) => m.por_omision) ?? puede[0])?.id ?? "";
+  return (
+    recuerdo ??
+    puede.find((m) => m.por_omision) ??
+    puede.find((m) => m.id === MODO_AUTOMATICO) ??
+    puede[0]
+  )?.id ?? "";
 }

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createRoot, createSignal } from "solid-js";
-import { modoInicial, modoRecordado, recordarModo } from "../../../../packages/features/chat/src/model/modes.ts";
+import { modoInicial } from "../../../../packages/features/chat/src/model/modes.ts";
 import { createComposerStore } from "../../../../packages/features/composer/src/index.ts";
-import type { Agent, AgentModels, ModelOption } from "../../src/lib/model.ts";
+import type { Agent, AgentModels, ModelOption, ModoDePermiso } from "../../src/lib/model.ts";
 import type { Superficie } from "../../src/lib/surfaces.ts";
 
 globalThis.window = new EventTarget() as unknown as Window & typeof globalThis;
@@ -11,6 +11,11 @@ const model = (id: string): ModelOption => ({ id, label: id, efforts: ["low", "h
 const catalog = (provider: string, id: string): AgentModels => ({ provider, models: [model(id)], fallback: false });
 const surface: Superficie = { id: "claude", provider: "claude", label: "Claude", catalogo: "todo", usable: true, marca: null, porque: null };
 const provider = (id: string): Agent => ({ id, label: id, available: true, path: null, version: null, driver: true, limits: true });
+const permissionModes: ModoDePermiso[] = [
+  { id: "manual", label: { clave: "agents.mode.manual" }, falta: null, por_omision: false },
+  { id: "ediciones", label: { clave: "agents.mode.edits" }, falta: null, por_omision: false },
+  { id: "auto", label: { clave: "agents.mode.auto" }, falta: null, por_omision: true },
+];
 function pending<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(yes => { resolve = yes; }); return { promise, resolve }; }
 function fixture(options: { invoke?: Parameters<typeof createComposerStore>[0]["invoke"]; install?: boolean; connected?: boolean; machineOn?: boolean; last?: Parameters<typeof createComposerStore>[0]["withLastAnswer"] } = {}) {
   return createRoot(dispose => {
@@ -26,13 +31,14 @@ function fixture(options: { invoke?: Parameters<typeof createComposerStore>[0]["
       invoke: async <T>(command: string, args?: Record<string, unknown>, routed?: { headers: Record<string, string> }) => {
         calls.push({ command, headers: routed?.headers });
         if (options.invoke) return options.invoke<T>(command, args, routed);
-        const value = command === "list_models" ? catalog(String(args?.provider), "first") : command === "list_surfaces" ? [surface] : command === "list_slash_menu" ? { commands: [], skills: [] } : [];
+        const value = command === "list_models" ? catalog(String(args?.provider), "first") : command === "list_surfaces" ? [surface] : command === "list_permission_modes" ? permissionModes : command === "list_slash_menu" ? { commands: [], skills: [] } : [];
         return value as T;
       },
       withLastAnswer: options.last ?? (async (_machine, _key, read) => read()),
       scope: { workspace, machine, machineOn, connected, session },
       workspaceMode, draftConfiguration: configuration,
-      modoInicial, modoRecordado, recordarModo,
+      modoInicial,
+      recordarModo: () => {},
     });
     if (options.install) store.installEffects();
     return { store, calls, setWorkspace, setMachine, setMachineOn, setConnected, setSession, setWorkspaceMode, setConfiguration, dispose: () => { store.dispose(); dispose(); } };
@@ -68,10 +74,12 @@ test("A to B to A discards an old catalog response", async () => {
 
 test("restoring a draft is atomic and manual permission mode beats workspace default", async () => {
   const f = fixture({ install: true }); await tick();
+  assert.equal(f.store.modo(), "auto");
   const config = { agent: "claude", surface: "claude", model: "first", effort: "high", mode: "manual" };
   f.setConfiguration(config); f.store.restoreDraft(config); f.setWorkspaceMode("auto"); await tick();
   assert.equal(f.store.model(), "first"); assert.equal(f.store.effort(), "high"); assert.equal(f.store.modo(), "manual");
-  f.setConfiguration(undefined); f.setWorkspaceMode("ediciones"); await tick(); assert.equal(f.store.modo(), "ediciones"); f.dispose();
+  f.setConfiguration(undefined); f.setWorkspaceMode("ediciones"); await tick(); assert.equal(f.store.modo(), "ediciones");
+  f.setWorkspaceMode(null); await tick(); assert.equal(f.store.modo(), "auto"); f.dispose();
 });
 
 test("existing legacy session cannot adopt a draft provider but absent session can", () => {

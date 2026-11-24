@@ -3,6 +3,10 @@ import test from "node:test";
 import { SETTINGS_ENTRIES, settingsTarget } from "../../../../packages/features/settings/src/model/settings-entries.ts";
 
 test("old settings ids open the entry and tab that now hold them", () => {
+  assert.deepEqual(settingsTarget("general"), { entry: "general", tab: null });
+  assert.deepEqual(settingsTarget("notify"), { entry: "general", tab: null });
+  assert.deepEqual(settingsTarget("notifications"), { entry: "general", tab: null });
+  assert.deepEqual(settingsTarget("appearance"), { entry: "appearance", tab: null });
   assert.deepEqual(settingsTarget("cuenta-danil"), { entry: "account", tab: "cuenta-danil" });
   assert.deepEqual(settingsTarget("security"), { entry: "security", tab: null });
   assert.deepEqual(settingsTarget("workspaces"), { entry: "preferences", tab: "workspaces" });
@@ -35,8 +39,14 @@ test("unknown or empty ids open nothing in particular", () => {
   assert.equal(settingsTarget("bitacora"), null);
 });
 
-test("nine entries, security stands after account in group you, maintenance in footer, every tab in exactly one", () => {
-  assert.equal(SETTINGS_ENTRIES.length, 9);
+test("eleven entries, general first then appearance, security after account, maintenance in footer, every tab in exactly one", () => {
+  assert.equal(SETTINGS_ENTRIES.length, 11);
+  assert.equal(SETTINGS_ENTRIES[0].id, "general");
+  assert.equal(SETTINGS_ENTRIES[0].group, "you");
+  assert.deepEqual([...SETTINGS_ENTRIES[0].tabs], ["general"]);
+  assert.equal(SETTINGS_ENTRIES[1].id, "appearance");
+  assert.equal(SETTINGS_ENTRIES[1].group, "you");
+  assert.deepEqual([...SETTINGS_ENTRIES[1].tabs], ["appearance"]);
   const accountIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "account");
   const securityIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "security");
   const preferences = SETTINGS_ENTRIES.find((e) => e.id === "preferences");
@@ -45,7 +55,11 @@ test("nine entries, security stands after account in group you, maintenance in f
   assert.equal(SETTINGS_ENTRIES[securityIndex].group, "you");
   assert.deepEqual([...SETTINGS_ENTRIES[securityIndex].tabs], ["security"]);
   assert.ok(!(SETTINGS_ENTRIES[accountIndex].tabs as readonly string[]).includes("security"));
-  assert.ok(preferences && !(preferences.tabs as readonly string[]).includes("download"));
+  assert.ok(preferences);
+  assert.ok(!(preferences.tabs as readonly string[]).includes("general"));
+  assert.ok(!(preferences.tabs as readonly string[]).includes("appearance"));
+  assert.ok(!(preferences.tabs as readonly string[]).includes("notify"));
+  assert.ok(!(preferences.tabs as readonly string[]).includes("download"));
   assert.equal(maintenance?.group, "footer");
   assert.deepEqual(maintenance ? [...maintenance.tabs] : [], ["maintenance"]);
   const tabs = SETTINGS_ENTRIES.flatMap((e) => [...e.tabs]);

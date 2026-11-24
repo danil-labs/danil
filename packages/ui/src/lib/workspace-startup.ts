@@ -20,7 +20,7 @@ export type Workspace = {
    * datos de la app; los árboles ya creados no se mueven al cambiarlo.
    */
   worktrees_root: string | null;
-  /** Con qué modo de permisos arranca lo nuevo. `null` es el último elegido a mano. */
+  /** Con qué modo de permisos arranca lo nuevo. `null` usa el modo por defecto (`auto`). */
   default_permission_mode: string | null;
   /** «Usar el GitHub de esta computadora». Un motor anterior no lo manda. */
   host_github?: boolean;
