@@ -1,5 +1,5 @@
 import { RelaySession } from "@terminus/computers";
-import type { MachineInfo } from "@terminus/fleet";
+import type { MachineInfo } from "../model/fleet/index.ts";
 import { EDGE_ENDPOINT } from "./cloud-machines.ts";
 import { createContextRelayPool } from "./context-relay-pool.ts";
 import type { createSessionCloud } from "./session-cloud.ts";

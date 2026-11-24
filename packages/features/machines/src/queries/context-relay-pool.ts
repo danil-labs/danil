@@ -1,5 +1,5 @@
 import type { Blocked, DeferredFrame, EngineInfo, EventsPage, MachineState } from "@terminus/computers";
-import type { Link } from "@terminus/fleet";
+import type { Link } from "../model/fleet/index.ts";
 
 type Clock = { now(): number; set(callback: () => void, ms: number): unknown; clear(timer: unknown): void };
 const clock: Clock = { now: Date.now, set: setTimeout, clear: (timer) => clearTimeout(timer as ReturnType<typeof setTimeout>) };

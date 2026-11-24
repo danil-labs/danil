@@ -949,7 +949,7 @@ test("what the window asks on its own (mark seen, watch the tree, probes) never 
     },
   });
   try {
-    for (const command of ["mark_task_seen", "watch_task_tree", "unwatch_task_tree", "kn_pending", "source_freshness", "tree_read_part", "list_storage"]) {
+    for (const command of ["mark_task_seen", "watch_task_tree", "unwatch_task_tree", "kn_pending", "source_freshness", "sync_workspace_context", "tree_read_part", "list_storage"]) {
       await assert.rejects(off.fleet.call({ machine: VM.id, workspace: "w", command, args: { project: "p1" } }), (e: FleetError) => e.code === "machine_off", command);
     }
     assert.equal(wakes, 0, "opening or focusing the web does not start the VM");

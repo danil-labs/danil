@@ -16,7 +16,7 @@
  * no tiene se lee de sus miembros y actúa en el primero.
  */
 import { arrangeSpaces, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
-import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "@terminus/fleet";
+import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "../model/fleet/index.ts";
 import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { setMachineRoute as engineSetMachineRoute } from "../../../../engine-client/src/client.ts";
 
@@ -186,16 +186,22 @@ function createRouterCore(config: RouterConfig) {
    * `list_workspaces`: un workspace es de la cuenta, y lo consume la máquina con acceso que lo tiene. Ninguna
    * otra recibe sus llamadas (ni la hospedada ni una «primera encendida»).
    */
+  const childHosted = (m: MachineInfo, workspace: string) =>
+    m.child === true && (!m.host ? hasHere(workspace) : fleet.lists(m.host, workspace) === true);
   const membersOf = (workspace: string | null) => {
     if (!workspace) return fleet.machines().map((m) => m.id);
-    return local && !scopedLocal ? fleet.membersOf(workspace) : fleet.machines().filter((m) => fleet.lists(m.id, workspace) === true).map((m) => m.id);
+    return local && !scopedLocal
+      ? fleet.membersOf(workspace)
+      : fleet.machines().filter((m) => fleet.lists(m.id, workspace) === true || childHosted(m, workspace)).map((m) => m.id);
   };
   /** En la web: sin máquina que lo liste, se dice y no se intenta nada. */
   const noMachine = () => ({ what: t("web.machines.none_for_workspace"), detail: "no_machine" });
   /** La máquina que atiende un workspace que no está aquí: la primera encendida de sus miembros, o la primera. */
   const leadOf = (workspace: string | null): string | null => {
     const members = membersOf(workspace).filter((m) => fleet.power(m) !== "outdated");
-    return members.find((m) => fleet.power(m) === "on") ?? members[0] ?? null;
+    const primary = members.filter((m) => !fleet.info(m)?.child);
+    const pick = (list: string[]) => list.find((m) => fleet.power(m) === "on") ?? list[0] ?? null;
+    return pick(primary) ?? pick(members);
   };
   /** Los workspaces de `machine` que su fila dice y el registro no le atribuye: los que le da una organización. */
   const givenTo = (info: MachineInfo): string[] => {

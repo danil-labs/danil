@@ -30,7 +30,7 @@ import {
 import { isRetiredComputersEndpoint } from "../../../../platform-client/src/api.ts";
 import { settledContextIds } from "../../../../../apps/desktop/src/lib/settled-contexts.ts";
 import { cancelEdgeWrites, setMachineRoute, wokeOf } from "../queries";
-import { Fleet, type MachineInfo, unwrap } from "@terminus/fleet";
+import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
 import { createRoot, createSignal } from "solid-js";
 import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
 import { whenConnected } from "../../../../../apps/desktop/src/lib/engineConnection";
@@ -47,14 +47,14 @@ import { createCloudRelayFactory } from "../queries/context-relay";
 import { machinesListed, readDanilContext, setDanilFleet } from "../queries/danil-source";
 import { createEngineWorkspaces } from "../queries/engine-workspaces";
 import { guestChannels } from "../queries/guestChannels";
-import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "../queries/guestLink";
+import { createGuestLink, guestMachineInfo, invalidateGuestChildren, isGuestMachine, wakeGuestMachine } from "../queries/guestLink";
 import { MachinePicker } from "./MachinePicker";
 import { infoOf } from "../model/machine-info";
 import { createRouter, type Invoke } from "../queries/router";
 import { createSessionCloud } from "../queries/session-cloud";
 import { readContextSpaces } from "../../../../platform-client/src/workspace-spaces.ts";
 import { machineNamesChanged, refetchMachines, setCloudInventory } from "../queries/store";
-import type { WslChild } from "../model/wsl";
+import { normalizeWslChildren, type WslChild } from "../model/wsl";
 import { RELIST, TOKEN_MARGIN, LOCAL, LOCAL_KEY, windowSystem, type ClientToken, type DanilStatus, type Installed } from "./account-helpers";
 import { refresh, slicesChanged, pickedFor } from "../queries/account-events";
 import { nativeInternals, type NativeInternals } from "../../../../host/src/native";
@@ -66,17 +66,22 @@ let started = false;
  * hijas de esta computadora. No vienen del plano de control; se suman a la
  * flota con un enlace directo (`guestLink.ts`).
  */
-let guestMachines: MachineInfo[] = [];
+let rawGuestChildren: WslChild[] = [];
+const guestMachines = (): MachineInfo[] =>
+  rawGuestChildren.map((child) => guestMachineInfo(child, homeName(), rawGuestChildren.length)).filter((m) => isGuestMachine(m.id));
 async function readGuestMachines(): Promise<MachineInfo[]> {
-  if (!(await guestChannels()).length) return [];
+  if (!(await guestChannels()).length) {
+    rawGuestChildren = [];
+    return [];
+  }
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     // Solo ids de huésped: la flota local no sabe llegar a otra cosa (`connect` lanza).
-    guestMachines = (await invoke<WslChild[]>("guest_children")).map(guestMachineInfo).filter((m) => isGuestMachine(m.id));
+    rawGuestChildren = normalizeWslChildren(await invoke<WslChild[]>("guest_children")).filter((c) => isGuestMachine(c.id));
   } catch {
     // Sin canal o sin registro: la flota sigue con las de la cuenta.
   }
-  return guestMachines;
+  return guestMachines();
 }
 let installed: Installed | null = null;
 let syncing: Promise<void> | null = null;
@@ -227,7 +232,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       self,
       selfName: homeName,
       connect: (info) => {
-        if (isGuestMachine(info.id)) return createGuestLink(info.id);
+        if (isGuestMachine(info.id)) return createGuestLink(info.id, native);
         if (cloudIds.has(info.id)) return cloudRelay(info);
         if (endpoint === null) throw { code: "unknown_machine", detail: info.id };
         return new RelaySession({
@@ -280,7 +285,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       engineFeatures: engineWorkspaces.features,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
-    fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+    fleet.setMachines([...others.map(infoOf), ...guestMachines()]);
     const validatedContexts = cloud.validatedContexts();
     if (validatedContexts !== null) { router.pruneContexts(validatedContexts); fleet.pruneContexts(validatedContexts); }
     observeEngine(fleet);
@@ -297,15 +302,16 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
             knows: (id) => id === self || !!fleet.info(id),
           });
 
-    const status = (id: string): MachineStatus => {
-      const power = fleet.power(id);
+    const activeCtx = () => router.activeContext() ?? undefined;
+    const status = (id: string, context?: string): MachineStatus => {
+      const power = fleet.power(id, context);
       return power === "on" ? "online" : power === "off" ? "offline" : power;
     };
     const previous: Capabilities = capabilities();
     setCapabilities({
       ...previous,
-      machineName: (id) => (id === self ? homeName() : fleet.name(id)),
-      taskMachine: (id) => unwrap(id, fleet.remotes())?.machine ?? null,
+      machineName: (id) => (id === self ? homeName() : fleet.name(id, activeCtx())),
+      taskMachine: (id) => unwrap(id, fleet.remotes(activeCtx()))?.machine ?? null,
       windowMachine: () => ({ id: self, name: homeName(), local: true }),
       ...(screens ? { machineScreen: (id: string) => screens.opener(id) } : {}),
       remoteCreate: (workspace) => {
@@ -329,7 +335,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
               changed();
               return [
                 { id: self, name: homeName(), status: "online" as const, at: null },
-                ...fleet.machines().map((info) => ({ id: info.id, name: info.name, status: status(info.id), at: null })),
+                ...fleet.machines().map((info) => ({ id: info.id, name: info.name, status: status(info.id, info.context), at: null })),
               ];
             }}
           />
@@ -418,7 +424,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
 
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
     if (installed?.key === key) {
-      installed.fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+      installed.fleet.setMachines([...others.map(infoOf), ...guestMachines()]);
       observeEngine(installed.fleet);
       machinesListed(installed.fleet);
       for (const context of cloud.validatedContexts() ?? []) readCloudWorkspaces(context);
@@ -504,8 +510,13 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     window.addEventListener("harness:workspace", () => { cancelEdgeWrites(); void sync(); });
     // Una máquina recién conectada («Conectar otra máquina») suma su rebanada sin desmontar las demás.
     window.addEventListener("harness:account-computers", () => void sync());
-    // Una VM conectada o quitada en Configuración: con cuenta o sin ella, la flota la suma o la quita.
-    window.addEventListener("danil:guests-changed", () => void sync());
+    // Una distro conectada, quitada o cambiada de estado en esta PC: la flota se actualiza en vivo.
+    const onGuestsChanged = () => {
+      invalidateGuestChildren();
+      void sync();
+    };
+    window.addEventListener("danil:guests-changed", onGuestsChanged);
+    void listen("guest-state-changed", onGuestsChanged);
     setInterval(() => void sync(), RELIST);
     void engineWorkspaces.refresh();
     return sync();
