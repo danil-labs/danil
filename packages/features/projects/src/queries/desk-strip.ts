@@ -1,5 +1,5 @@
 import { batch, createEffect, createMemo, on, onCleanup, type Accessor, type Setter } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { conservar } from "../../../../session/src/sessionRefresh.ts";
 import { carpetasDelEscritorio, escritorioDeFila, type Space } from "../../../../ui/src/lib/spaces.ts";
@@ -220,7 +220,7 @@ export function createDeskStrip(deps: DeskStripDeps) {
     const ws = workspaceActivo();
     if (!ws) return;
     try {
-      const lista = await invoke<Space[]>("list_spaces");
+      const lista = await callEngine<Space[]>("list_spaces");
       if (ws !== workspaceActivo() || escritorio() === null) return;
       setSpaces(lista);
       const actuales = spaces();
@@ -268,7 +268,7 @@ export function createDeskStrip(deps: DeskStripDeps) {
       const routed = machine && paths.every(path => pegadasEn.get(path) === machine) ? enMaquina(machine) : undefined;
       const workspace = workspaceActivo();
       const options = { headers: { ...routed?.headers, ...(workspace ? { "x-terminus-workspace": workspace } : {}) } };
-      const prepared = await invoke<string[]>("prepare_attachments", { project, paths }, options);
+      const prepared = await callEngine<string[]>("prepare_attachments", { project, paths }, options);
       if (machine) for (const path of prepared) adjuntosEn.set(path, machine);
       return prepared;
     },
@@ -288,7 +288,7 @@ export function createDeskStrip(deps: DeskStripDeps) {
   const contexto = drafts.context;
 
   const composer = createComposerStore({
-    invoke, withLastAnswer,
+    invoke: callEngine, withLastAnswer,
     scope: { workspace: workspaceActivo, machine: () => composerMachine(),
       machineOn: () => machines().find(machine => machine.id === composerMachine())?.on,
       connected, session: () => sessionId() },
@@ -299,7 +299,7 @@ export function createDeskStrip(deps: DeskStripDeps) {
   onCleanup(composer.dispose);
   const threads = createThreadsStore({
     scope: { workspace: workspaceActivo, generation: workspaceContext.generation, paged: () => serviceStream.paged() },
-    activeSession: sessionId, project, invoke, route: deLaTarea, liveThreads: () => liveThreads,
+    activeSession: sessionId, project, invoke: callEngine, route: deLaTarea, liveThreads: () => liveThreads,
   });
   onCleanup(threads.dispose);
   const hilos = threads.rows, hiloAbierto = threads.current, msgs = threads.messages, cargandoHilo = threads.loading;

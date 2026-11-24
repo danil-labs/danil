@@ -2,7 +2,7 @@
 import { connected } from "../../../../session/src/engineConnection.ts";
 import { type Agent } from "../../../../ui/src/lib/model.ts";
 import { esProvisional, tituloProvisional } from "../../../../ui/src/lib/taskDraft";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { claveDe } from "../../../../ui/src/Failure";
 import { type Encolado } from "../components/MessageQueue";
 import { mensajeDeFallo } from "../model/failures";
@@ -75,7 +75,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
     pendingStarts.set(session, Symbol());
     marcarViva(session);
     try {
-      const abrio = await invoke<boolean>("answer_shell_output", {
+      const abrio = await callEngine<boolean>("answer_shell_output", {
         provider: lanzado.provider,
         project: lanzado.project,
         session,
@@ -111,7 +111,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
       });
     });
     try {
-      await invoke<Corrida>("run_shell_command", { project: lanzado.project, session, command, queueId }, deLaTarea(session));
+      await callEngine<Corrida>("run_shell_command", { project: lanzado.project, session, command, queueId }, deLaTarea(session));
       return null;
     } catch (error) {
       if (lanzados.get(session) === lanzado) {
@@ -177,7 +177,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
     });
     try {
       const enOtra = draftOptions();
-      const corrida = await invoke<Corrida>("run_shell_command", {
+      const corrida = await callEngine<Corrida>("run_shell_command", {
         project: proyecto,
         session: null,
         command,
@@ -242,7 +242,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
     const vivo = id ? terminales()[id] : null;
     if (!id || !vivo?.id) return false;
     try {
-      if (!(await invoke<boolean>("write_shell_input", { session: id, input: texto }, deLaTarea(id)))) return false;
+      if (!(await callEngine<boolean>("write_shell_input", { session: id, input: texto }, deLaTarea(id)))) return false;
     } catch (e) {
       threads.appendLive(id, [{ role: "system", ...mensajeDeFallo(e), meta: "fallo" }]);
       return false;

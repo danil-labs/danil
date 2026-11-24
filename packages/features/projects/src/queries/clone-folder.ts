@@ -1,6 +1,6 @@
 import { ATTACHMENT_DOCUMENTS_FEATURE } from "../../../../engine-client/src/index.ts";
 import { createMemo, createSignal, onCleanup, type Accessor, type Setter } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { sessionRefresh } from "../../../../session/src/sessionRefresh.ts";
 import { withRemoteLaunchers, type RemoteScope } from "../../../../ui/src/lib/tasks/remote.ts";
 import type { Machine } from "../model.ts";
@@ -108,7 +108,7 @@ export function createCloneFolder(deps: CloneFolderDeps) {
   const sessionLists = sessionRefresh<SessionRow>({
     read: async (project) => {
       const open = sesionesConPestana();
-      const rows = await invoke<SessionRow[]>("list_live_sessions", { project, open });
+      const rows = await callEngine<SessionRow[]>("list_live_sessions", { project, open });
       // La pestaña que su máquina no confirmó no cuenta como pedida: no se cierra ni se pide en bucle.
       const sinConfirmar = new Set(unconfirmedOpen(rows));
       const confirmadas = open.filter((id) => !sinConfirmar.has(id));
@@ -174,7 +174,7 @@ export function createCloneFolder(deps: CloneFolderDeps) {
       const id = sessionId();
       if (esDeLaTarea && !id) return null;
       return esDeLaTarea
-        ? await invoke<Preview>("attachment_preview", {
+        ? await callEngine<Preview>("attachment_preview", {
             project: project(),
             id,
             rel,
@@ -193,11 +193,11 @@ export function createCloneFolder(deps: CloneFolderDeps) {
   // salió (el globo mientras se manda) sigue en la de la ventana.
   async function previewOn(path: string, id: string | null): Promise<Preview> {
     const there = deLaTarea(id);
-    if (!there) return invoke<Preview>("preview_file", { path, rel: path });
+    if (!there) return callEngine<Preview>("preview_file", { path, rel: path });
     try {
-      return await invoke<Preview>("preview_file", { path, rel: path }, there);
+      return await callEngine<Preview>("preview_file", { path, rel: path }, there);
     } catch {
-      return invoke<Preview>("preview_file", { path, rel: path });
+      return callEngine<Preview>("preview_file", { path, rel: path });
     }
   }
 

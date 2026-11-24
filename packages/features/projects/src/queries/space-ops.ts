@@ -1,5 +1,5 @@
 import { createSignal, type Accessor, type Setter } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { t } from "../../../../ui/src/lib/i18n.ts";
 import { spaceName, type Space } from "../../../../ui/src/lib/spaces.ts";
@@ -38,7 +38,7 @@ export function createSpaceOps(deps: SpaceOpsDeps) {
         return;
       }
     }
-    const nueva = await invoke<Space>("create_space", { name, folders });
+    const nueva = await callEngine<Space>("create_space", { name, folders });
     setSpaces((lista) => [...lista.filter((i) => i.id !== nueva.id), nueva]);
     cambiarEscritorio(nueva.id);
   }
@@ -49,7 +49,7 @@ export function createSpaceOps(deps: SpaceOpsDeps) {
         await catalog.rename(id, name);
         return;
       }
-      replaceSpace(await invoke<Space>("rename_space", { id, name }, machineOf(id)));
+      replaceSpace(await callEngine<Space>("rename_space", { id, name }, machineOf(id)));
     } catch (e) {
       setError(prosaDe(e));
     }
@@ -60,7 +60,7 @@ export function createSpaceOps(deps: SpaceOpsDeps) {
       await catalog.setFolders(id, folders);
       return;
     }
-    replaceSpace(await invoke<Space>("set_space_folders", { id, folders }, machineOf(id)));
+    replaceSpace(await callEngine<Space>("set_space_folders", { id, folders }, machineOf(id)));
   }
 
   async function removeFromActiveSpace(folder: string) {
@@ -86,7 +86,7 @@ export function createSpaceOps(deps: SpaceOpsDeps) {
         return;
       }
       // Sin cuenta gestionada: la máquina de la tarea persiste el movimiento en el motor local.
-      const destino = (await invoke<{ id: string; name: string | null } | null>("move_task_to_space", { project, id, space }, deLaTarea(id)))
+      const destino = (await callEngine<{ id: string; name: string | null } | null>("move_task_to_space", { project, id, space }, deLaTarea(id)))
         ?? spaces().find((i) => i.id === space) ?? null;
       await refreshSessions(grupos());
       setAviso({

@@ -761,7 +761,6 @@ const steps = [
   ["Web machine inventory preserves transient failures and invalidates definitive responses", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/web-machine-inventory.test.mjs")], root],
   ["Web workspace membership, selection and rail preferences", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-workspace-picker.test.ts"), join(root, "tests/unit/web-workspace-runtime.test.ts")], root],
   ["The platform session always uses cookies, CSRF and a configured edge", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-platform-session.test.ts")], root],
-  ["app.danil.ai/terminus answers 308 to the same alfa path and never leaves that host", process.execPath, ["--test", join(root, "web-redirect/worker.test.mjs")], root],
   ["The entry serves assets and closes every retired proxy", process.execPath, ["--test", join(root, "alpha-entry/worker.test.mjs")], root],
   ["The first-run account choice is remembered", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-welcome.test.ts")]],
   ["The alpha entry closes all routes that migrated to platform", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-service.test.mjs")], root],

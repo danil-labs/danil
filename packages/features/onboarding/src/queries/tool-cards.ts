@@ -1,4 +1,4 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import type { Frase } from "../../../../ui/src/lib/prose";
 
 type Wait = { code: string; url: string };
@@ -66,112 +66,112 @@ type vinculoBib = VinculoBib;
 type plugin = Plugin;
 
 export const getWorkspaceScope = () =>
-  invoke<{ active: string | null }>("list_workspaces").then((s) => s.active ?? "pending");
+  callEngine<{ active: string | null }>("list_workspaces").then((s) => s.active ?? "pending");
 
 export const listGitHosts = (scope: string) =>
-  invoke<proveedor[]>("list_git_hosts", { scope });
+  callEngine<proveedor[]>("list_git_hosts", { scope });
 
 export const listKnownMcp = () =>
-  invoke<conocido[]>("list_known_mcp");
+  callEngine<conocido[]>("list_known_mcp");
 
 export const listMcpProviders = () =>
-  invoke<agenteMcp[]>("list_mcp_providers");
+  callEngine<agenteMcp[]>("list_mcp_providers");
 
 export const getGoogleDriveStatus = () =>
-  invoke<estadoDeDrive>("google_drive_status");
+  callEngine<estadoDeDrive>("google_drive_status");
 
 export const getGoogleDriveDesktopStatus = () =>
-  invoke<driveDeEscritorio>("google_drive_desktop_status");
+  callEngine<driveDeEscritorio>("google_drive_desktop_status");
 
 export const getZoteroStatus = () =>
-  invoke<estadoDeZotero>("zotero_status");
+  callEngine<estadoDeZotero>("zotero_status");
 
 export const getZoteroBibLinks = () =>
-  invoke<vinculoBib[]>("zotero_bib_links");
+  callEngine<vinculoBib[]>("zotero_bib_links");
 
 export const setGoogleDriveDesktopUse = (used: boolean) =>
-  invoke("set_google_drive_desktop_use", { used });
+  callEngine("set_google_drive_desktop_use", { used });
 
 export const connectKnownMcp = (id: string) =>
-  invoke("connect_known_mcp", { id });
+  callEngine("connect_known_mcp", { id });
 
 export const checkGoogleDrive = () =>
-  invoke<estadoDeDrive>("check_google_drive");
+  callEngine<estadoDeDrive>("check_google_drive");
 
 export const openGoogleDriveDesktop = () =>
-  invoke("open_google_drive_desktop");
+  callEngine("open_google_drive_desktop");
 
 export const installGoogleDriveDesktop = () =>
-  invoke("install_google_drive_desktop");
+  callEngine("install_google_drive_desktop");
 
 export const getInstallSize = (operation: string) =>
-  invoke<number>("install_size", { operation });
+  callEngine<number>("install_size", { operation });
 
 export const installGoogleDrive = () =>
-  invoke("install_google_drive");
+  callEngine("install_google_drive");
 
 export const startGoogleDriveLogin = () =>
-  invoke<{ url: string }>("start_google_drive_login");
+  callEngine<{ url: string }>("start_google_drive_login");
 
 export const finishGoogleDriveLogin = () =>
-  invoke<estadoDeDrive>("finish_google_drive_login");
+  callEngine<estadoDeDrive>("finish_google_drive_login");
 
 export const installZotero = () =>
-  invoke("install_zotero");
+  callEngine("install_zotero");
 
 export const openZotero = () =>
-  invoke("open_zotero");
+  callEngine("open_zotero");
 
 export const startBrowserLogin = (id: string, scope: string) =>
-  invoke<wait>("start_browser_login", { id, scope });
+  callEngine<wait>("start_browser_login", { id, scope });
 
 export const finishBrowserLogin = (id: string, scope: string) =>
-  invoke<proveedor>("finish_browser_login", { id, scope });
+  callEngine<proveedor>("finish_browser_login", { id, scope });
 
 export const installGh = () =>
-  invoke("install_gh");
+  callEngine("install_gh");
 
 export const mcpLogin = (provider: string, id: string) =>
-  invoke("mcp_login", { provider, id });
+  callEngine("mcp_login", { provider, id });
 
 export const connectGitHost = (scope: string, id: string, data: Record<string, string>, token: string) =>
-  invoke("connect_git_host", { scope, id, data, token });
+  callEngine("connect_git_host", { scope, id, data, token });
 
 export const cancelInstall = (operation: string) =>
-  invoke("cancel_install", { operation });
+  callEngine("cancel_install", { operation });
 
 export const cancelGoogleDriveLogin = () =>
-  invoke("cancel_google_drive_login");
+  callEngine("cancel_google_drive_login");
 
 export const cancelBrowserLogin = (id: string, scope: string) =>
-  invoke("cancel_browser_login", { id, scope });
+  callEngine("cancel_browser_login", { id, scope });
 
 export const disconnectKnownMcp = (id: string) =>
-  invoke("disconnect_known_mcp", { id });
+  callEngine("disconnect_known_mcp", { id });
 
 export const disconnectGoogleDrive = () =>
-  invoke("disconnect_google_drive");
+  callEngine("disconnect_google_drive");
 
 export const disconnectGitHost = (id: string, scope: string) =>
-  invoke("disconnect_git_host", { id, scope });
+  callEngine("disconnect_git_host", { id, scope });
 
 export const syncZoteroBibs = () =>
-  invoke<vinculoBib[]>("sync_zotero_bibs");
+  callEngine<vinculoBib[]>("sync_zotero_bibs");
 
 export const unlinkZoteroBib = (path: string) =>
-  invoke("unlink_zotero_bib", { path });
+  callEngine("unlink_zotero_bib", { path });
 
 export const listIntegrations = () =>
-  invoke<{ workspace: string; plugins: plugin[] }>("list_integrations");
+  callEngine<{ workspace: string; plugins: plugin[] }>("list_integrations");
 
 export const installIntegration = (id: string) =>
-  invoke("install_integration", { id });
+  callEngine("install_integration", { id });
 
 export const setIntegrationEnabled = (id: string, workspace: string, enabled: boolean) =>
-  invoke("set_integration_enabled", { id, workspace, enabled });
+  callEngine("set_integration_enabled", { id, workspace, enabled });
 
 export const typstLiveStop = () =>
-  invoke("typst_live_stop", { key: null, session: null });
+  callEngine("typst_live_stop", { key: null, session: null });
 
 export const uninstallIntegration = (id: string) =>
-  invoke("uninstall_integration", { id });
+  callEngine("uninstall_integration", { id });

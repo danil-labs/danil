@@ -2,7 +2,7 @@
 import { t } from "../../../../ui/src/lib/i18n";
 import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
 import { esProvisional } from "../../../../ui/src/lib/taskDraft";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { claveDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
 import { type LiveTurn } from "./sleepSession.ts";
@@ -56,8 +56,8 @@ export function createResync(deps: ResyncDeps) {
 
   const serviceStream = createServiceStream({
     ready: () => deps.serviceListenersReady,
-    read: (request) => invoke<ServicePage>("service_poll", request),
-    filter: (sessions) => invoke("service_filter", { sessions }),
+    read: (request) => callEngine<ServicePage>("service_poll", request),
+    filter: (sessions) => callEngine("service_filter", { sessions }),
     visibleSessions: tareasQueSeVen,
     applyBatches: applyPushed,
     applyPage: (page, recovered: boolean) => {
@@ -97,8 +97,8 @@ export function createResync(deps: ResyncDeps) {
     const generation = workspaceContext.generation();
     try {
       const [active, timing] = await Promise.all([
-        invoke<string[]>("list_active_turns", { workspace }),
-        invoke<LiveTurn[]>("list_live_turns").catch(() => []),
+        callEngine<string[]>("list_active_turns", { workspace }),
+        callEngine<LiveTurn[]>("list_live_turns").catch(() => []),
       ]);
       if (generation !== workspaceContext.generation() || revision !== deps.lifecycleRevision) return;
       const enVuelo = timing.filter((turn) => turn.workspace === workspace && active.includes(turn.session));
@@ -188,7 +188,7 @@ export function createResync(deps: ResyncDeps) {
   // vuelve— las dejaría flotando sobre la interfaz sin pestaña que las
   // cierre. Aquí es el primer instante en que se sabe que el documento es
   // nuevo. Ver `sites::site_sweep`.
-  onMount(() => void invoke("site_sweep").catch(() => {}));
+  onMount(() => void callEngine("site_sweep").catch(() => {}));
   // Lo mismo con los Tinymist de la vista de Typst: sin visor que los suelte, seguirían vivos.
   onMount(soltarVistasHuerfanas);
   return { enviarFiltro, reconcileActiveTurns, reconcileSoon, releerUna, serviceStream };

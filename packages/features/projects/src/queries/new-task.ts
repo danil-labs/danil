@@ -1,5 +1,5 @@
 import { batch, createSignal, type Accessor, type Setter } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import type { AgentProfile as AgentProfileData } from "../../../../ui/src/lib/model.ts";
 import type { ComposerStore, DraftsStore, PanelsStore, TabsStore } from "../../../../ui/src/lib/project-block-types.ts";
 import type { PanelSite } from "../../../../ui/src/lib/panels.ts";
@@ -19,7 +19,7 @@ export function createNewTask(deps: NewTaskDeps) {
     // El borrador tampoco arranca a ciegas: si ya declaró con qué
     // prefiere trabajar, la caja en blanco lo trae puesto en vez del
     // último agente que se usó en cualquier otra conversación.
-    void invoke<Record<string, AgentProfileData>>("list_agent_profiles", { project: enProyecto })
+    void callEngine<Record<string, AgentProfileData>>("list_agent_profiles", { project: enProyecto })
       .then((perfiles) => {
         const sigue = hablandoCon();
         if (sigue?.project !== enProyecto || sigue.name !== name) return;

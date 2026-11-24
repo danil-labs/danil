@@ -1,5 +1,5 @@
 import { errorCode } from "../../../../ui/src/lib/errorCode.ts";
-import { invoke, type InvokeOptions } from "../../../../engine-client/src/client";
+import { callEngine, type InvokeOptions } from "../../../../engine-client/src/client";
 import { t } from "../../../../ui/src/lib/i18n";
 import { detalleDe, prosaDe } from "../../../../ui/src/Failure";
 
@@ -37,13 +37,13 @@ export const previewTaskLifecycle = (
   args: Record<string, unknown>,
   options?: InvokeOptions,
 ): Promise<(DeletePreview)> =>
-  invoke<(DeletePreview)>("task_lifecycle_preview", args, options);
+  callEngine<(DeletePreview)>("task_lifecycle_preview", args, options);
 
 export const applyTaskLifecycle = (
   args: Record<string, unknown>,
   options?: InvokeOptions,
 ): Promise<(DeleteResult)> =>
-  invoke<(DeleteResult)>("task_lifecycle_apply", args, options);
+  callEngine<(DeleteResult)>("task_lifecycle_apply", args, options);
 
 // The preview's `integration` decides. Older engines fall back to the finish check, whose `not_finished` also
 // flags a worktree without commits of its own and does not tell unmerged from unchecked: those stay unconfirmed.
@@ -57,7 +57,7 @@ export async function integrationChecks(list: DeleteMember[], options: InvokeOpt
   const queue = list.filter(member => member.inspection.status === "complete" && member.integration === undefined);
   const worker = async () => {
     for (let member = queue.shift(); member && Date.now() < deadline; member = queue.shift()) {
-      const blockers = await invoke<{ not_finished: boolean }>("task_blockers", { project: member.project, id: member.id, finish: true }, options).catch(() => null);
+      const blockers = await callEngine<{ not_finished: boolean }>("task_blockers", { project: member.project, id: member.id, finish: true }, options).catch(() => null);
       if (blockers && !blockers.not_finished) result.set(memberKey(member), "merged");
     }
   };

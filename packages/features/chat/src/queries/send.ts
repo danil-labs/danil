@@ -3,7 +3,7 @@ import { t } from "../../../../ui/src/lib/i18n";
 import { type Agent, type Source } from "../../../../ui/src/lib/model.ts";
 import { type CatalogosDeModelos } from "../../../../ui/src/lib/models.ts";
 import { esProvisional, tituloProvisional } from "../../../../ui/src/lib/taskDraft";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { claveDe, prosaDe } from "../../../../ui/src/Failure";
 import { type Encolado } from "../components/MessageQueue";
@@ -124,7 +124,7 @@ export function createSend(deps: SendDeps) {
     // no por el del selector: la cola guarda con qué se escribió cada uno, y
     // moverlo a mitad de un turno no puede reescribir hacia atrás quién
     // contestó los que ya estaban esperando.
-    const signatureReady = invoke<Signatures>("turn_authors", {
+    const signatureReady = callEngine<Signatures>("turn_authors", {
       provider: m.provider,
     }).catch(() => null);
     const firmaDelTurno = respuestas ? await signatureReady : null;
@@ -182,7 +182,7 @@ export function createSend(deps: SendDeps) {
       const spacePlan = !abierta && taskSpaceCreate
         ? taskSpaceCreate(m.space)
         : { engineSpace: m.space ?? null, record: () => {} };
-      const mandarTurno = () => invoke<string>("send_message", {
+      const mandarTurno = () => callEngine<string>("send_message", {
         provider: m.provider,
         project: proyecto,
         session: abierta,
@@ -247,7 +247,7 @@ export function createSend(deps: SendDeps) {
         provider: m.provider,
         command: m.text.trimStart().startsWith("!"),
         setProvider: (provider) =>
-          invoke("set_session_provider", { project: proyecto, session: abierta ?? "", provider }, opcionesDeLaTarea(abierta, workspaceActivo())),
+          callEngine("set_session_provider", { project: proyecto, session: abierta ?? "", provider }, opcionesDeLaTarea(abierta, workspaceActivo())),
         send: () => {
           const target = opciones?.headers?.["x-terminus-machine"];
           const machine = target ? machines().find((row) => row.id === target) : undefined;
@@ -383,6 +383,6 @@ export function createSend(deps: SendDeps) {
   };
   /** Lo que esa tarea tiene esperando. No lanza: sin respuesta, no hay nada. */
   const pendientesDe = (session: string, workspace = workspaceActivo()) =>
-    invoke<Pendientes>("pending_requests", { session }, opcionesDeLaTarea(session, workspace)).catch(() => null);
+    callEngine<Pendientes>("pending_requests", { session }, opcionesDeLaTarea(session, workspace)).catch(() => null);
   return { enviar, pendientesDe };
 }

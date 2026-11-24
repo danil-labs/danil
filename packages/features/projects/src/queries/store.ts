@@ -2,9 +2,9 @@ import { createMemo, createSignal, untrack } from "solid-js";
 import { createResource } from "../model/resource.ts";
 import { conservar, READ_TIMEOUT } from "../../../../session/src/sessionRefresh.ts";
 import type { Project } from "../../../../ui/src/lib/model.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 
-export { invoke };
+export { callEngine as invoke };
 
 export type ProjectsScope = { workspace: string | null; machine: string | null };
 type ReadyScope = ProjectsScope & { revision: number };
@@ -17,6 +17,7 @@ const route = (scope: ProjectsScope) => ({ headers: {
 
 /** Project rows have one writer; selection and task workflow remain with their own owners. */
 export function createProjectsStore(deps: { scope: () => ProjectsScope; invoke: Invoke; timeoutMs?: number }) {
+  const rpc = deps.invoke;
   let disposed = false;
   let generation = 0;
   const [readyScope, setReadyScope] = createSignal<ReadyScope | null>(null);
@@ -26,7 +27,7 @@ export function createProjectsStore(deps: { scope: () => ProjectsScope; invoke: 
       signal.throwIfAborted();
       const scope = currentScope();
       if (scopeKey(scope) !== key) return Promise.reject(new DOMException("Project scope changed", "AbortError"));
-      return deps.invoke<Project[]>("list_projects", {}, route(scope));
+      return rpc<Project[]>("list_projects", {}, route(scope));
     },
     timeoutMs: deps.timeoutMs ?? READ_TIMEOUT,
     reconcile: (previous, incoming) => conservar(previous, incoming, row => row.id),
@@ -91,17 +92,17 @@ export function createProjectsStore(deps: { scope: () => ProjectsScope; invoke: 
         reader = createResource<string, Project[]>({ read: (_key, signal) => {
           signal.throwIfAborted();
           if (currentScope().workspace !== scope.workspace) return Promise.reject(new DOMException("Project scope changed", "AbortError"));
-          return deps.invoke<Project[]>("list_projects", {}, route(scope));
+          return rpc<Project[]>("list_projects", {}, route(scope));
         }, timeoutMs: deps.timeoutMs ?? READ_TIMEOUT, reconcile: (previous, incoming) => conservar(previous, incoming, row => row.id) });
         routed.set(key, reader);
       }
       return reader.read(key);
     },
-    rename: (id: string, name: string) => mutate(scope => deps.invoke("rename_project", { id, name }, route(scope))),
-    attach: (id: string, source: string) => mutate(scope => deps.invoke("attach_known_source", { project: id, source }, route(scope))),
-    detach: (id: string, source: string) => mutate(scope => deps.invoke("detach_source", { project: id, source }, route(scope))),
-    workTree: (id: string, dir: string | null) => mutate(scope => deps.invoke("set_project_work_tree", { id, dir }, route(scope))),
-    remove: (id: string) => mutate(scope => deps.invoke("delete_project", { id }, route(scope)), false),
+    rename: (id: string, name: string) => mutate(scope => rpc("rename_project", { id, name }, route(scope))),
+    attach: (id: string, source: string) => mutate(scope => rpc("attach_known_source", { project: id, source }, route(scope))),
+    detach: (id: string, source: string) => mutate(scope => rpc("detach_source", { project: id, source }, route(scope))),
+    workTree: (id: string, dir: string | null) => mutate(scope => rpc("set_project_work_tree", { id, dir }, route(scope))),
+    remove: (id: string) => mutate(scope => rpc("delete_project", { id }, route(scope)), false),
     dispose() { disposed = true; setReadyScope(null); resource.dispose(); for (const reader of routed.values()) reader.dispose(); routed.clear(); },
   };
 }
