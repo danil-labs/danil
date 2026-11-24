@@ -2,7 +2,7 @@ import { Show, createSignal, lazy, onCleanup, onMount } from "solid-js";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { waitingThen } from "./liveTurns";
 

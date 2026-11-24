@@ -1,7 +1,7 @@
 import { HistoryDetails } from "../components/HistoryDetails";
 import Split from "lucide-solid/icons/split";
 import { Index, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { AgentModels } from "../../../../ui/src/lib/model";
 import type { MachineOf } from "../queries/history-details";
 import { formatearDuracion, type Paso } from "../../../../ui/src/lib/steps";

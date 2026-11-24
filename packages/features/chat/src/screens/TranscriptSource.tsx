@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { Agent } from "../../../../ui/src/lib/model";
 import type { TranscriptOrigin } from "../model/transcript";
 

@@ -1,5 +1,5 @@
 import { Show, createResource, createSignal, onCleanup } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { peso } from "../../../../ui/src/lib/format";
 import { FailureNote, asFailure } from "../../../../ui/src/Failure";
 import { descargar, type LeerParte } from "../../../../host/src/tree-download";

@@ -5,7 +5,7 @@
  * contestar no es no tener agentes, y enviar es lo que la enciende.
  */
 import { errorCode } from "../../../../ui/src/lib/errorCode.ts";
-import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { escribirPref, leerPref } from "../../../../session/src/prefs";
 
 const KEY = "machines.last_answer";
 /** Apagada, o encendiéndose tras pedirle algo (`router.ts`). */

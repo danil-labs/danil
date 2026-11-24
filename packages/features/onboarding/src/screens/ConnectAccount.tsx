@@ -5,7 +5,7 @@
  */
 import Cloud from "lucide-solid/icons/cloud";
 import { createEffect, createSignal, type JSX, on, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { Spinner } from "../../../../ui/src/Spinner";

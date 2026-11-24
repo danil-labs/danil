@@ -1,7 +1,7 @@
 import Check from "lucide-solid/icons/check";
 import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
 import { For, type JSX, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import {
   type SidebarGrouping,
   type SidebarView,

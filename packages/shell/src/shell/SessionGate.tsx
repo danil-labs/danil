@@ -1,9 +1,9 @@
-import "../../../../apps/desktop/src/locales/danilPhrases";
+import "../../../ui/src/locales/danilPhrases";
 import { createEffect, createMemo, createSignal, For, type JSX, Match, onCleanup, onMount, Show, Switch } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client";
 import { capabilities } from "../../../host/src/platform";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs";
+import { escribirPref, leerPref } from "../../../session/src/prefs";
 import { listen } from "../../../host/src/serviceEvents.ts";
 import { Button } from "../../../ui/src/Button";
 import { Spinner } from "../../../ui/src/Spinner";

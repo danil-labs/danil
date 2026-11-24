@@ -1,7 +1,7 @@
 import { withTaskAncestors, taskIdentity } from "../../../../ui/src/lib/tasks/index.ts";
 import Search from "lucide-solid/icons/search";
 import { type ComponentProps, createEffect, createMemo, createSignal, For, on, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { type FiltroDeTareas, filtrarTareas, primerasRaices } from "../model/agentPageFilters";

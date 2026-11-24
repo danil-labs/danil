@@ -1,5 +1,5 @@
 import { type JSX } from "solid-js";
-import { createPref, hayPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { createPref, hayPref } from "../../../../session/src/prefs";
 import type { LeerParte } from "../../../../host/src/tree-download";
 
 /** Los visores de pdf, imagen, tabla y medio los compone el shell. */

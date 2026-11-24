@@ -9,7 +9,7 @@ import {
   type RepoRemoto,
   type Area,
 } from "../queries";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listGitHosts } from "../../../../session/src/gitHosts";
 import type { Source } from "../../../../ui/src/lib/model";

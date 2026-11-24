@@ -1,5 +1,5 @@
 import { For, Show, createMemo, createSignal, onCleanup, onMount } from "solid-js";
-import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { manifiesto, t } from "../../../../ui/src/lib/i18n";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { Select } from "../../../../ui/src/Select";

@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import type { Capabilities } from "../../host/src/platform";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "../../ui/src/lib/i18n";
 import { Button } from "../../ui/src/Button";
 import { Toast, ToastPortal } from "../../ui/src/Toast";
 

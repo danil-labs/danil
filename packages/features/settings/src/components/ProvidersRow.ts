@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { Provider } from "./ProvidersModel";
 import type { createProveedores } from "./ProvidersState";
 

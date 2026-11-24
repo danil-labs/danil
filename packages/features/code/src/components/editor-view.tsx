@@ -24,7 +24,7 @@ import {
   lineNumbers,
 } from "@codemirror/view";
 import { Show, createEffect, createMemo, onCleanup, onMount, untrack } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { frasesDelEditor } from "../model/editorPhrases";
 import { sangriaDe } from "../model/indent";
 import { RESALTADO, TEMA } from "../model/editorTheme";

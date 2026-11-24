@@ -3,7 +3,7 @@ import { createEffect, createMemo, createSignal, createUniqueId, on, onCleanup, 
 import { rememberRoster } from "../../../../ui/src/lib/handlerRoster.ts";
 import { createCopied } from "../../../../host/src/clipboard";
 import { machineAction } from "../../../../host/src/machine-action";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import { getProjectSetupCommand, listAgents, setAgentHidden, setProjectSetupCommand } from "../queries";
 import {

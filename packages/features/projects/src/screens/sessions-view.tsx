@@ -1,5 +1,5 @@
 import { lazy, Show, Suspense } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { TaskActionToast } from "../components/TaskActionToast";
 import type { SessionsProps } from "./sessions-model";
 import { createSessionsState } from "./sessions-state";

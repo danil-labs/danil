@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 
 /** Ocupa el sitio de la caja en un chat anterior del agente, que es de solo lectura. */

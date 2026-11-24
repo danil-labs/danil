@@ -1,6 +1,6 @@
 /* @refresh reload */
 // Antes que nada: sin los catálogos dentro, `t()` devuelve la clave.
-import "../../../../apps/desktop/src/locales/catalogs";
+import "../../../ui/src/locales/catalogs";
 import { render } from "solid-js/web";
 import App from "./App";
 import { enchufarProyectos } from "./projectsPorts";
@@ -17,9 +17,9 @@ import { trimNativeMenu } from "../../../host/src/contextMenu";
 import { acotarSeleccionarTodo } from "../../../host/src/selectAll";
 import { activarBarrasAlDesplazar } from "../../../host/src/scrollbars";
 import { aplicarVeloDePestanas } from "../../../ui/src/lib/chat-background-store";
-import { aplicarLengua, refreshLanguage, lenguasDisponibles, semillaDelAlta } from "../../../../apps/desktop/src/lib/i18n";
-import { cargarPaquetes } from "../../../../apps/desktop/src/locales/packs";
-import { mountAfterLanguagePacks } from "../../../../apps/desktop/src/locales/startup";
+import { aplicarLengua, refreshLanguage, lenguasDisponibles, semillaDelAlta } from "../../../ui/src/lib/i18n";
+import { cargarPaquetes } from "../../../session/src/packs";
+import { mountAfterLanguagePacks } from "../../../ui/src/locales/startup";
 import { capabilities, setCapabilities } from "../../../host/src/platform";
 import { askGuestChannels } from "../../../features/machines/src/queries/guestChannels";
 import "../../../ui/src/lib/sharedClock";
@@ -28,7 +28,7 @@ enchufarProyectos();
 enchufarAlta();
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
-void import("../../../../apps/desktop/src/locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
+void import("../../../ui/src/locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
 
 // Los canales de máquinas locales los dice la ventana (`guest_channels`), no el userAgent.
 // La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.

@@ -1,6 +1,6 @@
 import GitBranch from "lucide-solid/icons/git-branch";
 import { createSignal, For, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { listSourceBranches, setSourceBranch } from "../queries";
 import type { Source } from "../../../../ui/src/lib/model";
 import { prosaDe } from "../../../../ui/src/Failure";

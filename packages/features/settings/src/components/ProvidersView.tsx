@@ -4,7 +4,7 @@ import { capabilities } from "../../../../host/src/platform.ts";
 import { FailureNote } from "../../../../ui/src/Failure";
 import { Skeleton } from "../../../../ui/src/Skeleton";
 import { MarcaGitHost } from "../../../../ui/src/icons";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { Toggle } from "../../../../ui/src/Toggle";

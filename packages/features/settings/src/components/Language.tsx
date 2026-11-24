@@ -8,7 +8,7 @@ import {
   lenguasDisponibles,
   semillaDelAlta,
   t,
-} from "../../../../../apps/desktop/src/lib/i18n";
+} from "../../../../ui/src/lib/i18n";
 import type { Startup } from "../queries/workspaces-store";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 

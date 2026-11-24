@@ -3,7 +3,7 @@ import { join, tempDir } from "@tauri-apps/api/path";
 import { envolver, formaDe } from "../model/sandbox";
 import { descargarArtefacto, historiaDe, leerVersion, openExternal, preparePrint, publicacionesDe, readArtifactPart, registrarSalida, restaurarVersion, type Preview, type Via, type VersionRef } from "../queries";
 import { asFailure, detalleDe } from "../../../../ui/src/Failure";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { ArtifactDownloadError, readArtifactDownload } from "../model/download.ts";
 import { extensionDe } from "../../../../ui/src/lib/steps";
 import type PreviewPane from "./Preview";

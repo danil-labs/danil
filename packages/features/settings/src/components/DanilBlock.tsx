@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import Accounts from "./Accounts";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { PiezasDeAjustes } from "../model/features-port";

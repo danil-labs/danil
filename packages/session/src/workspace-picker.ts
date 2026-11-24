@@ -1,4 +1,4 @@
-import type { WorkspaceAddLink } from "../../../apps/desktop/src/lib/workspace-add-link.ts";
+import type { WorkspaceAddLink } from "./workspace-add-link.ts";
 import { z } from "zod";
 import type { EdgeTransport } from "../../platform-client/src/edge.ts";
 import { workspaceId } from "./platform-workspaces.ts";

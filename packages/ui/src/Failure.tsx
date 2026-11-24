@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "./lib/i18n";
 import { prosa } from "./lib/prose.ts";
 import type { Failure } from "./lib/failure.ts";
 

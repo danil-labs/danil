@@ -1,5 +1,5 @@
 import { Show, createMemo } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { formatearDuracion, type Paso } from "../../../../ui/src/lib/steps";
 import { activityElapsed } from "../model/turnActivity";
 import { createNow } from "../../../../ui/src/lib/sharedClock";

@@ -1,7 +1,7 @@
 import { marcaDeSuperficie } from "../../../../ui/src/lib/surfaces";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createEffect, createSignal, createUniqueId, type JSX, on, onMount, Show, untrack } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { cancelLogin } from "../queries/engine-accounts";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Badge } from "../../../../ui/src/Badge";

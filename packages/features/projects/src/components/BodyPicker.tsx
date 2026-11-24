@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
 import { AstroAvatar, CUERPOS, type Cuerpo } from "../screens/AstroAvatar";
 import { Pressable } from "../../../../ui/src/Pressable";

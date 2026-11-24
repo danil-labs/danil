@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelStartup } from "../../../../session/src/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
 import { prosaDe } from "../../../../ui/src/Failure";

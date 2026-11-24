@@ -10,7 +10,7 @@ import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
 import Sparkles from "lucide-solid/icons/sparkles";
 import Wrench from "lucide-solid/icons/wrench";
 import { createResource, type JSX, lazy, Show, Suspense } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { machineAction } from "../../../../host/src/machine-action";
 import { type Superficie } from "../../../../ui/src/lib/surfaces";

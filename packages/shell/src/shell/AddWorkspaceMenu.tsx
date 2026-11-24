@@ -9,7 +9,7 @@ import { type Component, createEffect, createSignal, For, onCleanup, Show } from
 import { Dynamic } from "solid-js/web";
 import { canRedeemPromo } from "../../../session/src/promo-role";
 import { capabilities } from "../../../host/src/platform";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { cn } from "../../../ui/src/lib/utils";
 import { SEPARADOR_DE_MENU, TITULO_DE_GRUPO } from "../../../ui/src/ContextMenu";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";

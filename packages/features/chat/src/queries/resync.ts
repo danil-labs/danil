@@ -1,5 +1,5 @@
 
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
 import { esProvisional } from "../../../../ui/src/lib/taskDraft";
 import { invoke } from "../../../../engine-client/src/client.ts";

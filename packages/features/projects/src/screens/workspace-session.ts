@@ -2,8 +2,8 @@ import { createEffect, createMemo, createSignal, on, onCleanup, type Accessor } 
 import { lastActivity } from "../../../../ui/src/lib/tasks/index.ts";
 import { createProjectsStore, invoke } from "../queries/store.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
-import { createPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
+import { createPref } from "../../../../session/src/prefs.ts";
 import { recordarCarpetas } from "../../../../ui/src/lib/folderKinds.ts";
 import { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import { createTaskFiles } from "../../../../ui/src/lib/taskFiles.ts";

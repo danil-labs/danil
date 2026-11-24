@@ -1,7 +1,7 @@
 import Mail from "lucide-solid/icons/mail";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, onMount, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";

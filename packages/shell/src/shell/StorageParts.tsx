@@ -1,7 +1,7 @@
 import type { MachineResources } from "../../../engine-client/src/index.ts";
 import type { JSX } from "solid-js";
 import { Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { peso } from "../../../ui/src/lib/format";
 import { cn } from "../../../ui/src/lib/utils";
 import { TooltipAction } from "../../../ui/src/TooltipAction";

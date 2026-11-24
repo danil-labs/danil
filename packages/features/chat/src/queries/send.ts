@@ -1,5 +1,5 @@
 
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type Agent, type Source } from "../../../../ui/src/lib/model.ts";
 import { type CatalogosDeModelos } from "../../../../ui/src/lib/models.ts";
 import { esProvisional, tituloProvisional } from "../../../../ui/src/lib/taskDraft";

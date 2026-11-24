@@ -1,5 +1,5 @@
 import { createSignal, onMount } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { accountStatus, addAccount, discardAccount, installProvider, listAccounts, listProviders, loginAccount, setApiKey, tasksAwaitingQuota } from "../queries/engine-accounts";
 import { checkEnvironment } from "../queries/engine-environment";
 import { openExternal } from "../queries/engine-open";

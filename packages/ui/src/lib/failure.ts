@@ -1,4 +1,4 @@
-import { clavesConocidas, t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { clavesConocidas, t } from "./i18n.ts";
 import { prosa, type Prosa } from "./prose.ts";
 
 export type Failure = { what: Prosa; detail: string };

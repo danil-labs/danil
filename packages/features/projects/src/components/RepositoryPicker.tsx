@@ -5,7 +5,7 @@ import Plus from "lucide-solid/icons/plus";
 import Search from "lucide-solid/icons/search";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { listProjectRepositories, getGitHostAreas, getGitHostProjects } from "../queries";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { enfocar } from "../../../../ui/src/lib/focus";
 import { mergeRepositories, repositoryCloneUrl, repositoryIdentity, type ProjectRepository } from "../model/projectRepositories";
 import { MarcaGitHost } from "../../../../ui/src/icons";

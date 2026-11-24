@@ -1,5 +1,5 @@
 import { atenderElCampo, enfocarSiNadieEscribe } from "../../../../ui/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { applySuggestion } from "../../../../ui/src/lib/mentions";
 import { groupRecipients, recipientId, recipientLabel, type RecipientCandidate } from "../../../../ui/src/lib/recipients";
 import { slashPick, slashRows } from "../../../../ui/src/lib/skills";

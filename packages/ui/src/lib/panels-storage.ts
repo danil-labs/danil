@@ -1,4 +1,4 @@
-import { borrarPref, escribirPref, leerPref, prefsQueEmpiezan } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { borrarPref, escribirPref, leerPref, prefsQueEmpiezan } from "../../../session/src/prefs.ts";
 import { panelViewKey as layoutKey, workspaceViewKey } from "../../../session/src/workspace-view-scope.ts";
 import type { Layout } from "./panels-types.ts";
 

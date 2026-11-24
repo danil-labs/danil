@@ -2,7 +2,7 @@ import FolderOpen from "lucide-solid/icons/folder-open";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
 import { For, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { EmptyState } from "../../../../ui/src/EmptyState";

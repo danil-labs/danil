@@ -8,8 +8,8 @@ import {
   sanitizeSidebarView,
 } from "./tasks/index.ts";
 import { createRoot, createSignal } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n.ts";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { t } from "./i18n.ts";
+import { escribirPref, leerPref } from "../../../session/src/prefs.ts";
 
 // La vista (filtrar, agrupar) es la misma en el teléfono: vive en `packages/ui/src/lib/tasks/index.ts`.
 export {

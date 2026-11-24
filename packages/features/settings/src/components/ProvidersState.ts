@@ -6,7 +6,7 @@ import { listWorkspaces, setWorkspaceHostGithub } from "../queries/engine-worksp
 import { capabilities } from "../../../../host/src/platform.ts";
 import { asFailure, detalleDe, type Failure } from "../../../../ui/src/Failure";
 import type { Startup, Workspace } from "../queries/workspaces-store";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { GithubAccountState } from "./GithubAccount";
 import { type Provider, type Estado, type Borrador, type Wait, type Area, type ProyectoRemoto, SIN_BORRADOR } from "./ProvidersModel";
 

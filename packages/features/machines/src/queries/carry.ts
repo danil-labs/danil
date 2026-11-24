@@ -8,11 +8,11 @@ import { createRoot, createSignal } from "solid-js";
 import { type CarryEngine, type Exported, type Imported, type Part, type WorkStatus } from "../model/carryTypes.ts";
 import { type CarryFailure, type CarryJob, type CarryResult, type CarryState, CarryError, cancelCarry, carryWork, newState } from "./carryRun.ts";
 import { PART_RELAY, type Selection, keyVerdict, needsSheet, withoutRemote } from "../model/carryPlan.ts";
-import "../../../../../apps/desktop/src/locales/workPhrases";
+import "../../../../ui/src/locales/workPhrases";
 import { invoke } from "../../../../engine-client/src/client";
 import type { Project } from "../../../../ui/src/lib/model";
-import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { escribirPref, leerPref } from "../../../../session/src/prefs";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type CarryOrigin, machineName, rememberOrigin } from "./store";
 
 const on = (machine: string) => ({ headers: { "x-terminus-machine": machine } });

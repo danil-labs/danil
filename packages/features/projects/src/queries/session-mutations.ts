@@ -1,7 +1,7 @@
 import { createEffect, createSignal, on, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
 import type { ArbolEnTarea, Project, Source } from "../../../../ui/src/lib/model.ts";
 import type { Capabilities, DraftsStore, Machine, PanelsStore, TabsStore, TaskFilesStore, ThreadsStore } from "../../../../ui/src/lib/project-block-types.ts";
 import type { Space } from "../../../../ui/src/lib/spaces.ts";

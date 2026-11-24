@@ -2,7 +2,7 @@ import FileWarning from "lucide-solid/icons/triangle-alert";
 import { SignalDot } from "../../../ui/src/SignalDot";
 import Save from "lucide-solid/icons/save";
 import { createResource, createSignal, For, type JSX, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import {
   claveDeVista,
   type DeleteOutcome,

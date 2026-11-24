@@ -1,6 +1,6 @@
 import { batch, createEffect, createMemo, createSignal, onCleanup, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { type Project } from "../../../ui/src/lib/model.ts";
 import { readShellCache, shellCacheWriter } from "../../../session/src/shellCache";
 import { createSpaceNavigationOrder } from "../../../session/src/space-navigation-order";

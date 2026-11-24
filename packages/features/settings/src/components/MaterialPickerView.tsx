@@ -11,7 +11,7 @@ import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "..
 import { MarcaGitHost } from "../../../../ui/src/icons";
 import { repoDe } from "../../../../ui/src/sources";
 import { enfocar } from "../../../../ui/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { createSelectorDeMaterial } from "./MaterialPickerState";
 import { createVistasDeMaterial } from "./MaterialPickerRepos";
 

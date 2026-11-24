@@ -1,6 +1,6 @@
 import { SignalDot } from "../../../ui/src/SignalDot";
 import { For, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { haceCuanto } from "../../../ui/src/lib/limits";
 import { peso } from "../../../ui/src/lib/format";
 import { cn } from "../../../ui/src/lib/utils";

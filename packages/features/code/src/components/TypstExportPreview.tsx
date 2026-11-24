@@ -4,7 +4,7 @@ import ChevronUp from "lucide-solid/icons/chevron-up";
 import CircleAlert from "lucide-solid/icons/circle-alert";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { For, Show, Suspense, createEffect, createSignal, on, onCleanup, type JSX } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { treeTypstExport, treeShow } from "../queries";
 import { machineOf } from "../../../../host/src/machine";
 import { Button } from "../../../../ui/src/Button";

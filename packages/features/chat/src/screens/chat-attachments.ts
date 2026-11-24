@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { base64De, copyText, imagenPegada } from "../../../../host/src/clipboard";
 import { capabilities } from "../../../../host/src/platform";
 import { asFailure, prosaDe } from "../../../../ui/src/Failure";

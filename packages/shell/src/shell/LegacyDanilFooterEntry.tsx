@@ -1,6 +1,6 @@
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
 import { createEffect, createSignal, type JSX, on, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
 import { cn } from "../../../ui/src/lib/utils";
 import { SignalDot } from "../../../ui/src/SignalDot";

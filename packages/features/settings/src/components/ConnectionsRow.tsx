@@ -3,7 +3,7 @@ import type { Connection, ConnectionCapabilities, ConnectionPatch } from "../../
 import { webhookUrlOk } from "../model/connections.ts";
 import { createSignal, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";

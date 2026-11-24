@@ -8,7 +8,7 @@ import {
 } from "@codemirror/autocomplete";
 import type { Extension, Text } from "@codemirror/state";
 import { EditorView, ViewPlugin } from "@codemirror/view";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { machineOf } from "../../../../host/src/machine";
 import type { InsercionDeRuta } from "./typst";

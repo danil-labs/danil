@@ -1,5 +1,5 @@
 import { enfocar } from "../../../../ui/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { searchTasks } from "../../../../ui/src/lib/taskMentions";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";

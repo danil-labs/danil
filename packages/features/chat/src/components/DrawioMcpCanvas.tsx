@@ -1,7 +1,7 @@
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { copyText } from "../../../../host/src/clipboard";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { readDrawioAsset, listIntegrations, openExternal } from "../queries";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";

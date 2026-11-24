@@ -1,5 +1,5 @@
 import { batch, createSignal } from "solid-js";
-import { escribirPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { escribirPref } from "../../../session/src/prefs.ts";
 import { esProvisional } from "./taskDraft.ts";
 import { tabViewKey as key, workspaceViewKey } from "../../../session/src/workspace-view-scope.ts";
 import { belongsToBlock } from "./tabs-close.ts";

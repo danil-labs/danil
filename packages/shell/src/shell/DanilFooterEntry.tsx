@@ -1,6 +1,6 @@
 import UserRound from "lucide-solid/icons/user-round";
 import { type JSX } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { Pressable } from "../../../ui/src/Pressable";
 
 /** El pie representa las preferencias del equipo, independientemente de la cuenta abierta. */

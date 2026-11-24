@@ -1,5 +1,5 @@
 import { enfocar } from "../../../../ui/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { activeTrigger } from "../../../../ui/src/lib/mentions";
 import { opcionesDeModelos } from "../../../../ui/src/lib/models";
 import { lastSentAt, usedSince } from "../../../../ui/src/lib/chat/nextSteps";

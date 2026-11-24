@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { escribirPref, leerPref } from "../../../session/src/prefs.ts";
 import { adoptionTarget, adoptionTargetOf, adoptLocals, prefsAdoptionMemory, type AdoptionClaimed, type AdoptionFailure } from "./account-adoption.ts";
 import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
 import { engineOwnsAdoption } from "./engine-adoption.ts";

@@ -1,4 +1,4 @@
-import { createPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { createPref } from "../../../session/src/prefs.ts";
 
 /** Los workspaces que la persona quitó del riel, por id del motor. En la web, por persona. */
 const HIDDEN_KEY = "workspaces.hidden";

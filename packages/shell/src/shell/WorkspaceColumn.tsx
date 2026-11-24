@@ -1,6 +1,6 @@
 import SettingsIcon from "lucide-solid/icons/settings";
 import { children, createEffect, createSignal, For, type JSX, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { capabilities, type OtherAccount, type OtherWorkspace } from "../../../host/src/platform";
 import { deleteLayout, spacesWithLayout } from "../../../ui/src/lib/panels";
 import { workspaceViewKey } from "../../../session/src/workspace-view-scope";

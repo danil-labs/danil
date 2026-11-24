@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";
 
 /** Codes the sign-in return can bring in `?error=`; any other shows the generic one. */

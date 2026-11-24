@@ -1,9 +1,9 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { createPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { t } from "../../../../ui/src/lib/i18n";
+import { createPref } from "../../../../session/src/prefs";
 import { Select } from "../../../../ui/src/Select";
 import { NOTIFY_PREF, type NotifyChoice } from "../model/notify-pref";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
-import "../../../../../apps/desktop/src/locales/settingsPhrases";
+import "../../../../ui/src/locales/settingsPhrases";
 
 /** Cuándo avisa una tarea que se mira desde otro lado o con la ventana sin foco. */
 export function NotifyBehavior() {

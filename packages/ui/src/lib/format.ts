@@ -5,7 +5,7 @@
  * Vive en `lib/` y no junto a `limits` o `usage` a propósito: los dos formatean
  * números, y que uno importara del otro los ataría por donde menos se parecen.
  */
-import { manifiesto } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { manifiesto } from "./i18n.ts";
 
 // Construir uno cuesta decenas de microsegundos y una lista pinta cientos. La
 // clave lleva el locale, leído en cada llamada: cambiar de lengua da otro.

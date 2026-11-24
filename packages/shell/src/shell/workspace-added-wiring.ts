@@ -11,7 +11,7 @@ import type { Listed } from "../../../features/machines/src/model/fleet/index.ts
 import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js";
 import { edgeFetch, ORGANIZATION_CHANGED, platformFetch } from "../../../platform-client/src/client.ts";
 import { capabilities } from "../../../host/src/platform.ts";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { escribirPref, leerPref } from "../../../session/src/prefs.ts";
 import { listen } from "../../../host/src/serviceEvents.ts";
 import { platformTransport } from "../../../session/src/platform-session.ts";
 import { danilAvailable, danilMachines } from "../../../features/machines/src/index.ts";

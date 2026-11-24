@@ -8,7 +8,7 @@
  * Se aplica antes de montar, como el tema: leída después, la ventana abre al
  * 100 % y cambia de tamaño delante de quien mira.
  */
-import { createPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { createPref } from "../../../session/src/prefs.ts";
 
 /** Los saltos. ⌘0 vuelve al 1 exacto: sumar y restar deja resto. */
 const PASOS = [0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2] as const;

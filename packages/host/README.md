@@ -12,7 +12,6 @@ Exporta interfaces y funciones desde sus módulos en `src/`:
 
 ## Qué consume
 - `@tauri-apps/api` (en entorno de escritorio).
-- `@terminus/computers` y `apps/desktop/src/lib/prefs.ts` (en proceso de desacoplamiento).
 
 ## Qué contratos toca
 - Rutas `/v1` del borde: ninguna.

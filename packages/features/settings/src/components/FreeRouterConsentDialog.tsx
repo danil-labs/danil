@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { openExternal } from "../queries/engine-open";
 import { prosa } from "../../../../ui/src/lib/prose";
 import { cn } from "../../../../ui/src/lib/utils";
@@ -7,7 +7,7 @@ import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent } from "../../../../ui/src/Dialog";
 import { Spinner } from "../../../../ui/src/Spinner";
 import type { Consentimiento } from "./free-router-consent";
-import "../../../../../apps/desktop/src/locales/settingsPhrases";
+import "../../../../ui/src/locales/settingsPhrases";
 
 /**
  * El sí explícito, antes de activar.

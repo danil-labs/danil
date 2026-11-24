@@ -1,7 +1,7 @@
 import { workStateOf } from "../../../ui/src/lib/tasks/index.ts";
 import { createEffect, createMemo, mapArray, on, onCleanup } from "solid-js";
 import { recordarCarpetas } from "../../../ui/src/lib/folderKinds";
-import { createPref } from "../../../../apps/desktop/src/lib/prefs";
+import { createPref } from "../../../session/src/prefs";
 import { effectiveTaskGit, watchSessionGit } from "../../../features/projects/src/queries/taskGit";
 import {
   applySidebarView,

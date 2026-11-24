@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { errorCode } from "../../../../ui/src/lib/errorCode.ts";
 import { readVisualHtml, type VisualPart, type VisualWhole, VISUAL_FILE, VISUAL_TREE } from "../../../../ui/src/lib/chat/visual.ts";
 

@@ -1,7 +1,7 @@
 import { createSignal, type Signal } from "solid-js";
 import { sharedLazy } from "../../../../ui/src/lib/sharedLazy";
 import type { ObservedTurnActivity as TurnActivity } from "../model/activityObservation";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type MentionSource } from "../../../../ui/src/lib/mentions";
 import { type Clase, type Paso, pasoDe, pasoDePermiso } from "../../../../ui/src/lib/steps";
 import { avisoDeEncargado } from "../model/failures";

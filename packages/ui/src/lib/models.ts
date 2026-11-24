@@ -2,7 +2,7 @@ import { modelPresentation, providerMark } from "./tasks/model-presentation.ts";
 export { modelPresentation, providerMark };
 import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "./tasks/agents.ts";
 import { isDanilCreditsModel } from "./tasks/danil-services.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
 import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
 

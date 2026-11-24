@@ -7,8 +7,8 @@
  */
 // Con extensión: este módulo se carga también desde `node --test`, que no tiene
 // el resolvedor de Vite (`SYSTEM.md` § De dónde sale cada frase).
-import { t } from "../../../../apps/desktop/src/lib/i18n.ts";
-import type { Frase } from "../../../../apps/desktop/src/lib/prose";
+import { t } from "./i18n.ts";
+import type { Frase } from "./prose";
 
 /** Un renglón elegible. Espeja `surfaces::Superficie`. */
 export type Superficie = {
