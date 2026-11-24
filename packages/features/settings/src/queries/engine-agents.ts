@@ -9,6 +9,10 @@ export function listMachineAgents<res = unknown>(args?: InvokeArgs, options?: In
   return invoke<res>("list_machine_agents", args, options);
 }
 
+export function savePastedImage<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
+  return invoke<res>("guardar_imagen_pegada", args, options);
+}
+
 export function setAgentAvatar<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
   return invoke<res>("set_agent_avatar", args, options);
 }

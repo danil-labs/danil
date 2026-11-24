@@ -1,4 +1,5 @@
-import { For } from "solid-js";
+import Check from "lucide-solid/icons/check";
+import { For, Show } from "solid-js";
 import { cn } from "../../../../ui/src/lib/utils";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 import { Pressable } from "../../../../ui/src/Pressable";
@@ -27,8 +28,8 @@ export function StylePicker(props: {
               data-dark-style={props.theme === "dark" ? id : undefined}
               data-light-style={props.theme === "light" ? id : undefined}
               class={cn(
-                "grid w-[104px] gap-1.5 overflow-hidden rounded-md bg-bg p-1.5 text-left outline-offset-2 outline-primary focus-visible:outline-2 focus-visible:outline-solid",
-                props.value === id ? "border-2 border-primary" : "border border-border-strong",
+                "grid w-[104px] gap-1.5 overflow-hidden rounded-md border border-border bg-bg p-1.5 text-left outline-none transition-opacity focus:outline-none focus-visible:outline-none",
+                props.value === id ? "opacity-100" : "opacity-80 hover:opacity-100",
               )}
               onClick={() => props.onPick(id)}
             >
@@ -42,7 +43,12 @@ export function StylePicker(props: {
                   </span>
                 </span>
               </span>
-              <span class="truncate px-0.5 text-caption text-neutral-950">{label}</span>
+              <span class="flex items-center justify-between gap-1 px-0.5 text-caption text-neutral-950">
+                <span class={cn("truncate", props.value === id && "font-medium")}>{label}</span>
+                <Show when={props.value === id}>
+                  <Check size={12} class="shrink-0 text-neutral-950" aria-hidden="true" />
+                </Show>
+              </span>
             </Pressable>
           )}
         </For>

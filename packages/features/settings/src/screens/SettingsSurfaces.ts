@@ -7,7 +7,10 @@ import type { SurfacesState } from "../model/ai-providers-view";
 import { pestanasDe, entradasDe } from "./SettingsTabs";
 import type Settings from "./SettingsScreen";
 
-export function createSuperficiesDeAjustes(props: Parameters<typeof Settings>[0]) {
+export function createSuperficiesDeAjustes(
+  props: Parameters<typeof Settings>[0],
+  workspace: () => string | null = () => props.workspace ?? null,
+) {
   // Lo que se puede elegir para trabajar, que es lo que decide qué proveedores
   // tienen pantalla. Con su estado: aquí no apaga nada, lo enseña.
   const [superficies, setSuperficies] = createSignal<Superficie[]>([]);
@@ -94,7 +97,7 @@ export function createSuperficiesDeAjustes(props: Parameters<typeof Settings>[0]
       setEstadoSuperficies({ k: "loading" });
       cargarSuperficies();
     },
-  }, () => props.workspace ?? null, props.maquinas, props.piezas, props.sesiones, props.integraciones);
+  }, workspace, props.maquinas, props.piezas, props.sesiones, props.integraciones);
   const ENTRADAS = entradasDe(pestanas);
   return { ENTRADAS };
 }

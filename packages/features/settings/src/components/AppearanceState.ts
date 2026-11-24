@@ -1,34 +1,47 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { createResource, createSignal, onCleanup, onMount } from "solid-js";
-import { listMachineAgents, setAgentAvatar } from "../queries/engine-agents";
+import { listMachineAgents, savePastedImage, setAgentAvatar } from "../queries/engine-agents";
 import { previewFile } from "../queries/engine-workspaces";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { mimeOfAttachment } from "../../../../engine-client/src/attachments";
 import { elegirArchivoDeImagen } from "../../../../host/src/pick-image";
+import { capabilities } from "../../../../host/src/platform";
 import type { AgentProfile, CatalogoDeAgentes } from "../../../../ui/src/lib/model";
 import { type FondoDeChat } from "../../../../ui/src/lib/chat-background";
-import { elegirFondoDeChat, fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo, veloDePaneles, veloDePestanas } from "../../../../ui/src/lib/chat-background-store";
+import {
+  elegirFondoDeChat,
+  fondoDeChat,
+  fondoPropio,
+  imagenDelWorkspace,
+  veloDeFondo,
+  veloDePaneles,
+  veloDePestanas,
+  workspaceAbierto,
+} from "../../../../ui/src/lib/chat-background-store";
 import type { Preview } from "../../../../ui/src/lib/preview";
-import { apariencia, darkStyle, lightStyle, type Apariencia, type DarkStyle, type LightStyle } from "../../../../ui/src/lib/theme";
+import { blobToDataUrl } from "../../../../ui/src/lib/shrink-image";
+import { apariencia, darkStyle, lightStyle } from "../../../../ui/src/lib/theme";
 import { prosaDe } from "../../../../ui/src/Failure";
-import { createWorkspaces } from "../queries/workspaces-store";
 import { type Fila, filaDe, proyectoDe, IMAGES, motor } from "./AppearanceOptions";
 import type Appearance from "./AppearanceView";
+
+const AVATAR_MAX_BYTES = 4 * 1024 * 1024;
+const AVATAR_MIMES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 export function createApariencia(props: Parameters<typeof Appearance>[0]) {
   const { machineOf } = props.maquinas;
   const { AstroAvatar, displayName, notifyProfiles } = props.piezas;
-  const [tema, setTema] = createSignal<Apariencia>(apariencia());
-  const [estilo, setEstilo] = createSignal<DarkStyle>(darkStyle());
-  const [estiloClaro, setEstiloClaro] = createSignal<LightStyle>(lightStyle());
-  const [fondo, setFondo] = createSignal<FondoDeChat>(fondoDeChat());
-  const [propia, setPropia] = createSignal<string | null>(fondoPropio());
+  const tema = apariencia;
+  const estilo = darkStyle;
+  const estiloClaro = lightStyle;
+  const fondo = fondoDeChat;
+  const propia = fondoPropio;
   /** El workspace tiene imagen propia: la copia subida aquí o la que devolvió su motor. */
   const hayPropia = () => !!propia() || !!imagenDelWorkspace();
-  const [velo, setVelo] = createSignal(veloDeFondo());
+  const velo = veloDeFondo;
   const visibilidad = () => Math.round((1 - velo()) * 100);
-  const [veloPestanas, setVeloPestanas] = createSignal(veloDePestanas());
-  const [veloPaneles, setVeloPaneles] = createSignal(veloDePaneles());
-  const espacios = createWorkspaces();
+  const veloPestanas = veloDePestanas;
+  const veloPaneles = veloDePaneles;
   const [filas, setFilas] = createSignal<Fila[]>([]);
   const [cargado, setCargado] = createSignal(false);
   const [fallo, setFallo] = createSignal<string | null>(null);
@@ -51,33 +64,47 @@ export function createApariencia(props: Parameters<typeof Appearance>[0]) {
   }
 
   function filasDe(catalogo: CatalogoDeAgentes): Fila[] {
-    const propias = catalogo.own.map((a) =>
+    const propias = (catalogo.own ?? []).map((a) =>
       filaDe(
         a.agent.name,
         a.profile,
-        proyectoDe(props.proyecto, a.agent.own_scope, a.folders),
+        proyectoDe(props.proyecto, a.agent.own_scope, a.folders ?? []),
         `own:${a.agent.name}`,
       ),
     );
-    const delRepositorio = catalogo.repository.map((r) =>
-      filaDe(r.agent.name, r.profile, r.folders[0] ?? null, `repo:${r.agent.origin}`),
+    const delRepositorio = (catalogo.repository ?? []).map((r) =>
+      filaDe(r.agent.name, r.profile, (r.folders ?? [])[0] ?? null, `repo:${r.agent.origin}`),
     );
     return [...propias, ...delRepositorio].sort((a, b) =>
       a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
     );
   }
 
+  function cargarFondo(forzar = false) {
+    const workspace = props.workspace ?? null;
+    if (!workspace) return;
+    if (!forzar && workspaceAbierto() === workspace) return;
+    void motor().then((m) => m.cargarFondoDelWorkspace(workspace));
+  }
+
   onMount(() => {
     void recargar();
+    cargarFondo();
     const deFuera = () => void recargar();
+    const alDespertar = () => {
+      void recargar();
+      cargarFondo(true);
+    };
     window.addEventListener("harness:profiles", deFuera);
     window.addEventListener("harness:encargados", deFuera);
     window.addEventListener("harness:workspace", deFuera);
+    window.addEventListener("harness:machine-slices", alDespertar);
     onCleanup(() => {
       lectura++;
       window.removeEventListener("harness:profiles", deFuera);
       window.removeEventListener("harness:encargados", deFuera);
       window.removeEventListener("harness:workspace", deFuera);
+      window.removeEventListener("harness:machine-slices", alDespertar);
     });
   });
 
@@ -89,11 +116,14 @@ export function createApariencia(props: Parameters<typeof Appearance>[0]) {
     setOcupada(fila.id);
     setFallo(null);
     try {
-      await setAgentAvatar<AgentProfile>({
-        project: fila.project,
-        name: fila.name,
-        source,
-      });
+      await setAgentAvatar<AgentProfile>(
+        {
+          project: fila.project,
+          name: fila.name,
+          source,
+        },
+        machineOf(fila.project),
+      );
       notifyProfiles();
     } catch (error) {
       setFallo(prosaDe(error));
@@ -103,13 +133,52 @@ export function createApariencia(props: Parameters<typeof Appearance>[0]) {
   }
 
   async function elegirImagen(fila: Fila) {
-    const chosen = await open({
-      multiple: false,
-      directory: false,
-      filters: [{ name: t("settings.appearance.avatar.images"), extensions: IMAGES }],
-    });
-    if (typeof chosen !== "string") return;
-    await ponerAvatar(fila, chosen);
+    if (!fila.project) {
+      setFallo(t("settings.appearance.avatar.no_folder"));
+      return;
+    }
+    if (capabilities().nativeWindow) {
+      const chosen = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: t("settings.appearance.avatar.images"), extensions: IMAGES }],
+      });
+      if (typeof chosen !== "string") return;
+      await ponerAvatar(fila, chosen);
+      return;
+    }
+    const file = await elegirArchivoDeImagen(IMAGES);
+    if (!file) return;
+    const mime = mimeOfAttachment(file.type, file.name);
+    if (!mime || !AVATAR_MIMES.has(mime)) {
+      setFallo(t("settings.appearance.avatar.bad_type"));
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setFallo(t("settings.appearance.avatar.too_big"));
+      return;
+    }
+    setOcupada(fila.id);
+    setFallo(null);
+    try {
+      const dataUrl = await blobToDataUrl(file, mime);
+      const datos = dataUrl.slice(dataUrl.indexOf(",") + 1);
+      const destino = machineOf(fila.project);
+      const source = await savePastedImage<string>({ mime, datos }, destino);
+      await setAgentAvatar<AgentProfile>(
+        {
+          project: fila.project,
+          name: fila.name,
+          source,
+        },
+        destino,
+      );
+      notifyProfiles();
+    } catch (error) {
+      setFallo(prosaDe(error));
+    } finally {
+      setOcupada(null);
+    }
   }
 
   /* La miniatura lee el archivo por el servicio: la ventana no pinta
@@ -128,8 +197,7 @@ export function createApariencia(props: Parameters<typeof Appearance>[0]) {
     if (!file) return;
     setBackgroundFailure(null);
     try {
-      setFondo(await (await motor()).elegirFondoPropio(file));
-      setPropia(fondoPropio());
+      await (await motor()).elegirFondoPropio(file);
     } catch (error) {
       // `ShrinkError` de `shrink-image.ts`, que llega en el módulo diferido.
       const code = error instanceof Error && error.name === "ShrinkError" ? (error as Error & { code?: string }).code : null;
@@ -148,13 +216,12 @@ export function createApariencia(props: Parameters<typeof Appearance>[0]) {
       void elegirImagenPropia();
       return;
     }
-    setFondo(elegirFondoDeChat(id));
+    elegirFondoDeChat(id);
     void motor().then((m) => m.guardarFondo());
   }
   return {
-    espacios, tema, setTema, estilo, setEstilo, estiloClaro, setEstiloClaro, hayPropia, elegirImagenPropia,
-    setFondo, setPropia, fondo, pulsarFondo, vistaPropia, velo, visibilidad, setVelo, veloPestanas,
-    setVeloPestanas, veloPaneles, setVeloPaneles, backgroundFailure, cargado, filas, AstroAvatar,
+    tema, estilo, estiloClaro, hayPropia, elegirImagenPropia, fondo, pulsarFondo, vistaPropia, velo,
+    visibilidad, veloPestanas, veloPaneles, backgroundFailure, cargado, filas, AstroAvatar,
     displayName, ocupada, ponerAvatar, elegirImagen, fallo,
   };
 }

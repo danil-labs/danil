@@ -77,8 +77,16 @@ let lectura = 0;
  */
 export async function cargarFondoDelWorkspace(workspace: string | null): Promise<void> {
   const esta = ++lectura;
+  if (veloPendiente) {
+    clearTimeout(veloPendiente);
+    veloPendiente = null;
+  }
   // Antes de leer: aunque la lectura falle, lo que se importe después es de este workspace.
   store.setWorkspaceAbierto(workspace);
+  if (workspace === null) {
+    store.setImagenDelWorkspace(null);
+    return;
+  }
   let respuesta: unknown = null;
   let sinMotor = false;
   try {
@@ -110,8 +118,8 @@ export async function cargarFondoDelWorkspace(workspace: string | null): Promise
   store.setImagenDelWorkspace(vista.image);
   store.elegirFondoDeChat(vista.image ? "propia" : fondoDe(vista.preset));
   store.elegirVeloDeFondo(vista.veil.chat ?? VELO_DE_FONDO);
-  if (vista.veil.tabs !== null) store.elegirVeloDePestanas(vista.veil.tabs);
-  if (vista.veil.panels !== null) store.elegirVeloDePaneles(vista.veil.panels);
+  store.elegirVeloDePestanas(vista.veil.tabs ?? VELO_DE_PESTANAS);
+  store.elegirVeloDePaneles(vista.veil.panels ?? VELO_DE_PANELES);
 }
 
 /** Lo elegido en Estilo, al workspace abierto. */
@@ -165,8 +173,10 @@ async function subirFondo(imagen: Blob): Promise<FondoDeChat> {
 /** Los deslizadores cambian a cada paso: al motor va el último, un momento después. */
 export function guardarVelos() {
   if (veloPendiente) clearTimeout(veloPendiente);
+  const workspace = store.workspaceAbierto();
   veloPendiente = setTimeout(() => {
     veloPendiente = null;
+    if (store.workspaceAbierto() !== workspace) return;
     void guardarFondo();
   }, 400);
 }
