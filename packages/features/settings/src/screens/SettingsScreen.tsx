@@ -1,6 +1,6 @@
 import { createMemo, createResource, createSignal, For, type JSX, onCleanup, onMount, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { lockedBy } from "../../../../../apps/desktop/src/lib/governance";
+import { lockedBy } from "../../../../session/src/governance";
 import { t } from "../../../../ui/src/lib/i18n";
 import { displayWorkspaceContext } from "../../../../session/src/workspace-context";
 import { capabilities } from "../../../../host/src/platform";
