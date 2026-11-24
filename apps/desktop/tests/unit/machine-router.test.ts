@@ -1014,7 +1014,7 @@ test("a slow machine with a new open tab delays the list at most FRESH_WAIT and 
 
 test("remote GitHub account status distinguishes absent command from real authorization failure", async () => {
   // Un `Failure` de allá sin código propio llega como `command_failed`: igual que un Worker que no
-  // contesta. Se calla y queda la conexión local (decisión de Alberto, 2026-11-18).
+  // contesta. Se calla y queda la conexión local.
   for (const [failure, absent, code = "command_failed"] of [
     [{ what: { clave: "shell.service.command" }, detail: "github_account_status" }, true],
     [{ what: { clave: "providers.github.error.expired" }, detail: "private-sentinel" }, true],

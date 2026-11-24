@@ -1,6 +1,6 @@
 //! Listener loopback nativo de un solo uso para callbacks OAuth de motores remotos.
 //!
-//! Reglas de seguridad (decisión `2026-11-18-login-remoto-por-loopback.md` § 5):
+//! Reglas de seguridad:
 //! 1. Solo enlaza `127.0.0.1:<port>`; si el puerto está ocupado devuelve `port_unavailable` sin probar otro.
 //! 2. Valida método `GET`, ruta exacta y parámetro `state` exacto en tiempo constante; lectura acotada a 16 KiB.
 //! 3. Cualquier otra petición recibe `404 Not Found` y nunca resuelve ni reenvía nada.

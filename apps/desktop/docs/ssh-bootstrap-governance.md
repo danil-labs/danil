@@ -13,8 +13,7 @@ token de miembro que el motor valida contra el workspace.
 ## Problema
 
 Hoy conectar otra máquina es: copiar un comando, correrlo allá, aprobar un
-código en la web y esperar a que el relay la vea
-(`packages/computers/src/connect.ts`). Funciona y es gobernable, pero pide
+código en la web y esperar a que el relay la vea. Funciona y es gobernable, pero pide
 demasiado para el caso común: alguien con un VPS o una segunda laptop.
 
 Dray resuelve lo mismo con una línea: pegas `ssh root@1.2.3.4`, la app instala,

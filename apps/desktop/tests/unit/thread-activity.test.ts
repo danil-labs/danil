@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { activityElapsed, createActivityProjection } from "../../../../packages/features/chat/src/index.ts";
+import { activityElapsed, createActivityProjection } from "../../../../packages/features/chat/src/model/activity.ts";
 import type { Msg } from "../../../../packages/features/chat/src/index.ts";
 const message = (text: string, extra: Partial<Msg> = {}): Msg => ({ role: "agent", text, ...extra });
 
@@ -107,7 +107,7 @@ test("draft adoption retains the visible anchor key when started already arrived
 });
 test("thread owner publishes begin and finish without waiting for another message", async () => {
   const { createRoot, createEffect } = await import("solid-js");
-  const { createThreadsStore } = await import("../../../../packages/features/chat/src/index.ts");
+  const { createThreadsStore } = await import("../../../../packages/features/chat/src/queries/threads-store.ts");
   const states: boolean[] = [];
   const f = createRoot(dispose => {
     const store = createThreadsStore({ scope: { workspace: () => "A", generation: () => 1, paged: () => false },
@@ -133,7 +133,7 @@ test("closed run does not adopt unknown older history prepended before its saved
 });
 test("a done from workspace A closes A while B stays active and A remains closed on return", async () => {
   const { createRoot, createSignal } = await import("solid-js");
-  const { createThreadsStore } = await import("../../../../packages/features/chat/src/index.ts");
+  const { createThreadsStore } = await import("../../../../packages/features/chat/src/queries/threads-store.ts");
   const f = createRoot(dispose => {
     const [workspace, setWorkspace] = createSignal<string | null>("A");
     const store = createThreadsStore({ scope: { workspace, generation: () => 1, paged: () => false }, activeSession: () => "s", project: () => "p",
@@ -151,7 +151,7 @@ test("a done from workspace A closes A while B stays active and A remains closed
 });
 test("dropping a thread and resetting service remove its presentation activity", async () => {
   const { createRoot } = await import("solid-js");
-  const { createThreadsStore } = await import("../../../../packages/features/chat/src/index.ts");
+  const { createThreadsStore } = await import("../../../../packages/features/chat/src/queries/threads-store.ts");
   const f = createRoot(dispose => {
     const store = createThreadsStore({ scope: { workspace: () => "A", generation: () => 1, paged: () => false }, activeSession: () => "s", project: () => "p",
       invoke: async <T>() => ({ turns: [] }) as T, route: () => undefined, liveThreads: () => new Set() });

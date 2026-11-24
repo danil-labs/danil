@@ -3,7 +3,7 @@ import { EventRecovery } from "../../../../packages/computers/src/event-recovery
 import test from "node:test";
 import { createEffect, createRoot } from "solid-js";
 import { createBatchDelivery } from "../../../../packages/features/service-stream/src/index.ts";
-import { createThreadsStore } from "../../../../packages/features/chat/src/index.ts";
+import { createThreadsStore } from "../../../../packages/features/chat/src/queries/threads-store.ts";
 import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
 import { Fleet } from "@terminus/fleet";
 import type { ChatEvent, Session } from "../../../../packages/features/chat/src/index.ts";

@@ -74,7 +74,7 @@ To sign off commits you already made: `git rebase --signoff main`.
   you edit. Biome (`pnpm lint`) and `cargo fmt`/`clippy` are part of the chain.
 - User-facing text goes through the catalogs in `apps/desktop/src/locales/` (`t()`); add the
   key in both `es` and `en`. See [docs/localization.md](apps/desktop/docs/localization.md).
-- Colors and controls come from the theme tokens and `apps/desktop/src/ui/`; see
+- Colors and controls come from the theme tokens and `packages/ui/src/`; see
   [docs/visual-system.md](apps/desktop/docs/visual-system.md).
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/)
   (`feat:`, `fix:`, `docs:`, `chore:`…).

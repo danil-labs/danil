@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createRoot, createSignal } from "solid-js";
 import type { ChatEvent, Msg, Session } from "../../../../packages/features/chat/src/index.ts";
-import { createThreadsStore } from "../../../../packages/features/chat/src/index.ts";
+import { createThreadsStore } from "../../../../packages/features/chat/src/queries/threads-store.ts";
 
 const msg = (text: string, role: Msg["role"] = "agent"): Msg => ({ role, text });
 const session = (turns: Session["turns"] = [], extra: Partial<Session> = {}): Session => ({ turns, provider: "claude", ...extra }) as Session;

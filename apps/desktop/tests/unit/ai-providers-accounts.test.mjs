@@ -1,6 +1,5 @@
 /**
- * `Accounts` para Configuración › Proveedores de IA (T2,
- * `docs/testing/2026-11-19-proveedores-ia.md` § 2): cada instancia avisa
+ * `Accounts` para Configuración › Proveedores de IA (T2): cada instancia avisa
  * cuántas cuentas pinta, si hay algo vivo y por qué no deja agregar; el selector
  * usa el mismo `agregar()`; ocultar, plegar o reordenar no desmonta nada, y la
  * cabecera dice el conteo abierta y plegada. Monta los grupos sobre `dist/`.

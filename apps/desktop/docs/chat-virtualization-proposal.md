@@ -146,7 +146,7 @@ Una fila enfocada o con selección activa no debe desmontarse durante el gesto.
 
 ### 2. Geometría con un solo controlador
 
-Introducir `src/features/chat/VirtualThread.tsx` como adaptador de vista,
+Introducir `packages/features/chat/src/components/VirtualThread.tsx` como adaptador de vista,
 manteniendo los renderizadores actuales. Virtualizar bloques, no turnos enteros:
 un turno puede contener una secuencia extensa de mensajes y herramientas.
 

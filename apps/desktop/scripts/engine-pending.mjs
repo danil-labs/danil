@@ -8,4 +8,7 @@
  */
 export const COMANDOS_PENDIENTES = {};
 
-export const EVENTOS_PENDIENTES = {};
+export const EVENTOS_PENDIENTES = {
+  /** El motor avisa que cambió el contexto del workspace; la ventana refresca solo el activo. */
+  "sources-updated": "main-context-silent-sync",
+};

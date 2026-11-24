@@ -13,7 +13,7 @@ export const LIGHT_STATE_MACHINES_FEATURE = "light_state_machines_v1";
  */
 export type EngineWorkspace = { id: string; name: string | null; local: boolean; organization: boolean; machines: string[]; logo?: string | null; logo_version?: string | null };
 
-import type { RailWorkspace } from "../../../../ui/src/lib/rail-workspace"; export type { RailWorkspace };
+import type { RailWorkspace } from "../../../../ui/src/lib/rail-workspace.ts"; export type { RailWorkspace };
 
 /**
  * El riel de la persona desde un solo índice: los de aquí y los que sirve otra

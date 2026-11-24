@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createEffect, createRoot } from "solid-js";
 import { createResource } from "../../src/lib/resource.ts";
-import { createProjectsStore as projectsStore, type ProjectsScope } from "../../../../packages/features/projects/src/index.ts";
+import { createProjectsStore as projectsStore, type ProjectsScope } from "../../../../packages/features/projects/src/queries/store.ts";
 import type { Project } from "../../src/lib/model.ts";
 
 function createProjectsStore(deps: Parameters<typeof projectsStore>[0]) {

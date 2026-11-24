@@ -58,9 +58,9 @@ is not a pass. What each guard checks is in [docs/guards.md](docs/guards.md);
   Visible text is a label, a state, an error or a consequence, never an
   explanation ([docs/copy.md](docs/copy.md)). Command names in `invoke()` and
   event names in `listen()` stay literal so the guards can read them.
-- Colors are theme tokens from `@theme` in `src/styles/global.css` and text sizes
+- Colors are theme tokens from `@theme` in `packages/ui/src/styles/global.css` and text sizes
   come from the shared scale (`text-caption`, `text-ui`…); shared controls live
-  in `src/ui/` ([docs/visual-system.md](docs/visual-system.md)).
+  in `packages/ui/src/` ([docs/visual-system.md](docs/visual-system.md)).
 - Commits are signed off (DCO, `git commit -s`) and follow Conventional
   Commits. See [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
