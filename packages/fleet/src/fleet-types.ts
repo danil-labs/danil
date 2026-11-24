@@ -9,7 +9,7 @@ export type Row = Record<string, unknown>;
 /** `os` solo si se sabe: la tarjeta de la tarea lo lee y, si falta, no inventa un sistema. */
 /** `features`: lo que su motor anuncia (`status.service_features`); cada función se enciende por máquina. */
 /** `version`: la `host_version` de su último `hello`, según el plano de control; se conserva apagada. */
-/** `child`: una máquina hija de esta computadora (Linux en esta PC): no está en el registro de la cuenta y es de todos sus workspaces. */
+/** `child`: una máquina hija (Linux en WSL): no está en el registro de la cuenta; si trae `host`, viaja por el relay de esa máquina anfitriona. */
 /** `organization`: es el endpoint de la persona en el servidor de una organización y atiende esos workspaces (`organization` de su fila). */
 /** `kind` y `organizationId`: lo que dice `GET /v1/machines` (`kind=organization` con su `organization_id`, o `personal`); opcionales. */
 export type MachineInfo = {
@@ -22,6 +22,8 @@ export type MachineInfo = {
   features?: readonly string[];
   version?: string;
   child?: boolean;
+  /** Máquina anfitriona por cuyo relay viaja esta máquina hija (en la web, la PC Windows personal). */
+  host?: string;
   organization?: { id: string; workspaces: readonly { id: string; name: string }[] } | null;
   kind?: string | null;
   /** Máquina hospedada de su organización (no la Mac o PC de una persona): sirve los workspaces de la organización. */

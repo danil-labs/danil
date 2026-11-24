@@ -32,6 +32,11 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
   };
   const selectedWorkspaces = new Map<string, string>();
   const attention = createContextAttention(config.deliver);
+  const isLocalChild = (machine: string, context?: string) => {
+    if (context || config.native === null) return false;
+    const row = config.fleet.info(machine);
+    return row?.child === true && !row.host && !row.context;
+  };
   const sourceMachine = (machine: string, context?: string) => {
     if (!context) return true;
     const info = config.contextInfo?.(context), row = config.fleet.info(machine, context);
@@ -53,7 +58,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     if (!router) {
       const free = info.plan === "free";
       router = createRouterCore({ ...config,
-        fleet: scopedFleet(config.fleet, { context, org: info.org, localOnly: free }),
+        fleet: scopedFleet(config.fleet, { context, org: info.org, localOnly: free, includeLocalChildren: config.native !== null }),
         localWorkspace: !free && config.native ? workspace => localWorkspaces.get(workspace) === info.org : undefined,
         readWorkspaceSpaces: config.readContextSpaces && (workspace => config.readContextSpaces!(context, info.org, workspace)),
         deliverRemote: config.native !== null,
@@ -106,6 +111,10 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
   };
   return { ...legacy, handle,
     events(machine: string, list: Parameters<Core["events"]>[1], metadata?: EventMetadata, context?: string) {
+      if (isLocalChild(machine, context) && activeContext && config.contextInfo?.(activeContext)) {
+        core(activeContext).events(machine, list, metadata);
+        return;
+      }
       if (sourceMachine(machine, context)) core(context).events(machine, list, metadata);
     },
     attentionSuspended(machine: string, context?: string) { if (sourceMachine(machine, context)) attention.suspend(context); },
@@ -114,8 +123,22 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
       attention.resume(context);
       core(context).events(machine, [{ name: "attention", payload: config.fleet.encode(machine, value, "list_workspace_attention", context) }]);
     },
-    deferredChanged(machine: string, context?: string) { if (!context || config.contextInfo?.(context)) core(context).deferredChanged(machine); },
-    forget(machine: string, context?: string) { (context ? contexts.get(context) : legacy)?.forget(machine); },
+    deferredChanged(machine: string, context?: string) {
+      if (isLocalChild(machine, context)) {
+        legacy.deferredChanged(machine);
+        for (const router of contexts.values()) router.deferredChanged(machine);
+        return;
+      }
+      if (!context || config.contextInfo?.(context)) core(context).deferredChanged(machine);
+    },
+    forget(machine: string, context?: string) {
+      if (isLocalChild(machine, context)) {
+        legacy.forget(machine);
+        for (const router of contexts.values()) router.forget(machine);
+        return;
+      }
+      (context ? contexts.get(context) : legacy)?.forget(machine);
+    },
     pruneContexts(valid: Iterable<string>) {
       const keep = new Set(valid);
       attention.prune(keep);

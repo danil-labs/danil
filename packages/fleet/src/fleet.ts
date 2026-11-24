@@ -52,8 +52,19 @@ export class Fleet {
     this.deadlines = { ...DEADLINES, ...config.deadlines };
   }
 
+  private isLocalChildInfo(info: MachineInfo | undefined): boolean {
+    return this.self !== null && !!info && info.child === true && !info.host && !info.context;
+  }
+
+  private isLocalChild(machine: string): boolean {
+    return this.isLocalChildInfo(this.members.get(memberKey(machine, undefined))?.info);
+  }
+
   private member(machine: string, context?: string): Member | undefined {
-    return this.members.get(memberKey(machine, context));
+    const exact = this.members.get(memberKey(machine, context));
+    if (exact || !context || this.self === null) return exact;
+    const local = this.members.get(memberKey(machine, undefined));
+    return local && this.isLocalChildInfo(local.info) ? local : undefined;
   }
 
   private forgetInflight(machine: string, context?: string) {
@@ -68,7 +79,7 @@ export class Fleet {
   }
 
   private scoped(context?: string): MachineInfo[] {
-    return this.machines().filter((info) => sameContext(info.context, context));
+    return this.machines().filter((info) => sameContext(info.context, context) || this.isLocalChildInfo(info));
   }
 
   private shared(context?: string): Set<string> {
@@ -97,13 +108,14 @@ export class Fleet {
         this.config.onChange?.(member.info.id, member.info.context);
       }
     for (const info of next.values()) {
-      const member = this.member(info.id, info.context);
+      const member = this.members.get(memberKey(info.id, info.context));
       if (!member) {
         this.add(info);
         continue;
       }
       const before = member.info;
       const same = before.name === info.name && before.wakes === info.wakes && before.os === info.os && !!before.outdated === !!info.outdated && sameLinks(before.linked ?? null, info.linked ?? null)
+        && !!before.child === !!info.child && (before.host ?? null) === (info.host ?? null)
         && (before.features ?? []).join() === (info.features ?? []).join()
         && JSON.stringify(before.organization ?? null) === JSON.stringify(info.organization ?? null)
         && (before.kind ?? null) === (info.kind ?? null) && (before.organizationId ?? null) === (info.organizationId ?? null);
@@ -165,8 +177,8 @@ export class Fleet {
 
   /** Las otras máquinas, administradas (las VM y los servidores de organización) primero y luego por nombre. */
   machines(context?: string): MachineInfo[] {
-    const managed = (m: MachineInfo) => Number(m.wakes || alwaysOn(m));
-    return [...this.members.values()].map((m) => this.described(m)).filter((m) => context === undefined || sameContext(m.context, context)).sort((a, b) => managed(b) - managed(a) || a.name.localeCompare(b.name));
+    const managed = (m: MachineInfo) => Number(!m.child && (m.wakes || alwaysOn(m)));
+    return [...this.members.values()].map((m) => this.described(m)).filter((m) => context === undefined || sameContext(m.context, context) || this.isLocalChildInfo(m)).sort((a, b) => managed(b) - managed(a) || a.name.localeCompare(b.name));
   }
 
   has(machine: string | null | undefined, context?: string): boolean {
@@ -340,7 +352,9 @@ export class Fleet {
 
   leadOf(workspace: string | null, context?: string): string | null {
     const members = this.membersOf(workspace, context).filter((id) => this.power(id, context) !== "outdated");
-    return members.find((id) => this.power(id, context) === "on") ?? members[0] ?? null;
+    const primary = members.filter((id) => !this.info(id, context)?.child);
+    const pick = (list: string[]) => list.find((id) => this.power(id, context) === "on") ?? list[0] ?? null;
+    return pick(primary) ?? pick(members);
   }
 
   /** Solo un conjunto de sesiones asentado puede revocar contextos; el inventario no basta. */
@@ -439,7 +453,7 @@ export class Fleet {
 
   /** Las rebanadas juntas; `undefined` si ninguna trae valor (`merge.ts`). */
   merge(command: string, slices: readonly Slice[], workspace: string | null = null, context?: string): unknown {
-    const scoped = slices.filter((s) => s.machine === this.self || sameContext(s.context, context));
+    const scoped = slices.filter((s) => s.machine === this.self || sameContext(s.context, context) || this.isLocalChild(s.machine));
     for (const s of scoped) if (s.has) {
       this.learn(command, s.value, context);
       if (command === "list_workspaces" || command === "workspaces_startup") {
@@ -653,8 +667,8 @@ export class Fleet {
     // Archivar, borrar, renombrar, fijar o mover de space: el relay la guarda sin encenderla.
     if (halted || (off && kind !== "read" && !this.defers(command, args, context))) {
       if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);
-      // El relay enciende la VM solo con un intent; otra acción, o el canal detenido, la enciende antes el plano de control.
-      if (kind === "action" || halted) await this.wakeMember(member);
+      // El relay enciende la VM solo con un intent; una hija (WSL), otra acción o el canal detenido se encienden antes aquí.
+      if (kind === "action" || halted || member.info.child) await this.wakeMember(member);
     }
     const workspace = callWorkspace(envelope.workspace, args);
     const timeout = envelope.command === "list_storage" ? this.deadlines.action : this.deadlines[kind];

@@ -284,7 +284,12 @@ async fn guest_call(
                 .and_then(|a| a["id"].as_str().map(String::from))
                 .or(workspace.clone())
                 .unwrap_or_default();
-            guests::child::ensure_workspace(&entry, &id, &id)?;
+            let name = args
+                .as_ref()
+                .and_then(|a| a["name"].as_str())
+                .filter(|n| !n.trim().is_empty())
+                .unwrap_or(&id);
+            guests::child::ensure_workspace(&entry, &id, name)?;
             return Ok(serde_json::Value::Null);
         }
         guests::child::invoke(

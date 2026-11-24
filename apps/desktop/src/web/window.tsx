@@ -4,7 +4,7 @@ import { readContextSpaces } from "../../../../packages/platform-client/src/work
 import type { MachinesQuery } from "../../../../packages/features/machines/src/queries/machines-query.ts";
 import { Fleet, memberKey, relayLink, unwrap } from "@terminus/fleet";
 import { createSignal, lazy, Suspense } from "solid-js";
-import { createContextRelayPool, machinesListed, mergeByMachineId } from "../../../../packages/features/machines/src";
+import { createContextRelayPool, createRemoteGuestManager, isRemoteGuestMachine, machinesListed, mergeByMachineId } from "../../../../packages/features/machines/src";
 import { sessionRailState } from "../../../../packages/shell/src/shell";
 import { createRouter, type SliceChange } from "../../../../packages/features/machines/src/queries/router";
 import type { AccountProfileSource } from "../../../../packages/features/settings/src/model/account-profile";
@@ -43,10 +43,13 @@ export function mountWindow(base: Base, mounted: Mounted) {
   let listed = new Map<string, Machine>();
   const powers = new Map<string, string>();
   const unavailable = () => ({ what: t("web.machines.unavailable"), detail: "machines_unavailable" });
+  const notifyMachines = () => window.dispatchEvent(new CustomEvent("harness:machines"));
   const pool = createContextRelayPool();
+  const remoteGuests = createRemoteGuestManager({ onChange: () => { if (!stopped) { fleet.setMachines(remoteGuests.syncHosts()); bump(n => n + 1); notifyMachines(); } } });
   const scope = windowContext({ factory: base.contextMachines, sessions: base.sessions, groups: () => base.active.groups(), fallback: () => base.active.current()?.context ?? null, active: () => active.activeContext(), fleet: () => fleet, revision, onContextsSettled: contexts => { active.pruneContexts(contexts); bump(n => n + 1); }, onContextState: (context, expired) => sessionRailState()?.sessions.noteContext(context, expired) });
   const fleet: Fleet = new Fleet({ self: null, storage: mounted.storage,
     connect: info => {
+      if (isRemoteGuestMachine(info.id)) return remoteGuests.connect(info);
       const create = () => {
         const relay = new RelaySession({ endpoint: base.relayOrigin, computerId: info.id,
           getAdmission: async () => {
@@ -63,9 +66,11 @@ export function mountWindow(base: Base, mounted: Mounted) {
         const link = relayLink(relay, () => relay.state() === "unknown" ? machineToComputer(listed.get(memberKey(info.id, info.context))!).state : relay.state());
         return { ...link, call: webMachineCall(link, fleet, info.id, info.context) };
       };
-      return info.context ? pool.link(info.id, create, { onSuspend: () => active.attentionSuspended(info.id, info.context), onResume: (value) => active.attentionResumed(info.id, info.context, value) }) : create();
+      const hostLink = info.context ? pool.link(info.id, create, { onSuspend: () => active.attentionSuspended(info.id, info.context), onResume: (value) => active.attentionResumed(info.id, info.context, value) }) : create();
+      return remoteGuests.attachHost(info, hostLink);
     },
     wake: async (id, context) => {
+      if (isRemoteGuestMachine(id)) return remoteGuests.wake(id, context);
       if (!base.permits("machines.start")) return "not_startable";
       const answer = await scope.client(context).wake(id);
       if (answer.kind === "unauthorized") void refresh();
@@ -73,13 +78,13 @@ export function mountWindow(base: Base, mounted: Mounted) {
       return answer.kind === "error" && answer.code === "not_remotely_startable" ? "not_startable" : false;
     },
     onChange: (id, context) => {
-      window.dispatchEvent(new CustomEvent("harness:machines"));
+      notifyMachines();
       const power = fleet.power(id, context);
       const key = memberKey(id, context);
       const changed = powers.get(key) !== power;
       if (power === "on" && powers.get(key) !== "on" && active.unlisted()) window.dispatchEvent(new CustomEvent("harness:workspace"));
       powers.set(key, power);
-      if (changed) void refresh();
+      if (changed && !isRemoteGuestMachine(id)) void refresh();
       bump(n => n + 1);
       void import("../../../../packages/features/machines/src/queries/store").then(({ machineNamesChanged, refetchMachines }) => {
         if (stopped) return;
@@ -113,22 +118,22 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const any = () => (revision(), fleet.machines().length > 0);
   async function update() {
     if (stopped) return false;
-    if (!base.permits("machines")) { setMissing(true); fleet.setMachines([]); return false; }
+    if (!base.permits("machines")) { setMissing(true); fleet.setMachines(remoteGuests.syncHosts([])); return false; }
     const inventory = await scope.inventory();
-    if (!inventory) { setMissing(true); fleet.setMachines([]); bump(n => n + 1); return false; }
+    if (!inventory) { setMissing(true); fleet.setMachines(remoteGuests.syncHosts([])); bump(n => n + 1); return false; }
     const { answer, rows } = inventory;
     if (stopped) return false;
     if (answer.kind !== "ok") {
       bump(n => n + 1);
       if (answer.kind === "error" && (answer.status === null || answer.status === 408 || answer.status === 429 || answer.status >= 500)) return false;
-      setMissing(true); fleet.setMachines([]); return false;
+      setMissing(true); fleet.setMachines(remoteGuests.syncHosts([])); return false;
     }
     listed = new Map(rows.map(({ machine, group }) => [memberKey(machine.machine_id, group.context), machine]));
     setMissing(false);
     bump(n => n + 1);
-    fleet.setMachines(rows.map(({ machine, group }) => ({ id: machine.machine_id, name: scope.machineName(machine, group, rows),
+    fleet.setMachines(remoteGuests.syncHosts(rows.map(({ machine, group }) => ({ id: machine.machine_id, name: scope.machineName(machine, group, rows),
       wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: scope.fleetKind(machine, group), hosted: scope.hosted(machine), context: group.context, organizationId: machine.organization_id ?? null,
-    })));
+    }))));
     for (const { machine, group } of rows) fleet.observe(machine.machine_id, machineToComputer(machine).state, group.context);
     machinesListed(fleet);
     fleet.subscribeEvents();
@@ -154,7 +159,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       revision();
       const context = scope.current()?.context;
       const task = unwrap(id, fleet.remotes(context));
-      return !!task && fleet.canContinue(task.machine, context);
+      return !!task && remoteGuests.canContinue(fleet, task.machine, context);
     },
     taskMachine: id => unwrap(id, fleet.remotes(scope.current()?.context))?.machine ?? null,
     windowMachine: () => { const id = active.createsOn(null)?.machine; return id ? { id, name: fleet.name(id, scope.current()?.context), local: false } : undefined; },
@@ -199,7 +204,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     const context = scope.current()?.context;
     for (const m of fleet.machines(context)) {
       const key = memberKey(m.id, m.context);
-      if (!m.wakes || fleet.power(m.id, m.context) === "on" || waking.has(key)) continue;
+      if (!m.wakes || m.child || fleet.power(m.id, m.context) === "on" || waking.has(key)) continue;
       waking.set(key, fleet.wake(m.id, m.context)
         .then(() => { for (const name of ["harness:machines", "harness:service-resync"]) window.dispatchEvent(new CustomEvent(name)); })
         .catch(() => {})
@@ -219,6 +224,6 @@ export function mountWindow(base: Base, mounted: Mounted) {
       </>
     ), layer);
   });
-  return { refresh, close: () => { stopped = true; window.removeEventListener(MACHINE_ACTION, onMachineAction); stopListing(); url.close(); active.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
+  return { refresh, close: () => { stopped = true; window.removeEventListener(MACHINE_ACTION, onMachineAction); stopListing(); remoteGuests.close(); url.close(); active.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
 }
 
