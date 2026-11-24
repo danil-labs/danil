@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { withAccountBackground } from "../src/lib/engine.ts";
 
-const API = "https://computers.danil.ai";
+const API = "https://computers.test";
 const PNG = "data:image/png;base64,iVBORw0KGgo=";
 const URL_DE_CUENTA = `${API}/v1/workspaces/w1/background?v=abc`;
 

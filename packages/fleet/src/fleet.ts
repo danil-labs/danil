@@ -79,7 +79,7 @@ export class Fleet {
   }
 
   /**
-   * Las máquinas de la cuenta como las dice ahora `GET /v1/computers`: las nuevas
+   * Las máquinas que devuelve el inventario de la cuenta: las nuevas
    * se conectan, las que ya no están se cierran y olvidan, y a las demás se les
    * cambia nombre, contrato o vínculos sin reconectar.
    */
@@ -115,7 +115,7 @@ export class Fleet {
     this.purgeAbsentScopes();
   }
 
-  /** Una máquina renombrada en la cuenta (`PATCH /v1/computers/:id`): sus etiquetas leen el nombre nuevo. `true` si cambió. */
+  /** Una máquina renombrada en la cuenta: sus etiquetas leen el nombre nuevo. `true` si cambió. */
   rename(machine: string, name: string, context?: string): boolean {
     const member = this.member(machine, context);
     const next = name.trim();

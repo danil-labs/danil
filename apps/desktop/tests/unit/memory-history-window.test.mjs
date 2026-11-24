@@ -43,7 +43,7 @@ function engine() {
         index: { lines: 2, bytes: 80, line_limit: 200, byte_limit: 8192 },
       })),
       danil_workspace_account: record("danil_workspace_account", () => ({ account: "u_ana", email: "ana@danil.ai", signed_in: true, linked: true })),
-      account_relay_token: record("account_relay_token", () => ({ token: "client-tok", expires_at: Date.now() + 3_600_000, endpoint: "https://computers.danil.ai", computer_id: "cmp_mac" })),
+      account_relay_token: record("account_relay_token", () => ({ token: "client-tok", expires_at: Date.now() + 3_600_000, endpoint: "https://memory.test", computer_id: "cmp_mac" })),
     },
   };
 }

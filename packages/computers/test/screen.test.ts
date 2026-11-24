@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { SCREEN_SUBPROTOCOL, createScreenAccess, screenEnd, screenProtocols, screenUrl } from "../src/index.ts";
 
 test("el visor va a /screen del mismo relay, con el token en el subprotocolo", () => {
-  assert.equal(screenUrl("computers.danil.ai", "c_1"), "wss://computers.danil.ai/v1/computers/c_1/screen");
+  assert.equal(screenUrl("computers.test", "c_1"), "wss://computers.test/v1/computers/c_1/screen");
   assert.equal(screenUrl("https://computers-dev.danil.ai/", "a b"), "wss://computers-dev.danil.ai/v1/computers/a%20b/screen");
   assert.deepEqual(screenProtocols("t0k"), [SCREEN_SUBPROTOCOL, "bearer.t0k"]);
 });

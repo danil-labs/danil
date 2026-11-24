@@ -23,7 +23,7 @@ export {
   PERMISSION_MODES,
   connectionCapabilities,
   listConnections,
-  mcpUrl,
+  MCP_URL,
   revokeConnection,
   updateConnection,
   webhookUrlOk,
@@ -49,16 +49,6 @@ export {
 export { type WorkspaceGroup, type WorkspaceRow, groupWorkspaces, hasAccountWorkspaces, registryProjects, withRegistry } from "./fleet.ts";
 export { callWorkspace, hasLinkedWorkspaces, linkedAttention, linkedEvent, linkedEvents, linkedListing, linkedWorkspaces, onlyLinked, organizationOf, serviceFeatures, unlinkedWorkspaces } from "./links.ts";
 export { machineContracts } from "./compatibility.ts";
-export {
-  type ConnectHop,
-  type ConnectProgress,
-  type WatchOptions,
-  APPEAR_WAIT,
-  INSTALL_URL,
-  ONLINE_WAIT,
-  installCommand,
-  watchNewComputer,
-} from "./connect.ts";
 export {
   type Blocked,
   type Cached,
