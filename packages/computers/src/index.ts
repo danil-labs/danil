@@ -6,7 +6,6 @@ export {
   type Computer,
   type Fetch,
   COMPUTERS_ENDPOINT,
-  COMPUTER_NAME_MAX,
   apiUrl,
   listComputers,
   sessionProbe,
