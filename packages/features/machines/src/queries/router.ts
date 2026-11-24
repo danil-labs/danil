@@ -971,9 +971,10 @@ function createRouterCore(config: RouterConfig) {
         if (owner === machine && FAN.has(command)) lastRead.delete(id);
       }
     }
-    // `machine-usage` no dice de qué máquina es: el panel «Máquinas» relee la suya.
+    // `machine-usage` y `loopback-login` no dicen de qué máquina llegan: se marcan con `machine`.
     const mapped = list.map((e) => (e.name === "attention" ? { ...e, payload: attention.update(machine, e.payload) }
-      : e.name === "machine-usage" && e.payload && typeof e.payload === "object" ? { ...e, payload: { ...e.payload, machine } } : e));
+      : (e.name === "machine-usage" || e.name === "loopback-login") && e.payload && typeof e.payload === "object"
+        ? { ...e, payload: { ...(e.payload as Record<string, unknown>), machine } } : e));
     if (local || config.deliverRemote) config.deliver?.(mapped);
     else webEvents.push(mapped, context);
   }

@@ -117,6 +117,8 @@ export const APP_ACTIONS = [
   "login_account",
   "submit_login_code",
   "cancel_login",
+  "loopback_login_pending",
+  "loopback_login_deliver",
   "discard_account",
   "remove_account",
   // El próximo turno corre con esta cuenta. No enciende la máquina: el uso solo se muestra si ya está encendida.

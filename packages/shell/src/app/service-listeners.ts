@@ -5,6 +5,7 @@ import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tab
 import { type UsageRecord, ventanaDe } from "../../../ui/src/lib/usage";
 import { type Ventana } from "../../../ui/src/lib/usage.ts";
 import { invoke } from "../../../engine-client/src/client.ts";
+import { mountLoopbackLoginBridge } from "../../../engine-client/src/loopbackLogin.ts";
 import { type createChatEvents as T_createChatEvents } from "../../../features/chat/src";
 import { type ChatEvent, type PreguntaEvent, type SessionEvent } from "../../../features/chat/src/model/transcript";
 import { type Session } from "../../../features/chat/src/model/transcript.ts";
@@ -92,6 +93,7 @@ export function createServiceListeners(deps: ServiceListenersDeps) {
       setCuentasTocadas((n) => n + 1);
     });
     onCleanup(() => void cuentaEv.then((f) => f()));
+    onCleanup(mountLoopbackLoginBridge());
 
     // La otra ventana escribió en esta carpeta de datos: hay que releer,
     // igual que el `done` de un turno propio, con dos diferencias. Rust

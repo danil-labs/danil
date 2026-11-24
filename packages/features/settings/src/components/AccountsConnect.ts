@@ -13,7 +13,7 @@ import { ESPERA_ANTES_DE_LA_TERMINAL_MS } from "./AccountsModel";
 import type { createCuentas } from "./AccountsState";
 
 export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas>) {
-  const { agentes, agente, machineOf, setAgentes, setFallo, setInstalando, lista, setCargando, setLista, enCurso, setComprobando, setEstados, setSinComprobar, fallo, setEnCurso, setUrl, olvidarEnlaceCopiado, setCopiaFallida, setPorConfirmar, setPideCodigo, setCodigo, setSalida, setConexionFallida, setOfrecerTerminal, setEsperando } = cuentas;
+  const { agentes, agente, machineOf, setAgentes, setFallo, setInstalando, lista, setCargando, setLista, enCurso, setComprobando, setEstados, setSinComprobar, fallo, setEnCurso, setUrl, olvidarEnlaceCopiado, setCopiaFallida, setPorConfirmar, setPideCodigo, setCodigo, setAviso, setSalida, setConexionFallida, setOfrecerTerminal, setEsperando } = cuentas;
   /**
    * `espera` y `recienCreada` son variables: nadie pinta sus valores, y una
    * señal añadiría dependencias reactivas sin consumidores. `espera` conserva
@@ -244,7 +244,7 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
   }
 
   async function agregar(options?: { headers: Record<string, string> }) {
-    if (bloqueoAlta()) return;
+    if (bloqueoAlta(options?.headers?.["x-terminus-machine"])) return;
     setAgregando(true);
     try {
       // Apagada, esto la enciende (intent del relay) antes de conectar.
@@ -316,6 +316,7 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
     setPorConfirmar(null);
     setPideCodigo(false);
     setCodigo("");
+    setAviso(null);
     setSalida([]);
     setConexionFallida(null);
     setOfrecerTerminal(false);
@@ -359,23 +360,22 @@ export function createConexionDeCuentas(cuentas: ReturnType<typeof createCuentas
   }
 
   /** El único dueño de «se puede agregar»: el botón, el selector y `agregar()` preguntan aquí. */
-  const bloqueoAlta = (): BloqueoAlta => {
-    const porque = segunda();
+  const bloqueoAlta = (targetMachine?: string): BloqueoAlta => {
+    const porque = segunda(targetMachine);
     if (enCurso() !== null || agregando()) return { k: "ocupado" };
     return porque ? { k: "segunda", porque } : addBlockedByExternal(proveedor()) ? { k: "externo" } : null;
   };
 
-  /**
-   * Por qué no se puede agregar otra cuenta, o `null` si sí se puede.
-   *
-   * Solo aparece a partir de la segunda: la primera de un agente que comparte
-   * credencial es perfectamente utilizable, y bloquearla dejaría al agente sin
-   * poder conectarse.
-   */
-  const segunda = () => {
+  /** Por qué no se puede agregar otra cuenta (en la máquina elegida, o en la lista), o `null` si sí. */
+  const segunda = (targetMachine?: string) => {
     const l = lista();
-    if (!l?.shared_credential || l.accounts.length === 0) return null;
-    return l.shared_credential;
+    if (!l) return null;
+    if (targetMachine) {
+      if (l.shared_credential_by_machine) return l.shared_credential_by_machine[targetMachine] ?? null;
+      if (!l.shared_credential) return null;
+      return l.accounts.some((a) => a.machines?.some((m) => m.machine === targetMachine)) ? l.shared_credential : null;
+    }
+    return !l.shared_credential || l.accounts.length === 0 ? null : l.shared_credential;
   };
   return {
     comprobadas, refrescar, comprobar, cancelarEspera, descartarSiVacia, mirarEspera, agregando,

@@ -15,7 +15,7 @@ import type { createCuentas } from "./AccountsState";
 import type { createConexionDeCuentas } from "./AccountsConnect";
 
 export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cuentas: ReturnType<typeof createCuentas>, conexion: ReturnType<typeof createConexionDeCuentas>) {
-  const { conexionFallida, lista, tarjetas, enCurso, instalando, fallo, cargando, agentes, machineOf, setEnCurso, setPideCodigo, setPorConfirmar, setOfrecerTerminal, agente, estados } = cuentas;
+  const { conexionFallida, lista, tarjetas, enCurso, instalando, fallo, cargando, agentes, machineOf, setEnCurso, setPideCodigo, setPorConfirmar, setAviso, setOfrecerTerminal, agente, estados } = cuentas;
   const { agregando, pidioExterno, faltaExterno, bloqueoAlta, agregar, setPidioExterno, cancelarEspera, segunda } = conexion;
   // PROVISIONAL hasta que se decida Q2: el panel de un alta cuyo login falló también deja el grupo a la vista.
   const falloALaVista = () => conexionFallida() !== null;
@@ -36,6 +36,7 @@ export function createPartesDeCuentas(props: Parameters<typeof Accounts>[0], cue
     setEnCurso(null);
     setPideCodigo(false);
     setPorConfirmar(null);
+    setAviso(null);
     setOfrecerTerminal(false);
   }
 

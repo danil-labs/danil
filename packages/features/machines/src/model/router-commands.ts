@@ -32,7 +32,7 @@ const ACCOUNT_CREDENTIALS = /^account_credentials?_|^github_account_/;
 export const ofThisMachine = (command: string) => OF_THIS_MACHINE.test(command) && !ACCOUNT_CREDENTIALS.test(command);
 
 /** La sesión de Danil y Radiant son siempre de esta ventana; las cuentas de IA, de la máquina que nombra la cabecera o el id. */
-export const OF_THIS_WINDOW = /^radiant_|^danil_|^account_relay_token$|^agents_session_/;
+export const OF_THIS_WINDOW = /^radiant_|^danil_|^account_relay_token$|^agents_session_|^loopback_login_(listen|cancel)$/;
 
 /** Las órdenes con canal pierden el canal por el relay: vuelve solo la respuesta final. */
 const CHANNELS: Record<string, string> = { clone_project: "progress", list_session_git: "progress", watch_task_tree: "changes" };
