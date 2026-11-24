@@ -144,15 +144,18 @@ pub(super) fn unc(distro: &str, linux: &str) -> PathBuf {
     ))
 }
 
-pub(super) fn running_distros() -> Vec<String> {
-    let Ok(out) = wait_wsl(&["--list", "--running", "--quiet"], Duration::from_secs(15)) else {
-        return Vec::new();
-    };
-    super::wsl::decode(&out.stdout)
-        .lines()
-        .map(|l| l.replace('\0', "").trim().to_string())
-        .filter(|l| !l.is_empty())
-        .collect()
+pub(super) fn running_distros() -> Option<Vec<String>> {
+    let out = wait_wsl(&["--list", "--running", "--quiet"], Duration::from_secs(15)).ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    Some(
+        super::wsl::decode(&out.stdout)
+            .lines()
+            .map(|l| l.replace('\0', "").trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect(),
+    )
 }
 
 // ---------------------------------------------------------------- catálogo

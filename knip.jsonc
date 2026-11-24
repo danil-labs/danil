@@ -45,6 +45,8 @@
     "packages/shell/src/shell/workspace-added-sync.ts": ["exports"],
     "packages/features/machines/src/queries/store.ts": ["exports"],
     "packages/features/machines/src/queries/guestChannels.ts": ["exports"],
+    "packages/features/machines/src/queries/guestLink.ts": ["exports"],
+    "packages/features/machines/src/queries/remoteGuestLink.ts": ["exports", "types"],
     "packages/features/machines/src/queries/workspace-computers.ts": ["exports"],
     "packages/features/settings/src/components/AccountCredentials.tsx": ["exports"],
     "packages/features/settings/src/queries/credentials-store.ts": ["exports"],

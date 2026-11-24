@@ -10,7 +10,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { CallResult, EngineInfo, EventsPage, MachineState } from "@terminus/computers";
 import { classOf, type Link, type MachineInfo } from "../model/fleet/index.ts";
-import { WSL_MACHINE_PREFIX, type WslChild } from "../model/wsl";
+import type { Invoke } from "../model/router-commands";
+import { formatWslMachineName, isAnyGuestMachine, isLocalGuestMachine, WSL_MACHINE_PREFIX, type WslChild } from "../model/wsl";
 
 /** Los prefijos de id de las máquinas locales, uno por canal. */
 const GUEST_PREFIXES = [WSL_MACHINE_PREFIX];
@@ -21,25 +22,38 @@ const HEALTH_EVERY = 15_000;
 /** Cuánto vale una lectura de `guest_children`: los enlaces de todas las máquinas locales la comparten. */
 const CHILDREN_FOR = 3_000;
 
-export const isGuestMachine = (id: string | null | undefined): id is string => !!id && GUEST_PREFIXES.some((p) => id.startsWith(p));
+export const isGuestMachine = (id: string | null | undefined): id is string =>
+  !!id && GUEST_PREFIXES.some((p) => id.startsWith(p)) && isLocalGuestMachine(id);
+
+export { isAnyGuestMachine };
 
 type ChildHealth = { id: string; online: boolean; contract: string | null; version: string | null };
 let childrenRead: { at: number; list: Promise<ChildHealth[]> } | null = null;
+const awakeHooks = new Map<string, Set<() => void>>();
+
+/** Descarta la caché compartida de `guest_children` (al despertar o cambiar de estado una distro). */
+export function invalidateGuestChildren() {
+  childrenRead = null;
+}
 
 /** Una sola lectura de `guest_children` cada pocos segundos, para todas las máquinas locales. */
 function sharedChildren(): Promise<ChildHealth[]> {
   const now = Date.now();
   if (!childrenRead || now - childrenRead.at > CHILDREN_FOR) {
-    childrenRead = { at: now, list: invoke<ChildHealth[]>("guest_children") };
+    const read = invoke<ChildHealth[]>("guest_children").catch((error) => {
+      if (childrenRead?.list === read) childrenRead = null;
+      throw error;
+    });
+    childrenRead = { at: now, list: read };
   }
   return childrenRead.list;
 }
 
 /** La fila de la flota de una distro conectada. Se puede encender (la ventana la despierta). */
-export function guestMachineInfo(child: WslChild): MachineInfo {
+export function guestMachineInfo(child: WslChild, hostName?: string | null, siblingCount = 1): MachineInfo {
   return {
     id: child.id,
-    name: child.name,
+    name: hostName ? formatWslMachineName(hostName, child, siblingCount) : child.name,
     wakes: true,
     linked: null,
     child: true,
@@ -49,23 +63,37 @@ export function guestMachineInfo(child: WslChild): MachineInfo {
   };
 }
 
-/** Lo que crea algo en una carpeta: antes, la carpeta tiene que estar en la distribución. */
-const CREATES = new Set(["send_message", "run_shell_command"]);
+/** Lo que crea o acomoda algo en el workspace: antes, el workspace (y su carpeta) tienen que existir en la distribución. */
+const CREATES = new Set([
+  "send_message",
+  "run_shell_command",
+  "create_project",
+  "clone_project",
+  "start_project_clone",
+  "create_empty_session",
+  "move_task_to_space",
+  "set_task_archived",
+]);
 
 type Folder = { id: string; name?: string; working_directory?: string | null };
 
-export function createGuestLink(machine: string): Link {
+export function createGuestLink(machine: string, native?: Invoke): Link {
   const copied = new Set<string>();
   const workspaces = new Set<string>();
 
   const childCall = <T,>(command: string, args: unknown, workspace: string | null, timeoutMs = 30_000) =>
     invoke<T>("guest_call", { machine, command, args: args ?? {}, workspace, folder: null, timeoutMs });
 
+  const localRead = <T,>(command: string, workspace: string | null): Promise<T> =>
+    native
+      ? (native(command, {}, workspace ? { headers: { "x-terminus-workspace": workspace } } : undefined) as Promise<T>)
+      : invoke<T>(command);
+
   const spaces = new Set<string>();
 
   /** Los espacios de esta PC, con el mismo id: sin ellos la distribución rechaza la tarea (`spaces.error.missing`). */
   async function syncSpaces(workspace: string) {
-    const here = await invoke<{ id: string }[]>("list_spaces").catch(() => [] as { id: string }[]);
+    const here = await localRead<{ id: string }[]>("list_spaces", workspace).catch(() => [] as { id: string }[]);
     const list = Array.isArray(here) ? here : [];
     await invoke("guest_sync_spaces", { machine, workspace, spaces: list });
     for (const s of list) spaces.add(s.id);
@@ -91,7 +119,7 @@ export function createGuestLink(machine: string): Link {
       const there = await childCall<Folder[]>("list_projects", {}, workspace);
       own = Array.isArray(there) ? there : [];
     }
-    const here = await invoke<Folder[]>("list_projects").catch(() => [] as Folder[]);
+    const here = await localRead<Folder[]>("list_projects", workspace).catch(() => [] as Folder[]);
     const missing = (Array.isArray(here) ? here : []).filter((f) => f.working_directory && !own.some((o) => o.id === f.id));
     return [...own, ...missing];
   }
@@ -108,7 +136,7 @@ export function createGuestLink(machine: string): Link {
       copied.add(project);
       return;
     }
-    const here = await invoke<Folder[]>("list_projects");
+    const here = await localRead<Folder[]>("list_projects", workspace);
     const folder = Array.isArray(here) ? here.find((f) => f.id === project) : undefined;
     if (!folder?.working_directory) throw { code: "folder_missing", detail: project };
     await invoke("guest_copy_folder", { machine, project, name: folder.name ?? project, path: folder.working_directory, workspace });
@@ -143,7 +171,7 @@ export function createGuestLink(machine: string): Link {
     } catch {
       setState("offline");
     }
-    healthTimer = setTimeout(() => void health(), HEALTH_EVERY);
+    if (!closed) healthTimer = setTimeout(() => void health(), HEALTH_EVERY);
   }
 
   async function poll() {
@@ -161,8 +189,21 @@ export function createGuestLink(machine: string): Link {
     } catch {
       if (state === "online") setState("offline");
     }
-    pollTimer = setTimeout(() => void poll(), quiet && state !== "online" ? POLL_IDLE : POLL_EVERY);
+    if (!closed && subscribed) pollTimer = setTimeout(() => void poll(), quiet && state !== "online" ? POLL_IDLE : POLL_EVERY);
   }
+
+  const onAwake = () => {
+    if (closed) return;
+    setState("online");
+    clearTimeout(healthTimer);
+    void health();
+  };
+  let hooks = awakeHooks.get(machine);
+  if (!hooks) {
+    hooks = new Set();
+    awakeHooks.set(machine, hooks);
+  }
+  hooks.add(onAwake);
 
   return {
     state: () => state,
@@ -171,6 +212,7 @@ export function createGuestLink(machine: string): Link {
       // Apagada, leer no la enciende: la barra no prende Linux solo por estar abierta.
       if (state === "offline" && classOf(command) === "read") throw { code: "machine_off" };
       if (CREATES.has(command)) {
+        await ensureWorkspace(workspace);
         await ensureFolder((args as { project?: unknown } | null)?.project, workspace);
         const space = (args as { space?: unknown } | null)?.space;
         if (workspace && typeof space === "string" && space && !spaces.has(space)) await syncSpaces(workspace);
@@ -207,6 +249,9 @@ export function createGuestLink(machine: string): Link {
       subscribed = false;
       clearTimeout(pollTimer);
       clearTimeout(healthTimer);
+      const set = awakeHooks.get(machine);
+      set?.delete(onAwake);
+      if (set && !set.size) awakeHooks.delete(machine);
       stateListeners.clear();
       eventListeners.clear();
       engineListeners.clear();
@@ -214,5 +259,12 @@ export function createGuestLink(machine: string): Link {
   };
 }
 
-/** Enciende el huésped (en WSL, la ventana deja abierto un `wsl.exe`) y espera a que su motor conteste. */
-export const wakeGuestMachine = (machine: string) => invoke<boolean>("guest_start", { machine });
+/** Enciende el huésped (en WSL, la ventana deja abierto un `wsl.exe`) y avisa al enlace local en cuanto contesta. */
+export async function wakeGuestMachine(machine: string): Promise<boolean> {
+  const ok = await invoke<boolean>("guest_start", { machine });
+  if (ok) {
+    invalidateGuestChildren();
+    for (const notify of awakeHooks.get(machine) ?? []) notify();
+  }
+  return ok;
+}

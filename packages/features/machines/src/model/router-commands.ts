@@ -11,7 +11,7 @@ export type Failure = { what: unknown; detail: unknown };
 /** Content reads may use display copies; list_live_turns remains local to the window. */
 export const FAN = new Set(["list_projects", "list_portfolios", "list_live_sessions", "list_spaces", "list_workspace_attention", "list_session_git", "list_task_mentions"]);
 
-export const CONTEXT = new Set(["add_folder", "add_repo_url", "set_workspace_source", "set_root", "list_sources", "source_freshness", "source_detail", "update_source", "remove_source", "list_source_branches", "set_source_skill"]);
+export const CONTEXT = new Set(["add_folder", "add_repo_url", "set_workspace_source", "set_root", "list_sources", "source_freshness", "source_detail", "update_source", "remove_source", "list_source_branches", "set_source_skill", "sync_workspace_context"]);
 
 export const STORAGE = new Set(["list_storage", "reclaim_storage", "empty_build_cache", "collect_orphans"]);
 
