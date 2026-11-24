@@ -1,6 +1,6 @@
 import type { McpConnection } from "../../../../platform-client/src/connections.ts";
 import { MCP_URL } from "../model/connections.ts";
-import { createResource, createSignal, For, Show } from "solid-js";
+import { createResource, createSignal, For, onCleanup, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../ui/src/lib/i18n";
 import {
@@ -12,8 +12,10 @@ import {
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { EmptyState } from "../../../../ui/src/EmptyState";
-import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
+import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { ConnectionRow } from "./ConnectionsRow";
+
+const NO_RING = "outline-none focus:outline-none focus-visible:outline-none";
 
 const DOMAIN_ERROR_KEYS = new Set([
   "organization_unavailable",
@@ -37,6 +39,10 @@ export default function Connections() {
   const [failure, setFailure] = createSignal<string | null>(null);
   const [revoking, setRevoking] = createSignal<McpConnection | null>(null);
   const { copied, copy } = createCopied(2_000);
+  let alive = true;
+  onCleanup(() => {
+    alive = false;
+  });
 
   const ready = () => {
     const d = data();
@@ -51,6 +57,7 @@ export default function Connections() {
     setFailure(null);
     try {
       const answer = await run();
+      if (!alive) return null;
       if (answer.kind !== "ok") {
         setFailure(answer.code ?? answer.kind);
       } else {
@@ -58,26 +65,31 @@ export default function Connections() {
       }
       return answer;
     } catch {
-      setFailure("error");
+      if (alive) setFailure("error");
       return null;
     } finally {
-      setBusy(null);
+      if (alive) setBusy(null);
     }
   }
 
   return (
-    <SettingsPanel>
+    <SettingsPanel data-settings-personal-ai-agent="">
       <SettingsSection
         title={t("settings.connections.title")}
         description={t("settings.connections.description")}
-        aside={
-          <Show when={ready()}>
-            <Button variant="secondary" size="sm" onClick={() => void copy(MCP_URL)}>
-              {copied() ? t("settings.connections.copied") : t("settings.connections.copy_url")}
-            </Button>
-          </Show>
-        }
       >
+        <SettingsRow
+          label={t("settings.connections.mcp_endpoint")}
+          description={
+            <code class="font-mono text-ui text-neutral-950 select-all" data-mcp-url="">
+              {MCP_URL}
+            </code>
+          }
+        >
+          <Button variant="secondary" size="sm" class={NO_RING} onClick={() => void copy(MCP_URL)}>
+            {copied() ? t("settings.connections.copied") : t("settings.connections.copy_url")}
+          </Button>
+        </SettingsRow>
         <Show when={failure()}>
           {(code) => (
             <p class="m-0 py-2 text-ui text-error-strong" role="alert">
@@ -95,7 +107,7 @@ export default function Connections() {
           })()}
         >
           {(d) => (
-            <div class="grid gap-3">
+            <div class="grid gap-3 pt-3">
               <EmptyState
                 title={
                   d().reason === "no_account"
@@ -104,7 +116,7 @@ export default function Connections() {
                 }
                 description={t("settings.connections.unavailable_hint")}
               />
-              <Button variant="secondary" class="justify-self-start" onClick={() => void refetch()}>
+              <Button variant="secondary" class={`justify-self-start ${NO_RING}`} onClick={() => void refetch()}>
                 {t("settings.connections.retry")}
               </Button>
             </div>
@@ -115,10 +127,12 @@ export default function Connections() {
             <Show
               when={d().connections.length > 0}
               fallback={
-                <EmptyState
-                  title={t("settings.connections.empty")}
-                  description={t("settings.connections.empty_hint", { url: MCP_URL })}
-                />
+                <div class="pt-3">
+                  <EmptyState
+                    title={t("settings.connections.empty")}
+                    description={t("settings.connections.empty_hint", { url: MCP_URL })}
+                  />
+                </div>
               }
             >
               <For each={d().connections.map((c) => c.id)}>
@@ -163,17 +177,18 @@ export default function Connections() {
           </DialogTitle>
           <p class="m-0 text-sm text-neutral-700">{t("settings.connections.revoke_body")}</p>
           <div class="mt-4 flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setRevoking(null)}>
+            <Button variant="secondary" class={NO_RING} onClick={() => setRevoking(null)}>
               {t("settings.connections.cancel")}
             </Button>
             <Button
               variant="danger"
+              class={NO_RING}
               disabled={busy() !== null}
               onClick={async () => {
                 const c = revoking();
                 if (!c) return;
                 await act(c.id, () => revokeConnectionN1(c.id));
-                setRevoking(null);
+                if (alive) setRevoking(null);
               }}
             >
               {t("settings.connections.revoke")}

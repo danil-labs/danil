@@ -1,5 +1,5 @@
 /**
- * Las nueve entradas de Configuración y sus pestañas. Los ids de destinos que
+ * Las diez entradas de Configuración y sus pestañas. Los ids de destinos que
  * ya no son pestaña siguen en `MOVED`: `setSettings("plugins")` y los enlaces
  * guardados abren la entrada o pestaña que ahora los contiene.
  */
@@ -11,7 +11,8 @@ export const SETTINGS_ENTRIES = [
   { id: "ai-accounts", tabs: ["proveedores-ia"] },
   { id: "source-control", tabs: ["fuentes"] },
   { id: "agents-skills", tabs: ["agentes", "skills"] },
-  { id: "connections", tabs: ["operation", "plugins", "external"] },
+  { id: "connections", tabs: ["operation", "plugins"] },
+  { id: "personal-ai-agent", tabs: ["external"] },
   { id: "maintenance", footer: true, tabs: ["maintenance"] },
 ] as const;
 

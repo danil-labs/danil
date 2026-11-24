@@ -27,7 +27,10 @@ test("old settings ids open the entry and tab that now hold them", () => {
   assert.deepEqual(settingsTarget("source-control"), { entry: "source-control", tab: null });
   assert.deepEqual(settingsTarget("plugins"), { entry: "connections", tab: "plugins" });
   assert.deepEqual(settingsTarget("mcp"), { entry: "connections", tab: "operation" });
-  assert.deepEqual(settingsTarget("conexiones"), { entry: "connections", tab: "external" });
+  assert.deepEqual(settingsTarget("memory"), { entry: "connections", tab: "operation" });
+  assert.deepEqual(settingsTarget("conexiones"), { entry: "personal-ai-agent", tab: "external" });
+  assert.deepEqual(settingsTarget("external"), { entry: "personal-ai-agent", tab: "external" });
+  assert.deepEqual(settingsTarget("personal-ai-agent"), { entry: "personal-ai-agent", tab: null });
   assert.equal(settingsTarget("projects"), null);
   assert.equal(settingsTarget("proyectos"), null);
   assert.equal(settingsTarget("secrets"), null);
@@ -46,7 +49,7 @@ test("unknown or empty ids open nothing in particular", () => {
   assert.equal(settingsTarget("bitacora"), null);
 });
 
-test("nine flat entries in final order, account unified without sub-tabs, no billing entry, maintenance in footer, every tab in exactly one", () => {
+test("ten flat entries in final order, personal-ai-agent separated from connections, maintenance in footer, every tab in exactly one", () => {
   assert.deepEqual(
     SETTINGS_ENTRIES.map((e) => e.id),
     [
@@ -58,6 +61,7 @@ test("nine flat entries in final order, account unified without sub-tabs, no bil
       "source-control",
       "agents-skills",
       "connections",
+      "personal-ai-agent",
       "maintenance",
     ],
   );
@@ -65,11 +69,16 @@ test("nine flat entries in final order, account unified without sub-tabs, no bil
   assert.deepEqual([...SETTINGS_ENTRIES[1].tabs], ["appearance"]);
   const accountIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "account");
   const securityIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "security");
+  const connectionsIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "connections");
+  const personalAgentIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "personal-ai-agent");
   const maintenance = SETTINGS_ENTRIES.find((e) => e.id === "maintenance");
   assert.deepEqual([...SETTINGS_ENTRIES[accountIndex].tabs], ["cuenta-danil"]);
   assert.equal(securityIndex, accountIndex + 1);
   assert.deepEqual([...SETTINGS_ENTRIES[securityIndex].tabs], ["security"]);
   assert.ok(!(SETTINGS_ENTRIES[accountIndex].tabs as readonly string[]).includes("security"));
+  assert.deepEqual([...SETTINGS_ENTRIES[connectionsIndex].tabs], ["operation", "plugins"]);
+  assert.equal(personalAgentIndex, connectionsIndex + 1);
+  assert.deepEqual([...SETTINGS_ENTRIES[personalAgentIndex].tabs], ["external"]);
   assert.ok(maintenance && "footer" in maintenance && maintenance.footer === true);
   assert.deepEqual(maintenance ? [...maintenance.tabs] : [], ["maintenance"]);
   const tabs = SETTINGS_ENTRIES.flatMap((e) => [...e.tabs]);

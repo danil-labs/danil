@@ -4,12 +4,14 @@ import type {
   McpConnectionPatch,
 } from "../../../../platform-client/src/connections.ts";
 import type { ConnectionOrg, ConnectionWorkspace } from "../queries/engine-connections.ts";
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 import { ConnectionAccess } from "./ConnectionAccess";
+
+const NO_RING = "outline-none focus:outline-none focus-visible:outline-none";
 
 const stateTone = (state: McpConnection["state"]) =>
   state === "active" ? "success" : state === "needs_setup" ? "warning" : "neutral";
@@ -30,6 +32,12 @@ export function ConnectionRow(props: {
   const [auditOpen, setAuditOpen] = createSignal(false);
   const [auditLoading, setAuditLoading] = createSignal(false);
   const [auditItems, setAuditItems] = createSignal<McpAuditEntry[] | null>(null);
+  let alive = true;
+  let auditReq = 0;
+  onCleanup(() => {
+    alive = false;
+    auditReq++;
+  });
 
   const orgName = () => {
     const orgId = c().organization_id;
@@ -49,15 +57,20 @@ export function ConnectionRow(props: {
 
   async function toggleAudit() {
     if (auditOpen()) {
+      auditReq++;
       setAuditOpen(false);
+      setAuditLoading(false);
       return;
     }
+    const req = ++auditReq;
     setAuditOpen(true);
     setAuditLoading(true);
     try {
-      setAuditItems(await props.onLoadAudit());
+      const items = await props.onLoadAudit();
+      if (!alive || req !== auditReq) return;
+      setAuditItems(items);
     } finally {
-      setAuditLoading(false);
+      if (alive && req === auditReq) setAuditLoading(false);
     }
   }
 
@@ -74,21 +87,21 @@ export function ConnectionRow(props: {
         description={summary()}
       >
         <div class="flex gap-2">
-          <Button variant="ghost" size="sm" disabled={props.busy} onClick={() => void toggleAudit()}>
+          <Button variant="ghost" size="sm" class={NO_RING} disabled={props.busy} onClick={() => void toggleAudit()}>
             {t("settings.connections.audit")}
           </Button>
           <Show when={c().state === "active"}>
-            <Button variant="secondary" size="sm" disabled={props.busy} onClick={props.onPause}>
+            <Button variant="secondary" size="sm" class={NO_RING} disabled={props.busy} onClick={props.onPause}>
               {t("settings.connections.pause")}
             </Button>
           </Show>
           <Show when={c().state === "paused"}>
-            <Button variant="secondary" size="sm" disabled={props.busy} onClick={props.onResume}>
+            <Button variant="secondary" size="sm" class={NO_RING} disabled={props.busy} onClick={props.onResume}>
               {t("settings.connections.resume")}
             </Button>
           </Show>
           <Show when={c().state !== "revoked"}>
-            <Button variant="outline" size="sm" disabled={props.busy} onClick={props.onRevoke}>
+            <Button variant="outline" size="sm" class={NO_RING} disabled={props.busy} onClick={props.onRevoke}>
               {t("settings.connections.revoke")}
             </Button>
           </Show>

@@ -14,21 +14,6 @@ export {
   startedOf,
 } from "./api.ts";
 export {
-  type Connection,
-  type ConnectionCapabilities,
-  type ConnectionMachine,
-  type ConnectionPatch,
-  type ConnectionState,
-  type UpdatedConnection,
-  PERMISSION_MODES,
-  connectionCapabilities,
-  listConnections,
-  MCP_URL,
-  revokeConnection,
-  updateConnection,
-  webhookUrlOk,
-} from "./connections.ts";
-export {
   type MachineState,
   type Power,
   DEFERRED_COMMANDS,
