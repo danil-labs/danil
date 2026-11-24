@@ -4,11 +4,13 @@ import type {
   McpDestination,
 } from "../../../../platform-client/src/connections.ts";
 import type { ConnectionOrg, ConnectionWorkspace } from "../queries/engine-connections.ts";
-import { createSignal, createUniqueId, For, Show } from "solid-js";
+import { createSignal, createUniqueId, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Select } from "../../../../ui/src/Select";
 import "../../../../ui/src/locales/settingsPhrases";
+
+const NO_RING = "outline-none focus:outline-none focus-visible:outline-none";
 
 type Props = {
   connection: McpConnection;
@@ -34,7 +36,7 @@ export function ConnectionAccess(props: Props) {
         ref={trigger}
         variant="secondary"
         size="sm"
-        class="justify-self-start"
+        class={`justify-self-start ${NO_RING}`}
         disabled={props.busy}
         aria-expanded={editing()}
         aria-controls={id}
@@ -76,6 +78,10 @@ function AccessEditor(props: Props & { onClose: () => void }) {
     new Set(props.connection.exclusions.filter((e) => e.folder === "").map((e) => e.workspace)),
   );
   const [failed, setFailed] = createSignal(false);
+  let alive = true;
+  onCleanup(() => {
+    alive = false;
+  });
 
   const folderExclusions = () => props.connection.exclusions.filter((e) => e.folder !== "");
 
@@ -97,6 +103,7 @@ function AccessEditor(props: Props & { onClose: () => void }) {
       ...[...excluded()].map((workspace) => ({ workspace, folder: "" })),
     ];
     const ok = await props.onSave({ action: "configure", organization_id: targetOrg, exclusions });
+    if (!alive) return;
     if (ok) props.onClose();
     else setFailed(true);
   }
@@ -107,7 +114,12 @@ function AccessEditor(props: Props & { onClose: () => void }) {
       <Show when={props.connection.organization_id === null}>
         <label class="grid gap-1 text-label text-neutral-500">
           {t("settings.connections.organization")}
-          <Select value={orgId()} disabled={props.busy} onChange={(e) => setOrgId(e.currentTarget.value)}>
+          <Select
+            class={`${NO_RING} focus-visible:border-border-strong`}
+            value={orgId()}
+            disabled={props.busy}
+            onChange={(e) => setOrgId(e.currentTarget.value)}
+          >
             <For each={props.organizations}>
               {(org) => <option value={org.id}>{org.name}</option>}
             </For>
@@ -124,6 +136,7 @@ function AccessEditor(props: Props & { onClose: () => void }) {
               <label class="flex items-center gap-2 text-ui text-neutral-950">
                 <input
                   type="checkbox"
+                  class={NO_RING}
                   checked={!excluded().has(ws.id)}
                   onChange={(e) => toggleWorkspace(ws.id, e.currentTarget.checked)}
                 />
@@ -139,10 +152,10 @@ function AccessEditor(props: Props & { onClose: () => void }) {
         </p>
       </Show>
       <div class="flex justify-end gap-2">
-        <Button variant="secondary" disabled={props.busy} onClick={props.onClose}>
+        <Button variant="secondary" class={NO_RING} disabled={props.busy} onClick={props.onClose}>
           {t("settings.connections.cancel")}
         </Button>
-        <Button disabled={props.busy || !orgId().trim()} onClick={() => void save()}>
+        <Button class={NO_RING} disabled={props.busy || !orgId().trim()} onClick={() => void save()}>
           {props.connection.state === "needs_setup"
             ? t("settings.connections.activate")
             : t("settings.connections.save_access")}

@@ -17,6 +17,8 @@ import { createWake } from "../../scripts/verify-remote.mjs";
 
 const verify = resolve(import.meta.dirname, "../../scripts/verify.mjs");
 const skip = process.platform === "win32" ? "la cola solo corre en Linux" : false;
+/** La plataforma que la cola reporta es la de esta máquina: la prueba corre en Linux y en macOS. */
+const PLATAFORMA = { linux: "Linux", darwin: "macOS", win32: "Windows" }[process.platform] ?? process.platform;
 const PREPARE = 'pnpm() { bash ./chain.sh "$@"; }';
 const config = { repos: { terminus: { prepare: PREPARE, commands: ["pnpm verify", "pnpm verify --no-cargo"] } } };
 
@@ -162,7 +164,7 @@ test("--remote devuelve el exit real y el log entero, y dice qué plataforma no 
   assert.equal(failed.code, 7, failed.output);
   assert.match(failed.output, /paso-visible/);
   assert.match(failed.output, /falló \(exit 7\)/);
-  assert.match(failed.output, /Linux en 127/);
+  assert.match(failed.output, new RegExp(`${PLATAFORMA} en 127`));
   assert.match(failed.output, /NO se comprobó: una corrida --remote nunca cuenta por ellos/);
 
   commit(repo, "echo segundo");
@@ -888,7 +890,7 @@ test("lo que una corrida deja en .git del carril no corre en la siguiente", { sk
   const plant = `
     git config filter.evil.smudge "sh -c 'touch ${ran}; cat'"
     git config include.path /dev/null
-    mkdir -p .git/info; echo "*.txt filter=evil" > .git/info/attributes
+    mkdir -p .git/info .git/hooks; echo "*.txt filter=evil" > .git/info/attributes
     printf '#!/bin/sh\ntouch ${ran}\n' > .git/hooks/post-checkout; chmod +x .git/hooks/post-checkout`;
   const first = await engineRun(t, queue, repo, dir, plant);
   assert.equal(first.run.state, "passed", readFileSync(queue.logPath(first.id), "utf8"));

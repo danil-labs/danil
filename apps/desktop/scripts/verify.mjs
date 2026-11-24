@@ -764,7 +764,6 @@ const steps = [
   ["app.danil.ai/terminus answers 308 to the same alfa path and never leaves that host", process.execPath, ["--test", join(root, "web-redirect/worker.test.mjs")], root],
   ["The entry serves assets and closes every retired proxy", process.execPath, ["--test", join(root, "alpha-entry/worker.test.mjs")], root],
   ["The first-run account choice is remembered", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/account-welcome.test.ts")]],
-  ["Desk compatibility keeps PKCE, consent and one-time codes isolated from the SPA", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-session.test.mjs")], root],
   ["The alpha entry closes all routes that migrated to platform", process.execPath, ["--test", join(root, "tests/unit/alpha-entry-service.test.mjs")], root],
   ["On desktop account keys go through the engine and the notice uploads only the chosen ones", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/desktop-account-credentials.test.mjs")], root],
   ["unknownCommand recognizes only the pinned command-not-found transport error", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/error-code.test.ts")], root],

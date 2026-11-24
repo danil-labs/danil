@@ -141,5 +141,5 @@ Patrones disjuntos y exactos para el gate de verificación  y :
 | machineContracts | machineContracts | Contratos viejos de máquinas | 6 | Se borra |
 | workers.internal | workers[.]internal | workers.internal | 0 | Se borra |
 | access-projection | access-projection | access-projection | 0 | Se borra |
-| legacy-desktop-auth | legacy-desktop-auth | legacy-desktop-auth | 0 | Se borra |
+| legacy-desktop-auth | legacy-desktop-auth | legacy-desktop-auth | 0 | Borrado: el retiro de alfa quitó el Worker y su prueba |
 | supabase (auth/db) | supabase(Client|-js) | supabase legado | 0 | Se borra |

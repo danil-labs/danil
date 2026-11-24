@@ -1,4 +1,5 @@
 import Bot from "lucide-solid/icons/bot";
+import BotMessageSquare from "lucide-solid/icons/bot-message-square";
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
 import Palette from "lucide-solid/icons/palette";
 import Plug from "lucide-solid/icons/plug";
@@ -47,6 +48,7 @@ export type Pestana = { id: string; name: string; panel: (() => JSX.Element) | n
 export type Entrada = {
   id: SettingsEntryId;
   name: string;
+  subtitle?: string;
   icono: () => JSX.Element;
   tabs: Pestana[];
   footer?: boolean;
@@ -103,12 +105,12 @@ export const pestanasDe = (
     skills: tab("skills", () => t("settings.nav.skills"), () => <Skills />),
     operation: tab("operation", () => t("settings.skills.tab_mcp"), () => <ConnectionsOperation maquinas={maquinas} />),
     plugins: tab("plugins", () => t("settings.tab.plugins"), () => <SettingsPanel><Integrations /></SettingsPanel>),
-    external: cuenta ? tab("external", () => t("settings.tab.external"), () => <Suspense fallback={null}><Connections /></Suspense>) : undefined,
+    external: cuenta ? tab("external", () => t("settings.entry.personal_ai_agent"), () => <Suspense fallback={null}><Connections /></Suspense>) : undefined,
     maintenance: tab("maintenance", () => t("settings.entry.maintenance"), () => <Suspense fallback={null}><Maintenance maquinas={maquinas} /></Suspense>),
   };
 };
 
-const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JSX.Element }> = {
+const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; subtitle?: () => string; icono: () => JSX.Element }> = {
   general: { name: () => t("settings.nav.general"), icono: () => <SlidersHorizontal size={15} /> },
   appearance: { name: () => t("settings.nav.appearance"), icono: () => <Palette size={15} /> },
   account: { name: () => t("settings.entry.account"), icono: () => <CircleUserRound size={15} /> },
@@ -117,6 +119,11 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitMark size={15} /> },
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
   connections: { name: () => t("settings.nav.connections"), icono: () => <Plug size={15} /> },
+  "personal-ai-agent": {
+    name: () => t("settings.entry.personal_ai_agent"),
+    subtitle: () => t("settings.entry.personal_ai_agent_subtitle"),
+    icono: () => <BotMessageSquare size={15} />,
+  },
   maintenance: { name: () => t("settings.entry.maintenance"), icono: () => <Wrench size={15} /> },
 };
 
@@ -127,7 +134,14 @@ export const entradasDe = (pestanas: Record<string, Pestana | undefined>): Entra
     if (!tabs.some((p) => p.panel)) return [];
     const h = ENCABEZADOS[e.id];
     const footer = "footer" in e && e.footer ? true : undefined;
-    return [{ id: e.id, get name() { return h.name(); }, icono: h.icono, tabs, footer }];
+    return [{
+      id: e.id,
+      get name() { return h.name(); },
+      ...(h.subtitle ? { get subtitle() { return h.subtitle!(); } } : {}),
+      icono: h.icono,
+      tabs,
+      footer,
+    }];
   });
 
 /** Respaldo vacío si una entrada no tuviera pestaña montable. */

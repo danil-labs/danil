@@ -180,6 +180,17 @@ test("computes governed sections and discrete scope badges", () => {
     { kind: "workspace", tone: "neutral", label: "Workspace" },
   );
 
+  assert.equal(governedSectionFor("personal-ai-agent", "external"), null);
+  assert.equal(
+    settingsScopeBadge({
+      entryId: "personal-ai-agent",
+      workspace: { isOrg: true },
+      governed: false,
+      labels: SCOPE_LABELS,
+    }),
+    null,
+  );
+
   assert.equal(
     settingsScopeBadge({
       entryId: "security",

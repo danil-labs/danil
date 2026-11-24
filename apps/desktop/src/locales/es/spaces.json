@@ -32,8 +32,10 @@
   "spaces.delete.mark_changed": "cambió",
   "spaces.delete.mark_new": "nuevo",
   "spaces.delete.open": "Abrir",
+  "spaces.delete.no_answer": "El servicio no contestó. Reintenta.",
   "spaces.delete.open_named": "Abrir {title}",
   "spaces.delete.reading": "Leyendo qué tiene…",
+  "spaces.delete.see_details": "Ver qué no está guardado",
   "spaces.delete.see_archived": "Ver en Archivadas",
   "spaces.delete.title": "Eliminar «{name}»",
   "spaces.delete.toast": {
