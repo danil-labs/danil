@@ -43,6 +43,9 @@ export function r7() {
 
 const BLACKLIST = /supabase|appv2|messaging|mensajeria|\/v1\/compute|\/v1\/computers/i;
 
+// Excepción estrecha: íconos y marcas de herramientas CLI del desarrollador en packages/ui.
+const UI_TOOL_MARKS = /^packages\/ui\/(?:src\/(?:file-icons|toolMark)|test\/(?:command|toolMarks|tools)\.test\.ts)/;
+
 export function r8(files) {
-  return scan(files, () => true, BLACKLIST, "R8: término de la lista negra (supabase, appv2, mensajería, /v1/compute, /v1/computers)");
+  return scan(files, (f) => !UI_TOOL_MARKS.test(f.path), BLACKLIST, "R8: término de la lista negra (supabase, appv2, mensajería, /v1/compute, /v1/computers)");
 }

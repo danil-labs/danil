@@ -42,7 +42,8 @@ export function r4(files) {
     "R4: packages/ui no importa @danil/* (ni dominio ni red)");
 }
 
-const LOCAL = /\b(isLocal|is_local|kind\s*===?\s*["']personal["']|local\s*\?)/;
+// `local\s*\?(?![.:?])` solo detecta ternarios reales `local ? ... : ...` y excluye sintaxis de tipos/nullish (`local?: Type`, `local?.prop`, `local ?? x`).
+const LOCAL = /\b(isLocal|is_local|kind\s*===?\s*["']personal["']|local\s*\?(?![.:?]))/;
 
 export function r5(files) {
   // `host` es la única pieza que sabe qué máquina es esta computadora (Desk) y se lo dice a

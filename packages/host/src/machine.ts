@@ -27,3 +27,6 @@ export type LocalMachineEntry = { local?: boolean; features?: unknown };
 export function findLocalMachine<T extends { local?: boolean }>(machines: readonly T[]): T | undefined {
   return machines.find((m) => m.local);
 }
+
+/** Indica si la máquina corresponde a la computadora local de esta ventana. */
+export const isOwnMachine = (machine: { local?: boolean } | null | undefined): boolean => Boolean(machine?.local);
