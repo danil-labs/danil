@@ -7,8 +7,8 @@ import { capabilities } from "../../../../host/src/platform";
 import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
 import { Input } from "../../../../ui/src/Input";
-import { OnboardingAccounts } from "../../../../../apps/desktop/src/web/OnboardingAccounts";
-import "../../../../../apps/desktop/src/web/phrases";
+import { OnboardingAccounts } from "../../../../session/src/OnboardingAccounts";
+import "../../../../ui/src/phrases";
 
 /**
  * The first run on a managed computer: it is prepared and its cloud agents are
