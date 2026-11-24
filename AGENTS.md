@@ -143,7 +143,7 @@ account type is the feature, not the product:
 
 | Name | Who has it | What it is |
 |---|---|---|
-| **Machine** | every account | Your own VMs, or machines connected to the central relay `computers` (`computers.danil.ai`). CLI `danil machines` / `dn machines`. |
+| **Machine** | every account | Your own VMs, or machines connected through `connect.danil.ai` (relay) and registered in `machine-provisioning`. CLI `danil machines` / `dn machines`. |
 | **Harness** | organizations only (Teams, Enterprise); a personal account has none | Policy, usage, members and evaluation. It is what Radiant used to be. |
 
 "Agents" survives only as a common noun (the agents dock, a task's agent, a
