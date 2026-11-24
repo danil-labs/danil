@@ -1,24 +1,33 @@
-import { createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
 import { checkEnvironment } from "../queries/engine-environment";
 import { cancelBrowserLogin, checkGitHost, connectGitHost, disconnectGitHost, finishBrowserLogin, gitHostAreas, gitHostAvailableAreas, installGh, selectGitHostArea, startBrowserLogin } from "../queries/engine-git";
 import { openExternal } from "../queries/engine-open";
 import { listWorkspaces, setWorkspaceHostGithub } from "../queries/engine-workspaces";
-import { capabilities } from "../../../../host/src/platform.ts";
+import { capabilities, isNoMachines, machineAvailability } from "../../../../host/src/platform.ts";
 import { asFailure, detalleDe, type Failure } from "../../../../ui/src/Failure";
 import type { Startup, Workspace } from "../queries/workspaces-store";
 import { t } from "../../../../ui/src/lib/i18n";
 import type { GithubAccountState } from "./GithubAccount";
 import { type Provider, type Estado, type Borrador, type Wait, type Area, type ProyectoRemoto, SIN_BORRADOR } from "./ProvidersModel";
 
-export function createProveedores() {
-  const startup = listWorkspaces<Startup>();
+export function createProveedores(workspace?: () => string | null | undefined) {
+  const initialWorkspace = workspace?.() ?? null;
+  const startup = initialWorkspace ? null : listWorkspaces<Startup>();
   // En la web sin workspace abierto, la cuenta se resuelve por el primero de la lista.
-  const scope = startup.then((s) => s.active ?? (capabilities().nativeWindow ? null : s.workspaces[0]?.id) ?? "pending");
-  const [scopeId, setScopeId] = createSignal<string | null>(null);
-  void scope.then((id) => setScopeId(id === "pending" ? null : id), () => {});
+  const scope = initialWorkspace
+    ? Promise.resolve(initialWorkspace)
+    : startup!.then((s) => s.active ?? (capabilities().nativeWindow ? null : s.workspaces[0]?.id) ?? "pending");
+  const [scopeId, setScopeId] = createSignal<string | null>(initialWorkspace);
+  void scope.then((id) => { if (!scopeId()) setScopeId(id === "pending" ? null : id); }, () => {});
+  if (workspace) {
+    createEffect(() => {
+      const next = workspace();
+      if (next) setScopeId(next);
+    });
+  }
   const [githubAccount, setGithubAccount] = createSignal<GithubAccountState>({ mode: "unknown", connected: false, reauthorize: false, session: null });
   /** La tarjeta local se ve sin sesión de Danil, con un motor sin GitHub de la cuenta o mientras la local manda. */
-  const githubLocal = (id: string) => id !== "github" || githubAccount().mode === "local";
+  const githubLocal = (id: string) => !isNoMachines() && (id !== "github" || githubAccount().mode === "local");
   let disposed = false;
   onCleanup(() => {
     disposed = true;
@@ -27,7 +36,7 @@ export function createProveedores() {
     }
   });
   const [cli, setCli] = createSignal<{ available: boolean; version: string | null; managed_supported: boolean; installable: boolean; host_signed_in?: boolean } | null>(null);
-  const [loadingCli, setLoadingCli] = createSignal(true);
+  const [loadingCli, setLoadingCli] = createSignal(!isNoMachines());
   const [installingCli, setInstallingCli] = createSignal(false);
   const [cliFailure, setCliFailure] = createSignal<Failure | null>(null);
   async function installCli() {
@@ -40,18 +49,40 @@ export function createProveedores() {
     finally { setInstallingCli(false); }
   }
   async function refreshCli() {
+    if (isNoMachines()) {
+      setCli(null);
+      setCliFailure(null);
+      setLoadingCli(false);
+      return;
+    }
     setLoadingCli(true);
     try {
       const report = await checkEnvironment<{ githubCli?: NonNullable<ReturnType<typeof cli>> }>();
       setCli(report.githubCli ?? null);
     } finally { setLoadingCli(false); }
   }
-  onMount(() => { void refreshCli().catch((e) => setCliFailure(asFailure(e))); });
+  onMount(() => { void refreshCli().catch((e) => { if (!isNoMachines()) setCliFailure(asFailure(e)); }); });
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setCli(null);
+      setCliFailure(null);
+      setLoadingCli(false);
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) {
+      void refreshCli().catch((e) => { if (!isNoMachines()) setCliFailure(asFailure(e)); });
+    }
+  }, { defer: true }));
   // «Usar el GitHub de esta computadora»: es de esta máquina y no viaja con la cuenta.
   const [hostGithub, setHostGithub] = createSignal(false);
   const [savingHost, setSavingHost] = createSignal(false);
   const [hostFailure, setHostFailure] = createSignal<Failure | null>(null);
   onMount(() => {
+    if (!startup) return;
     void startup
       .then((s) => setHostGithub(!!s.workspaces.find((w) => w.id === s.active)?.host_github))
       .catch(() => {});

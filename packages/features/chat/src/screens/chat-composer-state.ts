@@ -15,6 +15,7 @@ import { seguirElFondo } from "../model/paste";
 import { createVisualBudget } from "../model/visualBudget";
 import type { ChatProps } from "./chat-props";
 import { isRetiredAgent } from "../../../../ui/src/lib/tasks/index.ts";
+import { isNoMachines } from "../../../../host/src/platform";
 import { createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js";
 
 /** Lo que el bloque usa del cuerpo de Chat. */
@@ -247,14 +248,14 @@ export function createChatComposerState(props: ChatProps, deps: ChatComposerStat
    */
   const escribible = () => !props.esperando || dirigido();
   // El campo no pide superficie: sin cuenta conectada hay que poder escribir un `!`.
-  const mandable = () => escribible() && (Boolean(actual()?.usable) || seMandaSinSuperficie(props.input));
+  const mandable = () => !isNoMachines() && escribible() && (Boolean(actual()?.usable) || seMandaSinSuperficie(props.input));
   const listo = () => mandable() && preparingAttachments() === 0;
   const enviadas = createMemo(() => lastSentAt(props.msgs, props.cola.items.map((q) => q.text)));
   const respuestaRapida = (desde: number): RespuestaRapida | null => {
     const mandarRapida = props.onRespuestaRapida;
     if (!mandarRapida || props.soloLectura) return null;
     return {
-      puede: Boolean(actual()?.usable) && !props.esperando,
+      puede: !isNoMachines() && Boolean(actual()?.usable) && !props.esperando,
       usada: (texto) => usedSince(enviadas(), texto, desde),
       onElegir: (texto) => {
         hilo.bajar();

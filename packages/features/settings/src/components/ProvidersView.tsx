@@ -1,6 +1,6 @@
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import { For, Match, Show, Suspense, Switch, createSignal, onCleanup, onMount, type JSX } from "solid-js";
-import { capabilities } from "../../../../host/src/platform.ts";
+import { capabilities, isNoMachines } from "../../../../host/src/platform.ts";
 import { FailureNote } from "../../../../ui/src/Failure";
 import { Skeleton } from "../../../../ui/src/Skeleton";
 import { MarcaGitHost } from "../../../../ui/src/icons";
@@ -16,12 +16,14 @@ import { createFilaDeProveedor } from "./ProvidersRow";
 import { createConexionDeProveedor } from "./ProvidersConnected";
 import { createFormularioDeProveedor } from "./ProvidersForm";
 import { GithubAccount, LocalKeysBanner, CredentialsInUse } from "./ProvidersModel";
+import { MachineRequiredNotice } from "./MachineRequiredNotice";
 
 /**
  * `solo` limita el catálogo a uno o varios proveedores. Configuración los
  * compone por sección sin volver a hacer de cada uno un destino del riel.
  */
 export type ProvidersProps = {
+  workspace?: string | null;
   solo?: string | string[];
   integraciones?: (p: { solo: string[]; onCambio: () => void }) => JSX.Element;
   maquinas: MaquinasDeAjustes;
@@ -36,13 +38,13 @@ export default function Providers(props: ProvidersProps) {
   });
   return (
     <Show when={generation()} keyed>
-      {(_generation) => <WorkspaceProviders solo={props.solo} integraciones={props.integraciones} maquinas={props.maquinas} />}
+      {(_generation) => <WorkspaceProviders workspace={props.workspace} solo={props.solo} integraciones={props.integraciones} maquinas={props.maquinas} />}
     </Show>
   );
 }
 
 function WorkspaceProviders(props: ProvidersProps) {
-  const proveedores = createProveedores();
+  const proveedores = createProveedores(() => props.workspace);
   const { cargando, fallo, githubAccount, conectarEnNavegador, hostUsable, hostGithub, savingHost, changeHostGithub, hostFailure, scopeId, setGithubAccount, githubLocal, cancelarNavegador, montajes, actualizarAcceso, cliFailure, cli, loadingCli, installingCli, installCli } = proveedores;
   const accionesDeProveedores = createAccionesDeProveedores(props, proveedores);
   const { visibles } = accionesDeProveedores;
@@ -223,7 +225,7 @@ function WorkspaceProviders(props: ProvidersProps) {
                   </Show>
 
                   <Areas />
-                  <Show when={p.id === "github"}>
+                  <Show when={p.id === "github" && !isNoMachines()}>
                     <SettingsBlock>
                       <details>
                         <summary class="cursor-pointer rounded-sm text-sm text-neutral-500 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
@@ -256,7 +258,10 @@ function WorkspaceProviders(props: ProvidersProps) {
               );
             }}
           </For>
-          <Show when={!props.solo && props.integraciones}>
+          <Show when={isNoMachines()}>
+            <MachineRequiredNotice />
+          </Show>
+          <Show when={!props.solo && !isNoMachines() && props.integraciones}>
             {(Integraciones) => (
               <>
                 <SettingsSection title={t("onboarding.tools.drive")} description={t("onboarding.tools.about.drive")}>

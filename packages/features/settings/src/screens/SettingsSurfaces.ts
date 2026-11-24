@@ -1,4 +1,5 @@
-import { createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform.ts";
 import { listSurfaces } from "../queries/engine-workspaces";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { type Superficie } from "../../../../ui/src/lib/surfaces";
@@ -40,6 +41,11 @@ export function createSuperficiesDeAjustes(
   });
   const cargarSuperficies = () => {
     const id = ++cargaId;
+    if (isNoMachines()) {
+      setSuperficies([]);
+      setEstadoSuperficies({ k: "no_machine" });
+      return;
+    }
     void listSurfaces<Superficie[]>()
       .then((raw) => {
         if (!vivo || id !== cargaId) return;
@@ -52,15 +58,33 @@ export function createSuperficiesDeAjustes(
       // Lo que ya se veía se queda; sin nada, el panel dice por qué (una VM encendiéndose, por ejemplo).
       .catch((e) => {
         if (!vivo || id !== cargaId) return;
+        if (isNoMachines()) {
+          setSuperficies([]);
+          setEstadoSuperficies({ k: "no_machine" });
+          return;
+        }
         setEstadoSuperficies({ k: "failed", f: asFailure(e) });
       });
   };
   const reiniciarSuperficies = () => {
     setSuperficies([]);
-    setEstadoSuperficies({ k: "loading" });
+    setEstadoSuperficies(isNoMachines() ? { k: "no_machine" } : { k: "loading" });
     cargarSuperficies();
   };
   onMount(cargarSuperficies);
+
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setSuperficies([]);
+      setEstadoSuperficies({ k: "no_machine" });
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) reiniciarSuperficies();
+  }, { defer: true }));
 
   /**
    * **Instalar un CLI cambia lo que esta pantalla afirma, así que se vuelve a

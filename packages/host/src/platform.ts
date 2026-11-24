@@ -132,19 +132,34 @@ export type Capabilities = import("../../session/src/group-account").GroupAccoun
   accountComputers?: AccountComputersSource;
   /** Varias cuentas de Danil en una ventana (la web); el escritorio no la da. */
   webAccounts?: WebAccountsSource;
+  /** Disponibilidad reactiva de máquinas en el contexto activo (web); en Desk siempre hay motor local. */
+  machineAvailability?: () => import("../../features/machines/src/model/availability").MachineAvailability;
+  /** Plan activo de la organización o cuenta en el contexto actual (ej. "free", "pro", "team"). */
+  activePlan?: () => string | null;
 };
 
 const DESKTOP: Capabilities = { nativeWindow: true, updater: true, localSetup: true, computerStatus: false, danilAccount: true, radiant: true };
+const DESKTOP_READY: import("../../features/machines/src/model/availability").MachineAvailability = { kind: "ready", online: 1, total: 1 };
 
 let current = DESKTOP;
+const [caps, setCaps] = createRoot(() => createSignal<Capabilities>(DESKTOP));
 const [screenAccess, setScreenAccess] = createRoot(() => createSignal<Capabilities["machineScreen"]>(DESKTOP.machineScreen));
 
 export const capabilities = (): Capabilities => current;
 
 export function setCapabilities(next: Capabilities) {
   current = next;
+  setCaps(() => next);
   setScreenAccess(() => next.machineScreen);
 }
+
+export const machineAvailability = () => caps().machineAvailability?.() ?? DESKTOP_READY;
+export const isNoMachines = () => machineAvailability().kind === "no_machines";
+export const activePlan = (): string | null => caps().activePlan?.() ?? null;
+export const isPaidPlan = (): boolean => {
+  const plan = activePlan();
+  return !!plan && plan !== "free";
+};
 
 export const machineScreen = (machine: string) => screenAccess()?.(machine) ?? null;
 

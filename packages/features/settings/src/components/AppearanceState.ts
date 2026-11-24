@@ -1,11 +1,11 @@
 import { open } from "@tauri-apps/plugin-dialog";
-import { createResource, createSignal, onCleanup, onMount } from "solid-js";
+import { createEffect, createResource, createSignal, on, onCleanup, onMount } from "solid-js";
 import { listMachineAgents, savePastedImage, setAgentAvatar } from "../queries/engine-agents";
 import { previewFile } from "../queries/engine-workspaces";
 import { t } from "../../../../ui/src/lib/i18n";
 import { mimeOfAttachment } from "../../../../ui/src/lib/attachment-mime.ts";
 import { elegirArchivoDeImagen } from "../../../../host/src/pick-image";
-import { capabilities } from "../../../../host/src/platform";
+import { capabilities, isNoMachines, machineAvailability } from "../../../../host/src/platform";
 import type { AgentProfile, CatalogoDeAgentes } from "../../../../ui/src/lib/model";
 import { type FondoDeChat } from "../../../../ui/src/lib/chat-background";
 import {
@@ -51,13 +51,19 @@ export function createApariencia(props: Parameters<typeof Appearance>[0]) {
 
   async function recargar() {
     const esta = ++lectura;
+    if (isNoMachines()) {
+      setFilas([]);
+      setFallo(null);
+      setCargado(true);
+      return;
+    }
     try {
       const catalogo = await listMachineAgents<CatalogoDeAgentes>();
       if (esta !== lectura) return;
       setFilas(filasDe(catalogo));
       setFallo(null);
     } catch (error) {
-      if (esta === lectura) setFallo(prosaDe(error));
+      if (esta === lectura && !isNoMachines()) setFallo(prosaDe(error));
     } finally {
       if (esta === lectura) setCargado(true);
     }
@@ -81,6 +87,7 @@ export function createApariencia(props: Parameters<typeof Appearance>[0]) {
   }
 
   function cargarFondo(forzar = false) {
+    if (isNoMachines()) return;
     const workspace = props.workspace ?? null;
     if (!workspace) return;
     if (!forzar && workspaceAbierto() === workspace) return;
@@ -107,6 +114,23 @@ export function createApariencia(props: Parameters<typeof Appearance>[0]) {
       window.removeEventListener("harness:machine-slices", alDespertar);
     });
   });
+
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setFilas([]);
+      setFallo(null);
+      setCargado(true);
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) {
+      void recargar();
+      cargarFondo(true);
+    }
+  }, { defer: true }));
 
   async function ponerAvatar(fila: Fila, source: string | null) {
     if (!fila.project) {
@@ -212,12 +236,13 @@ export function createApariencia(props: Parameters<typeof Appearance>[0]) {
   }
 
   function pulsarFondo(id: FondoDeChat) {
+    if (id === "propia" && isNoMachines()) return;
     if (id === "propia" && !hayPropia()) {
       void elegirImagenPropia();
       return;
     }
     elegirFondoDeChat(id);
-    void motor().then((m) => m.guardarFondo());
+    if (!isNoMachines()) void motor().then((m) => m.guardarFondo());
   }
   return {
     tema, estilo, estiloClaro, hayPropia, elegirImagenPropia, fondo, pulsarFondo, vistaPropia, velo,

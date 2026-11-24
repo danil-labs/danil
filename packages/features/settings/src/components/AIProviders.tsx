@@ -16,6 +16,7 @@ import { rotuloDeMarca } from "../../../../ui/src/lib/surfaceMarks";
 import Accounts from "./Accounts";
 import AddAccountPicker from "./AddAccountPicker";
 import DanilBlock from "./DanilBlock";
+import { MachineRequiredState } from "./MachineRequiredNotice";
 import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
 
 /**
@@ -34,7 +35,7 @@ export default function AIProviders(props: { superficies: Superficie[]; estado?:
   const controles = new Map<string, { agregar: () => void }>();
   let disparador: HTMLButtonElement | undefined;
   let focoEn: string | null = null; // El grupo donde estaba el foco; Kobalte lo mueve al cerrar de Configuración si su botón desaparece.
-  const sinLista = () => vista() === "loading" || vista() === "failed";
+  const sinLista = () => vista() === "loading" || vista() === "failed" || vista() === "no_machine";
   const ids = createMemo(() => (sinLista() ? [] : idsDeProveedor(props.superficies)));
   const porId = createMemo(() => new Map(grupos(props.superficies).map((g) => [g[0].provider, g])));
   const aLaVista = createMemo(() => visibles(props.superficies, estados));
@@ -66,11 +67,14 @@ export default function AIProviders(props: { superficies: Superficie[]; estado?:
       <DanilBlock routers={routers(props.superficies, FREE_ROUTER_OPENCODE)} maquinas={props.maquinas} piezas={props.piezas} />
       <SettingsSection
         title={t("settings.ai_providers.accounts")}
-        aside={<AddAccountPicker opciones={sinLista() ? [] : opcionesDeAlta(props.superficies, estados)} nombre={nombre} onElegir={elegir} disabled={ids().length === 0} disparador={(el) => (disparador = el)} />}
-        description={ids().length === 0 ? t("settings.ai_providers.add_unavailable") : undefined}
+        aside={vista() === "no_machine" ? undefined : <AddAccountPicker opciones={sinLista() ? [] : opcionesDeAlta(props.superficies, estados)} nombre={nombre} onElegir={elegir} disabled={ids().length === 0} disparador={(el) => (disparador = el)} />}
+        description={ids().length === 0 && vista() !== "no_machine" ? t("settings.ai_providers.add_unavailable") : undefined}
       >
         <div class="grid gap-6">
           <Switch>
+            <Match when={vista() === "no_machine"}>
+              <MachineRequiredState />
+            </Match>
             <Match when={vista() === "loading"}>
               <div class="grid gap-3" data-ai-providers="loading">
                 <p role="status" class="m-0 text-ui text-neutral-500">{t("settings.ai_providers.loading")}</p>

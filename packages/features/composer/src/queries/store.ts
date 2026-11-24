@@ -1,4 +1,5 @@
 import { batch, createEffect, createMemo, createSignal, on, onCleanup, onMount, untrack } from "solid-js";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform.ts";
 import type { Agent, AgentModels, ModoDePermiso } from "../../../../ui/src/lib/model.ts";
 import { type CatalogosDeModelos, effortAlCambiarDeModelo, type OpcionDeModelo } from "../../../../ui/src/lib/models.ts";
 import type { CliCommand, Skill, SlashMenu } from "../../../../ui/src/lib/skills.ts";
@@ -59,6 +60,12 @@ export function createComposerStore(deps: {
   const catalogosEnVuelo = new Map<string, Promise<void>>();
   const cargarComandos = (a: string) => {
     if (disposed) return;
+    if (isNoMachines()) {
+      setCliCommands([]);
+      setSkills([]);
+      setSideCommand(null);
+      return;
+    }
     const revision = composerRevision;
     const poner = (menu: SlashMenu) => {
       if (a !== agent() || disposed || revision !== composerRevision) return;
@@ -71,7 +78,7 @@ export function createComposerStore(deps: {
       .catch(() => poner({ commands: [], skills: [] }));
   };
   function cargarModelos(a: string, forzar = false) {
-    if (disposed) return Promise.resolve();
+    if (disposed || isNoMachines()) return Promise.resolve();
     if (!forzar && untrack(() => catalogos()[a])) return Promise.resolve();
     const yaVa = catalogosEnVuelo.get(a);
     if (yaVa) return yaVa;
@@ -115,6 +122,10 @@ export function createComposerStore(deps: {
   }
   async function cargarSuperficies(inicial: boolean) {
     if (disposed) return;
+    if (isNoMachines()) {
+      setSuperficies([]);
+      return;
+    }
     const revision = composerRevision;
     try {
       const machine = composerMachine(), routed = options();
@@ -192,6 +203,10 @@ export function createComposerStore(deps: {
   }
   async function refreshProviders() {
     if (disposed) return;
+    if (isNoMachines()) {
+      setAgents([]);
+      return;
+    }
     const revision = composerRevision;
     const workspace = workspaceActivo();
     const routed = options();
@@ -217,17 +232,39 @@ export function createComposerStore(deps: {
     catalogosEnVuelo.clear();
     batch(() => {
       setCatalogos({});
-      setSuperficies(null);
+      setSuperficies(isNoMachines() ? [] : null);
     });
-    if (connected() && workspaceActivo()) {
+    if (connected() && workspaceActivo() && !isNoMachines()) {
       void cargarSuperficies(false);
       void refreshProviders();
     }
   }, { defer: true }));
   createEffect(on(deps.scope.machineOn, (encendida, antes) => {
-    if (encendida && antes !== true && connected() && workspaceActivo()) {
+    if (encendida && antes !== true && connected() && workspaceActivo() && !isNoMachines()) {
       void cargarSuperficies(false);
       void refreshProviders();
+    }
+  }, { defer: true }));
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (disposed || kind === prev) return;
+    if (kind === "no_machines") {
+      batch(() => {
+        setSuperficies([]);
+        setAgents([]);
+        setModos([]);
+        setCliCommands([]);
+        setSkills([]);
+        setSideCommand(null);
+      });
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline") && connected() && workspaceActivo()) {
+      void cargarSuperficies(false);
+      void refreshProviders();
+      cargarComandos(agent());
     }
   }, { defer: true }));
 
@@ -236,7 +273,7 @@ export function createComposerStore(deps: {
     on([agent, composerMachine, workspaceActivo], ([a]) => {
       if (disposed) return;
       const revision = composerRevision;
-      if (!a) {
+      if (!a || isNoMachines()) {
         setModos([]);
         return;
       }

@@ -195,7 +195,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         return listed?.kind === 'ok' ? organizationMachine(id, listed.value) : null;
       }, active.billingFor(plain, profile.id));
       const current = async () => { const group = active.current(); return group ? { context: group.context, org: group.org, name: group.name, plan: group.plan, role: group.role, personal: group.personal } : null; };
-      windowApp = mountWindow({ sessions, rail, contextMachines: machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0], assets: webEdgeWorkspaceAssets(plain, () => active.current()?.context ?? null), credentials: webCredentialSource(options.origin, transport),
+      windowApp = mountWindow({ sessions, rail, contextMachines: machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0], origin: options.origin, transport, assets: webEdgeWorkspaceAssets(plain, () => active.current()?.context ?? null), credentials: webCredentialSource(options.origin, transport),
         profile: webAccountProfile(transport), active,
         onUnavailable: () => { setError('web.platform.unavailable'); mounted = false; gate(); later(); },
         services: {

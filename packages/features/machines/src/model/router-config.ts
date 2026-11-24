@@ -5,6 +5,7 @@ import type { WorkspaceSpaceCatalog } from "../../../../platform-client/src/work
 import type { EngineWorkspace } from "../queries/engine-workspaces.ts";
 export type Invoke = (command: string, args?: Record<string, unknown>, options?: { headers?: HeadersInit }) => Promise<unknown>;
 type SliceChange = "sessions" | "projects" | "spaces" | "attention" | "mentions" | "workspaces";
+export type CatalogWorkspaceEntry = { id: string; name: string; org?: string | null; account?: string | null };
 export type RouterConfig = {
   /** La máquina de la ventana; `null` en la web. */
   self: string | null;
@@ -23,6 +24,8 @@ export type RouterConfig = {
   deliverRemote?: boolean;
   /** El registro de la cuenta (`GET /v1/workspaces`), o `null` si no se pudo leer. */
   registry?: () => Promise<AccountWorkspace[] | null>;
+  /** Workspaces del catálogo del plano de control en Web, para listar aun con 0 máquinas. */
+  catalogWorkspaces?: () => readonly CatalogWorkspaceEntry[] | null;
   /** Cambió la rebanada de otra máquina: la ventana vuelve a leer eso. */
   onSlices?: (changes: SliceChange[]) => void;
   /** Los eventos de otra máquina, ya con los ids del panel. */

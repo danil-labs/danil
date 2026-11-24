@@ -52,6 +52,7 @@
   "shell.ports.external.none": "No other port is open on this computer",
   "shell.ports.external.why": "Something Danil did not launch opened these, so it does not close them.",
   "shell.ports.none": "None of your tasks left a port open",
+  "shell.ports.no_machines": "Connect a machine to view open ports.",
   "shell.ports.open_browser": "Open in the browser",
   "shell.ports.open_here": "Open here",
   "shell.processes.title": "Processes",

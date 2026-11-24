@@ -1,5 +1,6 @@
 import type { EngineUpdate, MachineTaskUsage, Startup } from "../../../engine-client/src/index.ts";
 import { createEffect, createMemo, createSignal, on, onCleanup, untrack } from "solid-js";
+import { isNoMachines } from "../../../host/src/platform";
 import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { t } from "../../../ui/src/lib/i18n";
 import { conservar } from "../../../session/src/sessionRefresh";
@@ -263,6 +264,13 @@ export function createStorageState(props: StorageProps) {
 
   async function openInventory(expected?: Target, refreshDetail = true) {
     if (clearing() || (expected && !current(expected))) return;
+    if (isNoMachines()) {
+      setInventory([]);
+      setMachine(null);
+      setInventoryError("");
+      resetDetail();
+      return;
+    }
     const context = expected?.generation ?? generation;
     const workspace = expected?.workspace ?? props.workspace;
     const request = ++inventoryRequest;
@@ -305,6 +313,13 @@ export function createStorageState(props: StorageProps) {
     let alive = true;
     const sync = async () => {
       if (running || clearing() || listing() || document.visibilityState === "hidden") return;
+      if (isNoMachines()) {
+        setInventory([]);
+        setMachine(null);
+        setInventoryError("");
+        resetDetail();
+        return;
+      }
       running = true;
       const context = generation;
       const workspace = props.workspace;

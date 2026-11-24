@@ -52,6 +52,7 @@
   "shell.ports.external.none": "No hay ningún otro puerto abierto en esta computadora",
   "shell.ports.external.why": "Los abrió algo que Danil no lanzó, así que no los cierra.",
   "shell.ports.none": "Ninguna de tus tareas dejó un puerto abierto",
+  "shell.ports.no_machines": "Conecta una máquina para ver los puertos abiertos.",
   "shell.ports.open_browser": "Abrir en el navegador",
   "shell.ports.open_here": "Abrir aquí",
   "shell.processes.title": "Procesos",

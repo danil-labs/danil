@@ -1,4 +1,5 @@
-import { For, Show, createSignal, onMount } from "solid-js";
+import { For, Show, createEffect, createSignal, on, onMount } from "solid-js";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform";
 import { setWorkspaceLanguage } from "../queries/engine-language";
 import { listWorkspaces } from "../queries/engine-workspaces";
 import { Select } from "../../../../ui/src/Select";
@@ -33,10 +34,11 @@ export function Lengua(props: { row?: boolean }) {
   /** Lo elegido: un código, o `""` para heredar. */
   const [valor, setValor] = createSignal(semillaDelAlta() === "sistema" ? "" : semillaDelAlta());
 
-  onMount(() => {
-    // Se pregunta en vez de recibirlo por props porque este componente lo monta
-    // `General`, que no conoce el workspace, y el paso 1 del alta, donde no
-    // existe. Preguntar aquí deja a los dos montarlo sin saber nada.
+  const loadWorkspace = () => {
+    if (isNoMachines()) {
+      setWorkspace(null);
+      return;
+    }
     void listWorkspaces<Startup>()
       .then((s) => {
         const activo = s.workspaces.find((w) => w.id === s.active);
@@ -45,15 +47,28 @@ export function Lengua(props: { row?: boolean }) {
         setValor(activo.lengua ?? "");
       })
       .catch(() => {
-        // Sin workspaces el selector sigue sirviendo: escribe la preferencia de
-        // la máquina, que es lo que corresponde antes de que haya ninguno.
+        // Sin workspaces el selector sigue sirviendo: escribe la preferencia local.
       });
-  });
+  };
+
+  onMount(loadWorkspace);
+
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setWorkspace(null);
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) loadWorkspace();
+  }, { defer: true }));
 
   function elegir(codigo: string) {
     setValor(codigo);
     const id = workspace();
-    if (id === null) {
+    if (id === null || isNoMachines()) {
       elegirLengua(codigo === "" ? "sistema" : codigo);
       return;
     }
