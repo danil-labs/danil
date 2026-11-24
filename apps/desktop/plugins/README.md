@@ -26,4 +26,4 @@ listo por defecto en Desk y Web sin instalación aparte.
 
 Los plugins binarios (descarga, hash, instalación y activación) los gestiona el
 motor de Terminus; la ventana solo los muestra en Configuración → Conexiones
-(`src/features/settings/ConnectionsOperation.tsx`).
+(`packages/features/settings/src/components/ConnectionsOperation.tsx`).

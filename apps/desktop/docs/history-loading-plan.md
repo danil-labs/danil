@@ -1,7 +1,7 @@
 # Historial acotado en host, relay, escritorio y web
 
 Estado: propuesta del 2026-10-28; la parte del cliente ya entró (#441 y
-`history_request` en `features/machines/router.ts`), host y relay se confirman en su repo. Preparada a petición de la
+`history_request` en `packages/features/machines/src/queries/router.ts`), host y relay se confirman en su repo. Preparada a petición de la
 persona; no es aceptación de arquitectura ni autorización de despliegue.
 Base del cliente inspeccionada: `4cc7a618`. Lectores: responsables del motor,
 Machines y clientes. Resultado esperado: cualquier conversación existente abre
@@ -18,9 +18,9 @@ marco del transporte.
   compacto; prácticamente todo corresponde a `tools`.
 - `src-tauri/crates/engine-protocol/src/lib.rs` fija `MAX_FRAME` en 16 MiB.
   `src-tauri/src/extracted/proxy.rs`, `read_history`, pide hasta 150 turnos.
-- `src/features/machines/router.ts`, `remote`, responde `load_history` leyendo
+- `packages/features/machines/src/queries/router.ts`, `remote`, responde `load_history` leyendo
   `load_session` completo: la web no conserva la paginación del IPC local.
-- `src/features/chat/history.ts` conserva y concatena páginas ya leídas.
+- `packages/features/chat/src/model/history.ts` conserva y concatena páginas ya leídas.
   `packages/fleet/src/slices.ts` limita la persistencia de caché, pero su mapa
   de rebanadas en memoria no tiene un presupuesto explícito de bytes.
 - En el checkout local de `machines`, [mirror.ts de Machines](https://github.com/danil-labs/machines/blob/main/src/mirror.ts) limita cada valor a

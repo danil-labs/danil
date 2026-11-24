@@ -264,9 +264,9 @@ comando exacto para copiar, como hace hoy la fila de un servidor de Dray.
 
 - `apps/desktop/src-tauri/src/extracted/guests/wsl.rs` (nuevo): detección, ejecución
   con argv seguro, decodificación UTF-16LE, timeouts y cancelación.
-- Una pantalla nueva en `src/features/machines/` y su estado local: pasos,
+- Una pantalla nueva en `packages/features/machines/src/` y su estado local: pasos,
   errores y registro.
-- `packages/computers/src/connect.ts`: reutilizar `watchNewComputer`; agregar el
+- Reutilizar `watchNewComputer`; agregar el
   destino WSL y los hops nuevos, sin duplicar el sondeo.
 - `packages/computers/src/machine.ts`: `kind`/`os`/`wakeable` para WSL.
 - `packages/fleet`: `transport`/`local` en `MachineInfo` y el enlace local de la

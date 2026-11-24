@@ -70,12 +70,12 @@ alcanzan:
 
 | Candado | Dónde | Qué cierra |
 |---|---|---|
-| `sandbox` sin `allow-same-origin` | `src/features/artifacts/sandbox.ts` | Origen opaco: no alcanza el DOM de la app, ni sus cookies, ni sus comandos |
-| Política de contenido inyectada | `src/features/artifacts/sandbox.ts` (`CSP_ARTEFACTO`) | `fetch`, XHR, WebSocket, EventSource, beacon, imagen remota, fuente, hoja de estilo, `script src`, formularios, marcos hijos |
+| `sandbox` sin `allow-same-origin` | `packages/features/artifacts/src/model/sandbox.ts` | Origen opaco: no alcanza el DOM de la app, ni sus cookies, ni sus comandos |
+| Política de contenido inyectada | `packages/features/artifacts/src/model/sandbox.ts` (`CSP_ARTEFACTO`) | `fetch`, XHR, WebSocket, EventSource, beacon, imagen remota, fuente, hoja de estilo, `script src`, formularios, marcos hijos |
 | `frame-src 'self'` en la ventana | `index.html` | `location.href` y `meta refresh` — un marco **siempre** puede navegarse a sí mismo, y ni el sandbox ni su propia política lo impiden |
 
 Y un cuarto candado que **no es de red y por eso no está en esa tabla**:
-`leerEstado` en `src/features/artifacts/sandbox.ts`,
+`leerEstado` en `packages/features/artifacts/src/model/sandbox.ts`,
 que deciden qué se le acepta al marco por `postMessage`. Ver «El puente» más
 abajo.
 
@@ -150,8 +150,8 @@ con esos canales. El laboratorio de navegador actualizado está sin verificar.
   Es un límite, no un control. Un HTML del árbol de trabajo sale igual, tal
   cual, por «Abrir en mi navegador».
 - **La vista previa del árbol no se ha corrido aquí.**
-  `src/features/code/FileViewer.tsx` pinta un HTML del árbol con el mismo
-  `src/features/artifacts/Document.tsx`, así que tiene los mismos
+  `packages/features/code/src/screens/FileViewer.tsx` pinta un HTML del árbol con el mismo
+  `packages/ui/src/Document.tsx`, así que tiene los mismos
   tres candados. Eso es un argumento y no una medición: la corrida 3 se puede
   hacer abriendo `hostile-artifact.html` desde el árbol.
 - **Esto no dice nada de la ventana del chat.** Es el otro laboratorio, más
@@ -187,7 +187,7 @@ Y lo que sale por aquí no pasa por ninguna salida registrada: **sin sello y sin
 | Archivo | Qué es |
 |---|---|
 | `hostile-response.ts` | La respuesta del agente, con siete vectores. **No se toca**: es el patrón de comparación |
-| `hostile-window.tsx` | Monta el `Markdown` de la app —el de verdad, importado de `src/ui/`— o la copia congelada de cómo pintaba antes |
+| `hostile-window.tsx` | Monta el `Markdown` de la app —el de verdad, importado de `packages/ui/src/`— o la copia congelada de cómo pintaba antes |
 | `window.html` | La misma política que `index.html`, byte por byte. `scripts/guards/csp.mjs` falla si dejan de serlo |
 | `unrestricted-window.html` | El mismo archivo sin política ninguna: el control negativo |
 | `window.mjs` | Levanta la sonda, el servidor de desarrollo y los dos motores, y dice qué salió |
@@ -260,7 +260,7 @@ Cuatro cosas se leen ahí:
    de `lib.rs`, que no pasan por ninguna capability. Lo que lo cierra es el filtro,
    y por eso el filtro no es opcional.
 3. **La navegación no la gobierna ninguna política.** Un `http:` en un enlace se
-   llevaba la ventana entera. Lo cierra `ui/Markdown.tsx` mandando el destino al
+   llevaba la ventana entera. Lo cierra `packages/ui/src/Markdown.tsx` mandando el destino al
    navegador del sistema, no una directiva.
 4. **Cerrar la ventana no rompió el contenedor**, y esa mitad hacía falta: con
    `script-src 'self'` a secas el runtime del artefacto no arrancaba —*«Refused to

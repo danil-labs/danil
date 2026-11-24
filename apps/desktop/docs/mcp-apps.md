@@ -55,10 +55,10 @@ que la sesión del agente autentique todos los servidores remotos de una MCP App
 ## Implementación y validación
 
 - El motor (`seldon-runtime`): recursos, conexiones y herramientas permitidas.
-- `src/features/chat/McpAppView.tsx`: descubrimiento y representación.
-- `src/features/chat/mcpAppProxy.ts`: sandbox y CSP.
-- `src/features/chat/ExcalidrawMcpCanvas.tsx`: checkpoints.
-- `src/features/chat/DrawioMcpCanvas.tsx`: XML y plugin.
+- `packages/features/chat/src/screens/McpAppView.tsx`: descubrimiento y representación.
+- `packages/features/chat/src/model/mcpAppProxy.ts`: sandbox y CSP.
+- `packages/features/chat/src/screens/ExcalidrawMcpCanvas.tsx`: checkpoints.
+- `packages/features/chat/src/screens/DrawioMcpCanvas.tsx`: XML y plugin.
 - `scripts/guards/mount-frontend.mjs`: montaje con IPC simulado.
 
 El montaje simulado no certifica el alojamiento ni la interacción en Tauri real.

@@ -23,7 +23,7 @@ cuenta, y que funcione sin internet.
   (`wsl-children.json` en la carpeta de datos de la ventana). Guardar ese
   registro nunca lo vacía: si no se puede leer, falla, y conserva las entradas
   que esta versión no entiende.
-- **En la flota** entra con un enlace propio (`features/machines/guestLink.ts`),
+- **En la flota** entra con un enlace propio (`packages/features/machines/src/queries/guestLink.ts`),
   con la misma forma que una sesión de relay: «Ejecutar en», el chat, los
   archivos y los eventos funcionan igual que con cualquier máquina.
 

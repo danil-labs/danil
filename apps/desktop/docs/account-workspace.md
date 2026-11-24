@@ -444,14 +444,14 @@ Agrega:
   ella. Un proyecto sin remoto que vive en otra máquina deja esa opción
   desactivada en «Ejecutar en», con la razón.
 - «Usar este workspace aquí» se borra.
-- El campo `linked` de `features/machines/store.ts` se renombra a `hosts`
+- El campo `linked` de `packages/features/machines/src/queries/store.ts` se renombra a `hosts`
   (tiene el workspace), para no confundirlo con el vínculo de la cuenta.
 
 Lista desde el registro de la cuenta (2026-10-21, tras el reporte de la web
 que pedía «crea tu workspace» con las VMs dormidas y la Mac encendida sin
 workspaces ligados):
 
-- La web, el escritorio con cuenta de Danil (`features/machines/account.tsx`,
+- La web, el escritorio con cuenta de Danil (`packages/features/machines/src/screens/account.tsx`,
   con el token de cliente) y el móvil leen `GET /v1/workspaces`
   (`listWorkspaces` en `packages/computers`) y lo juntan con lo que listan las
   máquinas encendidas (`Fleet.setRegistry` en `packages/fleet/src/fleet.ts`,
@@ -467,7 +467,7 @@ workspaces ligados):
   un workspace del registro abre sin esperar: proyectos del registro, tareas,
   fuentes y spaces vacíos. Crear una tarea va a la máquina elegida o a la
   última (con `materialize_workspace` antes si no lo tiene) y la enciende.
-- La web usa `src/web/window-session.tsx`: autentica por cookie en el borde y
+- La web usa `packages/session/src/window-session.tsx`: autentica por cookie en el borde y
   monta la ventana de tareas y la flota existentes (`src/web/window.tsx`). La
   lista y selección de plataforma usan `/v1/workspaces` tal como está. El registro
   del motor es independiente: mientras compute no lo publique, se descubre por
