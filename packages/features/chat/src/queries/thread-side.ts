@@ -67,7 +67,6 @@ export function createThreadSide(deps: ThreadSideDeps) {
   // `null` = cerrada. Una cadena es además con qué destino abrirla.
   const [settings, setSettings] = createSignal<string | null>(capabilities().initialSettings ?? null);
   const [activityNotice, setActivityNotice] = createSignal<ActivityEvent | null>(null);
-  const [activityMachine, setActivityMachine] = createSignal<string | null>(null);
   onMount(() => {
     const states = new Map<string, ActivityEvent["state"]>();
     const events = listen<ActivityEvent>("activity", event => {
@@ -85,5 +84,5 @@ export function createThreadSide(deps: ThreadSideDeps) {
 
   const [anadiendoCarpeta, setAnadiendoCarpeta] = createSignal(false);
   const [inicioDeCarpeta, setInicioDeCarpeta] = createSignal<InicioDeCarpeta | null>(null);
-  return { activityMachine, activityNotice, anadiendoCarpeta, carpetaDelProyecto, inicioDeCarpeta, setActivityMachine, setActivityNotice, setAnadiendoCarpeta, setInicioDeCarpeta, setSettings, settings, sidebar };
+  return { activityNotice, anadiendoCarpeta, carpetaDelProyecto, inicioDeCarpeta, setActivityNotice, setAnadiendoCarpeta, setInicioDeCarpeta, setSettings, settings, sidebar };
 }

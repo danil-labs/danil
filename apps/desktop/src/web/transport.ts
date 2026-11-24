@@ -42,8 +42,6 @@ const QUIET = new Set([
   "tray_update",
   "quit_completely",
   "service_filter",
-  "service_prepare_update",
-  "service_cancel_update",
   "update_install",
   "update_pending",
 ]);

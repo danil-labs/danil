@@ -297,10 +297,6 @@ export function crearCorridaDelAlta(props: SetupProps, estado: EstadoDelAlta) {
   const aviso = () =>
     mostrar() === false && bloqueado() && (corriendo() || falloEsencial()) && descartado() !== claveDelAviso();
 
-  function abrirEntorno() {
-    window.dispatchEvent(new CustomEvent("harness:open-settings", { detail: "entorno" }));
-  }
-
   const instalacion = (): Instalacion => ({
     titulo: sinSoporte()
       ? t("setup.status.unsupported")
@@ -338,6 +334,6 @@ export function crearCorridaDelAlta(props: SetupProps, estado: EstadoDelAlta) {
 
   return {
     empezar, terminado, fin, falloEsencial, fallas, conFallas, nombreAReparar, claveDelAviso, setDescartado,
-    aviso, abrirEntorno, instalacion, reparar,
+    aviso, instalacion, reparar,
   };
 }

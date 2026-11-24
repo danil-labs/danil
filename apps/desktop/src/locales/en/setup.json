@@ -21,7 +21,6 @@
   "setup.next.app": "Open Danil",
   "setup.repair.running": "Checking {name} in the background. You can keep working.",
   "setup.repair.failed": "{name} needs repair. Some features may fail until it's repaired.",
-  "setup.repair.open": "Open environment status",
   "setup.done_title": "All set.",
   "setup.progress": "Setup progress",
   "setup.simple.done": "All set",
@@ -49,6 +48,5 @@
   "setup.functions.restart": "Restart Danil",
   "setup.functions.repair_failed": "Could not repair the Danil environment.",
   "setup.bundled.description": "The tools come included with Danil. We check that they work.",
-  "setup.unsupported_detail": "This Mac has macOS {version}. Danil needs macOS {minimum} or later.",
-  "setup.row.ready": "Ready"
+  "setup.unsupported_detail": "This Mac has macOS {version}. Danil needs macOS {minimum} or later."
 }

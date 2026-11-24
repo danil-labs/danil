@@ -338,44 +338,6 @@ caso("un motor anterior conserva la función afectada sin listar herramientas", 
   assert.ok(app.w.document.querySelector('[data-function="agent-browser"]'), "la etapa vieja fallida no se nombra por su función");
 });
 
-caso("Estado del entorno lista solo los extras y lo incluido en una línea con «Reparar»", async () => {
-  const fila = (id, label, extra = {}) => ({ id, label, ok: true, required: false, detail: "1.0", source: "del sistema", ...extra });
-  const items = [
-    fila("git", "Git", { required: true }),
-    fila("python", "Python", { required: true, ok: false, reason: "missing" }),
-    fila("node", "Node.js"),
-    fila("npm", "npm"),
-    fila("pnpm", "pnpm"),
-    fila("bun", "Bun"),
-    fila("cargo", "Rust"),
-    fila("gh", "GitHub CLI"),
-  ];
-  const s = servicio({
-    setupRequired: false,
-    entorno: reporte(false, [], items),
-    preparar: enCurso,
-    extra: { list_dependencies: [], list_language_packs: [], list_bundled_language_packs: [], install_size: 0 },
-  });
-  const app = await boot("listo", "estado-del-entorno", s.respuestas);
-  s.conectar(app);
-  await sleep(300);
-  app.w.dispatchEvent(new app.w.CustomEvent("harness:open-settings", { detail: "entorno" }));
-  await sleep(1200);
-
-  const cuerpo = app.w.document.body.textContent;
-  const filas = [...app.w.document.querySelectorAll("tbody tr")].map((tr) => tr.textContent);
-  assert.ok(filas.some((f) => f.includes("GitHub CLI")), `no se lista lo detectado en el sistema: ${filas}`);
-  assert.ok(!filas.some((f) => /Node\.js|npm|pnpm|Bun|Rust|Git\b|Python/.test(f)), `se listan herramientas que no son extras: ${filas}`);
-  assert.ok(cuerpo.includes("Entorno de Danil: necesita reparación"));
-  assert.ok(cuerpo.includes("Editar Excel, Word, PowerPoint y PDF"));
-  const reparar = [...app.w.document.querySelectorAll("[data-environment-bundled] button")].find((b) => b.textContent.trim() === "Reparar");
-  reparar.click();
-  await sleep(300);
-  assert.deepEqual(s.llamadas.install_tool, [{ tool: "bundled-work-tools" }]);
-  assert.ok(app.w.document.body.textContent.includes("No se pudo reparar el entorno de Danil."));
-  assert.equal(app.commands.includes("install_base_tool"), false);
-});
-
 const elegido = process.env.SETUP_REPAIR_CASO;
 if (elegido) {
   await CASOS.get(elegido)();

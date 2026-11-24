@@ -1016,15 +1016,6 @@ fn read_history(
         Duration::from_secs(30),
     )
 }
-#[tauri::command]
-pub(super) fn service_prepare_update() -> Result<(), Value> {
-    // El cliente y el host se actualizan por separado; Windows ya no reemplaza el ejecutable del host.
-    Ok(())
-}
-#[tauri::command]
-pub(super) fn service_cancel_update() -> Result<(), Value> {
-    Ok(())
-}
 
 /// El token de cliente de vida corta de la cuenta de Danil, con el que la ventana
 /// lista las otras computadoras de la persona y les abre una sesión del relay. La

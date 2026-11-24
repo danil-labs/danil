@@ -89,6 +89,5 @@
   "settings.accounts.free.policy_changed": "La política o el workspace cambió. Cierra este aviso y vuelve a revisar las condiciones.",
   "settings.accounts.free.privacy": "Privacidad de {provider}",
   "settings.accounts.free.terms": "Condiciones de {provider}",
-  "settings.accounts.free.paused": "Servicio no disponible · consentimiento guardado",
-  "settings.accounts.downloading": "Descargando · {done} de {total}"
+  "settings.accounts.free.paused": "Servicio no disponible · consentimiento guardado"
 }

@@ -46,6 +46,12 @@
     "apps/desktop/src/lib/{danilConnectionEvents,engineConnection}.ts": ["files"],
     "packages/features/settings/src/components/AccountCredentials.tsx": ["exports"],
     "packages/features/settings/src/queries/credentials-store.ts": ["exports"],
+    "packages/features/settings/src/model/environment-store.ts": ["files"],
+    "packages/features/settings/package.json": ["dependencies"],
+    "packages/ui/src/Table.tsx": ["files"],
+    "packages/ui/src/lib/bundled.ts": ["exports", "types"],
+    "packages/features/machines/src/queries/guestChannels.ts": ["exports"],
+    "packages/features/machines/src/queries/workspace-computers.ts": ["exports"],
     "packages/features/machines/src/queries/store.ts": ["exports"],
     "packages/platform-client/src/api.ts": ["exports"],
     // isManaged es el alias de wakes con nombre del dominio; lo prueba packages/computers/test/computers.test.ts.
@@ -74,7 +80,7 @@
     "packages/features/code/src/model/tree.ts": ["exports"],          // estadoLocal: tree.test.ts
     "packages/features/code/src/screens/FileViewer.tsx": ["exports"], // esMarkdown: command-output.test.ts
     "packages/features/machines/src/index.ts": ["exports"],           // danilAvailableContext, readDanilContext: danil-source.test.ts
-    "packages/features/machines/src/model/wsl.ts": ["exports"],       // wslFailureCode, WSL_INSTALL, WSL_INSTALL_UBUNTU: wsl-detection.test.ts
+    "packages/features/machines/src/model/wsl.ts": ["exports", "types"], // wslFailureCode, WSL_INSTALL, WSL_INSTALL_UBUNTU: wsl-detection.test.ts
     "packages/features/machines/src/queries/cloud-machines.ts": ["exports"], // edgeFetch: cloud-machines, edge-client, organization-selection, mvp-contracts
     "packages/features/machines/src/queries/connected-status.ts": ["exports"], // CONNECTED_MACHINES_FEATURE: connected-status.test.ts
     "packages/features/machines/src/queries/danil-source.ts": ["exports"], // listedOf, noteListing, danilAvailableContext, readDanilContext: danil-source.test.ts

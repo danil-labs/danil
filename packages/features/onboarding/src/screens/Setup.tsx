@@ -57,7 +57,7 @@ export default function Setup(props: SetupProps) {
   } = estado;
   const {
     empezar, terminado, fin, falloEsencial, fallas, conFallas, nombreAReparar, claveDelAviso, setDescartado,
-    aviso, abrirEntorno, instalacion, reparar,
+    aviso, instalacion, reparar,
   } = crearCorridaDelAlta(props, estado);
 
   const [conexiones, setConexiones] = createSignal<Conexiones | null>(null);
@@ -295,13 +295,6 @@ export default function Setup(props: SetupProps) {
                     ? t("setup.repair.failed", { name: nombreAReparar() })
                     : t("setup.repair.running", { name: nombreAReparar() })}
                 </p>
-                <Show when={falloEsencial()}>
-                  <div>
-                    <Button variant="outline" size="compact" onClick={abrirEntorno}>
-                      {t("setup.repair.open")}
-                    </Button>
-                  </div>
-                </Show>
               </Toast>
             </ToastPortal>
           </Show>
