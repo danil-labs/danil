@@ -13,7 +13,7 @@ import type { createChatBlocks } from "./chat-blocks";
 import type { createChatComposerState } from "./chat-composer-state";
 import { FILA_DEL_MENSAJE, type Bloque } from "./chat-model";
 import type { ChatProps } from "./chat-props";
-import { For, Show } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 
 /** Lo que el bloque usa del cuerpo de Chat. */
@@ -24,6 +24,8 @@ export function createChatUserRow(props: ChatProps, deps: ChatUserRowDeps) {
   const { claveFila, commandNames, copiado, copiando, copiarMensaje, presentation, skillNames } = deps;
   const filaDeUsuario = (m: () => Msg, b: () => Bloque, indice: () => number) => {
                     const entrante = () => !!(m().encargado || m().fromTask);
+                    const [loaded, setLoaded] = createSignal<{ key: string; text: string } | null>(null);
+                    const copyText = () => m().text || (loaded()?.key === claveFila(b()) ? loaded()!.text : "");
                     // El input de la persona va a la derecha; el de un encargado
                     // u otra tarea, a la izquierda con su cara en el margen de
                     // 52 px del hilo: meterla en el globo encoge el hilo.
@@ -61,7 +63,6 @@ export function createChatUserRow(props: ChatProps, deps: ChatUserRowDeps) {
                         entrante() ? presentation().incomingMessage : presentation().userMessage,
                       )}
                     >
-                      <Show when={m().historyRefs?.length}><HistoryDetails refs={m().historyRefs!} turnId={m().turno} route={props.machineOf} /></Show>
                       <Show when={entrante()}>
                         <div class="mb-1 flex justify-start gap-1 text-[0.72rem] text-neutral-500" data-sender={m().encargado ? "agent" : "task"}>
                           <Show when={m().encargado}>
@@ -151,7 +152,26 @@ export function createChatUserRow(props: ChatProps, deps: ChatUserRowDeps) {
                             onOpenTask={props.onOpenTask}
                           />
                         </Show>
-                        <Show when={!m().text && m().meta === "hidden_task"}>
+                        <Show when={m().historyRefs?.length}>
+                          <HistoryDetails
+                            refs={m().historyRefs!}
+                            turnId={m().turno}
+                            route={props.machineOf}
+                            onText={(text) => setLoaded({ key: claveFila(b()), text })}
+                            renderText={(text) => (
+                              <MessageText
+                                incoming={entrante()}
+                                text={text}
+                                searchBlock={indice()}
+                                taskMentions={m().task_mentions}
+                                commands={commandNames()}
+                                skills={skillNames()}
+                                onOpenTask={props.onOpenTask}
+                              />
+                            )}
+                          />
+                        </Show>
+                        <Show when={!m().text && !m().historyRefs?.length && m().meta === "hidden_task"}>
                           <p class="m-0 leading-[1.5] italic text-neutral-500">
                             {t("chat.subagent.hidden_task")}
                           </p>
@@ -159,12 +179,14 @@ export function createChatUserRow(props: ChatProps, deps: ChatUserRowDeps) {
                       </Dynamic>
                       <div class={cn(FILA_DEL_MENSAJE, entrante() ? "justify-start -ml-1.5" : "justify-end -mr-1.5")}>
                         <HoraDelTurno at={m().at} />
-                        <Show when={m().text}>
-                          <BotonCopiar
-                            copiando={copiando() === claveFila(b())}
-                            copiado={copiado() === claveFila(b())}
-                            onCopiar={() => void copiarMensaje(claveFila(b()), m().text)}
-                          />
+                        <Show when={copyText()}>
+                          {(text) => (
+                            <BotonCopiar
+                              copiando={copiando() === claveFila(b())}
+                              copiado={copiado() === claveFila(b())}
+                              onCopiar={() => void copiarMensaje(claveFila(b()), text())}
+                            />
+                          )}
                         </Show>
                       </div>
                     </article>
