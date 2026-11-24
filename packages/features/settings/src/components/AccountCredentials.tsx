@@ -17,7 +17,7 @@ import { type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import { SettingsBlock } from "../../../../ui/src/SettingsLayout";
-import { act, credentialMachines, credentialsView, failureOf, reloadCredentials } from "../queries/credentials-store";
+import { act, credentialMachines, credentialsView, failureOf, reloadCredentials, whereName } from "../queries/credentials-store";
 
 const nameOf = (m: Pick<CredentialMachine, "computer_id" | "name">) => m.name?.trim() || capabilities().machineName?.(m.computer_id) || m.computer_id;
 const PROVIDERS: Record<string, string> = { opencode: "OpenCode", zotero: "Zotero", github: "GitHub" };
@@ -260,12 +260,6 @@ export function CredentialsInUse(props: { kinds?: CredentialKind[]; match?: (c: 
 }
 
 const [dismissed, setDismissed] = createSignal<ReadonlySet<string>>(new Set());
-
-/** Dónde corre el motor que contesta: esta máquina, salvo que el workspace viva en otra. */
-function whereName({ machines, machineName }: MaquinasDeAjustes): string | null {
-  const lead = machines().find((m) => m.active);
-  return lead && !lead.local ? machineName(lead.id, false) : null;
-}
 
 /**
  * «Tienes N claves solo en esta máquina. ¿Subirlas a tu cuenta?». La persona
