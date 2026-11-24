@@ -83,6 +83,7 @@ const steps = [
   ["Billing plan links are gated and preserve checkout parameters", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/billing-v2-settings-link.test.ts")], root],
   ["Workspace context owns transition and material validity", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/workspace-context.test.ts")], root],
   ["Composer selection and catalogs have one owner", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/composer-store.test.ts")], root],
+  ["Composer skips engine RPCs in no_machines and recovers when a machine becomes ready", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/no-machines-composer.test.ts")], root],
   ["Drafts own text references attachments and rollback", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/drafts-store.test.ts")], root],
   ["Conversation handoff waits for terminal and stop settlement", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/conversation-handoff.test.ts")], root],
   ["Task queues own retention persistence and session scope", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/task-queues-store.test.ts")], root],

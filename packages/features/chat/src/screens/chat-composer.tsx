@@ -1,4 +1,5 @@
 import { enfocar } from "../../../../ui/src/lib/focus";
+import { isNoMachines, isPaidPlan } from "../../../../host/src/platform";
 import { t } from "../../../../ui/src/lib/i18n";
 import { modelBrand } from "../../../../ui/src/lib/models";
 import { prosa } from "../../../../ui/src/lib/prose";
@@ -95,8 +96,53 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
                 un agente desconectado deja una entrada y ninguna utilizable,
                 y ahí también hace falta. El rótulo cambia con lo que falta;
                 el porqué entero va en el título de la superficie. */}
+            <Show when={isNoMachines()}>
+              <div class="flex min-w-0 items-center gap-1" data-composer-no-machines="">
+                <span class="truncate px-1.5 text-xs text-neutral-500">{t("chat.no_machines.status")}</span>
+                <Show
+                  when={isPaidPlan()}
+                  fallback={
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.dispatchEvent(new window.CustomEvent("harness:open-settings", { detail: "maintenance" }))}
+                      >
+                        {t("chat.no_machines.download_desk")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.dispatchEvent(new window.CustomEvent("harness:open-settings", { detail: "cuenta-danil" }))}
+                      >
+                        {t("chat.no_machines.view_plans")}
+                      </Button>
+                    </>
+                  }
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.dispatchEvent(new window.CustomEvent("harness:open-settings", { detail: "cuenta-danil" }))}
+                  >
+                    {t("chat.no_machines.manage_plan")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.dispatchEvent(new window.CustomEvent("harness:open-settings", { detail: "maintenance" }))}
+                  >
+                    {t("chat.no_machines.download_desk")}
+                  </Button>
+                </Show>
+              </div>
+            </Show>
             <Show
-              when={props.superficies && !props.superficies.some((s) => s.usable)}
+              when={!isNoMachines() && props.superficies && !props.superficies.some((s) => s.usable)}
             >
               <Button
                 variant="ghost"
@@ -116,7 +162,7 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
               </Button>
             </Show>
 
-            <Show when={props.superficies != null && !modoTerminal()}>
+            <Show when={!isNoMachines() && props.superficies != null && !modoTerminal()}>
               {/* Una opción decide agente, superficie y modelo. Separarlos hacía
                   imposible buscar Claude, Codex y OpenCode en el mismo menú.
                   La marca sale del agente que sirve la superficie: «OpenCode»

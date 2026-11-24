@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createSignal, on, onMount } from "solid-js";
+import { isNoMachines, machineAvailability } from "../../../host/src/platform";
 import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { copyText } from "../../../host/src/clipboard";
 import { prosaDe } from "../../../ui/src/Failure";
@@ -18,10 +19,19 @@ export function createPuertos(props: PuertosProps) {
   const [copiado, setCopiado] = createSignal<string | null>(null);
 
   async function consultar() {
+    if (isNoMachines()) {
+      setDatos({ tareas: [], externos: [], aviso: null });
+      setConsultando(false);
+      return;
+    }
     setConsultando(true);
     try {
       setDatos(await callShellEngine<Puertos>("list_ports"));
     } catch (e) {
+      if (isNoMachines()) {
+        setDatos({ tareas: [], externos: [], aviso: null });
+        return;
+      }
       // Un fallo al preguntar no puede dejar el número de antes en pantalla
       // afirmando puertos que ya no se sabe si están. Y se dice por qué: un
       // panel vacío se lee como «no hay nada», que no es lo mismo.
@@ -32,6 +42,18 @@ export function createPuertos(props: PuertosProps) {
   }
 
   onMount(() => void consultar());
+
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setDatos({ tareas: [], externos: [], aviso: null });
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) void consultar();
+  }, { defer: true }));
 
   // Al terminar el turno, no al empezarlo: lo que se busca es lo que dejó.
   createEffect(

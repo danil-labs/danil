@@ -205,6 +205,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     organizations: base.organizations,
     initialSettings: takeSettingsParam(),
     machineAvailability: availability,
+    activePlan: () => (revision(), base.active.current()?.plan ?? null),
     machineName: id => id === "local" ? (missing() ? t("web.machines.unavailable") : "") : fleet.name(id, scope.current()?.context),
     taskWritable: id => {
       revision();
