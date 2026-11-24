@@ -3,6 +3,7 @@
  * del de sesión que lleva RFB (VNC) en frames binarios. Abrirlo no
  * enciende la computadora: con ella apagada el relay lo cierra con 4010.
  */
+import { openWebSocket } from "../../../../host/src/socket.ts";
 import { sessionUrl } from "./relay.ts";
 
 export const SCREEN_SUBPROTOCOL = "danil.screen.v1";
@@ -33,7 +34,7 @@ export function createScreenAccess(options: {
         if (!allowed(id)) throw new Error("screen_unavailable");
         const token = await options.getToken();
         if (!allowed(id)) throw new Error("screen_unavailable");
-        const socket = (options.socket ?? ((url, protocols) => new WebSocket(url, protocols)))(screenUrl(options.endpoint, id), screenProtocols(token));
+        const socket = (options.socket ?? openWebSocket)(screenUrl(options.endpoint, id), screenProtocols(token));
         sockets.add(socket);
         socket.addEventListener("close", () => sockets.delete(socket), { once: true });
         return socket;

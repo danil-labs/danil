@@ -18,7 +18,7 @@ function machinesOf(raw: unknown): ConnectedMachine[] | null {
   });
 }
 
-export function createConnectedStatus(invoke: Invoke) {
+export function createConnectedStatus(rpc: Invoke) {
   let machines: ConnectedMachine[] = [];
   // La fila propia por la flota puede llegar sin `features`; lo que el motor anunció en esta ejecución vale.
   let supported = false;
@@ -28,11 +28,11 @@ export function createConnectedStatus(invoke: Invoke) {
     of: (org: string) => machines.find((m) => m.organization_id === org) ?? null,
     async read() {
       try {
-        const self = (await invoke("machine_list") as { local?: boolean; features?: string[] }[]).find((m) => m.local);
+        const self = (await rpc("machine_list") as { local?: boolean; features?: string[] }[]).find((m) => m.local);
         if (!self) return;
         supported ||= self.features?.includes(CONNECTED_MACHINES_FEATURE) ?? false;
         if (!supported) return;
-        machines = machinesOf(await invoke("danil_connected_status")) ?? machines;
+        machines = machinesOf(await rpc("danil_connected_status")) ?? machines;
       } catch {
         // Un motor ocupado o reiniciando: se conserva lo último que reportó.
       }

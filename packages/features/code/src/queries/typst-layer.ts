@@ -1,5 +1,5 @@
 import { createEffect, createRoot, createSignal, on } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { huecoLibre, moviendoHueco, zonasEncima, type Hueco } from "../../../../ui/src/lib/sites";
 
 const claveDe = (session: string, arbol: string) => `${session}\n${arbol}`;
@@ -55,7 +55,7 @@ function colocarAhora(clave: string) {
   const destino = libre ? JSON.stringify(libre) : "escondida";
   if (destino === capa.ultima) return;
   capa.ultima = destino;
-  const orden = libre ? () => invoke("site_place", { label, ...libre }) : () => invoke("site_hide", { label });
+  const orden = libre ? () => callEngine("site_place", { label, ...libre }) : () => callEngine("site_hide", { label });
   capa.cola = capa.cola.then(orden).catch(() => {});
 }
 
@@ -63,7 +63,7 @@ function cerrarCapa(clave: string) {
   const capa = capas.get(clave);
   capas.delete(clave);
   setCapasListas(({ [clave]: _, ...resto }) => resto);
-  if (capa?.label) void invoke("site_close", { label: capa.label }).catch(() => {});
+  if (capa?.label) void callEngine("site_close", { label: capa.label }).catch(() => {});
 }
 
 export function ocuparCapa(session: string, arbol: string): number {
@@ -95,12 +95,12 @@ export async function asegurarCapa(session: string, arbol: string, puerto: numbe
   if (actual) cerrarCapa(clave);
   const capa: Capa = { label: null, puerto, cola: Promise.resolve(), ultima: "" };
   capas.set(clave, capa);
-  const s = await invoke<{ label: string }>("site_open_local", { port: puerto, css: ESTILO_DE_LA_VISTA, ...hueco });
-  if (capas.get(clave) !== capa) return void invoke("site_close", { label: s.label }).catch(() => {});
+  const s = await callEngine<{ label: string }>("site_open_local", { port: puerto, css: ESTILO_DE_LA_VISTA, ...hueco });
+  if (capas.get(clave) !== capa) return void callEngine("site_close", { label: s.label }).catch(() => {});
   capa.label = s.label;
   setCapasListas((l) => ({ ...l, [clave]: true }));
   const zoom = zooms()[clave];
-  if (zoom && zoom !== 1) void invoke("site_zoom", { label: s.label, factor: zoom }).catch(() => {});
+  if (zoom && zoom !== 1) void callEngine("site_zoom", { label: s.label, factor: zoom }).catch(() => {});
   colocarCapa(clave);
 }
 
@@ -112,7 +112,7 @@ export function fijarZoom(session: string, arbol: string, zoom: number) {
   const clave = claveDe(session, arbol);
   setZooms((z) => ({ ...z, [clave]: zoom }));
   const label = capas.get(clave)?.label;
-  if (label) void invoke("site_zoom", { label, factor: zoom }).catch(() => {});
+  if (label) void callEngine("site_zoom", { label, factor: zoom }).catch(() => {});
 }
 
 /** La vista ocupa todo el archivo, por tarea: sigue así al cambiar de archivo. */

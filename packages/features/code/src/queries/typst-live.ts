@@ -1,7 +1,7 @@
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createSignal } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { createPref } from "../../../../session/src/prefs";
 import { capas, cerrarCapa, claveDe } from "./typst-layer";
 
@@ -56,7 +56,7 @@ export const conVistaExportada = () => pluginTypst() && servida() === false;
 /** Al montar la ventana: suelta los Tinymist que dejó una recarga y, de paso, sabe si la vista existe. */
 export function soltarVistasHuerfanas() {
   // `typst_live_stop` no devuelve error: si se rechaza, es que la ventana no lo registra.
-  void invoke("typst_live_stop", { key: null, session: null }).then(
+  void callEngine("typst_live_stop", { key: null, session: null }).then(
     () => setVistaServida(true),
     () => setVistaServida(false),
   );
@@ -67,7 +67,7 @@ let consultado = false;
 let consulta = 0;
 async function consultarPlugin() {
   const n = ++consulta;
-  const activo = await invoke<{ plugins: { id: string; enabled: boolean }[] }>("list_integrations").then(
+  const activo = await callEngine<{ plugins: { id: string; enabled: boolean }[] }>("list_integrations").then(
     (catalogo) => catalogo.plugins.some((p) => p.id === "typst" && p.enabled),
     () => false,
   );
@@ -150,7 +150,7 @@ export async function abrirVista(project: string, session: string, arbol: string
   escuchar();
   const clave = claveDe(session, arbol);
   clearTimeout(apagados.get(clave));
-  const viva = await invoke<VistaViva>("typst_live_open", {
+  const viva = await callEngine<VistaViva>("typst_live_open", {
     project,
     session,
     tree: arbol,
@@ -185,7 +185,7 @@ export function soltarVista(session: string, arbol: string) {
       cerrarCapa(clave);
       if (!viva) return;
       setCompilaciones(({ [viva.key]: _, ...resto }) => resto);
-      void invoke("typst_live_stop", { key: viva.key, session: null }).catch(() => {});
+      void callEngine("typst_live_stop", { key: viva.key, session: null }).catch(() => {});
     }, ESPERA_DEL_APAGADO),
   );
 }
@@ -197,7 +197,7 @@ export async function apagarVistasDe(session: string) {
   }
   setVivas((v) => Object.fromEntries(Object.entries(v).filter(([c]) => !c.startsWith(`${session}\n`))));
   for (const clave of [...capas.keys()]) if (clave.startsWith(`${session}\n`)) cerrarCapa(clave);
-  await invoke("typst_live_stop", { key: null, session }).catch(() => {});
+  await callEngine("typst_live_stop", { key: null, session }).catch(() => {});
 }
 
 export const vivaDe = (session: string, arbol: string): VistaViva | null => vivas()[claveDe(session, arbol)] ?? null;

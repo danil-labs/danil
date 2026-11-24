@@ -22,7 +22,7 @@ export function createComposerStore(deps: {
   modoRecordado?: () => string;
   recordarModo: (id: string) => void;
 }) {
-  const { invoke, withLastAnswer, modoInicial, recordarModo } = deps;
+  const { invoke: rpc, withLastAnswer, modoInicial, recordarModo } = deps;
   const composerMachine = deps.scope.machine;
   const workspaceActivo = deps.scope.workspace;
   const connected = deps.scope.connected;
@@ -66,7 +66,7 @@ export function createComposerStore(deps: {
       setSkills(menu.skills);
       setSideCommand(menu.side_question ?? null);
     };
-    void invoke<SlashMenu>("list_slash_menu", { provider: a }, options())
+    void rpc<SlashMenu>("list_slash_menu", { provider: a }, options())
       .then(poner)
       .catch(() => poner({ commands: [], skills: [] }));
   };
@@ -77,7 +77,7 @@ export function createComposerStore(deps: {
     if (yaVa) return yaVa;
     const revision = composerRevision;
     const machine = composerMachine(), routed = options();
-    const pedido = withLastAnswer(machine, `list_models:${a}`, () => invoke<AgentModels>("list_models", { provider: a }, routed))
+    const pedido = withLastAnswer(machine, `list_models:${a}`, () => rpc<AgentModels>("list_models", { provider: a }, routed))
       .then((catalogo) => {
         if (disposed || revision !== composerRevision) return;
         setCatalogos((actuales) => ({ ...actuales, [a]: catalogo }));
@@ -107,7 +107,7 @@ export function createComposerStore(deps: {
     const revision = composerRevision;
     try {
       const machine = composerMachine(), routed = options();
-      const s = await withLastAnswer(machine, "list_surfaces", () => invoke<Superficie[]>("list_surfaces", {}, routed));
+      const s = await withLastAnswer(machine, "list_surfaces", () => rpc<Superficie[]>("list_surfaces", {}, routed));
       if (disposed || revision !== composerRevision) return;
       const primera = s.find((x) => x.usable);
       batch(() => {
@@ -185,7 +185,7 @@ export function createComposerStore(deps: {
     const workspace = workspaceActivo();
     const routed = options();
     try {
-      const rows = await invoke<Agent[]>("list_providers", {}, routed);
+      const rows = await rpc<Agent[]>("list_providers", {}, routed);
       if (!disposed && revision === composerRevision) setAgents(rows);
       return;
     } catch {
@@ -193,7 +193,7 @@ export function createComposerStore(deps: {
     }
     try {
       const headers: Record<string, string> = workspace ? { "x-terminus-workspace": workspace } : {};
-      const rows = await invoke<Agent[]>("list_providers", {}, { headers });
+      const rows = await rpc<Agent[]>("list_providers", {}, { headers });
       if (!disposed && revision === composerRevision) setAgents(rows);
     } catch { /* A transient provider probe keeps the last known installation list. */ }
   }
@@ -229,7 +229,7 @@ export function createComposerStore(deps: {
         setModos([]);
         return;
       }
-      void invoke<ModoDePermiso[]>("list_permission_modes", { provider: a }, options())
+      void rpc<ModoDePermiso[]>("list_permission_modes", { provider: a }, options())
         .then((lista) => {
           if (a !== agent() || disposed || revision !== composerRevision) return;
           batch(() => {

@@ -22,8 +22,8 @@ export function mergeContextMachines(groups: { context: Context; computers: Comp
 export const contextMachineKey = (machine: string, context?: string) => JSON.stringify([machine, context ?? ""]);
 
 /** `here`: las inscripciones que el motor reporta de esta computadora (`connected-status.ts`). */
-export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT, onContextsSettled?: (contexts: readonly string[]) => void, here?: { read: () => Promise<void>; own: () => ReadonlySet<string> }) {
-  const legacy = createCloudMachines(invoke, onProblem, endpoint);
+export function createSessionCloud(rpc: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT, onContextsSettled?: (contexts: readonly string[]) => void, here?: { read: () => Promise<void>; own: () => ReadonlySet<string> }) {
+  const legacy = createCloudMachines(rpc, onProblem, endpoint);
   let clients = new Map<string, ReturnType<typeof createCloudMachines>>();
   let current = new Map<string, ContextComputer>();
   let contexts: Map<string, Context> | null = null;
@@ -34,7 +34,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
     let client = clients.get(context);
     if (!client) {
       client = createCloudMachines(async (_command, args) => {
-        try { return await invoke("danil_edge_fetch", { ...args, context }); }
+        try { return await rpc("danil_edge_fetch", { ...args, context }); }
         catch (error) {
           if ((error as { detail?: string } | null)?.detail === "session_echo_mismatch") unsupported = true;
           throw error;
@@ -65,7 +65,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
       unsupported = false;
       validated = null;
       let status: Status;
-      try { status = await invoke("danil_session_status") as Status; }
+      try { status = await rpc("danil_session_status") as Status; }
       catch {
         if (version !== epoch) return { state: "retrying" as const };
         contexts = null; clients.clear(); current.clear();

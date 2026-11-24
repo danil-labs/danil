@@ -6,7 +6,7 @@
  * con `nativeWindow`). En la web `invoke` va por el relay a la máquina:
  * preguntar desde ahí la encendería. Ahí la respuesta se queda en `[]`.
  */
-import { invokeNative as invoke } from "../../../../host/src/native.ts";
+import { invokeNative } from "../../../../host/src/native.ts";
 import { createRoot, createSignal } from "solid-js";
 
 let channels: Promise<string[]> = Promise.resolve([]);
@@ -14,7 +14,7 @@ const [offered, setOffered] = createRoot(() => createSignal<string[]>([]));
 
 /** Una vez por arranque de la ventana. */
 export function askGuestChannels(): Promise<string[]> {
-  channels = invoke<string[]>("guest_channels").then(
+  channels = invokeNative<string[]>("guest_channels").then(
     (list) => (Array.isArray(list) ? list : []),
     () => [],
   );

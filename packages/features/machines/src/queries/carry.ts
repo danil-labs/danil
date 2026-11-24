@@ -9,7 +9,7 @@ import { type CarryEngine, type Exported, type Imported, type Part, type WorkSta
 import { type CarryFailure, type CarryJob, type CarryResult, type CarryState, CarryError, cancelCarry, carryWork, newState } from "./carryRun.ts";
 import { PART_RELAY, type Selection, keyVerdict, needsSheet, withoutRemote } from "../model/carryPlan.ts";
 import "../../../../ui/src/locales/workPhrases";
-import { invoke } from "../../../../engine-client/src/client";
+import { callEngine } from "../../../../engine-client/src/client";
 import type { Project } from "../../../../ui/src/lib/model";
 import { escribirPref, leerPref } from "../../../../session/src/prefs";
 import { t } from "../../../../ui/src/lib/i18n";
@@ -19,13 +19,13 @@ const on = (machine: string) => ({ headers: { "x-terminus-machine": machine } })
 
 /** Los `work_*` por el proxy de la ventana (o el transporte de la web), con la máquina en la cabecera. */
 export const engine: CarryEngine = {
-  status: (machine, args) => invoke<WorkStatus>("work_status", args, on(machine)),
-  exportWork: (machine, args) => invoke<Exported>("work_export", args, on(machine)),
-  readPart: (machine, args) => invoke<Part>("work_read_part", args, on(machine)),
-  writePart: (machine, args) => invoke("work_write_part", args, on(machine)),
-  importWork: (machine, args) => invoke<Imported>("work_import", args, on(machine)),
-  cancel: (machine, args) => invoke("work_cancel", args, on(machine)),
-  key: (machine) => invoke<{ publicKey: string }>("work_key", {}, on(machine)),
+  status: (machine, args) => callEngine<WorkStatus>("work_status", args, on(machine)),
+  exportWork: (machine, args) => callEngine<Exported>("work_export", args, on(machine)),
+  readPart: (machine, args) => callEngine<Part>("work_read_part", args, on(machine)),
+  writePart: (machine, args) => callEngine("work_write_part", args, on(machine)),
+  importWork: (machine, args) => callEngine<Imported>("work_import", args, on(machine)),
+  cancel: (machine, args) => callEngine("work_cancel", args, on(machine)),
+  key: (machine) => callEngine<{ publicKey: string }>("work_key", {}, on(machine)),
 };
 
 import type { CarryCheck, Carry, CarriedBase } from "../../../../ui/src/lib/carry.ts"; export type { CarryCheck, Carry, CarriedBase };
@@ -66,7 +66,7 @@ async function keyFor(target: string): Promise<{ recipientKey: string | null; ke
  */
 async function targetHasProject(target: string, project: Project): Promise<boolean> {
   if (project.machines?.includes(target)) return true;
-  const theirs = await invoke<Project[]>("list_projects", {}, on(target));
+  const theirs = await callEngine<Project[]>("list_projects", {}, on(target));
   const same = theirs.find((p) => p.id === project.id);
   return !!same && !!(same.working_directory ?? same.work_tree);
 }

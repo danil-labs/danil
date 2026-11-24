@@ -1,7 +1,7 @@
 import { SEP } from "../model/fleet/index.ts";
 import { REMOTE_CHILD_FEATURE, type RemoteScope } from "../../../../ui/src/lib/tasks/index.ts";
 import { createRoot, createSignal } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client";
+import { callEngine } from "../../../../engine-client/src/client";
 import { t } from "../../../../ui/src/lib/i18n";
 import { createPref, escribirPref, leerPref } from "../../../../session/src/prefs";
 import { knownMachineName } from "../../../../session/src/known-machine-names";
@@ -29,7 +29,7 @@ export function unavailable(m: Machine, project: ProjectPlace, all: Machine[] = 
 }
 
 export const removeMachineAccount = (provider: string, id: string, machine: string) =>
-  invoke("remove_account", { provider, id }, { headers: { "x-terminus-machine": machine } });
+  callEngine("remove_account", { provider, id }, { headers: { "x-terminus-machine": machine } });
 
 // Una sola lista para toda la ventana. Señal y no `createResource`, que
 // suspendería la vista entera mientras contestan.
@@ -40,7 +40,7 @@ export { machines, cloudInventory, setCloudInventory };
 let machinesRead = 0;
 export const refetchMachines = () => {
   const read = ++machinesRead;
-  return invoke<Machine[]>("machine_list")
+  return callEngine<Machine[]>("machine_list")
     .then((rows) => { if (read === machinesRead) setMachines(rows); })
     .catch(() => setMachines([]));
 };

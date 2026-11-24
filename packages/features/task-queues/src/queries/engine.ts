@@ -18,6 +18,7 @@ export function createEngineQueue(env: {
   /** The engine could not tie this Stop to the turn seen: tell the person to try again. */
   notStoppableYet: (session: string) => void;
 }) {
+  const rpc = env.invoke;
   // The machine of the task, as `documentosEn`: this window's machine has no id in its row.
   const rowOf = (session: string) => {
     const machine = env.machineOf(session)?.headers["x-terminus-machine"];
@@ -41,7 +42,7 @@ export function createEngineQueue(env: {
   // The turn this window saw start, per task: Stop acts only on that one.
   const seen = new Map<string, string>();
   const turnOf = (scope: EngineScope) =>
-    env.invoke<TurnState | null>("get_turn", { project: scope.project, session: scope.session }, scope.route);
+    rpc<TurnState | null>("get_turn", { project: scope.project, session: scope.session }, scope.route);
 
   /** A turn started (`started`): its id is the one Stop may act on. */
   function turnStarted(scope: EngineScope) {
@@ -59,7 +60,7 @@ export function createEngineQueue(env: {
   async function stopTurn(scope: EngineScope): Promise<false | undefined> {
     const args = { project: scope.project, session: scope.session };
     if (!conditional(scope.session)) {
-      await env.invoke("stop_turn", args, scope.route);
+      await rpc("stop_turn", args, scope.route);
       return undefined;
     }
     const deadline = Date.now() + STOP_RETRY_MS;
@@ -71,7 +72,7 @@ export function createEngineQueue(env: {
         if (!turnId && (!turn || turn.state === "idle")) break;
       }
       if (turnId) {
-        const reply = await env.invoke<{ outcome?: string } | null>("stop_turn_if", { ...args, turnId }, scope.route);
+        const reply = await rpc<{ outcome?: string } | null>("stop_turn_if", { ...args, turnId }, scope.route);
         if (reply?.outcome === "stop_requested" || reply?.outcome === "closing") return undefined;
         if (reply?.outcome !== "not_controllable") break;
       }
@@ -90,6 +91,6 @@ export function createEngineQueue(env: {
     /** The turn closed (`done`): the next Stop reads the turn again. */
     turnClosed: (session: string) => { seen.delete(session); },
     /** Releases a held queue: it goes out now if the task is free, else when its turn closes. */
-    resumeQueue: (scope: EngineScope) => env.invoke("queue_resume", { project: scope.project, session: scope.session }, scope.route),
+    resumeQueue: (scope: EngineScope) => rpc("queue_resume", { project: scope.project, session: scope.session }, scope.route),
   };
 }
