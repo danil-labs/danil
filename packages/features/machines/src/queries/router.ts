@@ -198,6 +198,14 @@ function createRouterCore(config: RouterConfig) {
    */
   const childHosted = (m: MachineInfo, workspace: string) =>
     m.child === true && (!m.host ? hasHere(workspace) : fleet.lists(m.host, workspace) === true);
+  /** Una VM que despierta sola y sigue apagada sin lista conocida sigue elegible para despertar al enviar. */
+  const wakeableFor = (m: MachineInfo, workspace: string | null): boolean =>
+    !!workspace
+    && m.wakes
+    && fleet.power(m.id) !== "on"
+    && fleet.lists(m.id, workspace) === null
+    && (!m.organization || m.organization.workspaces.some((w) => w.id === workspace))
+    && (!m.linked || m.linked.has(workspace));
   const membersOf = (workspace: string | null) => {
     if (!workspace) return fleet.machines().map((m) => m.id);
     return local && !scopedLocal
@@ -211,7 +219,9 @@ function createRouterCore(config: RouterConfig) {
     const members = membersOf(workspace).filter((m) => fleet.power(m) !== "outdated");
     const primary = members.filter((m) => !fleet.info(m)?.child);
     const pick = (list: string[]) => list.find((m) => fleet.power(m) === "on") ?? list[0] ?? null;
-    return pick(primary) ?? pick(members);
+    const found = pick(primary) ?? pick(members);
+    if (found || !workspace) return found;
+    return fleet.machines().find((m) => fleet.power(m.id) !== "outdated" && !m.child && wakeableFor(m, workspace))?.id ?? null;
   };
   /** Los workspaces de `machine` que su fila dice y el registro no le atribuye: los que le da una organización. */
   const givenTo = (info: MachineInfo): string[] => {
@@ -833,6 +843,7 @@ function createRouterCore(config: RouterConfig) {
       // Una de otro contrato no corre tareas nuevas hasta actualizarse.
       ...fleet.machines().filter((m) => fleet.power(m.id) !== "outdated").map((m) => {
         const os = systemOf(m.os);
+        const wakeable = owned && wakeableFor(m, workspace);
         return {
           id: m.id,
           local: false,
@@ -840,9 +851,9 @@ function createRouterCore(config: RouterConfig) {
           on: fleet.power(m.id) === "on",
           connection: fleet.state(m.id),
           power: fleet.power(m.id),
-          hosts: workspace ? members.has(m.id) : null,
+          hosts: workspace ? (members.has(m.id) ? true : wakeable ? null : false) : null,
           materializes: owned ? members.has(m.id) : adopts(m, workspace),
-          refuses: owned ? !members.has(m.id) : !permitted(m, workspace) && m.kind !== "organization",
+          refuses: owned ? !members.has(m.id) && !wakeable : !permitted(m, workspace) && m.kind !== "organization",
           wakes: m.wakes,
           ...(m.features?.length ? { features: [...m.features] } : {}),
           ...(m.version ? { version: m.version } : {}),
@@ -1032,7 +1043,15 @@ function createRouterCore(config: RouterConfig) {
     const picked = config.pickedFor?.(ws) ?? null;
     const lead = defaultMachine(ws);
     // Una elegida que no tiene permiso en este workspace no cuenta: «Ejecutar en» no la ofrece aquí.
-    const runs = (id: string) => (id === self ? !scopedLocal || hasHere(ws) : !!fleet.info(id) && (!ws || (local && !scopedLocal ? fleet.membersOf(ws).includes(id) || permitted(fleet.info(id) as MachineInfo, ws) : membersOf(ws).includes(id))));
+    const runs = (id: string) => {
+      if (id === self) return !scopedLocal || hasHere(ws);
+      const info = fleet.info(id);
+      if (!info) return false;
+      if (!ws) return true;
+      return local && !scopedLocal
+        ? fleet.membersOf(ws).includes(id) || permitted(info, ws)
+        : membersOf(ws).includes(id) || wakeableFor(info, ws);
+    };
     const machine = picked && runs(picked) ? picked : lead;
     return machine ? { machine, lead: machine === lead } : null;
   }
