@@ -4,6 +4,7 @@ import { createStore, reconcile } from "solid-js/store";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { deleteAgent, listMachineAgents } from "../queries/engine-agents";
 import type { AgenteDeMaquina, CatalogoDeAgentes } from "../../../../ui/src/lib/model";
+import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { EmptyState } from "../../../../ui/src/EmptyState";
@@ -69,7 +70,14 @@ export default function Agents(props: {
       <div role="list">
         <For each={agents}>{row => <SettingsRow role="listitem"
           lead={<AstroAvatar name={row.agent.name} body={row.profile.body} avatar={row.profile.avatar} status="awake" size={36} />}
-          label={displayName(row.agent.name, row.profile)}
+          label={
+            <span class="flex min-w-0 items-center gap-2">
+              <span class="truncate">{displayName(row.agent.name, row.profile)}</span>
+              <Show when={row.agent.managed}>
+                <Badge tone="info" class="shrink-0">{t("settings.scope.organization")}</Badge>
+              </Show>
+            </span>
+          }
           description={row.agent.package === "business" ? t("settings.agents.business") : row.agent.description}>
           <Button variant="secondary" size="sm" onClick={() => props.onAgentProfile?.("", row.agent.name)}>{t("settings.agents.open_profile")}</Button>
           <Show when={row.agent.package !== "business" && !row.agent.managed}>

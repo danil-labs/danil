@@ -210,6 +210,11 @@ export function FuentesDeSkills() {
                   {f.nombre}
                 </span>
                 <Badge forma="dato">{f.branch}</Badge>
+                <Show when={f.managed}>
+                  <Badge tone="info" class="shrink-0">
+                    {t("settings.scope.organization")}
+                  </Badge>
+                </Show>
               </span>
             }
             description={

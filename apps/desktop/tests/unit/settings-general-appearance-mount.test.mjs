@@ -55,8 +55,7 @@ test("General and Apariencia mount first in Settings, Notificaciones lives in Ge
   await sleep(80);
   assert.deepEqual(saves, [["w", "ediciones"]]);
 
-  w.document.querySelector("#cfg-tab-preferences")?.click();
-  await sleep(60);
+  assert.equal(w.document.querySelector("#cfg-tab-preferences"), null);
   assert.equal(w.document.querySelector("#cfg-sub-general"), null);
   assert.equal(w.document.querySelector("#cfg-sub-appearance"), null);
   assert.equal(w.document.querySelector("#cfg-sub-notify"), null);

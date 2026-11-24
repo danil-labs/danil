@@ -1,9 +1,0 @@
-{
-  "settings.projects.delete": "Delete project",
-  "settings.projects.delete_now": "Delete",
-  "settings.projects.delete_title": "Delete “{name}”?",
-  "settings.projects.delete_with": {
-    "one": "Delete with its task",
-    "other": "Delete with its {count} tasks"
-  }
-}

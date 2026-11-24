@@ -30,8 +30,7 @@ import { SettingsPanel } from "../../../../ui/src/SettingsLayout";
 import ProveedorDeMemoria from "../components/MemoryProvider";
 import Providers from "../components/Providers";
 import Skills from "../components/Skills";
-import { SETTINGS_ENTRIES, type SettingsEntryId, type SettingsGroup } from "../model/settings-entries";
-import Workspaces from "../components/Workspaces";
+import { SETTINGS_ENTRIES, type SettingsEntryId } from "../model/settings-entries";
 
 // Chunks aparte: solo los carga quien abre la sección.
 const DanilAccount = lazy(() => import("../components/DanilAccountsEntry"));
@@ -51,10 +50,10 @@ export type Pestana = { id: string; name: string; panel: (() => JSX.Element) | n
 
 export type Entrada = {
   id: SettingsEntryId;
-  group: SettingsGroup;
   name: string;
   icono: () => JSX.Element;
   tabs: Pestana[];
+  footer?: boolean;
 };
 
 /** Lo que la sección de agentes necesita de la ventana. Getters: leerlos aquí
@@ -97,7 +96,6 @@ export const pestanasDe = (
     security: tab("security", () => t("settings.tab.security"), () => <LoginSecurity />),
     general: tab("general", () => t("settings.nav.general"), () => <General maquinas={maquinas} />),
     appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} sesiones={sesiones} /></Suspense>),
-    workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces maquinas={maquinas} sesiones={sesiones} />),
     "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} piezas={piezas} />; }),
     fuentes: tab("fuentes", () => t("settings.nav.sources"), () => { machineAction(); return <Providers integraciones={integraciones} maquinas={maquinas} />; }),
     agentes: tab("agentes", () => t("settings.nav.agents"), () => (
@@ -124,7 +122,6 @@ const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JS
   appearance: { name: () => t("settings.nav.appearance"), icono: () => <Palette size={15} /> },
   account: { name: () => t("settings.entry.account"), icono: () => <CircleUserRound size={15} /> },
   security: { name: () => t("settings.entry.security"), icono: () => <Shield size={15} /> },
-  preferences: { name: () => t("settings.entry.preferences"), icono: () => <SlidersHorizontal size={15} /> },
   "ai-accounts": { name: () => t("settings.entry.ai_accounts"), icono: () => <Sparkles size={15} /> },
   "source-control": { name: () => t("settings.entry.source_control"), icono: () => <GitBranch size={15} /> },
   "agents-skills": { name: () => t("settings.entry.agents_skills"), icono: () => <Bot size={15} /> },
@@ -139,13 +136,9 @@ export const entradasDe = (pestanas: Record<string, Pestana | undefined>): Entra
     const tabs = e.tabs.flatMap((id) => (pestanas[id] ? [pestanas[id]!] : []));
     if (!tabs.some((p) => p.panel)) return [];
     const h = ENCABEZADOS[e.id];
-    return [{ id: e.id, group: e.group, get name() { return h.name(); }, icono: h.icono, tabs }];
+    const footer = "footer" in e && e.footer ? true : undefined;
+    return [{ id: e.id, get name() { return h.name(); }, icono: h.icono, tabs, footer }];
   });
-
-export const GRUPOS: { id: Exclude<SettingsGroup, "footer">; nombre: () => string }[] = [
-  { id: "you", nombre: () => t("settings.nav.group_you") },
-  { id: "workspace", nombre: () => t("settings.nav.group_workspace") },
-];
 
 /** Una entrada con solo pestañas de cuenta personal, mientras llega si la cuenta lo es. */
 export const SIN_PESTANA: Pestana = { id: "", name: "", panel: null };

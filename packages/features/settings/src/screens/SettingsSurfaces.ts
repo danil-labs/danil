@@ -66,9 +66,12 @@ export function createSuperficiesDeAjustes(props: Parameters<typeof Settings>[0]
     window.addEventListener("harness:consentimiento", cargarSuperficies);
     // Una máquina de la cuenta se encendió o trajo otra rebanada: su lista puede haber llegado.
     window.addEventListener("harness:machine-slices", cargarSuperficies);
+    // Cambiar de workspace desde Configuración actualiza las superficies del nuevo workspace.
+    window.addEventListener("harness:workspace", cargarSuperficies);
     onCleanup(() => {
       window.removeEventListener("harness:consentimiento", cargarSuperficies);
       window.removeEventListener("harness:machine-slices", cargarSuperficies);
+      window.removeEventListener("harness:workspace", cargarSuperficies);
       void cambios.then((f) => f());
       void cuenta.then((f) => f());
     });

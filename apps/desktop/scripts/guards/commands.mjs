@@ -159,6 +159,9 @@ const SIN_INTERFAZ = {
   ...Object.fromEntries([
     "install_language_pack", "remove_language_pack", "list_bundled_language_packs", "install_bundled_language_pack",
   ].map(command => [command, "se retiró la pestaña Lenguas de Configuración y Maayatʼaan (yua) ya viaja embebido en src/locales/yua; queda en el contrato del motor"])),
+  // La pestaña Configuración › Barra de workspaces se retiró; los workspaces se administran desde el riel principal.
+  remove_workspace: "la llamaba Configuración › Barra de workspaces, ya retirada; queda en el contrato del motor",
+  set_workspace_worktrees_root: "la llamaba Configuración › Barra de workspaces, ya retirada; queda en el contrato del motor",
   // `docs/agents.md` § Estado observable: el comando de agregación existe
   // para que el riel deje de sondear; el riel mismo no está construido.
 };
