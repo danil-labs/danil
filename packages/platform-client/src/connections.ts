@@ -7,7 +7,7 @@ import type { Answer } from "./api.ts";
 import type { EdgeMethod, EdgeReply } from "./client.ts";
 import { EdgeError, type EdgeTransport } from "./edge.ts";
 
-export type McpConnectionState = "active" | "paused" | "needs_setup" | "revoked";
+type McpConnectionState = "active" | "paused" | "needs_setup" | "revoked";
 
 export type McpDestination = { workspace: string; folder: string };
 

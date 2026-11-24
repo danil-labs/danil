@@ -75,7 +75,7 @@
     // ver arriba). Cuando se arreglen esos imports, knip los volverá a contar como usados.
     "packages/ui/src/lib/project-block-types.ts": ["types"],          // HandoverState, createThreadsCore: provider-handover, question-card-r0
     "packages/ui/src/lib/sourceOrigin.ts": ["exports"],               // proveedorDe: models.test.ts
-    "packages/engine-client/src/client.ts": ["exports"],              // canRepeat, neverRan, retrying, WAITS, untilConnected: invoke-retry, early-startup
+    "packages/engine-client/src/client.ts": ["exports", "duplicates"], // canRepeat, neverRan, retrying, WAITS, untilConnected: invoke-retry, early-startup; invoke es alias de callEngine
     "packages/engine-client/src/loopbackLogin.ts": ["exports"],       // loopbackLoginPending, loopbackLoginDeliver (#1175)
     "packages/features/projects/src/queries/space-ops.ts": ["types"], // SpaceOpsCatalog (#1173)
     "packages/engine-client/src/retries.ts": ["exports"],             // WAITS, neverRan: invoke-retry.test.ts

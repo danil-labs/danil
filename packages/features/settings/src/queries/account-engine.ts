@@ -1,5 +1,5 @@
 /** La persona de la cuenta de Danil según el motor del escritorio (`danil_account_*`). */
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { imagenInerte } from "../../../../ui/src/lib/chat/links.ts";
 import { urlDeAvatar } from "../../../../engine-client/src/previewFile.ts";
 import type { AccountProfile, AccountProfileSource } from "../model/account-profile.ts";
@@ -24,9 +24,9 @@ export const engineAccountProfile: AccountProfileSource = engineAccountProfileOf
 export function engineAccountProfileOf(account?: string | null): AccountProfileSource {
   const named = account ? { account } : {};
   return {
-    read: () => invoke<DanilConnectStatus>("danil_account_refresh", named).then(profileFromStatus),
+    read: () => callEngine<DanilConnectStatus>("danil_account_refresh", named).then(profileFromStatus),
     setPhoto: (photo) =>
-      invoke<DanilConnectStatus>("danil_account_set_photo", { image: photo.dataUrl, ...named }).then(profileFromStatus),
-    removePhoto: () => invoke<DanilConnectStatus>("danil_account_remove_photo", named).then(profileFromStatus),
+      callEngine<DanilConnectStatus>("danil_account_set_photo", { image: photo.dataUrl, ...named }).then(profileFromStatus),
+    removePhoto: () => callEngine<DanilConnectStatus>("danil_account_remove_photo", named).then(profileFromStatus),
   };
 }
