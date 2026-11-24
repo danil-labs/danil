@@ -38,7 +38,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { type Capabilities, capabilities, setCapabilities } from "../../../../host/src/platform";
 import { deliver, listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
 import { isMac } from "../../../../host/src/window";
-import type { MachineStatus } from "../../../../../apps/desktop/src/web/SyncNote";
+import type { MachineStatus } from "../model/SyncNote";
 import AccountMachines from "./AccountMachines";
 import { mergeBridgeInventory } from "../model/bridge-inventory";
 import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS } from "../queries/cloud-machines";

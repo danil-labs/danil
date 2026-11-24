@@ -28,7 +28,10 @@
     // prohíbe. Se van cuando se retire esa pantalla con su propia revisión de paridad.
     "packages/features/settings/src/components/{AuditLog,BusinessBilling,BusinessBillingFiscal,BusinessBillingPlan}.tsx": ["files"],
     "packages/features/settings/src/model/{business-billing,fiscal}.ts": ["files"],
-    "apps/desktop/src/web/audit-log.ts": ["types"],
+    "apps/desktop/src/web/audit-log.ts": ["files", "types"],
+    "apps/desktop/src/web/Onboarding.tsx": ["files"],
+    "apps/desktop/src/web/workspace-assets.ts": ["types"],
+    "packages/platform-client/src/audit-log.ts": ["types"],
     "packages/shell/src/shell/OrganizationPositionMenu.tsx": ["files"],
     "packages/shell/src/shell/SpaceBar.tsx": ["exports"],
     // BARRA_DE_TERMINAL, TerminalName, TerminalCursor y TerminusMark: lo mismo (JSX y CSS).
@@ -139,7 +142,9 @@
         "@typescript/native-preview",
         // Los importa eslint.solid.config.mjs, que no tiene el nombre que el plugin de ESLint de knip busca.
         "eslint-plugin-solid",
-        "typescript-eslint"
+        "typescript-eslint",
+        // Movido con Onboarding.tsx a packages/features/onboarding/src/screens/WebOnboarding.tsx (F4.4 lote 1).
+        "lucide-solid"
       ]
     },
     // apps/mobile está fuera del pnpm workspace (npm propio). Se analiza solo para que cuente lo
