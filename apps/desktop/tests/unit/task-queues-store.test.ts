@@ -66,3 +66,48 @@ test("accepted queued saves survive view disposal without accepting new work", a
   const first = queue.persist("s1", "p1", [message("old")]), second = queue.persist("s1", "p1", [message("new")]);
   queue.dispose(); await queue.persist("s1", "p1", [message("late")]); pending[0](); await first; await Promise.resolve(); assert.equal(pending.length, 2); pending[1](); await second;
 });
+test("opening or rereading a session from the engine hydrates without writing back", async () => {
+  const f = fixture(async () => [message("disk")]);
+  await f.queue.openSession("s1", "p1");
+  assert.equal(f.writes.length, 0, "initial hydration must not call save_queue");
+  await f.queue.openSession("s1", "p1", () => true, true);
+  assert.equal(f.writes.length, 0, "engine reread must not call save_queue");
+  f.queue.remove("disk");
+  assert.equal(f.writes.length, 1, "removing the last item persists the empty queue");
+  f.queue.remove("missing");
+  assert.equal(f.writes.length, 1, "removing from an already empty queue does not write again");
+  f.dispose();
+});
+test("a failed write superseded by a newer queued write does not trigger onSaveFailure", async () => {
+  const settle = () => new Promise<void>(r => setTimeout(r, 0));
+  const pending: { resolve: () => void; reject: (err: unknown) => void }[] = [];
+  const failures: unknown[] = [];
+  const dispose = createRoot(end => {
+    const [scope] = createSignal<QueueScope>({ workspace: "A", generation: 1, session: "s1", project: "p1" });
+    const queue = createTaskQueues({
+      scope,
+      readQueue: async () => [],
+      writeQueue: () => new Promise<void>((resolve, reject) => pending.push({ resolve, reject })),
+      onSaveFailure: error => { failures.push(error); },
+    });
+    return { queue, end };
+  });
+  await dispose.queue.openSession("s1", "p1");
+  dispose.queue.enqueue(message("a"));
+  dispose.queue.enqueue(message("b"));
+  assert.equal(pending.length, 1);
+  pending[0].reject(new Error("service_busy"));
+  await settle();
+  assert.equal(failures.length, 0, "superseded failure stays quiet while newer write runs");
+  assert.equal(pending.length, 2);
+  pending[1].resolve();
+  await settle();
+  assert.equal(failures.length, 0);
+  dispose.queue.enqueue(message("c"));
+  assert.equal(pending.length, 3);
+  pending[2].reject(new Error("still_busy"));
+  await settle();
+  assert.equal(failures.length, 1, "latest write failing still notifies the user");
+  dispose.end();
+});
+

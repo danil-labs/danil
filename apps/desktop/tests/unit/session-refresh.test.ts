@@ -274,3 +274,95 @@ test("un aviso de una carpeta que el riel no enseña no la mete", async () => {
   await refresh.refresh(["ajena"]);
   assert.deepEqual(lists, { app: ["app"] });
 });
+
+test("limita lecturas simultáneas y salta carpetas en cola superadas por una ola más nueva", async () => {
+  const projects = ["p1", "p2", "p3", "p4", "p5", "p6"];
+  let inFlight = 0;
+  let peak = 0;
+  const started: { project: string; result: ReturnType<typeof deferred<string[]>> }[] = [];
+  let lists: SessionLists<string> = {};
+  const refresh = sessionRefresh<string>({
+    read: (project) => {
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      const result = deferred<string[]>();
+      started.push({ project, result });
+      return result.promise.finally(() => { inFlight--; });
+    },
+    apply: (update) => { lists = update(lists); },
+    projects: () => projects,
+    key: (row) => row,
+    schedule: () => 0,
+    cancel: () => {},
+    concurrency: 2,
+  });
+  const wave1 = refresh.refresh(["p1", "p1", "p2", "p3", "p4", "p5", "p6"]);
+  assert.equal(started.length, 2, "solo arranca hasta concurrency");
+  const wave2 = refresh.refresh(projects);
+  while (started.length > 0) {
+    const next = started.shift()!;
+    next.result.resolve([next.project]);
+    await settle();
+  }
+  await Promise.all([wave1, wave2]);
+  assert.equal(peak, 2, "nunca rebasa el tope de concurrencia");
+  assert.deepEqual(Object.keys(lists).sort(), projects);
+  // Wave 1 arrancó p1 y p2; p3..p6 en cola se saltaron porque wave 2 ya los pidió.
+  // Wave 2 leyó las 6 carpetas -> total 8 lecturas en vez de 12 (o 13 sin deduplicar).
+  assert.equal(Object.values(lists).flat().length, 6);
+});
+
+test("reset suelta de inmediato las lecturas en cola sin llamar a read", async () => {
+  const projects = ["p1", "p2", "p3"];
+  const reads: string[] = [];
+  const pending: ReturnType<typeof deferred<string[]>>[] = [];
+  const refresh = sessionRefresh<string>({
+    read: (project) => {
+      reads.push(project);
+      const d = deferred<string[]>();
+      pending.push(d);
+      return d.promise;
+    },
+    apply: () => {},
+    projects: () => projects,
+    key: (row) => row,
+    schedule: () => 0,
+    cancel: () => {},
+    concurrency: 1,
+  });
+  const first = refresh.refresh(projects);
+  assert.deepEqual(reads, ["p1"]);
+  refresh.reset();
+  pending[0].resolve(["p1"]);
+  await first;
+  assert.deepEqual(reads, ["p1"], "p2 y p3 nunca se leyeron tras reset");
+});
+
+test("el reintento solo vuelve a leer las carpetas que fallaron", async () => {
+  const reads: string[] = [];
+  const timers: { run: () => void; ms: number }[] = [];
+  let failApp = true;
+  let lists: SessionLists<string> = {};
+  const refresh = sessionRefresh<string>({
+    read: async (project) => {
+      reads.push(project);
+      if (project === "app" && failApp) throw new Error("busy");
+      return [project];
+    },
+    apply: (update) => { lists = update(lists); },
+    projects: () => ["app", "otra"],
+    key: (row) => row,
+    schedule: (run, ms) => { timers.push({ run, ms }); return timers.length; },
+    cancel: () => {},
+  });
+  await refresh.refresh(["app", "otra"]);
+  assert.deepEqual(lists, { app: [], otra: ["otra"] });
+  assert.equal(timers.length, 1);
+  reads.length = 0;
+  failApp = false;
+  timers[0].run();
+  await settle();
+  assert.deepEqual(reads, ["app"], "no relee carpetas sanas");
+  assert.deepEqual(lists, { app: ["app"], otra: ["otra"] });
+});
+
