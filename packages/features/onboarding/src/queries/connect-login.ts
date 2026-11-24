@@ -1,6 +1,6 @@
 import { onCleanup } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { cancelLoopbackForAccount } from "../../../../engine-client/src/loopbackLogin.ts";
 import { freeModelScope } from "../../../../session/src/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
@@ -16,7 +16,7 @@ type Avance = { id: string; done: number; bytes: number };
 type AvanceDeInstalacion = { operation: string; kind: string; done: number; bytes: number };
 
 export async function cuentaConectada(agent: string): Promise<{ cuenta: string; id: string } | null> {
-  const lista = await invoke<AccountList>("list_accounts", { provider: agent });
+  const lista = await callEngine<AccountList>("list_accounts", { provider: agent });
   const vivas = lista.accounts.filter((a) => a.authenticated_at !== null);
   const activa = vivas.find((a) => a.id === lista.active) ?? vivas[0];
   if (!activa) return null;
@@ -39,8 +39,8 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
       if (!e || e.cuenta !== cuenta || pasos[id]?.k !== "entrando") return;
       entrada = null;
       cancelLoopbackForAccount(cuenta);
-      void invoke("cancel_login", { id: cuenta }).catch(() => {});
-      void invoke("discard_account", { provider: e.agente, id: cuenta }).catch(() => {});
+      void callEngine("cancel_login", { id: cuenta }).catch(() => {});
+      void callEngine("discard_account", { provider: e.agente, id: cuenta }).catch(() => {});
       setErrores(id, t("onboarding.ai.login_timeout"));
       poner(id, { k: "instalada" });
     }, PLAZO_DE_ENTRADA_MS);
@@ -55,7 +55,7 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     if (!a.available) {
       if (a.external_install_url) {
         poner(id, { k: "externa" });
-        invoke("open_external", { target: a.external_install_url }).catch(() => {});
+        callEngine("open_external", { target: a.external_install_url }).catch(() => {});
         return;
       }
       if (!(await descargar(f))) return;
@@ -72,7 +72,7 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     setErrores(id, null);
     poner(id, { k: "comprobando" });
     try {
-      const cuenta = await invoke<{ id: string }>("adopt_system_session", { provider: f.agente });
+      const cuenta = await callEngine<{ id: string }>("adopt_system_session", { provider: f.agente });
       const conectada = await cuentaConectada(f.agente);
       poner(id, { k: "conectada", cuenta: conectada?.cuenta ?? p.identidad, id: cuenta.id });
     } catch (e) {
@@ -86,14 +86,14 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     if (!f) return;
     let cuenta: string | null = null;
     try {
-      cuenta = (await invoke<{ id: string }>("add_account", { provider: f.agente, label: "" })).id;
+      cuenta = (await callEngine<{ id: string }>("add_account", { provider: f.agente, label: "" })).id;
       entrada = { fila: id, agente: f.agente, cuenta };
       setSalidas(id, []);
       poner(id, { k: "entrando", cuenta });
-      await invoke("login_account", { provider: f.agente, id: cuenta, mode: "tuberia" });
+      await callEngine("login_account", { provider: f.agente, id: cuenta, mode: "tuberia" });
     } catch (e) {
       entrada = null;
-      if (cuenta) await invoke("discard_account", { provider: f.agente, id: cuenta }).catch(() => {});
+      if (cuenta) await callEngine("discard_account", { provider: f.agente, id: cuenta }).catch(() => {});
       setErrores(id, explicar(e));
       poner(id, { k: "instalada" });
     }
@@ -107,25 +107,25 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     clearTimeout(plazo);
     entrada = null;
     try {
-      const estado = await invoke<AccountStatus>("account_status", { provider: e.agente, id: e.cuenta });
+      const estado = await callEngine<AccountStatus>("account_status", { provider: e.agente, id: e.cuenta });
       if (!motivo && estado.authenticated) return void (await quedoConectada(e.fila, e.agente, e.cuenta));
       // La cuenta se queda: ya tiene la sesión, y en cuanto el alta exista se conecta sin volver a entrar.
       if (!motivo && estado.signup) {
         const url = estado.signup.url;
         poner(e.fila, { k: "alta", cuenta: e.cuenta, url });
-        if (url) invoke("open_external", { target: url }).catch(() => {});
+        if (url) callEngine("open_external", { target: url }).catch(() => {});
         return;
       }
     } catch {
       // Sin estado legible se trata como un intento que no llegó: la cuenta vacía se descarta.
     }
-    await invoke("remove_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
+    await callEngine("remove_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
     setErrores(e.fila, motivo ? explicar(motivo) : t("onboarding.ai.login_failed"));
     poner(e.fila, { k: "instalada" });
   }
 
   async function quedoConectada(id: string, agent: string, cuenta: string) {
-    await invoke("set_active_account", { provider: agent, id: cuenta }).catch(() => {});
+    await callEngine("set_active_account", { provider: agent, id: cuenta }).catch(() => {});
     const conectada = await cuentaConectada(agent);
     poner(id, { k: "conectada", cuenta: conectada?.cuenta ?? "", id: cuenta });
   }
@@ -138,11 +138,11 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     setErrores(id, null);
     poner(id, { ...p, revisando: true });
     try {
-      const estado = await invoke<AccountStatus>("account_status", { provider: f.agente, id: p.cuenta });
+      const estado = await callEngine<AccountStatus>("account_status", { provider: f.agente, id: p.cuenta });
       if (pasos[id]?.k !== "alta") return;
       if (estado.authenticated) return void (await quedoConectada(id, f.agente, p.cuenta));
       if (estado.signup) return poner(id, { ...p, url: estado.signup.url ?? p.url, revisando: false });
-      await invoke("remove_account", { provider: f.agente, id: p.cuenta }).catch(() => {});
+      await callEngine("remove_account", { provider: f.agente, id: p.cuenta }).catch(() => {});
       setErrores(id, t("onboarding.ai.login_failed"));
       poner(id, { k: "instalada" });
     } catch {
@@ -153,7 +153,7 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
 
   function abrirAlta(id: string) {
     const p = pasos[id];
-    if (p?.k === "alta" && p.url) invoke("open_external", { target: p.url }).catch(() => {});
+    if (p?.k === "alta" && p.url) callEngine("open_external", { target: p.url }).catch(() => {});
   }
 
   async function enviarCodigo(id: string, codigo: string) {
@@ -162,7 +162,7 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     setErrores(id, null);
     poner(id, { ...p, pideCodigo: false });
     try {
-      await invoke("submit_login_code", { id: p.cuenta, code: codigo.trim() });
+      await callEngine("submit_login_code", { id: p.cuenta, code: codigo.trim() });
     } catch (e) {
       setErrores(id, explicar(e));
       poner(id, { ...p, pideCodigo: true });
@@ -176,7 +176,7 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     setErrores(id, null);
     poner(id, { k: "comprobando" });
     try {
-      const cuenta = await invoke<{ id: string }>("connect_api_key", { provider: f.agente, key: v });
+      const cuenta = await callEngine<{ id: string }>("connect_api_key", { provider: f.agente, key: v });
       poner(id, { k: "conectada", cuenta: t("onboarding.ai.key_saved", { start: v.slice(0, 4), end: v.slice(-4) }), id: cuenta.id });
     } catch (e) {
       const texto = explicar(e);
@@ -193,11 +193,11 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
       const e = entrada;
       entrada = null;
       cancelLoopbackForAccount(p.cuenta);
-      await invoke("cancel_login", { id: p.cuenta }).catch(() => {});
-      if (e) await invoke("discard_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
+      await callEngine("cancel_login", { id: p.cuenta }).catch(() => {});
+      if (e) await callEngine("discard_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
     }
     const f = fila(id);
-    if (p?.k === "alta" && f) await invoke("remove_account", { provider: f.agente, id: p.cuenta }).catch(() => {});
+    if (p?.k === "alta" && f) await callEngine("remove_account", { provider: f.agente, id: p.cuenta }).catch(() => {});
     const sesion = sesionesDelSistema().find((x) => x.provider === f?.agente);
     poner(id, sesion ? { k: "sesion", identidad: sesion.identity ?? "" } : agente(f?.agente ?? "")?.available ? { k: "instalada" } : { k: "falta" });
   }
@@ -212,12 +212,12 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
       if (f.modo === "consentimiento") {
         const policy = await loadFreeModelPolicy();
         if (!policy) throw new Error(t("settings.accounts.free.unavailable"));
-        await invoke("set_provider_consent", { provider: f.agente, accepted: false }, freeModelScope(policy));
+        await callEngine("set_provider_consent", { provider: f.agente, accepted: false }, freeModelScope(policy));
         window.dispatchEvent(new CustomEvent("harness:consentimiento"));
       } else {
-        const lista = await invoke<AccountList>("list_accounts", { provider: f.agente });
+        const lista = await callEngine<AccountList>("list_accounts", { provider: f.agente });
         for (const c of lista.accounts.filter((c) => c.authenticated_at !== null)) {
-          await invoke("remove_account", { provider: f.agente, id: c.id });
+          await callEngine("remove_account", { provider: f.agente, id: c.id });
         }
       }
       poner(id, agente(f.agente)?.available ? { k: "instalada" } : { k: "falta" });
@@ -235,7 +235,7 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     if (kind === "url") {
       vigilarEntrada(e.fila, e.cuenta);
       poner(e.fila, { ...p, url: text });
-      invoke("open_external", { target: text }).catch(() => {});
+      callEngine("open_external", { target: text }).catch(() => {});
     } else if (kind === "notice") setSalidas(e.fila, (s) => [...(s ?? []), text]);
     else if (kind === "confirm") poner(e.fila, { ...p, codigo: text });
     else if (kind === "code") poner(e.fila, { ...p, pideCodigo: true });
@@ -269,12 +269,12 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     const e = entrada;
     if (e) {
       cancelLoopbackForAccount(e.cuenta);
-      void invoke("cancel_login", { id: e.cuenta }).catch(() => {});
-      void invoke("discard_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
+      void callEngine("cancel_login", { id: e.cuenta }).catch(() => {});
+      void callEngine("discard_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
     }
     for (const f of filas()) {
       const p = pasos[f.id];
-      if (p?.k === "alta") void invoke("remove_account", { provider: f.agente, id: p.cuenta }).catch(() => {});
+      if (p?.k === "alta") void callEngine("remove_account", { provider: f.agente, id: p.cuenta }).catch(() => {});
     }
   });
 

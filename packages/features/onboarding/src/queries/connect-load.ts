@@ -1,6 +1,6 @@
 import { batch } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
 import type { Superficie } from "../../../../ui/src/lib/surfaces.ts";
 import { textoDeFalta } from "../../../../ui/src/lib/no-space";
@@ -62,9 +62,9 @@ export function crearCargaDeConexiones(estado: EstadoDeConexiones) {
     let superficies: Superficie[] = [];
     try {
       [agentes, superficies, sesiones] = await Promise.all([
-        invoke<Agente[]>("list_providers"),
-        invoke<Superficie[]>("list_surfaces").catch(() => [] as Superficie[]),
-        invoke<SesionDelSistema[]>("list_system_sessions").catch(() => [] as SesionDelSistema[]),
+        callEngine<Agente[]>("list_providers"),
+        callEngine<Superficie[]>("list_surfaces").catch(() => [] as Superficie[]),
+        callEngine<SesionDelSistema[]>("list_system_sessions").catch(() => [] as SesionDelSistema[]),
       ]);
     } catch (e) {
       setFalloDeCarga(prosaDe(e));
@@ -131,7 +131,7 @@ export function crearCargaDeConexiones(estado: EstadoDeConexiones) {
     for (const f of nuevas) {
       const a = agente(f.agente);
       if (!a || a.available || a.external_install_url || f.bytes !== null) continue;
-      invoke<number>("provider_download_size", { provider: a.id })
+      callEngine<number>("provider_download_size", { provider: a.id })
         .then((b) => setFilas((fs) => fs.map((x) => (x.agente === a.id ? { ...x, bytes: b } : x))))
         .catch(() => {});
     }
@@ -142,7 +142,7 @@ export function crearCargaDeConexiones(estado: EstadoDeConexiones) {
     poner(f.id, { k: "descargando", hecho: 0, total });
     const vuelta = descargas.then(async () => {
       if (agente(f.agente)?.available) return true;
-      await invoke("install_provider", { provider: f.agente });
+      await callEngine("install_provider", { provider: f.agente });
       return true;
     });
     descargas = vuelta.catch(() => {});
@@ -170,7 +170,7 @@ export function crearCargaDeConexiones(estado: EstadoDeConexiones) {
     if (!f) return;
     // La tarjeta vuelve al instante; el motor termina de cortar por detrás.
     poner(id, sesiones.some((y) => y.provider === f.agente) ? { k: "instalada" } : { k: "falta" });
-    void invoke("cancel_install", { operation: `provider:${f.agente}` }).catch(() => {});
+    void callEngine("cancel_install", { operation: `provider:${f.agente}` }).catch(() => {});
   }
 
   return {
