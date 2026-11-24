@@ -2,7 +2,7 @@ import Bug from "lucide-solid/icons/bug";
 import LogOut from "lucide-solid/icons/log-out";
 import { type Accessor, For, Show } from "solid-js";
 import { t } from "../../../ui/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { capabilities } from "../../../host/src/platform";
 import { type Apariencia, elegirApariencia } from "../../../ui/src/lib/theme";
 import { cn } from "../../../ui/src/lib/utils";
@@ -66,7 +66,7 @@ export function ProfileThemeAndBug(props: {
         class={ITEM_DE_MENU}
         onClick={() => {
           setOpen(false);
-          void invoke("site_open_external", { url: BUG_REPORT_URL }).catch(() => {});
+          void callShellViewEngine("site_open_external", { url: BUG_REPORT_URL }).catch(() => {});
         }}
       >
         {t("usage.bug_report.open_web")}

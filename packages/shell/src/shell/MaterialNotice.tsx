@@ -1,5 +1,5 @@
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
 import type { Source } from "../../../ui/src/lib/model";
@@ -81,9 +81,9 @@ export default function AvisoDeMaterial() {
   async function mirar() {
     if (document.visibilityState !== "visible") return;
     const mia = vuelta;
-    void invoke("sync_workspace_context", { force: false }).catch(() => {});
+    void callShellViewEngine("sync_workspace_context", { force: false }).catch(() => {});
     try {
-      const rs = await invoke<Frescura[]>("source_freshness");
+      const rs = await callShellViewEngine<Frescura[]>("source_freshness");
       const nuevas = rs.filter((f) => f.estado === "atrasada");
       if (mia !== vuelta) return;
       if (nuevas.length === 0) {
@@ -93,7 +93,7 @@ export default function AvisoDeMaterial() {
       // Los nombres se piden solo cuando hay algo que nombrar: la lista de
       // fuentes es de disco y barata, pero pedirla en cada vuelta sería
       // trabajo para no decir nada.
-      const ss = await invoke<Source[]>("list_sources");
+      const ss = await callShellViewEngine<Source[]>("list_sources");
       if (mia !== vuelta) return;
       const raices = new Set(ss.filter((s) => s.root === true).map((s) => s.id));
       const secundarias = nuevas.filter((f) => !raices.has(f.id));
@@ -146,7 +146,7 @@ export default function AvisoDeMaterial() {
     const quedan: Frescura[] = [];
     for (const f of visibles()) {
       try {
-        await invoke("update_source", { id: f.id });
+        await callShellViewEngine("update_source", { id: f.id });
       } catch (e) {
         quedan.push(f);
         setFallo(typeof e === "string" ? e : prosaDe(e));

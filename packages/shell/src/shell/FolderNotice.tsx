@@ -1,5 +1,5 @@
 import { Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { machineOf } from "../../../features/machines/src/queries/store";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
@@ -32,7 +32,7 @@ export default function AvisoDeCarpeta(props: {
       return;
     }
     try {
-      const r = await invoke<Resumen>("kn_pending", {
+      const r = await callShellViewEngine<Resumen>("kn_pending", {
         project: props.project,
         session: id,
       }, machineOf(id));
@@ -62,7 +62,7 @@ export default function AvisoDeCarpeta(props: {
     if (!id || actualizando()) return;
     setActualizando(true);
     try {
-      await invoke("kn_update", { project: props.project, session: id }, machineOf(id));
+      await callShellViewEngine("kn_update", { project: props.project, session: id }, machineOf(id));
       setAtrasada(false);
     } catch {
       await mirar();

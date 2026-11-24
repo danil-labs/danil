@@ -13,7 +13,7 @@ import {
   spaceName,
   type TaskSeen,
 } from "../../../ui/src/lib/spaces";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { machineOf } from "../../../features/machines/src/queries/store";
 import { cn } from "../../../ui/src/lib/utils";
 import type { Project } from "../../../ui/src/lib/model";
@@ -44,7 +44,7 @@ export default function DeleteSpace(props: {
 }) {
   const [previa, { mutate, refetch }] = createResource(
     () => (props.managed ? null : props.space.id),
-    (id) => invoke<DeletePreview>("space_delete_preview", { id }, machineOf(id)),
+    (id) => callShellViewEngine<DeletePreview>("space_delete_preview", { id }, machineOf(id)),
   );
   const [marcas, setMarcas] = createSignal(new Map<string, "new" | "changed">());
   const [fallos, setFallos] = createSignal<{ task: string; title: string; error: Failure }[]>([]);
@@ -69,7 +69,7 @@ export default function DeleteSpace(props: {
   const carpeta = (id: string) => props.proyectos.find((p) => p.id === id)?.name ?? id;
   const nombre = () => spaceName(props.space);
 
-  const releer = () => invoke<DeletePreview>("space_delete_preview", { id: props.space.id }, machineOf(props.space.id));
+  const releer = () => callShellViewEngine<DeletePreview>("space_delete_preview", { id: props.space.id }, machineOf(props.space.id));
 
   createEffect(() => {
     if (props.managed || !previa.loading) {
@@ -106,7 +106,7 @@ export default function DeleteSpace(props: {
     setFallo(null);
     for (const s of vista.tasks) enviadas.add(claveDeVista(s));
     try {
-      const salida = await invoke<DeleteOutcome>("delete_space", {
+      const salida = await callShellViewEngine<DeleteOutcome>("delete_space", {
         id: props.space.id,
         seen: { tasks: vista.tasks, discard: sinCommitear().length > 0 },
       }, machineOf(props.space.id));
