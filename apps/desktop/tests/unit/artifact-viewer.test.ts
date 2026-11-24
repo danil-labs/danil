@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
-import { envolver, leerEstado } from "../../src/features/artifacts/sandbox.ts";
-import { JS_INLINE } from "../../src/features/artifacts/inlineVisual.ts";
+import { envolver, leerEstado } from "../../../../packages/features/artifacts/src/model/sandbox.ts";
+import { JS_INLINE } from "../../../../packages/features/artifacts/src/model/inlineVisual.ts";
 
 // jsdom prueba navegación y mensajes; no demuestra aislamiento de un navegador.
 test("legacy HTML slides retain navigation after removing the editor", () => {

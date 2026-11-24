@@ -9,8 +9,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import "../helpers/catalog.ts";
-import type { Msg } from "../../src/features/chat/Chat.tsx";
-import { ponerLanzamiento } from "../../src/features/chat/launchGroups.ts";
+import type { Msg } from "../../../../packages/features/chat/src/screens/Chat.tsx";
+import { ponerLanzamiento } from "../../../../packages/features/chat/src/model/launchGroups.ts";
 import {
   anexarDelta,
   mensajesDelHilo,
@@ -18,7 +18,7 @@ import {
   tramoGuardado,
   transcripcion,
   type Turn,
-} from "../../src/features/chat/transcript.ts";
+} from "../../../../packages/features/chat/src/model/transcript.ts";
 
 const tarea = (n: number) => ({ folder: "p", task: `hija${n}`, title: `Hija ${n}`, agent: "claude", provider: "claude" });
 const lanzada = (n: number): Msg => ({ role: "system", text: "", meta: "task_launched", fromTask: tarea(n), turno: `l${n}` });

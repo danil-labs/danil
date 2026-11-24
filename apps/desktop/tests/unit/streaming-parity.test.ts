@@ -8,12 +8,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import "../helpers/catalog.ts";
-import type { Msg } from "../../src/features/chat/Chat.tsx";
-import { lotesDeDeltas } from "../../src/features/chat/deltaFrames.ts";
-import { anexarDelta, anexarDeltas, type Delta } from "../../src/features/chat/transcript.ts";
-import { MAX_CHAT_VISUALS, splitChatVisuals } from "../../src/features/chat/visualDirective.ts";
+import type { Msg } from "../../../../packages/features/chat/src/screens/Chat.tsx";
+import { lotesDeDeltas } from "../../../../packages/features/chat/src/model/deltaFrames.ts";
+import { anexarDelta, anexarDeltas, type Delta } from "../../../../packages/features/chat/src/model/transcript.ts";
+import { MAX_CHAT_VISUALS, splitChatVisuals } from "../../../../packages/features/chat/src/model/visualDirective.ts";
 import { splitNextSteps } from "../../src/lib/nextSteps.ts";
-import { bloquesDeMarkdown, partidorDeBloques } from "../../src/ui/markdown-blocks.ts";
+import { bloquesDeMarkdown, partidorDeBloques } from "../../../../packages/ui/src/markdown-blocks.ts";
 
 const FIXTURES: Record<string, string> = {
   prosa: "Voy a mirarlo.\n\nY luego **esto** con `código`.\n\n\n\nFin.",

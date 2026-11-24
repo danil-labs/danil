@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { agentsWithDifferentReaders } from "../../src/features/projects/agentReaders.ts";
+import { agentsWithDifferentReaders } from "../../../../packages/features/projects/src/model/agentReaders.ts";
 
 const agent = (name: string, ...providers: string[]) => ({ name, providers });
 

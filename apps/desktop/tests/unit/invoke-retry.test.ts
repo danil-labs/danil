@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { canRepeat, neverRan, retrying, untilConnected, WAITS } from "../../src/lib/invoke.ts";
+import { canRepeat, neverRan, retrying, untilConnected, WAITS } from "../../../../packages/engine-client/src/client.ts";
 
 function service(failures: number, code = "app_unavailable") {
   const waits: number[] = [];

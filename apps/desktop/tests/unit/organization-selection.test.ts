@@ -191,7 +191,7 @@ test("lista vacía: el selector no se muestra (sin organizaciones con plan)", as
 });
 
 test("Idempotency-Key: una clave por intento lógico de `select`, reutilizada en sus reintentos hasta llegar a danil_edge_fetch", async () => {
-  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  const { edgeOrganizationSource } = await import("../../../../packages/shell/src/shell/organization-edge.ts");
   const calls: { method: string; path: string; body?: unknown; key?: string }[] = [];
   let lose = 2;
   const edgeFetch = async (method: "GET" | "POST", path: string, body?: unknown, key?: string) => {
@@ -220,7 +220,7 @@ test("Idempotency-Key: una clave por intento lógico de `select`, reutilizada en
 });
 
 test("adaptador del borde: 404/501 → oculto y reintento; 403 organization_selection_required se reconoce", async () => {
-  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  const { edgeOrganizationSource } = await import("../../../../packages/shell/src/shell/organization-edge.ts");
   const c = clock();
   let status = 404;
   const source = edgeOrganizationSource(async (_m, path) =>
@@ -242,7 +242,7 @@ test("adaptador del borde: 404/501 → oculto y reintento; 403 organization_sele
 });
 
 test("adaptador del borde: lee /v1/capabilities; sin `identity.organizations` no pide la ruta", async () => {
-  const { edgeOrganizationSource } = await import("../../src/features/shell/organization-edge.ts");
+  const { edgeOrganizationSource } = await import("../../../../packages/shell/src/shell/organization-edge.ts");
   const c = clock();
   const paths: string[] = [];
   let caps: unknown = { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] };

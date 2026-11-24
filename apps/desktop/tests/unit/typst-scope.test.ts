@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { esTypst, llevaVistaTypst } from "../../src/features/code/typstScope.ts";
+import { esTypst, llevaVistaTypst } from "../../../../packages/features/code/src/model/typstScope.ts";
 
 const principal = "taller-cicy-entre-el-orden-y-el-caos/main.typ";
 

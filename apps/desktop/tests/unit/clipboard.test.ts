@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 
-const { base64De: toBase64, copyText, imagenPegada: pastedImage } = await import("../../src/lib/clipboard.ts");
+const { base64De: toBase64, copyText, imagenPegada: pastedImage } = await import("../../../../packages/host/src/clipboard.ts");
 const { elegirLengua: chooseLanguage, registrarCatalogo: registerCatalog, t } = await import("../../src/lib/i18n.ts");
 
 const repoRoot = resolve(import.meta.dirname, "../..");

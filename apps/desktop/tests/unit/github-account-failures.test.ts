@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import "../helpers/catalog.ts";
-import { accountPathDown, githubAccountFailureOf } from "../../src/features/settings/github-account/failures.ts";
+import { accountPathDown, githubAccountFailureOf } from "../../../../packages/features/settings/src/model/github-account-failures.ts";
 
 test("account-path codes from the relay fall back to the local connection", () => {
   for (const code of ["unsupported", "command_failed", "not_linked", "unavailable"]) {

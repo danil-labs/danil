@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { FreeModelPolicy } from "../../src/lib/free-model-policy.ts";
-import { activatePlatform, isPlatformPolicy, needsPlatform, setFreeRouterHost, signOutPlatform, withdrawPlatform } from "../../src/features/settings/free-router-session.ts";
+import { activatePlatform, isPlatformPolicy, needsPlatform, setFreeRouterHost, signOutPlatform, withdrawPlatform } from "../../../../packages/features/settings/src/queries/free-router-session.ts";
 
 const POLICY = { workspace_id: "q3ce37ff", version: 3, providers: ["kilo", "vercel", "reflection"], lines: [], acceptance_ref: "", enabled: false, terms: [], accepted: false, authority: "platform" } as FreeModelPolicy;
 const LIST = { active_workspace_id: "42", items: [{ id: "42", org: "org_A1", name: "Activa", role: "owner" }] };

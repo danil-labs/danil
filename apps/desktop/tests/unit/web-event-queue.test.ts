@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createWebEventQueue } from "../../src/features/machines/web-event-queue.ts";
+import { createWebEventQueue } from "../../../../packages/features/machines/src/model/web-event-queue.ts";
 
 test("a pending web poll wakes immediately and close settles a later reader", async () => {
   const queue = createWebEventQueue();

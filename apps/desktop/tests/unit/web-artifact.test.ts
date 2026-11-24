@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 
-import { envolver, formaDe } from "../../src/features/artifacts/sandbox.ts";
+import { envolver, formaDe } from "../../../../packages/features/artifacts/src/model/sandbox.ts";
 
 /**
  * **Un artefacto web se pinta como un sitio, y lo que decide eso no da error si

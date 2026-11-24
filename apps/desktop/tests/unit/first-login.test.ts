@@ -5,12 +5,12 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { firstLoginPhase, FIRST_LOGIN_KEY, linkingOutcome, localCandidateCount, shouldMarkFirstLoginDone } from "../../src/features/shell/first-login.ts";
-import { createLinker } from "../../src/features/shell/first-login-link.ts";
-import { gateView } from "../../src/features/shell/session-gate.ts";
-import { personSessionSource, registerEngineSessionSource } from "../../src/features/shell/session-source.ts";
-import { createPersonalOpener, openPersonal, personalOrgOf } from "../../src/features/shell/personal-open.ts";
-import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
+import { firstLoginPhase, FIRST_LOGIN_KEY, linkingOutcome, localCandidateCount, shouldMarkFirstLoginDone } from "../../../../packages/shell/src/shell/first-login.ts";
+import { createLinker } from "../../../../packages/shell/src/shell/first-login-link.ts";
+import { gateView } from "../../../../packages/shell/src/shell/session-gate.ts";
+import { personSessionSource, registerEngineSessionSource } from "../../../../packages/shell/src/shell/session-source.ts";
+import { createPersonalOpener, openPersonal, personalOrgOf } from "../../../../packages/shell/src/shell/personal-open.ts";
+import { createAccountWorkspaces } from "../../../../packages/shell/src/shell/session-account-workspaces.ts";
 
 globalThis.localStorage ??= (() => {
   const m = new Map<string, string>();

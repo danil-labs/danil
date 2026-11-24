@@ -25,7 +25,7 @@ function window(replies: Record<string, Reply>) {
   return calls;
 }
 
-const account = () => import("../../src/features/settings/danil-account.ts");
+const account = () => import("../../../../packages/features/settings/src/queries/danil-account.ts");
 const LEGACY = ["danil_connect_start", "danil_connect_status", "danil_connect_options", "danil_disconnect", "open_external"];
 
 test("the account is read from the Desk session, not from the engine", async () => {

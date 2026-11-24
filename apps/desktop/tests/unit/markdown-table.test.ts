@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { ANCHO_MINIMO, anchosDeColumnas } = await import("../../src/ui/markdown-table.ts");
+const { ANCHO_MINIMO, anchosDeColumnas } = await import("../../../../packages/ui/src/markdown-table.ts");
 
 const suma = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 

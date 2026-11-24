@@ -10,8 +10,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import "../helpers/catalog.ts";
-import type { Msg } from "../../src/features/chat/Chat.tsx";
-import { anexarDelta, anexarImagen, anexarRazonamiento } from "../../src/features/chat/transcript.ts";
+import type { Msg } from "../../../../packages/features/chat/src/screens/Chat.tsx";
+import { anexarDelta, anexarImagen, anexarRazonamiento } from "../../../../packages/features/chat/src/model/transcript.ts";
 
 const texto = (msgs: Msg[]) => msgs.map((m) => `${m.role}:${m.text}`);
 

@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { comandoDe, comandoEscrito, esMarkdown, esSalidaDeComando, soloEnSuTerminal } from "../../src/features/chat/slashOutput.ts";
+import { comandoDe, comandoEscrito, esMarkdown, esSalidaDeComando, soloEnSuTerminal } from "../../../../packages/features/chat/src/model/slashOutput.ts";
 import { claseDelTramo, tramosDelMensaje } from "../../src/lib/taskMentions.ts";
 
 const salida = { role: "system", meta: "command_output", text: "## Context Usage\n\n**Tokens:** 17.5k / 1m (2%)" };

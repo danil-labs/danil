@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { capabilityList } from "@terminus/computers";
 import { readCapabilities, supports } from "../../src/web/service-capabilities.ts";
-import { PlatformSessionError } from "../../src/web/platform-session.ts";
+import { PlatformSessionError } from "../../../../packages/session/src/platform-session.ts";
 
 test("capabilities reads its versioned route and ignores unknown response fields", async () => {
   const asked: string[] = [];
