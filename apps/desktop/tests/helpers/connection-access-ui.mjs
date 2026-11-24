@@ -75,7 +75,7 @@ async function toggle(index) {
 }
 await click("Configuración");
 // Settings entry is named by the current catalog.
-const settingsButton = [...doc.querySelectorAll("button")].find(b => /Conexiones|Conectar herramientas/.test(b.textContent));
+const settingsButton = [...doc.querySelectorAll("button")].find(b => /Conectores|Conexiones|Conectar herramientas/.test(b.textContent));
 assert.ok(settingsButton, `Missing connections entry: ${doc.body.textContent}`);
 settingsButton.click();
 if (loadFail) {

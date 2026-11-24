@@ -29,6 +29,7 @@ export type ComandoQueNace = {
   claveBorrador: string;
   generation: number;
   session: string | null;
+  recordSpace?: (taskId: string) => void;
 };
 
 export type LiveTurn = {

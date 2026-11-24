@@ -1,32 +1,120 @@
 import { createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js";
 import { arrangeSpaces } from "../../../platform-client/src/space-order.ts";
-import { displayWorkspaceContext } from "../../../session/src/workspace-context.ts";
-import type { Space } from "../../../ui/src/lib/spaces.ts";
+import { displayWorkspaceContext } from "../../../../apps/desktop/src/lib/workspace-context.ts";
+import type { Space } from "../../../../apps/desktop/src/lib/spaces.ts";
 import { workspaceSpacesForEngine, type WorkspaceSpace, type WorkspaceSpaceCatalog, type WorkspaceSpaceEdit } from "../../../platform-client/src/workspace-spaces.ts";
 import { sessionRailState } from "../shell/session-groups.ts";
 
 type Client = NonNullable<Awaited<ReturnType<typeof workspaceSpacesForEngine>>>;
 type Ready = { client: Client; catalog: WorkspaceSpaceCatalog };
 type OrderFallback = { saving: Accessor<boolean>; arrange<T extends { id: string }>(items: readonly T[]): T[]; save(ids: string[]): Promise<void> | void };
+type SessionLike = { id: string; space?: string | null; parent?: string | null };
 
 const ENGINE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
-function bareSpaceId(id: string): string | null {
+export function canonicalRef(id: string | null | undefined): string | null {
+  if (!id) return null;
   const index = id.indexOf("~");
   const bare = index >= 0 ? id.slice(index + 1) : id;
   return ENGINE_ID.test(bare) ? bare : null;
 }
 
+function cleanFolders(folders: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const folder of folders) {
+    const bare = canonicalRef(folder);
+    if (!bare || seen.has(bare)) continue;
+    seen.add(bare);
+    result.push(bare);
+    if (result.length >= 500) break;
+  }
+  return result;
+}
+
 function toCatalogSpace(row: Space): WorkspaceSpace | null {
-  const id = bareSpaceId(row.id);
+  const id = canonicalRef(row.id);
   if (!id) return null;
-  const folders = row.folders.filter(folder => ENGINE_ID.test(folder)).slice(0, 500);
   const name = typeof row.name === "string" && row.name.trim() ? row.name.trim().slice(0, 100) : null;
-  return { id, name, folders };
+  return { id, name, folders: cleanFolders(row.folders) };
 }
 
 function statusOf(error: unknown): number | undefined {
   return (error as { status?: number } | null)?.status;
+}
+
+/** Proyecta la lista de spaces cuando `workspaces` es la fuente única de verdad. */
+export function projectCatalogSpaces(catalog: WorkspaceSpaceCatalog | undefined, rows: readonly Space[]): Space[] {
+  if (!catalog || catalog.spaces.length === 0) return [...rows];
+  return catalog.spaces.map(space => ({
+    id: space.id,
+    name: space.name,
+    folders: [...space.folders],
+    created_at: 0,
+    updated_at: 0,
+    account: true,
+  }));
+}
+
+/** Proyecta `row.space` desde `task_spaces` del usuario (y asignaciones optimistas en vuelo). */
+export function projectCatalogSessions<T extends SessionLike>(
+  catalog: WorkspaceSpaceCatalog | undefined,
+  pending: Readonly<Record<string, string | null>>,
+  sesiones: Record<string, T[]>,
+): Record<string, T[]> {
+  if (!catalog || catalog.spaces.length === 0) return sesiones;
+  const validIds = new Set(catalog.spaces.map(space => space.id));
+  const defaultSpace = catalog.order.find(id => validIds.has(id)) ?? catalog.spaces[0].id;
+  const lookup = (ref: string | null): string | undefined => {
+    if (!ref) return undefined;
+    if (Object.hasOwn(pending, ref)) {
+      const value = pending[ref];
+      return value && validIds.has(value) ? value : defaultSpace;
+    }
+    const saved = catalog.task_spaces[ref];
+    return saved && validIds.has(saved) ? saved : undefined;
+  };
+  let anyChanged = false;
+  const next: Record<string, T[]> = {};
+  for (const [folder, rows] of Object.entries(sesiones)) {
+    let folderChanged = false;
+    const mapped = rows.map(row => {
+      const target = lookup(canonicalRef(row.id)) ?? lookup(canonicalRef(row.parent)) ?? defaultSpace;
+      if (row.space === target) return row;
+      folderChanged = true;
+      return { ...row, space: target };
+    });
+    next[folder] = folderChanged ? mapped : rows;
+    if (folderChanged) anyChanged = true;
+  }
+  return anyChanged ? next : sesiones;
+}
+
+/** Construye la siembra inicial (una sola vez en version 0) desde los spaces y filas locales existentes. */
+export function buildInitialSeed(
+  rows: readonly Space[],
+  sesiones: Record<string, readonly SessionLike[]>,
+): { spaces: WorkspaceSpace[]; task_spaces: Record<string, string> } | null {
+  const spaces: WorkspaceSpace[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const entry = toCatalogSpace(row);
+    if (!entry || seen.has(entry.id)) continue;
+    seen.add(entry.id);
+    spaces.push(entry);
+  }
+  if (spaces.length === 0) return null;
+  const task_spaces: Record<string, string> = {};
+  for (const list of Object.values(sesiones)) {
+    for (const row of list) {
+      const taskRef = canonicalRef(row.id);
+      const spaceId = canonicalRef(row.space);
+      if (taskRef && spaceId && seen.has(spaceId) && !(taskRef in task_spaces)) {
+        task_spaces[taskRef] = spaceId;
+      }
+    }
+  }
+  return { spaces, task_spaces };
 }
 
 export function createSpaceCatalog(
@@ -44,10 +132,15 @@ export function createSpaceCatalog(
 
   const [ready, setReady] = createSignal<{ scope: ReturnType<typeof scope>; value: Ready }>();
   const [pendingOrder, setPendingOrder] = createSignal<{ scope: ReturnType<typeof scope>; ids: string[] } | null>(null);
+  const [pendingTasks, setPendingTasks] = createSignal<{ scope: ReturnType<typeof scope>; map: Record<string, string | null> } | null>(null);
   const [savingOrder, setSavingOrder] = createSignal(false);
   const value = () => {
     const last = ready();
     return last?.scope === scope() ? last?.value : undefined;
+  };
+  const activePendingTasks = () => {
+    const entry = pendingTasks();
+    return entry && entry.scope === scope() ? entry.map : {};
   };
   let generation = 0;
   let forbiddenScope: ReturnType<typeof scope> = null;
@@ -77,6 +170,7 @@ export function createSpaceCatalog(
   createEffect(on(scope, () => {
     lastImportKey = "";
     setPendingOrder(null);
+    setPendingTasks(null);
     void refresh();
   }));
   const timer = setInterval(() => { if (document.visibilityState !== "hidden") void refresh(); }, 15_000);
@@ -115,32 +209,25 @@ export function createSpaceCatalog(
     return current.catalog;
   }
 
-  async function sync(rows: readonly Space[]) {
+  /** Siembra única (solo cuando el usuario aún está en version 0 sin spaces en el servicio). */
+  async function sync(rows: readonly Space[], sesiones: Record<string, readonly SessionLike[]> = {}) {
     const selected = scope();
     const current = value();
     if (!selected || !current || syncing || forbiddenScope === selected) return;
-    const known = new Set(current.catalog.spaces.map(item => item.id));
-    const missing: WorkspaceSpace[] = [];
-    const seen = new Set<string>();
-    for (const row of rows) {
-      const entry = toCatalogSpace(row);
-      if (!entry || known.has(entry.id) || seen.has(entry.id)) continue;
-      seen.add(entry.id);
-      missing.push(entry);
-    }
-    if (!missing.length) return;
-    const key = `${selected.context}:${selected.id}:${current.catalog.version}:${missing.map(m => m.id).sort().join(",")}`;
+    if (current.catalog.version > 0 || current.catalog.spaces.length > 0) return;
+    const seed = buildInitialSeed(rows, sesiones);
+    if (!seed) return;
+    const key = `${selected.context}:${selected.id}:${seed.spaces.map(m => m.id).sort().join(",")}`;
     if (key === lastImportKey) return;
     lastImportKey = key;
     syncing = true;
     try {
-      const beforeVersion = current.catalog.version;
-      const updated = await mutateWithRetry(catalog => {
-        const present = new Set(catalog.spaces.map(item => item.id));
-        const pending = missing.filter(item => !present.has(item.id));
-        return pending.length ? { kind: "import", spaces: pending } : null;
-      });
-      if (updated && updated.version > beforeVersion && selected === scope()) onSynced?.();
+      const updated = await mutateWithRetry(catalog =>
+        catalog.version === 0 && catalog.spaces.length === 0
+          ? { kind: "import", spaces: seed.spaces, task_spaces: seed.task_spaces }
+          : null,
+      );
+      if (updated && updated.version > 0 && selected === scope()) onSynced?.();
     } catch (error) {
       if (statusOf(error) === 403) forbiddenScope = selected;
     } finally {
@@ -148,56 +235,124 @@ export function createSpaceCatalog(
     }
   }
 
-  async function create(space: Space) {
-    const entry = toCatalogSpace(space);
-    if (!entry) return;
-    try {
-      await mutateWithRetry(catalog =>
-        catalog.spaces.some(item => item.id === entry.id) ? null : { kind: "import", spaces: [entry] },
-      );
-    } catch {
-      // Si la cuenta no admite escritura o está sin red, el espacio local sigue vivo.
+  async function createSpace(name: string, folders: string[], seedRows: readonly Space[] = []): Promise<Space | null> {
+    const selected = scope();
+    const current = value();
+    if (!selected || !current) return null;
+    if (current.catalog.version === 0 && current.catalog.spaces.length === 0 && seedRows.length > 0) {
+      const seed = buildInitialSeed(seedRows, {});
+      if (seed) {
+        await mutateWithRetry(catalog =>
+          catalog.version === 0 && catalog.spaces.length === 0
+            ? { kind: "import", spaces: seed.spaces }
+            : null,
+        );
+      }
     }
+    const beforeIds = new Set((value()?.catalog.spaces ?? []).map(item => item.id));
+    const trimmed = name.trim();
+    const updated = await mutateWithRetry(() => ({
+      kind: "create",
+      name: trimmed ? trimmed.slice(0, 100) : null,
+      folders: cleanFolders(folders),
+    }));
+    if (!updated) return null;
+    const created = updated.spaces.find(item => !beforeIds.has(item.id)) ?? updated.spaces.at(-1);
+    return created
+      ? { id: created.id, name: created.name, folders: [...created.folders], created_at: 0, updated_at: 0, account: true }
+      : null;
   }
 
   async function rename(id: string, name: string): Promise<boolean> {
-    const bare = bareSpaceId(id);
-    if (!bare || !value()?.catalog.spaces.some(item => item.id === bare)) return false;
+    const bare = canonicalRef(id);
+    if (!bare || !value()) return false;
     await mutateWithRetry(catalog =>
       catalog.spaces.some(item => item.id === bare) ? { kind: "rename", id: bare, name } : null,
     );
     return true;
   }
 
-  async function remove(id: string) {
-    const bare = bareSpaceId(id);
-    if (!bare || !value()?.catalog.spaces.some(item => item.id === bare)) return;
+  async function setFolders(id: string, folders: string[]): Promise<boolean> {
+    const bare = canonicalRef(id);
+    if (!bare || !value()) return false;
+    const nextFolders = cleanFolders(folders);
+    await mutateWithRetry(catalog =>
+      catalog.spaces.some(item => item.id === bare) ? { kind: "set_folders", id: bare, folders: nextFolders } : null,
+    );
+    return true;
+  }
+
+  async function addFolder(id: string, folder: string): Promise<boolean> {
+    const bare = canonicalRef(id);
+    const bareFolder = canonicalRef(folder);
+    if (!bare || !bareFolder || !value()) return false;
+    await mutateWithRetry(catalog => {
+      const target = catalog.spaces.find(item => item.id === bare);
+      if (!target || target.folders.includes(bareFolder)) return null;
+      return { kind: "set_folders", id: bare, folders: [...target.folders, bareFolder] };
+    });
+    return true;
+  }
+
+  async function remove(id: string): Promise<{ ungrouped: number } | null> {
+    const bare = canonicalRef(id);
+    const current = value();
+    if (!bare || !current) return null;
+    const ungrouped = Object.values(current.catalog.task_spaces).filter(spaceId => spaceId === bare).length;
+    await mutateWithRetry(catalog =>
+      catalog.spaces.some(item => item.id === bare) ? { kind: "delete", id: bare } : null,
+    );
+    return { ungrouped };
+  }
+
+  async function assignTask(taskId: string, spaceId: string | null): Promise<boolean> {
+    const selected = scope();
+    const current = value();
+    const taskRef = canonicalRef(taskId);
+    if (!selected || !current || !taskRef) return false;
+    const bareSpace = spaceId ? canonicalRef(spaceId) : null;
+    if (spaceId && !bareSpace) return false;
+    setPendingTasks(prev => ({
+      scope: selected,
+      map: { ...(prev?.scope === selected ? prev.map : {}), [taskRef]: bareSpace },
+    }));
+    const request = ++generation;
     try {
-      await mutateWithRetry(catalog =>
-        catalog.spaces.some(item => item.id === bare) ? { kind: "delete", id: bare } : null,
-      );
-    } catch {
-      // Un 404/422 o falta de red no revierte el borrado local ya confirmado.
+      const catalog = await current.client.assignTask(taskRef, bareSpace);
+      if (scope() === selected && generation === request) {
+        setReady({ scope: selected, value: { ...current, catalog } });
+      }
+      return true;
+    } finally {
+      setPendingTasks(prev => {
+        if (!prev || prev.scope !== selected || !(taskRef in prev.map)) return prev;
+        const { [taskRef]: _, ...rest } = prev.map;
+        return Object.keys(rest).length ? { scope: selected, map: rest } : null;
+      });
     }
   }
 
+  function taskCreation(requested: string | null | undefined) {
+    const current = value();
+    if (!current || current.catalog.spaces.length === 0) {
+      return { engineSpace: requested ?? null, record: (_taskId: string) => {} };
+    }
+    const bare = canonicalRef(requested);
+    const target = bare && current.catalog.spaces.some(item => item.id === bare) ? bare : null;
+    return {
+      engineSpace: null,
+      record: (taskId: string) => {
+        if (target) void assignTask(taskId, target).catch(() => {});
+      },
+    };
+  }
+
   function project(rows: Space[]): Space[] {
-    const catalog = value()?.catalog;
-    if (!catalog?.spaces.length) return rows;
-    const result = new Map<string, Space>();
-    for (const row of rows) {
-      const bare = bareSpaceId(row.id);
-      if (bare && catalog.spaces.some(space => space.id === bare)) {
-        if (!result.has(bare)) result.set(bare, { ...row, id: bare, account: true });
-      } else {
-        result.set(row.id, row);
-      }
-    }
-    for (const space of catalog.spaces) {
-      const row = result.get(space.id);
-      result.set(space.id, { created_at: 0, updated_at: 0, folders: [], ...row, id: space.id, name: space.name, account: true });
-    }
-    return [...result.values()];
+    return projectCatalogSpaces(value()?.catalog, rows);
+  }
+
+  function projectSessions<T extends SessionLike>(sesiones: Record<string, T[]>): Record<string, T[]> {
+    return projectCatalogSessions(value()?.catalog, activePendingTasks(), sesiones);
   }
 
   function arrange(rows: Space[], fallback: OrderFallback): Space[] {
@@ -224,7 +379,7 @@ export function createSpaceCatalog(
     try {
       await mutateWithRetry(current => {
         const remaining = new Set(current.order);
-        const ordered = ids.map(bareSpaceId).filter((id): id is string => !!id && remaining.delete(id));
+        const ordered = ids.map(canonicalRef).filter((id): id is string => !!id && remaining.delete(id));
         if (!ordered.length) return null;
         return { kind: "reorder", order: [...ordered, ...remaining] };
       });
@@ -238,11 +393,17 @@ export function createSpaceCatalog(
 
   return {
     catalog: () => value()?.catalog,
+    isManaged: () => !!value(),
     sync,
-    create,
+    createSpace,
     rename,
+    setFolders,
+    addFolder,
     remove,
+    assignTask,
+    taskCreation,
     project,
+    projectSessions,
     arrange,
     saveOrder,
     saving: (fallback: OrderFallback) => savingOrder() || fallback.saving(),

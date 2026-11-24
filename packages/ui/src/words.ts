@@ -260,7 +260,7 @@ const es = {
   "shell.keep_awake.on.description": "No dejar que la computadora entre en reposo, y Danil sigue atendiendo aunque cierres su ventana",
   "shell.keep_awake.off.description": "La computadora entra en reposo como siempre",
   "usage.manage_accounts": "Gestionar cuentas",
-  "settings.nav.connections": "Conexiones",
+  "settings.nav.connections": "Conectores",
   "shell.ports.title": "Puertos",
   "settings.title": "Configuración",
   "danil.account.title": "Cuenta de Danil",
