@@ -2,7 +2,7 @@ import { For, Show, Suspense, type JSX } from "solid-js";
 import Documento from "../../../../ui/src/Document";
 import Versiones from "./Versions";
 import { type Forma } from "../model/sandbox";
-import { type Preview } from "../queries";
+import type { Preview } from "../../../../ui/src/lib/preview";
 import { Button } from "../../../../ui/src/Button";
 import { Print } from "../../../../ui/src/icons";
 import { FailureNote, asFailure } from "../../../../ui/src/Failure";
@@ -11,8 +11,8 @@ import { Markdown } from "../../../../ui/src/Markdown";
 import { t } from "../../../../ui/src/lib/i18n";
 import { peso, nf } from "../../../../ui/src/lib/format";
 import { delimiterFor } from "../../../../ui/src/lib/csv";
-import { createPreviewState } from "./PreviewState";
-import { createPreviewActions } from "./PreviewActions";
+import { createPreviewState } from "../screens/PreviewState";
+import { createPreviewActions } from "../screens/PreviewActions";
 
 export type { Preview };
 

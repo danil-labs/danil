@@ -152,14 +152,14 @@ export function createComposerStore(deps: {
       if (configuration.mode) setModo(configuration.mode);
     });
   }
-  function restoreSessionDraft(draft: DraftSelection, session?: { provider?: string | null }) {
+  function restoreSessionDraft(draft: DraftSelection, current?: { provider?: string | null }) {
     if (disposed) return;
     batch(() => {
       if (draft.configuration) {
         setModel(draft.configuration.model); setEffort(draft.configuration.effort);
         if (draft.configuration.mode) setModo(draft.configuration.mode);
       }
-      if (draft.provider && (!session || session.provider === draft.provider.from)) setAgent(draft.provider.to);
+      if (draft.provider && (!current || current.provider === draft.provider.from)) setAgent(draft.provider.to);
     });
   }
   function useProfile(profile: { provider?: string | null; model?: string | null; effort?: string | null }) {

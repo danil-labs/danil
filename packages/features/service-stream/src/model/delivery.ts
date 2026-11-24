@@ -1,7 +1,7 @@
 import type { JournalEvent } from "../../../../host/src/serviceEvents.ts";
 import type { PushedBatch } from "../queries/store.ts";
 
-type StreamPayload = { session?: string; kind?: string; workspace?: string };
+type StreamPayload = Partial<{ session: string; kind: string; workspace: string }>;
 
 const REPUESTO = new Set(["delta", "reasoning", "tool", "tool_done", "command_output", "command_running", "shell_started", "shell_output", "image", "retry", "notice", "task_launched", "segment_saved"]);
 /** One journal delivery policy for native catchup and relayed replay. */

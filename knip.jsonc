@@ -74,6 +74,7 @@
     "packages/ui/src/lib/project-block-types.ts": ["types"],          // HandoverState, createThreadsCore: provider-handover, question-card-r0
     "packages/ui/src/lib/sourceOrigin.ts": ["exports"],               // proveedorDe: models.test.ts
     "packages/engine-client/src/client.ts": ["exports"],              // canRepeat, neverRan, retrying, WAITS, untilConnected: invoke-retry, early-startup
+    "packages/engine-client/src/loopbackLogin.ts": ["exports"],       // loopbackLoginPending, loopbackLoginDeliver (#1175)
     "packages/engine-client/src/retries.ts": ["exports"],             // WAITS, neverRan: invoke-retry.test.ts
     "packages/features/chat/src/components/TaskChatPresentation.tsx": ["exports"], // TaskUserBubble: helpers/activity-header.tsx
     "packages/features/chat/src/model/failures.ts": ["exports"],      // gestoDelFallo: turn-failure.test.ts
