@@ -1,4 +1,4 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc } from "../../../../host/src/native.ts";
 import { SANDBOX_ARTEFACTO } from "../../../../ui/src/lib/sandbox";
 
 /**

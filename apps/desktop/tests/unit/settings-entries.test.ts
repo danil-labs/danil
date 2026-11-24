@@ -27,6 +27,7 @@ test("old settings ids open the entry and tab that now hold them", () => {
   assert.deepEqual(settingsTarget("source-control"), { entry: "source-control", tab: null });
   assert.deepEqual(settingsTarget("plugins"), { entry: "connections", tab: "plugins" });
   assert.deepEqual(settingsTarget("mcp"), { entry: "connections", tab: "operation" });
+  assert.deepEqual(settingsTarget("memory"), { entry: "connections", tab: "operation" });
   assert.deepEqual(settingsTarget("conexiones"), { entry: "personal-ai-agent", tab: "external" });
   assert.deepEqual(settingsTarget("external"), { entry: "personal-ai-agent", tab: "external" });
   assert.deepEqual(settingsTarget("personal-ai-agent"), { entry: "personal-ai-agent", tab: null });
@@ -75,7 +76,7 @@ test("ten flat entries in final order, personal-ai-agent separated from connecti
   assert.equal(securityIndex, accountIndex + 1);
   assert.deepEqual([...SETTINGS_ENTRIES[securityIndex].tabs], ["security"]);
   assert.ok(!(SETTINGS_ENTRIES[accountIndex].tabs as readonly string[]).includes("security"));
-  assert.deepEqual([...SETTINGS_ENTRIES[connectionsIndex].tabs], ["operation", "plugins", "memory"]);
+  assert.deepEqual([...SETTINGS_ENTRIES[connectionsIndex].tabs], ["operation", "plugins"]);
   assert.equal(personalAgentIndex, connectionsIndex + 1);
   assert.deepEqual([...SETTINGS_ENTRIES[personalAgentIndex].tabs], ["external"]);
   assert.ok(maintenance && "footer" in maintenance && maintenance.footer === true);

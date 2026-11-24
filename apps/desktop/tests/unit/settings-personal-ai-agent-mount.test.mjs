@@ -83,12 +83,12 @@ test("Desk promotes Agente IA Personal out of Conectores with subtitle, MCP N1 U
     "rail entry must display the requested subtitle",
   );
 
-  // Conectores must no longer contain the external sub-tab
+  // Conectores must no longer contain the retired memory or external sub-tabs
   doc.querySelector("#cfg-tab-connections")?.click();
   await sleep(60);
   assert.ok(doc.querySelector("#cfg-sub-operation"));
   assert.ok(doc.querySelector("#cfg-sub-plugins"));
-  assert.ok(doc.querySelector("#cfg-sub-memory"));
+  assert.equal(doc.querySelector("#cfg-sub-memory"), null, "Conectores must not contain retired memory sub-tab");
   assert.equal(doc.querySelector("#cfg-sub-external"), null, "Conectores must not contain external sub-tab");
   assert.ok(!doc.querySelector("#cfg-panel").textContent.includes("Acceso externo"));
 

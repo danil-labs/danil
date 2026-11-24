@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative as invoke } from "../../../../host/src/native.ts";
 import { createSignal, onCleanup } from "solid-js";
 import type { AgentProfile } from "../../../../ui/src/lib/model";
 

@@ -1,5 +1,6 @@
 import { createContext, useContext } from "solid-js";
-import type { InvokeOptions } from "@tauri-apps/api/core";
+
+export type FileMachineOptions = { headers: Record<string, string> };
 
 /**
  * La máquina de la tarea cuyo chat se pinta; `undefined` es la de la ventana.
@@ -9,7 +10,7 @@ import type { InvokeOptions } from "@tauri-apps/api/core";
 export const FileMachine = createContext<() => string | undefined>(() => undefined);
 
 /** Las opciones de `invoke` para leer un archivo que nombra el chat, en su máquina. */
-export function useFileMachine(): () => InvokeOptions | undefined {
+export function useFileMachine(): () => FileMachineOptions | undefined {
   const machine = useContext(FileMachine);
   return () => {
     const id = machine();

@@ -4,7 +4,7 @@
  * inventario de computers, que puede no traerlos. Espera al motor mientras la ventana está
  * en `connecting` para no confundir el arranque con un motor sin `person_session_v1`.
  */
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative as invoke } from "../../../host/src/native.ts";
 import { untilConnected } from "../../../engine-client/src/client.ts";
 
 export async function engineFeatures(): Promise<string[] | null> {

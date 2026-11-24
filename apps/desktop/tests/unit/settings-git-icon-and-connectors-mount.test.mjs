@@ -45,7 +45,7 @@ test("Control git renders the official Git SVG mark and connections entry render
   assert.equal(w.document.querySelector("#cfg-panel h2")?.textContent?.trim(), "Conectores");
   assert.ok(w.document.querySelector("#cfg-sub-operation"), "connections internal tabs remain intact");
   assert.ok(w.document.querySelector("#cfg-sub-plugins"), "plugins sub-tab remains intact");
-  assert.ok(w.document.querySelector("#cfg-sub-memory"), "memory sub-tab remains intact");
+  assert.equal(w.document.querySelector("#cfg-sub-memory"), null, "the deprecated memory sub-tab is gone");
 
   assert.deepEqual(app.failures, []);
 });

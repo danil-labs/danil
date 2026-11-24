@@ -1,5 +1,4 @@
-import type { InvokeArgs, InvokeOptions } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { invoke, type InvokeArgs, type InvokeOptions } from "../../../../engine-client/src/client.ts";
 
 export function getRadiantIdentity<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
   return invoke<res>("get_radiant_identity", args, options);

@@ -6,7 +6,7 @@
  * con `nativeWindow`). En la web `invoke` va por el relay a la máquina:
  * preguntar desde ahí la encendería. Ahí la respuesta se queda en `[]`.
  */
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative as invoke } from "../../../../host/src/native.ts";
 import { createRoot, createSignal } from "solid-js";
 
 let channels: Promise<string[]> = Promise.resolve([]);

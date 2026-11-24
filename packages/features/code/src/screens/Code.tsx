@@ -3,7 +3,7 @@ import { createStore, reconcile } from "solid-js/store";
 import { alMoverseElArbol, avisarDeLosArboles } from "../queries/refresh";
 import { precargarEditor } from "../model/editorLoad";
 import { Skeleton } from "../../../../ui/src/Skeleton";
-import { Channel } from "@tauri-apps/api/core";
+import { Channel } from "../../../../host/src/native.ts";
 import { listTaskTrees, watchTaskTree, unwatchTaskTree } from "../queries";
 import { machineOf } from "../../../../host/src/machine";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";

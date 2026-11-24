@@ -1,11 +1,11 @@
 import { createMemo, createResource, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { capabilities } from "../../../../host/src/platform";
-import { billingHref } from "../../../../platform-client/src/billing-route";
 import { Button } from "../../../../ui/src/Button";
 import { t } from "../../../../ui/src/lib/i18n";
 import { SettingsBlock, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import {
   type AccountOrganization,
+  billingHref,
   deskBillingUrl,
   isPlanAdminRole,
   planLabelKey,

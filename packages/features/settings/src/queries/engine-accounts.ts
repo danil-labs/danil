@@ -1,5 +1,4 @@
-import type { InvokeArgs, InvokeOptions } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { invoke, type InvokeArgs, type InvokeOptions } from "../../../../engine-client/src/client.ts";
 import { cancelLoopbackForAccount } from "../../../../engine-client/src/loopbackLogin.ts";
 
 export function accountStatus<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
@@ -54,10 +53,6 @@ export function setActiveAccount<res = unknown>(args?: InvokeArgs, options?: Inv
 
 export function setApiKey<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
   return invoke<res>("set_api_key", args, options);
-}
-
-export function setMemoryProvider<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
-  return invoke<res>("set_memory_provider", args, options);
 }
 
 export function submitLoginCode<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {

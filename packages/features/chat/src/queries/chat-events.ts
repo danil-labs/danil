@@ -5,7 +5,7 @@ import { type Author } from "../model/messageTypes.ts";
 import { type ChatEvent } from "../model/transcript";
 import { type PermissionRequest } from "../screens/Chat.tsx";
 import type { ComposerPort, ConversationScope, SessionRow, createThreadsStore } from "./types.ts";
-import { type EventCallback } from "@tauri-apps/api/event";
+import { type EventCallback } from "../../../../host/src/native.ts";
 import { type Accessor, type Setter } from "solid-js";
 
 

@@ -21,7 +21,6 @@ import ConnectionsOperation from "../components/ConnectionsOperation";
 import General from "../components/General";
 import Integrations from "../components/Integrations";
 import LoginSecurity from "../components/LoginSecurity";
-import ProveedorDeMemoria from "../components/MemoryProvider";
 import Providers from "../components/Providers";
 import Skills from "../components/Skills";
 import type { SurfacesState } from "../model/ai-providers-view";
@@ -106,7 +105,6 @@ export const pestanasDe = (
     skills: tab("skills", () => t("settings.nav.skills"), () => <Skills />),
     operation: tab("operation", () => t("settings.skills.tab_mcp"), () => <ConnectionsOperation maquinas={maquinas} />),
     plugins: tab("plugins", () => t("settings.tab.plugins"), () => <SettingsPanel><Integrations /></SettingsPanel>),
-    memory: tab("memory", () => t("settings.tab.memory"), () => <SettingsPanel><ProveedorDeMemoria /></SettingsPanel>),
     external: cuenta ? tab("external", () => t("settings.entry.personal_ai_agent"), () => <Suspense fallback={null}><Connections /></Suspense>) : undefined,
     maintenance: tab("maintenance", () => t("settings.entry.maintenance"), () => <Suspense fallback={null}><Maintenance maquinas={maquinas} /></Suspense>),
   };

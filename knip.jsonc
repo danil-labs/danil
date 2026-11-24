@@ -27,6 +27,8 @@
     // .tsx sin montar (con su modelo): borrarlos cambia JSX y el CSS generado, y move-gate lo
     // prohíbe. Se van cuando se retire esa pantalla con su propia revisión de paridad.
     "packages/features/settings/src/components/{AuditLog,BusinessBilling,BusinessBillingFiscal,BusinessBillingPlan}.tsx": ["files"],
+    "packages/features/settings/src/components/Harness*.{ts,tsx}": ["files"],
+    "packages/features/settings/src/queries/engine-harness.ts": ["files"],
     "packages/features/settings/src/model/{business-billing,fiscal}.ts": ["files"],
     "apps/desktop/src/web/audit-log.ts": ["files", "types"],
     "apps/desktop/src/web/Onboarding.tsx": ["files"],
@@ -108,8 +110,10 @@
     "packages/features/settings/src/components/AppDownloads.tsx": ["exports"], // default: #1151 Maintenance.tsx usa el export nombrado AppDownloads
     "packages/features/settings/src/model/ai-providers-groups.ts": ["exports"], // idsDeGrupos, sinCuentas: ai-providers-groups.test.ts
     "packages/features/settings/src/model/settings-workspaces.ts": ["types"], // EngineWorkspaceLike, OtherAccountLike: settings-workspaces.test.ts / #1155
+    "packages/features/settings/src/queries/account-engine.ts": ["exports"], // engineAccountProfileOf: #1178
     "packages/features/settings/src/queries/free-router-platform.ts": ["exports"], // supportsPlatformFreeRouter: free-router-platform.test.ts
-    "packages/features/settings/src/queries/workspaces-store.ts": ["exports"], // anunciarMudanza: #1155
+    "packages/features/settings/src/queries/workspaces-store.ts": ["exports", "types"], // anunciarMudanza (#1155), MemoriaProveedor (#1181)
+    "packages/session/src/governance.ts": ["exports", "types"],       // adoptGovernance, governance, Tailscale, RemoteConnection, GovernanceStatus (#1181)
     "packages/host/src/downloads.ts": ["exports"],                    // DESKTOP_DOWNLOADS, platformOf: account-welcome.test.ts
     "packages/platform-client/src/client.ts": ["exports"],            // nextDelay: edge-client.test.ts
     "packages/platform-client/src/identity.ts": ["exports"],          // selectOrganization: edge-client.test.ts
@@ -195,7 +199,11 @@
         // La hoja que carga apps/desktop/index.html con <link>, que knip no lee.
         "src/styles/desktop.css"
       ],
-      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts"]
+      "project": ["src/**/*.{ts,tsx,css}", "test/**/*.ts"],
+      "ignoreDependencies": [
+        // Movido con file-preview.ts a packages/host/src/file-preview.ts (r1-ui-metrics).
+        "@tauri-apps/api"
+      ]
     },
     "packages/engine-client": {
       "entry": [
@@ -210,7 +218,16 @@
     "packages/features/*": {
       "project": ["src/**/*.{ts,tsx}"]
     },
+    "packages/features/{artifacts,chat,code,projects,settings}": {
+      "ignoreDependencies": ["@tauri-apps/api"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/shell": {
+      "ignoreDependencies": ["@tauri-apps/api"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
     "packages/features/machines": {
+      "ignoreDependencies": ["@tauri-apps/api"],
       "entry": [
         // Lo que reexporta el shim packages/carry para apps/mobile.
         "src/model/carryTypes.ts",

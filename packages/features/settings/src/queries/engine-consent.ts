@@ -1,5 +1,4 @@
-import type { InvokeArgs, InvokeOptions } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { invoke, type InvokeArgs, type InvokeOptions } from "../../../../engine-client/src/client.ts";
 
 export function listModels<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
   return invoke<res>("list_models", args, options);
