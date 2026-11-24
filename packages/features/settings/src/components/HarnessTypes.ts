@@ -1,5 +1,6 @@
 import { type Frase } from "../../../../ui/src/lib/prose";
 import { type Failure } from "../../../../ui/src/Failure";
+import type { Organization } from "../../../../platform-client/src/organizations.ts";
 
 export type RemoteWorkspace = { id: string; name: string };
 
@@ -18,14 +19,12 @@ export type Status = {
   login: LoginView | null;
 };
 
-type Organization = { id: string; name: string };
-
 export type Identity = {
   status: string;
   email: string | null;
   name: string | null;
   organization: string | null;
-  organizations: Organization[];
+  organizations: Pick<Organization, "id" | "name">[];
   note: Frase | null;
 };
 

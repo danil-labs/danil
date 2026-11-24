@@ -1,7 +1,8 @@
 import { batch, createEffect, createSignal, on, untrack } from "solid-js";
 import { guardable, type Encolado } from "../../../../ui/src/lib/queue.ts";
 import { editMentions, type TaskMention } from "../../../../ui/src/lib/taskMentions.ts";
-import type { QueueScope, Saved, TaskQueuesDeps as Dependencies } from "../../../../ui/src/lib/queue.ts"; export type { QueueScope };
+import type { Saved, TaskQueuesDeps as Dependencies } from "../../../../ui/src/lib/queue.ts";
+import type { QueueScope } from "../model.ts"; export type { QueueScope };
 /** Owns the queue in hand and its per-task copies. Nothing here sends: the engine or the person does. */
 export function createTaskQueues(deps: Dependencies) {
   const [items, setItems] = createSignal<Encolado[]>([]);

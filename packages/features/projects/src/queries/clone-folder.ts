@@ -3,7 +3,8 @@ import { createMemo, createSignal, onCleanup, type Accessor, type Setter } from 
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { sessionRefresh } from "../../../../session/src/sessionRefresh.ts";
 import { withRemoteLaunchers, type RemoteScope } from "../../../../ui/src/lib/tasks/remote.ts";
-import { clave, threadPreview, type Author, type Machine, type Msg, type OptimisticHistoryState, type Preview, type Session, type TabsStore } from "../../../../ui/src/lib/project-block-types.ts";
+import type { Machine } from "../model.ts";
+import { clave, threadPreview, type Author, type Msg, type OptimisticHistoryState, type Preview, type Session, type TabsStore } from "../../../../ui/src/lib/project-block-types.ts";
 import type { AttentionStore, WorkspaceStore } from "../screens/workspace-session.ts";
 import type { ClonEnCurso } from "../screens/AddWorkdir.tsx";
 import type { SessionRow } from "../screens/Sessions.tsx";

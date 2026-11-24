@@ -8,7 +8,8 @@ import { SignalDot } from "../../../../ui/src/SignalDot";
 import { MachineIcon } from "../../../../ui/src/MachineIcon";
 import { isGuestMachine } from "../queries/guestLink";
 import { capabilities } from "../../../../host/src/platform";
-import { cloudInventory, rememberedRunOn, type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "../queries/store";
+import type { Machine } from "../model";
+import { cloudInventory, rememberedRunOn, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "../queries/store";
 
 let pedida = false;
 

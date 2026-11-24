@@ -14,7 +14,7 @@ import { type createDeskStrip as T_createDeskStrip, type createSessionMutations 
 import { type ClonEnCurso } from "../../../features/projects/src/screens/AddWorkdir.tsx";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions.tsx";
 import { type AttentionStore } from "../../../features/projects/src/screens/workspace-session.ts";
-import { type Workspace } from "../../../features/settings/src/queries/workspaces-store.ts";
+import type { Workspace } from "../../../features/workspaces/src/model.ts";
 import { ConexionesMenu } from "../../../features/settings/src/screens/Tools";
 import { capabilities } from "../../../host/src/platform";
 import { sealFirstFreeWorkspace, TitleBarSection } from "../shell";

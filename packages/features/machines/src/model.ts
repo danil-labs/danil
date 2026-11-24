@@ -8,3 +8,4 @@ export * from "./model/runs-workspace.ts";
 export * from "./model/unconfirmedOpen.ts";
 export * from "./model/web-event-queue.ts";
 export * from "./model/wsl.ts";
+export type { Machine } from "../../../ui/src/lib/machine.ts";
