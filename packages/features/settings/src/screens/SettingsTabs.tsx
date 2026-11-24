@@ -3,6 +3,7 @@ import CircleUserRound from "lucide-solid/icons/circle-user-round";
 import CreditCard from "lucide-solid/icons/credit-card";
 import ExternalLink from "lucide-solid/icons/external-link";
 import GitBranch from "lucide-solid/icons/git-branch";
+import Palette from "lucide-solid/icons/palette";
 import Plug from "lucide-solid/icons/plug";
 import Shield from "lucide-solid/icons/shield";
 import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
@@ -26,9 +27,8 @@ import General from "../components/General";
 import Integrations from "../components/Integrations";
 import { PaquetesDeLengua } from "../components/LanguagePacks";
 import LoginSecurity from "../components/LoginSecurity";
-import { SettingsPanel, SettingsSection } from "../../../../ui/src/SettingsLayout";
+import { SettingsPanel } from "../../../../ui/src/SettingsLayout";
 import ProveedorDeMemoria from "../components/MemoryProvider";
-import { NotifyBehavior } from "../components/NotifyBehavior";
 import Providers from "../components/Providers";
 import Skills from "../components/Skills";
 import { SETTINGS_ENTRIES, type SettingsEntryId, type SettingsGroup } from "../model/settings-entries";
@@ -98,7 +98,6 @@ export const pestanasDe = (
     security: tab("security", () => t("settings.tab.security"), () => <LoginSecurity />),
     general: tab("general", () => t("settings.nav.general"), () => <General maquinas={maquinas} />),
     appearance: tab("appearance", () => t("settings.nav.appearance"), () => <Suspense fallback={null}><Appearance proyecto={agentes.proyecto} maquinas={maquinas} piezas={piezas} sesiones={sesiones} /></Suspense>),
-    notify: tab("notify", () => t("settings.tab.notify"), () => <SettingsPanel><SettingsSection title={t("settings.tab.notify")}><NotifyBehavior /></SettingsSection></SettingsPanel>),
     languages: tab("languages", () => t("settings.languages.title"), () => <SettingsPanel><PaquetesDeLengua /></SettingsPanel>),
     workspaces: tab("workspaces", () => t("settings.tab.workspace_bar"), () => <Workspaces maquinas={maquinas} sesiones={sesiones} />),
     "proveedores-ia": tab("proveedores-ia", () => t("settings.nav.ai_providers"), () => { machineAction(); return <AIProviders superficies={superficies()} estado={agentes.estadoSuperficies} onRetry={agentes.reintentarSuperficies} maquinas={maquinas} piezas={piezas} />; }),
@@ -123,6 +122,8 @@ export const pestanasDe = (
 };
 
 const ENCABEZADOS: Record<SettingsEntryId, { name: () => string; icono: () => JSX.Element }> = {
+  general: { name: () => t("settings.nav.general"), icono: () => <SlidersHorizontal size={15} /> },
+  appearance: { name: () => t("settings.nav.appearance"), icono: () => <Palette size={15} /> },
   account: { name: () => t("settings.entry.account"), icono: () => <CircleUserRound size={15} /> },
   security: { name: () => t("settings.entry.security"), icono: () => <Shield size={15} /> },
   preferences: { name: () => t("settings.entry.preferences"), icono: () => <SlidersHorizontal size={15} /> },

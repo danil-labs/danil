@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { modoInicial, siguienteModo } from "../../src/features/chat/modes.ts";
+import { modoInicial, siguienteModo } from "../../../../packages/features/chat/src/model/modes.ts";
 import type { ModoDePermiso } from "../../src/lib/model.ts";
 
 /** Los tres, en el orden en que los manda el backend. */
-const tres = (falta: Record<string, string> = {}): ModoDePermiso[] =>
+const tres = (falta: Record<string, string> = {}, omision = "auto"): ModoDePermiso[] =>
   // `label` y `falta` son `Frase` —clave, no palabra—, como los manda el
   // backend de verdad; el chequeo de tipos de scripts/ cazó que este arnés
   // los fabricaba como cadenas.
@@ -16,7 +16,7 @@ const tres = (falta: Record<string, string> = {}): ModoDePermiso[] =>
   ].map((m) => ({
     ...m,
     falta: falta[m.id] ? { clave: falta[m.id] } : null,
-    por_omision: m.id === "ediciones",
+    por_omision: m.id === omision,
   }));
 
 test("el ciclo recorre los tres y vuelve al principio", () => {
@@ -68,16 +68,18 @@ test("un modo que ya no está deja el ciclo en el primero utilizable", () => {
  * Lo que se ve al día siguiente es lo contrario: quien puso «automático» ayer
  * abre hoy y se encuentra aprobando cada acción, sin nada que lo explique.
  */
-test("el arranque toma el último modo elegido a mano", () => {
+test("el arranque toma el modo preferido cuando el agente lo sostiene", () => {
   assert.equal(modoInicial(tres(), "auto"), "auto");
   assert.equal(modoInicial(tres(), "manual"), "manual");
+  assert.equal(modoInicial(tres(), "ediciones"), "ediciones");
 });
 
 /**
  * Un recuerdo que este agente no sostiene no arrastra el arranque: con Codex
  * delante, «manual» dejaría el turno negado al mandarse.
  */
-test("un recuerdo sin sostén cae al que el backend resolvió", () => {
+test("un recuerdo sin sostén cae al que el backend resolvió y a auto si ninguno viene marcado", () => {
   const modos = tres({ manual: "Codex no devuelve aprobaciones" });
-  assert.equal(modoInicial(modos, "manual"), "ediciones");
+  assert.equal(modoInicial(modos, "manual"), "auto");
+  assert.equal(modoInicial(tres({}, ""), ""), "auto");
 });

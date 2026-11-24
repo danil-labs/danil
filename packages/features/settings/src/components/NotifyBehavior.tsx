@@ -16,7 +16,7 @@ export function NotifyBehavior() {
     >
       <Select
         variant="ghost"
-        class="min-h-8 w-auto px-1.5 text-sm focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
+        class="min-h-8 w-auto px-1.5 text-sm"
         aria-label={t("settings.general.notify.title")}
         value={choice()}
         onChange={(e) => setChoice(e.currentTarget.value as NotifyChoice)}

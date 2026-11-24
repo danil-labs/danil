@@ -18,6 +18,7 @@ import { CloseBehavior } from "./CloseBehavior";
 import { DefaultPermissions } from "../screens/DefaultPermissions";
 import { Governed } from "../../../../ui/src/Governed";
 import { Lengua } from "./Language";
+import { NotifyBehavior } from "./NotifyBehavior";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import MaterialPicker from "./MaterialPicker";
 import { type Freshness, type SourceDetail, SourceRow } from "./GeneralSources";
@@ -243,6 +244,10 @@ export default function General(props: { maquinas: MaquinasDeAjustes }) {
       <SettingsSection title={t("settings.general.section.language")}>
         <Lengua row />
         <SalidaDelAgente />
+      </SettingsSection>
+
+      <SettingsSection title={t("settings.general.section.notifications")}>
+        <NotifyBehavior />
       </SettingsSection>
 
       <SettingsSection

@@ -17,6 +17,7 @@
   "settings.general.root.title": "Main context",
   "settings.general.section.context": "Context",
   "settings.general.section.language": "Language",
+  "settings.general.section.notifications": "Notifications",
   "settings.general.section.profile": "Profile",
   "settings.general.section.projects": "Projects",
   "settings.general.source.behind": {

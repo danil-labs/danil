@@ -67,6 +67,8 @@ export const RESPONSES = {
   artifact_history: { current: null, versions: [] },
   publications_of: [],
   list_live_turns: [],
+  list_language_packs: [],
+  list_bundled_language_packs: [],
   service_poll: { cursor: 0, gap: false, replay: false, runtime: "test-service", reset: false },
 };
 
