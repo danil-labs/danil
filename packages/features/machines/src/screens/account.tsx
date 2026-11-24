@@ -28,7 +28,7 @@ import {
   wakes,
 } from "@terminus/computers";
 import { isRetiredComputersEndpoint } from "../../../../platform-client/src/api.ts";
-import { settledContextIds } from "../../../../../apps/desktop/src/lib/settled-contexts.ts";
+import { settledContextIds } from "../../../../session/src/settled-contexts.ts";
 import { cancelEdgeWrites, setMachineRoute, wokeOf } from "../queries";
 import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
 import { createRoot, createSignal } from "solid-js";

@@ -13,7 +13,7 @@ import type { ModelChoices } from "../../../features/projects/src/screens/NewAge
 import type { CreateFreeRouterConsent } from "../../../ui/src/lib/freeRouterConsent.ts";
 import Sessions, { type SessionRow } from "../../../features/projects/src/screens/Sessions";
 import type { Etapa } from "../../../features/projects/src/screens/TaskStage";
-import { groupLabel, type SidebarGroup } from "../../../../apps/desktop/src/lib/sidebarView";
+import { groupLabel, type SidebarGroup } from "../../../ui/src/lib/sidebarView";
 import type { SidebarFilterProps } from "./SidebarFilter";
 import type { TareasDelRiel } from "./sidebar-groups";
 import { Spinner } from "../../../ui/src/Spinner";

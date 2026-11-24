@@ -9,7 +9,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { enfocar } from "../../../../ui/src/lib/focus";
 import { mergeRepositories, repositoryCloneUrl, repositoryIdentity, type ProjectRepository } from "../model/projectRepositories";
 import { MarcaGitHost } from "../../../../ui/src/icons";
-import { listGitHosts, type GitHost } from "../../../../../apps/desktop/src/lib/gitHosts";
+import { listGitHosts, type GitHost } from "../../../../ui/src/lib/gitHosts";
 import { Input } from "../../../../ui/src/Input";
 import { Button } from "../../../../ui/src/Button";
 import { Select } from "../../../../ui/src/Select";

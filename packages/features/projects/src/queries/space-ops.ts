@@ -2,9 +2,9 @@ import { createSignal, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
-import { spaceName, type Space } from "../../../../../apps/desktop/src/lib/spaces.ts";
+import { spaceName, type Space } from "../../../../ui/src/lib/spaces.ts";
 import { deleteStoredStrip, storedStrip } from "../../../../../apps/desktop/src/lib/tabs.ts";
-import type { SearchFilter } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
+import type { SearchFilter } from "../../../../ui/src/lib/project-block-types.ts";
 
 /** Lo que las acciones sobre espacios usan del estado de la ventana. */
 export type SpaceOpsDeps = { abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; activeSpace: Accessor<Space | null>; cambiarEscritorio: (id: string, restaurarActiva?: boolean) => void; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; escritorio: Accessor<string | null>; grupos: Accessor<string[]>; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string } } | undefined; refreshSessions: (proyectos: string[]) => Promise<void>; reloadSpaces: () => Promise<void>; setBuscando: Setter<SearchFilter | null>; setError: Setter<string | null>; setSpaces: Setter<Space[]>; soltarPestanaGuardada: (id: string) => void; spaces: Accessor<Space[]>; workspaceActivo: Accessor<string | null>; catalog?: { create(space: Space): Promise<void>; rename(id: string, name: string): Promise<boolean>; remove(id: string): Promise<void> }; };

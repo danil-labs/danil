@@ -1,5 +1,5 @@
 import { Pressable } from "../../../ui/src/Pressable";
-import { watchWorkspaceAddLinks } from "../../../../apps/desktop/src/lib/native-workspace-add-link";
+import { watchWorkspaceAddLinks } from "../../../host/src/native-workspace-add-link";
 import Eye from "lucide-solid/icons/eye";
 import FolderPlus from "lucide-solid/icons/folder-plus";
 import LogIn from "lucide-solid/icons/log-in";

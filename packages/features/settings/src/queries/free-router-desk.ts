@@ -1,7 +1,7 @@
 /** Desk: el Free router de plataforma con la sesión de Rust (Bearer en `danil_edge_fetch`) y el motor de cada workspace. */
 import { me } from "../../../../platform-client/src/identity.ts";
 import { workspaces } from "../../../../platform-client/src/workspaces.ts";
-import { freeModelScope } from "../../../../../apps/desktop/src/lib/free-model-policy.ts";
+import { freeModelScope } from "../../../../session/src/free-model-policy.ts";
 import { freeRouterDeskEdge, freeRouterEngine } from "./free-router-adapters.ts";
 import { setFreeRouterHost } from "./free-router-session.ts";
 

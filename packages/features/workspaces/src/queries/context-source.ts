@@ -1,8 +1,8 @@
 import type { AgentProfile as AgentProfileData } from "../../../../../apps/desktop/src/lib/model.ts";
-import type { Session } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
-import type { MentionSources } from "../../../../../apps/desktop/src/lib/mentions.ts";
-import { escritorioDeFila } from "../../../../../apps/desktop/src/lib/spaces.ts";
-import { esProvisional, sameSources, unirFuentes } from "../../../../../apps/desktop/src/lib/taskDraft.ts";
+import type { Session } from "../../../../ui/src/lib/project-block-types.ts";
+import type { MentionSources } from "../../../../ui/src/lib/mentions.ts";
+import { escritorioDeFila } from "../../../../ui/src/lib/spaces.ts";
+import { esProvisional, sameSources, unirFuentes } from "../../../../ui/src/lib/taskDraft.ts";
 import { isTaskTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { type SessionUsage, ventanaDe } from "../../../../../apps/desktop/src/lib/usage.ts";

@@ -1,4 +1,4 @@
-import { editMentions, finishEdit, trimMentions, type PendingEdit, type TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
+import { editMentions, finishEdit, trimMentions, type PendingEdit, type TaskMention } from "../../../../ui/src/lib/taskMentions";
 import CornerDownLeft from "lucide-solid/icons/corner-down-left";
 import Paperclip from "lucide-solid/icons/paperclip";
 import Pause from "lucide-solid/icons/pause";

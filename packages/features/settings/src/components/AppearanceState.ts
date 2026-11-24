@@ -6,7 +6,7 @@ import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { elegirArchivoDeImagen } from "../../../../host/src/pick-image";
 import type { AgentProfile, CatalogoDeAgentes } from "../../../../../apps/desktop/src/lib/model";
 import { type FondoDeChat } from "../../../../ui/src/lib/chat-background";
-import { elegirFondoDeChat, fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo, veloDePaneles, veloDePestanas } from "../../../../../apps/desktop/src/lib/chat-background-store";
+import { elegirFondoDeChat, fondoDeChat, fondoPropio, imagenDelWorkspace, veloDeFondo, veloDePaneles, veloDePestanas } from "../../../../ui/src/lib/chat-background-store";
 import type { Preview } from "../../../../ui/src/lib/preview";
 import { apariencia, darkStyle, lightStyle, type Apariencia, type DarkStyle, type LightStyle } from "../../../../ui/src/lib/theme";
 import { prosaDe } from "../../../../ui/src/Failure";

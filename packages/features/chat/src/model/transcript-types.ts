@@ -1,7 +1,7 @@
 /** Lo que se guarda de un turno y de una tarea, tal como lo lee la ventana. */
 import type { HistoryRef } from "../../../../engine-client/src/index.ts";
 import type { CodeRange } from "../../../../../apps/desktop/src/lib/model.ts";
-import type { Recipient, ReplyTo, SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
+import type { Recipient, ReplyTo, SenderTask } from "../../../../ui/src/lib/recipients.ts";
 import type {
   CambioPorCupo,
   FalloDelTurno
@@ -85,7 +85,7 @@ export type TurnReasoning = {
 };
 
 export type Turn = {
-  task_mentions?: import("../../../../../apps/desktop/src/lib/taskMentions.ts").TaskMention[];
+  task_mentions?: import("../../../../ui/src/lib/taskMentions.ts").TaskMention[];
   role: string;
   text: string;
   /** Lo que la persona adjuntó a ESTE mensaje. Ver `sessions::Turn`. */

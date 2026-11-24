@@ -2,7 +2,7 @@ import { For, Show, createMemo } from "solid-js";
 import UnfoldVertical from "lucide-solid/icons/unfold-vertical";
 import { cn } from "../../../../ui/src/lib/utils";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { ajuste } from "../../../../../apps/desktop/src/lib/wrap";
+import { ajuste } from "../../../../ui/src/lib/wrap";
 import { marcarLineas, type Hunk, type Linea, type Tramo } from "../model/diff";
 import { Pressable } from "../../../../ui/src/Pressable";
 

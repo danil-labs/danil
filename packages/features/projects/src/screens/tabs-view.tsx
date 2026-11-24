@@ -4,7 +4,7 @@ import SquarePen from "lucide-solid/icons/square-pen";
 import X from "lucide-solid/icons/x";
 import { For, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { ariaDeAtajo, textoDeAtajo } from "../../../../../apps/desktop/src/lib/shortcuts";
+import { ariaDeAtajo, textoDeAtajo } from "../../../../ui/src/lib/shortcuts";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../../../../ui/src/ContextMenu";
 import { Atajo } from "../../../../ui/src/Shortcut";
 import {

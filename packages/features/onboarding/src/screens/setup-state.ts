@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { hasShellCache } from "../../../../../apps/desktop/src/lib/shellCache";
+import { hasShellCache } from "../../../../session/src/shellCache";
 import type { Failure } from "../../../../ui/src/Failure";
 import { accountWelcomeAnswered } from "../model/account-welcome";
 import type { EnvReport } from "../../../../ui/src/lib/bundled";

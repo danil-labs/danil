@@ -1,0 +1,30 @@
+// Tipos que los bloques de projects usan y que viven en otra feature.
+// Un solo sitio: la feature no importa a otra (R3).
+import type { createComposerStore } from "../../../features/composer/src/index.ts";
+import type { createDraftsStore } from "../../../features/drafts/src/index.ts";
+import type { createThreadsStore } from "../../../features/chat/src/index.ts";
+import type { createPanels } from "../../../../apps/desktop/src/lib/panels.ts";
+import type { createTabs } from "../../../../apps/desktop/src/lib/tabs.ts";
+import type { createTaskFiles } from "../../../../apps/desktop/src/lib/taskFiles.ts";
+
+export type ComposerStore = ReturnType<typeof createComposerStore>;
+export type DraftsStore = ReturnType<typeof createDraftsStore>;
+export type ThreadsStore = ReturnType<typeof createThreadsStore>;
+export type PanelsStore = ReturnType<typeof createPanels>;
+export type TabsStore = ReturnType<typeof createTabs>;
+export type TaskFilesStore = ReturnType<typeof createTaskFiles>;
+export { type createComposerStore } from "../../../features/composer/src/index.ts";
+export { type createDraftsStore } from "../../../features/drafts/src/index.ts";
+export { type createThreadsStore } from "../../../features/chat/src/index.ts";
+
+export { type Machine, type ProjectPlace } from "../../../features/machines/src/queries.ts";
+export { type HandoverState, type Msg, type PermissionRequest, type Session } from "../../../features/chat/src/index.ts";
+export { type createThreadsCore } from "../../../features/chat/src/queries.ts";
+export { type OptimisticHistoryState } from "../../../features/chat/src/model.ts";
+export { type Author } from "../../../features/chat/src/model/messageTypes.ts";
+export { type Preview } from "../../../features/artifacts/src/components/Preview.tsx";
+export { type ChatExportado } from "../../../features/chat/src/model/transcript.ts";
+export { type Capabilities } from "../../../host/src/platform.ts";
+export { type SearchFilter } from "../../../shell/src/shell/GlobalSearch.tsx";
+export { clave } from "../../../features/chat/src/model/transcript.ts";
+export { threadPreview } from "./chat/nextSteps.ts";

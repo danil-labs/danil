@@ -2,7 +2,7 @@ import { createResource, createSignal, For, type JSX, onCleanup, onMount, Show }
 import { Dynamic } from "solid-js/web";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
-import { flechaDeLista } from "../../../../../apps/desktop/src/lib/shortcuts";
+import { flechaDeLista } from "../../../../ui/src/lib/shortcuts";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";

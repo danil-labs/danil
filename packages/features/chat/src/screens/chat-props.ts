@@ -5,9 +5,9 @@ import type { ThreadSearchTarget } from "./ThreadSearch";
 import type { OlderState } from "../model/history";
 import type { ObservedTurnActivity as TurnActivity } from "../model/activityObservation";
 import { type Lectura } from "../model/threadWindow";
-import { type MentionTarget, type PlaceCandidate, type TextEdit, type TaskCandidate, type TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
-import { type Recipient, type RecipientCandidate, type SenderTask } from "../../../../../apps/desktop/src/lib/recipients";
-import { type MentionSources } from "../../../../../apps/desktop/src/lib/mentions";
+import { type MentionTarget, type PlaceCandidate, type TextEdit, type TaskCandidate, type TaskMention } from "../../../../ui/src/lib/taskMentions";
+import { type Recipient, type RecipientCandidate, type SenderTask } from "../../../../ui/src/lib/recipients";
+import { type MentionSources } from "../../../../ui/src/lib/mentions";
 import type { Agent, AgentModels, HandlerStatus, ModoDePermiso, Source } from "../../../../../apps/desktop/src/lib/model";
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import type { MachineOf } from "../queries/history-details";
@@ -254,8 +254,8 @@ export type ChatProps = {
   recipientFolder?: string;
   /** A quién va lo que hay escrito ahora mismo. No es material: no se adjunta. */
   recipients?: Recipient[];
-  onRecipient?: (name: string, label: string, trigger: import("../../../../../apps/desktop/src/lib/mentions").Trigger) => void;
-  onReference?: (target: MentionTarget, label: string, trigger: import("../../../../../apps/desktop/src/lib/mentions").Trigger) => void;
+  onRecipient?: (name: string, label: string, trigger: import("../../../../ui/src/lib/mentions").Trigger) => void;
+  onReference?: (target: MentionTarget, label: string, trigger: import("../../../../ui/src/lib/mentions").Trigger) => void;
   onMentionHistory?: (redo: boolean) => boolean;
   input: string;
   onInput: (value: string, inputType?: string, edit?: TextEdit) => void;

@@ -1,5 +1,5 @@
 import { createResource, type JSX, Show } from "solid-js";
-import type { GroupAccount, GroupSend } from "../../../../apps/desktop/src/lib/group-account";
+import type { GroupAccount, GroupSend } from "../../../session/src/group-account";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";

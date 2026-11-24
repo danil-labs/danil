@@ -4,7 +4,7 @@ import SquarePen from "lucide-solid/icons/square-pen";
 import { createEffect, createSignal, lazy, on, onCleanup, Show, Suspense } from "solid-js";
 import { puntoDelArrastre, tareaEnVuelo } from "../../../ui/src/lib/drag";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { ariaDeAtajo } from "../../../../apps/desktop/src/lib/shortcuts";
+import { ariaDeAtajo } from "../../../ui/src/lib/shortcuts";
 import { KeyedList } from "../../../ui/src/KeyedList";
 import { TeclaDeAtajo } from "../../../ui/src/Shortcut";
 import {
@@ -14,7 +14,7 @@ import {
   SidebarMenuItem,
   Sidebar as SidebarShell,
 } from "../../../ui/src/sidebar";
-import { groupKey } from "../../../../apps/desktop/src/lib/sidebarView";
+import { groupKey } from "../../../ui/src/lib/sidebarView";
 import { LazyPart, retryableLazy } from "../../../ui/src/LazyPart";
 import { createTareasDelRiel } from "./sidebar-groups";
 import { createDockDelRiel } from "./sidebar-dock";

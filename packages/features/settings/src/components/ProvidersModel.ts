@@ -1,6 +1,6 @@
 import { lazy } from "solid-js";
 import { type Failure } from "../../../../ui/src/Failure";
-import { type GitHost } from "../../../../../apps/desktop/src/lib/gitHosts.ts";
+import { type GitHost } from "../../../../ui/src/lib/gitHosts.ts";
 import { type Frase } from "../../../../ui/src/lib/prose";
 
 // GitHub de la cuenta de Danil: con sesión, su tarjeta reemplaza la local.

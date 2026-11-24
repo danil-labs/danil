@@ -2,21 +2,21 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createSignal, For, Match, Show, Switch } from "solid-js";
 import { createRowSignal } from "../model/threadRow";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { flechaDeLista } from "../../../../../apps/desktop/src/lib/shortcuts";
+import { flechaDeLista } from "../../../../ui/src/lib/shortcuts";
 import {
   agrupar,
   type Detalle,
   type Fila,
   type Paso,
   rotuloDeFila,
-} from "../../../../../apps/desktop/src/lib/steps";
+} from "../../../../ui/src/lib/steps";
 import { cn } from "../../../../ui/src/lib/utils";
 import { AnsiText } from "../../../../ui/src/AnsiText";
 import BloqueDeDiff from "./DiffBlock";
 import { balance, comparado } from "../model/diff";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { Glifo, HUECO_DE_GLIFO } from "./StepGlyph";
-import { carpetaDe, desplegable, salidaDe, tituloDeFila, verboVisible } from "../../../../../apps/desktop/src/lib/stepRow";
+import { carpetaDe, desplegable, salidaDe, tituloDeFila, verboVisible } from "../../../../ui/src/lib/stepRow";
 import { Pressable } from "../../../../ui/src/Pressable";
 
 /**

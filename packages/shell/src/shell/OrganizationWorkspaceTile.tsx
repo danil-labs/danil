@@ -1,5 +1,5 @@
 import { createSignal, Show } from "solid-js";
-import type { GroupSend } from "../../../../apps/desktop/src/lib/group-account";
+import type { GroupSend } from "../../../session/src/group-account";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../ui/src/lib/utils";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../ui/src/Tooltip";

@@ -10,7 +10,7 @@ import {
   groupingLabel,
   sameAgent,
   sortLabel,
-} from "../../../../apps/desktop/src/lib/sidebarView";
+} from "../../../ui/src/lib/sidebarView";
 import { cn } from "../../../ui/src/lib/utils";
 import { Button } from "../../../ui/src/Button";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";

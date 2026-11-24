@@ -4,7 +4,7 @@ import X from "lucide-solid/icons/x";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import FileText from "lucide-solid/icons/file-text";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { extensionDe, nombreDe } from "../../../../../apps/desktop/src/lib/steps";
+import { extensionDe, nombreDe } from "../../../../ui/src/lib/steps";
 import type { Preview } from "../../../../ui/src/lib/preview.ts";
 import { Pressable } from "../../../../ui/src/Pressable";
 

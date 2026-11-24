@@ -1,5 +1,5 @@
 import type { ObservedTurnActivity as TurnActivity } from "./activityObservation.ts";
-import type { Paso } from "../../../../../apps/desktop/src/lib/steps.ts";
+import type { Paso } from "../../../../ui/src/lib/steps.ts";
 
 type LiveMessage = { nativeMessageId?: string; turno?: string; duration_ms?: number; preguntas?: unknown[] };
 export type ActivityChunk<M> = { pasos: Paso[]; msg: M; outside?: true };

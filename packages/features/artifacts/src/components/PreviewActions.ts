@@ -5,7 +5,7 @@ import { descargarArtefacto, historiaDe, leerVersion, openExternal, preparePrint
 import { asFailure, detalleDe } from "../../../../ui/src/Failure";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { ArtifactDownloadError, readArtifactDownload } from "../model/download.ts";
-import { extensionDe } from "../../../../../apps/desktop/src/lib/steps";
+import { extensionDe } from "../../../../ui/src/lib/steps";
 import type PreviewPane from "./Preview";
 import type { createPreviewState } from "./PreviewState";
 

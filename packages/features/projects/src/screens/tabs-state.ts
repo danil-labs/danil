@@ -1,7 +1,7 @@
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import type { AgentProfile } from "../../../../../apps/desktop/src/lib/model";
-import { flechaDeLista } from "../../../../../apps/desktop/src/lib/shortcuts";
+import { flechaDeLista } from "../../../../ui/src/lib/shortcuts";
 import { corta } from "../../../../../apps/desktop/src/lib/sites";
 import { type BatchCloseAction, isTaskTab, type Tab, tabsToClose } from "../../../../../apps/desktop/src/lib/tabs";
 import { watchProfiles } from "../queries/profiles";

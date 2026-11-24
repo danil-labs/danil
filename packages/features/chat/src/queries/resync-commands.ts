@@ -1,5 +1,5 @@
 
-import { pasoDe } from "../../../../../apps/desktop/src/lib/steps";
+import { pasoDe } from "../../../../ui/src/lib/steps";
 import { type Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure";

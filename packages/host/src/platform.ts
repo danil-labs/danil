@@ -58,7 +58,7 @@ export type WebAccountsSource = {
   signOut: () => void;
 };
 
-export type Capabilities = import("../../../apps/desktop/src/lib/group-account").GroupAccountCapabilities & {
+export type Capabilities = import("../../session/src/group-account").GroupAccountCapabilities & {
   revokeWorkspaceAccess?: (context: string, workspace: string) => Promise<"revoked" | "unavailable">;
   webPromo?: (code: string, idempotencyKey: string) => Promise<{ machine?: { state?: string }; unavailable?: boolean }>;
   webWorkspacePicker?: import("../../session/src/workspace-picker").WorkspacePicker;

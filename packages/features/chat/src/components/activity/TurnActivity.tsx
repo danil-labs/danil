@@ -2,7 +2,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createMemo, createUniqueId, Index, type JSX, Show } from "solid-js";
 import { t } from "../../../../../../apps/desktop/src/lib/i18n";
 import { sharedLazy } from "../../../../../ui/src/lib/sharedLazy";
-import { partesDelTramo, type Paso } from "../../../../../../apps/desktop/src/lib/steps";
+import { partesDelTramo, type Paso } from "../../../../../ui/src/lib/steps";
 import { cn } from "../../../../../ui/src/lib/utils";
 import { Markdown } from "../../../../../ui/src/Markdown";
 import type { ActivityChunk } from "../../model/activityBlocks";

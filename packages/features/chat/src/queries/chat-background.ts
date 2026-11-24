@@ -1,4 +1,4 @@
-import { fondoPropio } from "../../../../../apps/desktop/src/lib/chat-background-store";
+import { fondoPropio } from "../../../../ui/src/lib/chat-background-store";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { createResource } from "solid-js";
 import type { Preview } from "../../../../ui/src/lib/preview.ts";

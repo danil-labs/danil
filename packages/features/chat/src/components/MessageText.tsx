@@ -1,5 +1,5 @@
 import { Index, Show } from "solid-js";
-import { claseDelTramo, type TaskMention, tramosDelMensaje } from "../../../../../apps/desktop/src/lib/taskMentions";
+import { claseDelTramo, type TaskMention, tramosDelMensaje } from "../../../../ui/src/lib/taskMentions";
 import { Markdown } from "../../../../ui/src/Markdown";
 import { WithMentions } from "../../../../ui/src/WithMentions";
 

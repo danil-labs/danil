@@ -2,14 +2,14 @@ import { batch, createEffect, createMemo, on, onCleanup, type Accessor, type Set
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { conservar } from "../../../../session/src/sessionRefresh.ts";
-import { carpetasDelEscritorio, escritorioDeFila, type Space } from "../../../../../apps/desktop/src/lib/spaces.ts";
+import { carpetasDelEscritorio, escritorioDeFila, type Space } from "../../../../ui/src/lib/spaces.ts";
 import { appendToStoredStrip, deleteStoredStrip, migrateLegacyStrip, spacesWithStoredStrip, storedStrip, isTaskTab, type Tab, type TaskTab } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import { deleteLayout, readLayout, spacesWithLayout } from "../../../../../apps/desktop/src/lib/panels.ts";
-import { claveDeBorrador, esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft.ts";
+import { claveDeBorrador, esProvisional } from "../../../../ui/src/lib/taskDraft.ts";
 import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
 import { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";
 import type { ModoDePermiso, Project, Source } from "../../../../../apps/desktop/src/lib/model.ts";
-import type { createComposerStore, createDraftsStore, createThreadsStore, Machine, PanelsStore, Session, TabsStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
+import type { createComposerStore, createDraftsStore, createThreadsStore, Machine, PanelsStore, Session, TabsStore } from "../../../../ui/src/lib/project-block-types.ts";
 import type { AttentionStore, WorkspaceStore } from "../screens/workspace-session.ts";
 import type { SessionRow } from "../screens/Sessions.tsx";
 

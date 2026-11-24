@@ -13,7 +13,7 @@ import {
   drawSelection,
   lineNumbers,
 } from "@codemirror/view";
-import { ajuste } from "../../../../../apps/desktop/src/lib/wrap";
+import { ajuste } from "../../../../ui/src/lib/wrap";
 import { RESALTADO, TEMA } from "../model/editorTheme";
 import { MUESTRA } from "../model/languages";
 

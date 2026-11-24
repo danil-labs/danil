@@ -3,10 +3,10 @@ import { type Project, type Source } from "../../../../apps/desktop/src/lib/mode
 import { sameSite, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../../apps/desktop/src/lib/panels";
 import { type Layout, type PanelGroup } from "../../../ui/src/lib/panels-types.ts";
 import { createPointerDrag } from "../../../ui/src/lib/pointer-drag";
-import { type Space } from "../../../../apps/desktop/src/lib/spaces.ts";
+import { type Space } from "../../../ui/src/lib/spaces.ts";
 import { isTaskTab } from "../../../../apps/desktop/src/lib/tabs";
 import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
-import { esProvisional } from "../../../../apps/desktop/src/lib/taskDraft";
+import { esProvisional } from "../../../ui/src/lib/taskDraft";
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
 import { arbolesDe, contiene, ubicar } from "../../../features/code/src/queries/treeKind";
 import { machineName, machineOf, machines, senderTaskId, setRunOn } from "../../../features/machines/src/queries/store";

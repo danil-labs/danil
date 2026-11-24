@@ -4,12 +4,12 @@ import { createProjectsStore, invoke } from "../queries/store.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { createPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
-import { recordarCarpetas } from "../../../../../apps/desktop/src/lib/folderKinds.ts";
+import { recordarCarpetas } from "../../../../ui/src/lib/folderKinds.ts";
 import { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
 import { createTaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles.ts";
 import type { Frase } from "../../../../ui/src/lib/prose.ts";
 import type { Project, Source } from "../../../../../apps/desktop/src/lib/model.ts";
-import type { Machine, ProjectPlace } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
+import type { Machine, ProjectPlace } from "../../../../ui/src/lib/project-block-types.ts";
 import { activeTaskCounts, activityByProject, hiddenIn, type HiddenProjects, type PickedAt, picksIn, rememberPick, setHidden, storedPicks } from "../model/recent.ts";
 import type { SessionRow } from "./Sessions.tsx";
 

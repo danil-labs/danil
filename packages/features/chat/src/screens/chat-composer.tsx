@@ -2,7 +2,7 @@ import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { modelBrand } from "../../../../../apps/desktop/src/lib/models";
 import { prosa } from "../../../../ui/src/lib/prose";
-import { nombreDe } from "../../../../../apps/desktop/src/lib/steps";
+import { nombreDe } from "../../../../ui/src/lib/steps";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";

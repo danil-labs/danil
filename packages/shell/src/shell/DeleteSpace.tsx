@@ -11,7 +11,7 @@ import {
   marcasDeCambio,
   spaceName,
   type TaskSeen,
-} from "../../../../apps/desktop/src/lib/spaces";
+} from "../../../ui/src/lib/spaces";
 import { invoke } from "../../../engine-client/src/client.ts";
 import { machineOf } from "../../../features/machines/src/queries/store";
 import type { Project } from "../../../../apps/desktop/src/lib/model";

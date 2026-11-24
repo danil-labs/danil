@@ -7,7 +7,7 @@ import {
   type Forma,
 } from "./lib/sandbox";
 import { t } from "../../../apps/desktop/src/lib/i18n";
-import { flechaDeLista } from "../../../apps/desktop/src/lib/shortcuts";
+import { flechaDeLista } from "./lib/shortcuts";
 import { Back, Next } from "./icons";
 import { Button } from "./Button";
 import { cn } from "./lib/utils";

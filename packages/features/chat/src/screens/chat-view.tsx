@@ -3,7 +3,7 @@ import FileText from "lucide-solid/icons/file-text";
 import { Show } from "solid-js";
 import type { VirtualThreadApi } from "../components/VirtualThread";
 import { type Lectura } from "../model/threadWindow";
-import { type PendingEdit } from "../../../../../apps/desktop/src/lib/taskMentions";
+import { type PendingEdit } from "../../../../ui/src/lib/taskMentions";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";

@@ -1,5 +1,5 @@
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { claseDelTramo, finishEdit, type PendingEdit } from "../../../../../apps/desktop/src/lib/taskMentions";
+import { claseDelTramo, finishEdit, type PendingEdit } from "../../../../ui/src/lib/taskMentions";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { FIN_DE_ARCHIVO, TECLAS_DE_TERMINAL } from "../model/commandInput";

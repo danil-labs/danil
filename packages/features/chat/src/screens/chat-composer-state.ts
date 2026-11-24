@@ -1,11 +1,11 @@
 import { enfocar } from "../../../../ui/src/lib/focus";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { activeTrigger } from "../../../../../apps/desktop/src/lib/mentions";
+import { activeTrigger } from "../../../../ui/src/lib/mentions";
 import { opcionesDeModelos } from "../../../../../apps/desktop/src/lib/models";
 import { lastSentAt, usedSince } from "../../../../ui/src/lib/chat/nextSteps";
 import { prosa } from "../../../../ui/src/lib/prose";
 import { slashSuggestions } from "../../../../ui/src/lib/skills";
-import { highlightSpans } from "../../../../../apps/desktop/src/lib/taskMentions";
+import { highlightSpans } from "../../../../ui/src/lib/taskMentions";
 import type { Failure } from "../../../../ui/src/Failure";
 import { seMandaSinSuperficie } from "../../../../ui/src/lib/queue.ts";
 import { taskChatPresentation } from "../components/TaskChatPresentation";

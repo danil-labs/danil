@@ -1,4 +1,4 @@
-import { type GitHost } from "../../../../../apps/desktop/src/lib/gitHosts";
+import { type GitHost } from "../../../../ui/src/lib/gitHosts";
 
 /**
  * Traer material al workspace desde **una carpeta local, una cuenta conectada

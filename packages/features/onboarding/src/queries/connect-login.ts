@@ -1,8 +1,8 @@
 import { onCleanup } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { freeModelScope } from "../../../../../apps/desktop/src/lib/free-model-policy.ts";
-import { loadFreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-model-policy-load.ts";
+import { freeModelScope } from "../../../../session/src/free-model-policy.ts";
+import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { accountPresentation } from "../../../../ui/src/lib/accounts.ts";
 import type { AccountList, AccountStatus, AgentOpt, LoginEvent } from "../../../../ui/src/lib/accounts.ts";

@@ -1,6 +1,6 @@
 import { anexarImagen, anexarRazonamiento, mcpCallFromName, tramoGuardado, type ChatEvent } from "./transcript.ts";
 import type { Msg } from "../screens/Chat.tsx";
-import { type Paso, pasoDe } from "../../../../../apps/desktop/src/lib/steps.ts";
+import { type Paso, pasoDe } from "../../../../ui/src/lib/steps.ts";
 import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 
 export type TranscriptMetadata = { provider?: string; author: NonNullable<Msg["author"]> | null; model?: string | null };

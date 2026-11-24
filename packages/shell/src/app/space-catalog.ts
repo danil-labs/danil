@@ -1,7 +1,7 @@
 import { createEffect, createMemo, createSignal, onCleanup, type Accessor } from "solid-js";
 import { arrangeSpaces } from "@terminus/computers/space-order";
-import { displayWorkspaceContext } from "../../../../apps/desktop/src/lib/workspace-context.ts";
-import type { Space } from "../../../../apps/desktop/src/lib/spaces.ts";
+import { displayWorkspaceContext } from "../../../session/src/workspace-context.ts";
+import type { Space } from "../../../ui/src/lib/spaces.ts";
 import { workspaceSpacesForEngine, type WorkspaceSpace, type WorkspaceSpaceCatalog, type WorkspaceSpaceEdit } from "../../../platform-client/src/workspace-spaces.ts";
 import { sessionRailState } from "../shell/session-groups.ts";
 

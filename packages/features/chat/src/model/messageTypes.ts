@@ -1,8 +1,8 @@
 import type { HistoryRef } from "../../../../engine-client/src/index.ts";
 import type { CodeRange } from "../../../../../apps/desktop/src/lib/model";
-import type { Recipient, SenderTask } from "../../../../../apps/desktop/src/lib/recipients";
-import type { Paso } from "../../../../../apps/desktop/src/lib/steps";
-import type { TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
+import type { Recipient, SenderTask } from "../../../../ui/src/lib/recipients";
+import type { Paso } from "../../../../ui/src/lib/steps";
+import type { TaskMention } from "../../../../ui/src/lib/taskMentions";
 import type { Producido } from "../components/Delivery";
 import type { CambioPorCupo, FalloDelTurno } from "./failures";
 import type { Pregunta, Respuesta } from "../components/Questions";

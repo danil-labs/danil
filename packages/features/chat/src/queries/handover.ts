@@ -1,6 +1,6 @@
 
 import { type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
-import { idProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
+import { idProvisional } from "../../../../ui/src/lib/taskDraft";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
