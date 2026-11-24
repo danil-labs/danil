@@ -33,6 +33,14 @@ export function createSessionContexts(rpc: ContextInvoke, changed: () => void, o
     try {
       const status = await rpc<SessionStatus>("danil_session_status");
       if (read !== epoch) return;
+      const hasSessions = Array.isArray(status.sessions);
+      // Un refresco transitorio sin `sessions` (caída momentánea o sin red) no borra los grupos ya cargados.
+      if (!hasSessions && groups !== null && (connected || groups.length > 0) && (status.state === "connected" || Boolean(status.error))) {
+        onStatus?.(status);
+        ready = true;
+        notify();
+        return;
+      }
       onStatus?.(status);
       ready = true;
       defaultContext = status.default_context ?? null;

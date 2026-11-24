@@ -201,3 +201,76 @@ test("computes governed sections and discrete scope badges", () => {
     null,
   );
 });
+
+test("hides raw Local engine workspaces when allowLocalFallback is false (Desk SessionGate)", () => {
+  const localEngines = [
+    { id: "w1", name: "Local Uno", logo: null },
+    { id: "w2", name: "Local Dos", logo: null },
+  ];
+
+  const nullGroups = resolveSettingsWorkspaces({
+    activeId: "w1",
+    activeContext: null,
+    engineWorkspaces: localEngines,
+    groups: null,
+    allowLocalFallback: false,
+  });
+  assert.deepEqual(nullGroups.options, []);
+  assert.equal(nullGroups.active, null);
+
+  const emptyGroups = resolveSettingsWorkspaces({
+    activeId: "w1",
+    activeContext: null,
+    engineWorkspaces: localEngines,
+    groups: [],
+    allowLocalFallback: false,
+  });
+  assert.deepEqual(emptyGroups.options, []);
+  assert.equal(emptyGroups.active, null);
+
+  const unloadedCatalog = resolveSettingsWorkspaces({
+    activeId: "w1",
+    activeContext: "ctx-1",
+    engineWorkspaces: localEngines,
+    groups: [
+      {
+        context_id: "ctx-1",
+        org: "org_1",
+        org_name: "Acme",
+        plan: "business",
+        email: "ana@acme.test",
+        family: "f1",
+        added: new Set(),
+        available: [],
+      },
+    ],
+    allowLocalFallback: false,
+  });
+  assert.deepEqual(unloadedCatalog.options, []);
+  assert.equal(unloadedCatalog.active, null);
+
+  const localActiveOutsideGroups = resolveSettingsWorkspaces({
+    activeId: "w-local-only",
+    activeContext: null,
+    engineWorkspaces: [...localEngines, { id: "w-local-only", name: "Solo Local" }],
+    groups: [
+      {
+        context_id: "ctx-1",
+        org: "org_1",
+        org_name: "Acme",
+        plan: "business",
+        email: "ana@acme.test",
+        family: "f1",
+        added: new Set(["w1"]),
+        available: [{ id: "w1", name: "Acme WS" }],
+      },
+    ],
+    allowLocalFallback: false,
+  });
+  assert.deepEqual(
+    localActiveOutsideGroups.options.map((o) => [o.id, o.context]),
+    [["w1", "ctx-1"]],
+  );
+  assert.equal(localActiveOutsideGroups.active?.id, "w1");
+});
+

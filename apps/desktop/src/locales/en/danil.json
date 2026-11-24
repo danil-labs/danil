@@ -124,5 +124,7 @@
   "danil.welcome.connect_effect": "Use your Danil workspace, agents and machines.",
   "danil.welcome.waiting": "Finish signing in in your browser.",
   "danil.error.too_many_contexts": "You reached the maximum of 20 connected organizations. Close one to add another.",
+  "danil.error.browser": "Could not open the browser to sign in.",
+  "danil.error.timeout": "Signing in timed out. Try again.",
   "danil.accounts.empty": "No one is signed in."
 }

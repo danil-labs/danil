@@ -124,5 +124,7 @@
   "danil.welcome.connect_effect": "Usa tu workspace, tus agentes y tus máquinas de Danil.",
   "danil.welcome.waiting": "Termina de entrar en el navegador.",
   "danil.error.too_many_contexts": "Llegaste al máximo de 20 organizaciones conectadas. Cierra una para agregar otra.",
+  "danil.error.browser": "No se pudo abrir el navegador para iniciar sesión.",
+  "danil.error.timeout": "Se agotó el tiempo para completar el inicio de sesión. Inténtalo de nuevo.",
   "danil.accounts.empty": "No hay sesiones abiertas."
 }

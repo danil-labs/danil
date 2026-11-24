@@ -209,3 +209,26 @@ test("the Free router of a workspace open in X gets X's platform account, never 
   assert.equal(await identity("wp"), null, "a workspace of the personal org is not in X's catalog");
   setActiveWorkspaceContext(null);
 });
+
+test("explicit personal: false is preserved on web session contexts for free-plan organization scopes", async () => {
+  const payload = {
+    version: 1,
+    items: [
+      {
+        session_id: "ses_a",
+        sub: "user_a",
+        email: "a@example.com",
+        contexts: [
+          { context_id: "ctx_free_org", org: "org_free_team", org_name: "Free Team", plan: "free", role: "admin", personal: false },
+          { context_id: "ctx_personal", org: "org_personal", org_name: "Personal", plan: "free", role: "owner", personal: true },
+        ],
+      },
+    ],
+  };
+  const { transport } = fakeEdge(() => json(payload));
+  const web = webSessionCommands(transport, { expired: () => {} });
+  const status = await web.handle("danil_session_status") as { sessions: { contexts: { context_id: string; personal?: boolean }[] }[] };
+  assert.equal(status.sessions[0].contexts[0].personal, false);
+  assert.equal(status.sessions[0].contexts[1].personal, true);
+});
+

@@ -25,3 +25,46 @@ test("web return restores the public snapshot from this tab", () => {
   assert.deepEqual(flow.take([group("new", ["w"])]), { ids: ["w"], organizations: ["NEW"] });
   assert.equal(values.size, 0);
 });
+
+test("wrapped cancellation causes stay silent and specific error codes resolve to their message", async () => {
+  const flow = createAccountReturn(() => {});
+  for (const cause of [
+    { code: "cancelled" },
+    { error: "cancelled" },
+    { what: { clave: "danil.error.cancelled" } },
+    "cancelled",
+  ]) {
+    const attempt = flow.begin([]);
+    flow.failed(attempt, cause);
+    assert.equal(flow.state(), null);
+  }
+
+  const { accountAddErrorBody, canRetryAccountAddError, shouldShowAccountAddError } = await import(
+    "../../../../packages/shell/src/shell/account-return-error.ts"
+  );
+  const catalog: Record<string, string> = {
+    "danil.error.too_many_contexts": "Max 20 orgs",
+    "danil.error.browser": "Could not open browser",
+    "danil.error.unavailable": "Service unavailable",
+    "danil.error.timeout": "Timed out",
+    "shell.workspaces.add_failed_body": "Check connection",
+  };
+  const translate = (key: string) => catalog[key] ?? key;
+
+  assert.equal(shouldShowAccountAddError("cancelled"), false);
+  assert.equal(shouldShowAccountAddError("browser"), true);
+  assert.equal(shouldShowAccountAddError("unavailable"), true);
+  assert.equal(shouldShowAccountAddError(undefined), true);
+
+  assert.equal(accountAddErrorBody("browser", translate), "Could not open browser");
+  assert.equal(accountAddErrorBody("unavailable", translate), "Service unavailable");
+  assert.equal(accountAddErrorBody("timeout", translate), "Timed out");
+  assert.equal(accountAddErrorBody("too_many_contexts", translate), "Max 20 orgs");
+  assert.equal(accountAddErrorBody("network", translate), "Check connection");
+  assert.equal(accountAddErrorBody(undefined, translate), "Check connection");
+
+  assert.equal(canRetryAccountAddError("too_many_contexts"), false);
+  assert.equal(canRetryAccountAddError("browser"), true);
+  assert.equal(canRetryAccountAddError("unavailable"), true);
+});
+

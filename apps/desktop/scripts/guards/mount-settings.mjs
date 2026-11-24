@@ -702,18 +702,43 @@ assert.deepEqual(agentsApp.failures, []);
  */
 let selectorSpaces = {
   workspaces: [
-    { id: "w", name: "Acme", context_root: null, sessions: 0 },
-    { id: "w2", name: "Beta", context_root: null, sessions: 0 },
+    { id: "w", name: "Acme", context_root: null, sessions: 0, account: { org: "org-w", account_id: "ctx-w" } },
+    { id: "w2", name: "Beta", context_root: null, sessions: 0, account: { org: "org-w2", account_id: "ctx-w2" } },
   ],
   active: "w",
 };
 const workspaceChanges = [];
 const agentsReads = [];
+const selectorContexts = [
+  { context_id: "ctx-w", org: "org-w", org_name: "Acme", plan: "pro", workspaces: "all", role: "owner" },
+  { context_id: "ctx-w2", org: "org-w2", org_name: "Beta", plan: "pro", workspaces: "all", role: "owner" },
+];
 const selectorApp = await boot("listo", "settings-workspace-selector", {
   ...RESPONSES,
+  machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true }],
   list_workspaces: () => selectorSpaces,
   workspaces_startup: () => selectorSpaces,
   list_language_packs: [], list_bundled_language_packs: [],
+  danil_session_status: () => ({
+    state: "connected",
+    default_context: "ctx-w",
+    sessions: [{ family: "fam-1", email: "user@example.com", contexts: selectorContexts }],
+  }),
+  danil_edge_fetch: (args) => {
+    if (args.path === "/v1/identity/me") return { status: 200, body: { id: "person" } };
+    if (args.path === "/v1/workspaces") {
+      return {
+        status: 200,
+        body: {
+          items: [
+            { id: "acc-w", org: "org-w", name: "Acme", engine_workspace_id: "w" },
+            { id: "acc-w2", org: "org-w2", name: "Beta", engine_workspace_id: "w2" },
+          ],
+        },
+      };
+    }
+    return { status: 404, body: {} };
+  },
   set_active_workspace: ({ id }) => {
     workspaceChanges.push(id);
     selectorSpaces = { ...selectorSpaces, active: id };
@@ -735,7 +760,7 @@ const selectorApp = await boot("listo", "settings-workspace-selector", {
     };
   },
 });
-await sleep(250);
+for (let i = 0; i < 80 && !selectorApp.w.document.querySelector('[data-workspace-context="ctx-w2"]'); i++) await sleep(25);
 const sDoc = selectorApp.w.document;
 sDoc.querySelector('button[aria-label="Configuración"]')?.click();
 await sleep(120);

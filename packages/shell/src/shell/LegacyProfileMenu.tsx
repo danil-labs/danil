@@ -1,12 +1,10 @@
-import ChevronRight from "lucide-solid/icons/chevron-right";
 import UserRound from "lucide-solid/icons/user-round";
 import { createSignal, lazy, Show, Suspense, untrack } from "solid-js";
 import { t } from "../../../ui/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
 import { canRedeemPromo } from "../../../session/src/promo-role";
 import { type Apariencia, apariencia } from "../../../ui/src/lib/theme";
-import { cn } from "../../../ui/src/lib/utils";
-import { ITEM_DE_MENU, Popover, PopoverAnchor, PopoverContent } from "../../../ui/src/Popover";
+import { Popover, PopoverAnchor, PopoverContent } from "../../../ui/src/Popover";
 import { Pressable } from "../../../ui/src/Pressable";
 import { ProfileThemeAndBug, ProfileWebSignOut } from "./ProfileMenuItems";
 
@@ -18,10 +16,10 @@ const OrganizationSection = lazy(() => import("./OrganizationMenu").then((m) => 
 const OrganizationHarnessLink = lazy(() => import("./OrganizationHarnessLink"));
 
 
-/** El avatar al pie de la columna: la cuenta, el tema, el Harness de la organización, reportar un bug y, en la web, cerrar sesión. */
+/** El avatar al pie de la columna: el tema, el Harness de la organización, reportar un bug y, en la web, cerrar sesión. */
 export default function ProfileMenu(props: {
   initialOpen?: boolean;
-  onAccount: () => void;
+  onAccount?: () => void;
   onReportarBug: () => void;
   open?: string | null;
   context?: string | null;
@@ -32,7 +30,7 @@ export default function ProfileMenu(props: {
   const alternar = () => setOpen((o) => !o);
   const generico = () => (
     <Pressable
-      class="grid size-8 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
+      class="grid size-8 place-items-center rounded-md text-neutral-500 outline-none hover:bg-neutral-200 hover:text-neutral-950 focus:outline-none focus-visible:outline-none"
       aria-label={t("shell.profile.menu")}
       title={t("shell.profile.menu")}
       aria-expanded={open()}
@@ -69,13 +67,6 @@ export default function ProfileMenu(props: {
         </Show>
       </PopoverAnchor>
       <PopoverContent class="w-72 p-1" aria-label={t("shell.profile.menu")}>
-        <Show when={cuenta()}>
-          <Pressable class={cn(ITEM_DE_MENU, "flex items-center gap-2")} onClick={() => { setOpen(false); props.onAccount(); }}>
-            <span class="min-w-0 flex-1 truncate">{t("settings.nav.danil_account")}</span>
-            <ChevronRight size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />
-          </Pressable>
-          <div class="my-1 h-px bg-border" />
-        </Show>
         <Show when={capabilities().organizations}>
           {(load) => (
             <Suspense fallback={null}>
