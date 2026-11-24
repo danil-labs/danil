@@ -1,6 +1,6 @@
 import FolderOpen from "lucide-solid/icons/folder-open";
 import { Button } from "../../../../ui/src/Button";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 
 /**
  * Un workspace sin fuente de contexto. **Nace inerte**: sabe qué alcanza y no

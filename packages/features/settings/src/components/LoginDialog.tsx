@@ -6,14 +6,14 @@ import { Spinner } from "../../../../ui/src/Spinner";
 import { Show, createSignal } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
 import { enfocar } from "../../../../ui/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
 import { Terminal, TerminalBody } from "../../../../ui/src/Terminal";
-import "../../../../../apps/desktop/src/locales/settingsPhrases";
+import "../../../../ui/src/locales/settingsPhrases";
 import { Paso } from "./ConnectionStep";
 
 /**

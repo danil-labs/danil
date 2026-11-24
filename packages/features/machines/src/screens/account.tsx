@@ -24,7 +24,7 @@ import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
 import { createRoot, createSignal } from "solid-js";
 import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
 import { whenConnected } from "../../../../session/src/engineConnection.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type Capabilities, capabilities, setCapabilities } from "../../../../host/src/platform";
 import { deliver, listen } from "../../../../host/src/serviceEvents.ts";
 import { isMac } from "../../../../host/src/window";

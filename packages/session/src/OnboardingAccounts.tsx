@@ -5,7 +5,7 @@ import { Pantalla } from "../../features/onboarding/src/components/Screen";
 import { accountKeyUrl } from "../../ui/src/lib/account-auth.ts";
 import type { AccountList, AgentOpt, LoginEvent } from "../../features/settings/src/queries/accounts-store";
 import { LoginCodeForm } from "../../features/settings/src/screens/LoginCodeForm";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "../../ui/src/lib/i18n";
 import { invoke } from "../../engine-client/src/client.ts";
 import { listen } from "../../host/src/serviceEvents";
 import { Badge } from "../../ui/src/Badge";

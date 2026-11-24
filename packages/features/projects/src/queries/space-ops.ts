@@ -1,7 +1,7 @@
 import { createSignal, type Accessor, type Setter } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
 import { spaceName, type Space } from "../../../../ui/src/lib/spaces.ts";
 import { deleteStoredStrip, storedStrip } from "../../../../ui/src/lib/tabs.ts";
 import type { SearchFilter } from "../../../../ui/src/lib/project-block-types.ts";

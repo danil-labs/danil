@@ -1,5 +1,5 @@
 import { type createSendGates as T_createSendGates, type createShellCommand as T_createShellCommand, type createThreadStream as T_createThreadStream } from "../../../features/chat/src";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { type MentionSources } from "../../../ui/src/lib/mentions.ts";
 import { carpetaDeTrabajo } from "../../../ui/src/lib/model";
 import { type Agent, type AgentModels, type AgentProfile, type HandlerDefinition, type ModoDePermiso, type Source } from "../../../ui/src/lib/model.ts";

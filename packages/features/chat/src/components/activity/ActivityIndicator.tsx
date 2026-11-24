@@ -2,7 +2,7 @@ import { createEffect, createSignal, createUniqueId, For, Match, onCleanup, Show
 import { ACTIVITY_MOTIONS, createActivityMotionCycle, createActivityMotionPreference } from "../../model/activityMotion";
 import "./activity-indicator.css";
 import { createNow } from "../../../../../ui/src/lib/sharedClock";
-import { t } from "../../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../../ui/src/lib/i18n";
 
 const PARTICLES = Array.from({ length: 13 }, (_, index) => index);
 

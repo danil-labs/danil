@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 
 export const nombreDeArchivo = (ruta: string) => ruta.split(/[\\/]/).pop() || ruta;
 export const falloDeInstalacion = (clave: string | null | undefined, porOmision = "onboarding.tools.drive_app.install_failed") => {

@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { modelBrand } from "../../../../ui/src/lib/models";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Pressable } from "../../../../ui/src/Pressable";

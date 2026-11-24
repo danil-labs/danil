@@ -1,5 +1,5 @@
 import { type Accessor, createSignal, For, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Toast, ToastPortal } from "../../../../ui/src/Toast";
 /** On, off, starting or speaking another contract: what the page says of a machine. */
 export type MachineStatus = "online" | "offline" | "starting" | "outdated";

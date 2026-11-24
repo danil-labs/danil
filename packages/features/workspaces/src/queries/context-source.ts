@@ -4,7 +4,7 @@ import type { MentionSources } from "../../../../ui/src/lib/mentions.ts";
 import { escritorioDeFila } from "../../../../ui/src/lib/spaces.ts";
 import { esProvisional, sameSources, unirFuentes } from "../../../../ui/src/lib/taskDraft.ts";
 import { isTaskTab, type Tab } from "../../../../ui/src/lib/tabs.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
 import { type SessionUsage, ventanaDe } from "../../../../ui/src/lib/usage.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { canonicalAgentId } from "../../../../ui/src/lib/tasks/agents.ts";

@@ -6,7 +6,7 @@ import { carpetasDelEscritorio, escritorioDeFila, type Space } from "../../../..
 import { appendToStoredStrip, deleteStoredStrip, migrateLegacyStrip, spacesWithStoredStrip, storedStrip, isTaskTab, type Tab, type TaskTab } from "../../../../ui/src/lib/tabs.ts";
 import { deleteLayout, readLayout, spacesWithLayout } from "../../../../ui/src/lib/panels.ts";
 import { claveDeBorrador, esProvisional } from "../../../../ui/src/lib/taskDraft.ts";
-import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs.ts";
+import { escribirPref, leerPref } from "../../../../session/src/prefs.ts";
 import { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";
 import type { ModoDePermiso, Project, Source } from "../../../../ui/src/lib/model.ts";
 import type { createComposerStore, createDraftsStore, createThreadsStore, Machine, PanelsStore, Session, TabsStore } from "../../../../ui/src/lib/project-block-types.ts";

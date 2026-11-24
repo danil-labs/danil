@@ -2,10 +2,10 @@ import type { AccountWorkspace, Computer } from "../../../../platform-client/src
 import type { Connection, ConnectionCapabilities, ConnectionPatch } from "../../../../platform-client/src/connections.ts";
 import { PERMISSION_MODES } from "../model/connections.ts";
 import { createSignal, createUniqueId, For, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import { Select } from "../../../../ui/src/Select";
-import "../../../../../apps/desktop/src/locales/settingsPhrases";
+import "../../../../ui/src/locales/settingsPhrases";
 
 type Access = NonNullable<ConnectionPatch["machines"]>[number];
 const key = (m: Access) => JSON.stringify([m.computer_id, m.workspace, m.folder ?? ""]);

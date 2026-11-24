@@ -4,7 +4,7 @@ import SquarePen from "lucide-solid/icons/square-pen";
 import { createSignal, Show } from "solid-js";
 import { destinoEnVuelo } from "../../../ui/src/lib/drag";
 import { enfocarYSeleccionar } from "../../../ui/src/lib/focus";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import type { Project } from "../../../ui/src/lib/model";
 import { PROJECT_NAME_MAX_LENGTH } from "../../../ui/src/lib/projectNames";
 import { cn } from "../../../ui/src/lib/utils";

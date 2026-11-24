@@ -1,7 +1,7 @@
 import type { Machine } from "../../platform-client/src/machines.ts";
 import type { MachinesQuery } from "../../features/machines/src/queries/machines-query.ts";
 import type { Fleet } from "../../features/machines/src/model/fleet/index.ts";
-import type { GroupAccount } from "../../../apps/desktop/src/lib/group-account.ts";
+import type { GroupAccount } from "./group-account.ts";
 import type { WebSessionCommands, WebSessionStatus } from "./web-session-contexts.ts";
 
 type Client = MachinesQuery;

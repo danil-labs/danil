@@ -1,5 +1,5 @@
 import { type Accessor, createMemo, createSignal, onCleanup } from "solid-js";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { escribirPref, leerPref } from "../../../session/src/prefs.ts";
 import { createPointerDrag } from "./pointer-drag.ts";
 
 type Destination = { id: string; before: boolean };

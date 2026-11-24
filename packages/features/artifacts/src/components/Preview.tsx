@@ -8,7 +8,7 @@ import { Print } from "../../../../ui/src/icons";
 import { FailureNote, asFailure } from "../../../../ui/src/Failure";
 import { Skeleton } from "../../../../ui/src/Skeleton";
 import { Markdown } from "../../../../ui/src/Markdown";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { peso, nf } from "../../../../ui/src/lib/format";
 import { delimiterFor } from "../../../../ui/src/lib/csv";
 import { createPreviewState } from "./PreviewState";

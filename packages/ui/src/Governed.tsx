@@ -1,6 +1,6 @@
 import { type JSX, Show } from "solid-js";
 import { type GovernedSection, lockedBy } from "../../session/src/governance.ts";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "./lib/i18n";
 
 /** El aviso de una sección que gobierna Harness. */
 export function GovernedNotice(props: { section: GovernedSection }) {

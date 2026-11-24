@@ -1,4 +1,4 @@
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { cn } from "../../../ui/src/lib/utils";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import { Pressable } from "../../../ui/src/Pressable";

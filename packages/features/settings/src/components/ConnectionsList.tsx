@@ -3,7 +3,7 @@ import type { Connection, ConnectionCapabilities } from "../../../../platform-cl
 import { MCP_URL } from "../model/connections.ts";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { accountRelayToken, connectionCapabilities, listComputers, listConnections, revokeConnection, updateConnection } from "../queries/engine-connections";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";

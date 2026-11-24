@@ -5,7 +5,7 @@ import { createEffect, createMemo, createRoot, createSignal, on } from "solid-js
 import { invoke } from "../../../engine-client/src/client.ts";
 import { bridgePersonSession } from "../../../session/src/person-session.ts";
 import { capabilities } from "../../../host/src/platform.ts";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { escribirPref, leerPref } from "../../../session/src/prefs.ts";
 import { listen } from "../../../host/src/serviceEvents.ts";
 import { createAccountRequests } from "./account-requests.ts";
 import { engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, retryEngineAdoption } from "./engine-adoption.ts";

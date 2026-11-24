@@ -5,7 +5,7 @@ import FileText from "lucide-solid/icons/file-text";
 import FileSpreadsheet from "lucide-solid/icons/file-spreadsheet";
 import Presentation from "lucide-solid/icons/presentation";
 import FileCode from "lucide-solid/icons/file-code";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "./lib/i18n";
 import { cn } from "./lib/utils";
 import X from "lucide-solid/icons/x";
 import Navegador from "lucide-solid/icons/external-link";

@@ -1,7 +1,7 @@
 import { For, Match, Show, Switch, createSignal, onMount } from "solid-js";
 import { addSkillSource, listSkillSources, removeSkillSource, setSkillSourceEnabled, skillSourceFreshness, updateSkillSource } from "../queries/engine-skills";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import { Input } from "../../../../ui/src/Input";
@@ -9,7 +9,7 @@ import { Toggle } from "../../../../ui/src/Toggle";
 import { Badge } from "../../../../ui/src/Badge";
 import { SettingsBlock, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { Governed } from "../../../../ui/src/Governed";
-import "../../../../../apps/desktop/src/locales/settingsPhrases";
+import "../../../../ui/src/locales/settingsPhrases";
 
 /**
  * Lo que contestó la comprobación de frescura. Espeja `context::Frescura`, que

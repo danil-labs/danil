@@ -1,6 +1,6 @@
 import type { Machine } from "../../platform-client/src/machines.ts";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "../../ui/src/lib/i18n";
 import { Button } from "../../ui/src/Button";
 import { PlatformSessionError } from "./platform-session";
 import { BILLING_RETURN_KEY, checkoutReturn, followCheckout, waitWithSignal } from "./billing-v2-return";

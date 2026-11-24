@@ -1,7 +1,7 @@
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createSignal, For, Match, Show, Switch } from "solid-js";
 import { createRowSignal } from "../model/threadRow";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { flechaDeLista } from "../../../../ui/src/lib/shortcuts";
 import {
   agrupar,

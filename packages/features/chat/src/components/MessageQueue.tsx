@@ -8,7 +8,7 @@ import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import X from "lucide-solid/icons/x";
 import { createSignal, For, onCleanup, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { Agent } from "../../../../ui/src/lib/model";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";

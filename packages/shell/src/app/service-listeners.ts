@@ -1,4 +1,4 @@
-import { aplicarLenguaDeWorkspace, t } from "../../../../apps/desktop/src/lib/i18n";
+import { aplicarLenguaDeWorkspace, t } from "../../../ui/src/lib/i18n";
 import { type InternalTaskLink } from "../../../ui/src/lib/chat/links";
 import { listen } from "../../../host/src/serviceEvents.ts";
 import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";

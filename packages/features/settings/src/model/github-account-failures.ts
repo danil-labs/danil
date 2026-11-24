@@ -3,7 +3,7 @@
  * `detail` es `credentials.error.<código>`, como los manda el motor, y `what` la
  * frase del catálogo de ese código.
  */
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
 
 /** La forma de `Failure` (`ui/Failure.tsx`), sin importar su JSX: la web y sus pruebas cargan esto en Node. */
 type Failure = { what: unknown; detail: string };

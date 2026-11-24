@@ -1,7 +1,7 @@
 // Tipos del puente con Rust: cambiar campos requiere conservar la compatibilidad serializada.
 // Este módulo no importa componentes para evitar arrastrar JSX a consumidores de tipos.
 
-import type { Frase, Prosa } from "../../../../apps/desktop/src/lib/prose";
+import type { Frase, Prosa } from "./prose";
 
 export type Project = {
   id: string;

@@ -6,7 +6,7 @@ import Workflow from "lucide-solid/icons/workflow";
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { mb } from "../../../../ui/src/lib/format";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { checkIntegration, installIntegration, listIntegrations, setIntegrationEnabled, typstLiveStop, uninstallIntegration, updateIntegration } from "../queries/engine-integrations";
 import { isMac } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";

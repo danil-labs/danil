@@ -1,5 +1,5 @@
 import type { MachineTaskUsage } from "../../../engine-client/src/index.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { cn } from "../../../ui/src/lib/utils";
 
 /** El título y la carpeta de una tarea de la ventana, si se conocen. */

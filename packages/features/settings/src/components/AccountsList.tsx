@@ -2,7 +2,7 @@ import Ellipsis from "lucide-solid/icons/ellipsis";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { For, Show, Suspense } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../../../../ui/src/DropdownMenu";

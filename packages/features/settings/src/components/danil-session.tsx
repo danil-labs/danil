@@ -2,9 +2,9 @@
  * El estado y las acciones de la cuenta de Danil que comparten Configuración y
  * el alta: leer, escuchar `danil-connect`, entrar y cerrar sesión.
  */
-import "../../../../../apps/desktop/src/locales/danilPhrases";
+import "../../../../ui/src/locales/danilPhrases";
 import { createSignal, For, onCleanup, onMount } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { danilAccountRefresh } from "../queries/engine-github";
 import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../host/src/serviceEvents.ts";

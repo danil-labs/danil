@@ -6,7 +6,7 @@ import {
   SANDBOX_ARTEFACTO,
   type Forma,
 } from "./lib/sandbox";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "./lib/i18n";
 import { flechaDeLista } from "./lib/shortcuts";
 import { Back, Next } from "./icons";
 import { Button } from "./Button";

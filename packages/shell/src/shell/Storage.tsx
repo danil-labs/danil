@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { haceCuanto } from "../../../ui/src/lib/limits";
 import { cn } from "../../../ui/src/lib/utils";
 import Server from "lucide-solid/icons/server";

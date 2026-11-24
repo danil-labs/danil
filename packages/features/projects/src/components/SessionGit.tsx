@@ -15,7 +15,7 @@ import MessageSquareWarning from "lucide-solid/icons/message-square-warning";
 import UserCheck from "lucide-solid/icons/user-check";
 import { type JSX, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
 import { changeNumber, changeShort, checksName } from "../../../../session/src/gitHosts";
 import { workLabel } from "../../../../ui/src/lib/workLabel.ts";

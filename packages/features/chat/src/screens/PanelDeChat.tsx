@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type Agent, type Project, type Source } from "../../../../ui/src/lib/model.ts";
 import { sameSite, type PanelSite as SitioDePanel } from "../../../../ui/src/lib/panels";
 import { type Tab, type TaskTab } from "../../../../ui/src/lib/tabs.ts";

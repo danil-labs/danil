@@ -19,7 +19,7 @@
  */
 // Con extensión: estos módulos se cargan también desde `node --test`, que no
 // tiene el resolvedor de Vite (`SYSTEM.md` § De dónde sale cada frase).
-import { t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { t } from "./i18n.ts";
 import { SIN_ESPACIO, textoSinEspacio } from "./no-space.ts";
 
 /** Lo que manda un backend ya migrado. Espeja `util::Frase`. */

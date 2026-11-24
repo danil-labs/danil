@@ -1,7 +1,7 @@
 import { createMemo, type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { tareaEnVuelo } from "../../../../ui/src/lib/drag";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { esProvisional } from "../../../../ui/src/lib/taskDraft";
 import { cn } from "../../../../ui/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";

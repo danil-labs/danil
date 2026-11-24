@@ -8,7 +8,7 @@
 import { createEffect, createSignal, on, onCleanup } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { legible, type Query, type Read } from "../../../../ui/src/lib/limits";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { detalleDe } from "../../../../ui/src/Failure";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 

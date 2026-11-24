@@ -1,6 +1,6 @@
 import { routerAvailable } from "../../../../ui/src/lib/tasks/index.ts";
 import { createSignal, lazy, onCleanup, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { listModels, setProviderConsent, workspacesStartup } from "../queries/engine-consent";
 import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelPolicy, type FreeModelStartup } from "../../../../session/src/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";

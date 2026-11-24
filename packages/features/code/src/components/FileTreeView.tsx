@@ -2,7 +2,7 @@ import FilePlus from "lucide-solid/icons/file-plus";
 import FolderPlus from "lucide-solid/icons/folder-plus";
 import Search from "lucide-solid/icons/search";
 import { For, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";

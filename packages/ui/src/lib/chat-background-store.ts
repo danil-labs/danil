@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { createPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { createPref } from "../../../session/src/prefs.ts";
 import {
   fondoDe,
   VELO_DE_FONDO,

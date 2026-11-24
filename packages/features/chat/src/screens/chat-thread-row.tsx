@@ -1,4 +1,4 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { formatearDuracion } from "../../../../ui/src/lib/steps";
 import { Markdown } from "../../../../ui/src/Markdown";
 import { Pressable } from "../../../../ui/src/Pressable";

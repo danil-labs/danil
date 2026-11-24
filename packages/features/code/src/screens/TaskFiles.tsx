@@ -11,7 +11,7 @@ import { capabilities } from "../../../../host/src/platform";
 import { arbolesDe } from "../queries/treeKind";
 import { Button } from "../../../../ui/src/Button";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import {
   listTaskTrees,
   openExternal,

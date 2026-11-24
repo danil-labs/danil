@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import type { AgentProfile } from "../../../../ui/src/lib/model";
 import { flechaDeLista } from "../../../../ui/src/lib/shortcuts";
 import { corta } from "../../../../ui/src/lib/sites";

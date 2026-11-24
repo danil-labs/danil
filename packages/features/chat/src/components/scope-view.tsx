@@ -1,5 +1,5 @@
 import { For, Match, Show, Switch } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import GitBranch from "lucide-solid/icons/git-branch";
 import Plus from "lucide-solid/icons/plus";

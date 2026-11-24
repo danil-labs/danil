@@ -10,7 +10,7 @@ import {
   mimeOfAttachment,
 } from "../../../../engine-client/src/index.ts";
 import { base64De } from "../../../../host/src/clipboard";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
 
 type Conversacion = {

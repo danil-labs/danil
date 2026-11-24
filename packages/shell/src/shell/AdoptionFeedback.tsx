@@ -1,7 +1,7 @@
 import Check from "lucide-solid/icons/check";
 import CircleAlert from "lucide-solid/icons/circle-alert";
 import { createSignal, For, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";
 import { Toast, ToastPortal } from "../../../ui/src/Toast";
 import type { AdoptionClaimed, AdoptionFailure } from "./account-adoption";

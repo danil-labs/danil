@@ -1,7 +1,7 @@
 import AlertTriangle from "lucide-solid/icons/triangle-alert";
 import { For, Show } from "solid-js";
 import { immediateWindow } from "../../../ui/src/lib/account-usage.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { left, legible, tono } from "../../../ui/src/lib/limits";
 import { sharedLazy } from "../../../ui/src/lib/sharedLazy";
 import { cn } from "../../../ui/src/lib/utils";

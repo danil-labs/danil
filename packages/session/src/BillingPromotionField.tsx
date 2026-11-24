@@ -1,6 +1,6 @@
 import { createUniqueId, Show } from "solid-js";
 import { SettingsRow } from "../../features/settings/src/index";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "../../ui/src/lib/i18n";
 import { Input } from "../../ui/src/Input";
 import { PromotionCodeFormatError } from "../../platform-client/src/treasury";
 import { PlatformSessionError } from "./platform-session";

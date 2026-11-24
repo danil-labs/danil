@@ -1,5 +1,5 @@
 import { createEffect, on, onCleanup, onMount } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { listProviders, removeAccount, renameAccount, resumeAwaitingQuota, setActiveAccount, submitLoginCode } from "../queries/engine-accounts";
 import { openExternal } from "../queries/engine-open";
 import { listen } from "../../../../host/src/serviceEvents.ts";

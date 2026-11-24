@@ -8,7 +8,7 @@ import {
 import "@excalidraw/excalidraw/index.css";
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
-import { lengua } from "../../../../../apps/desktop/src/lib/i18n";
+import { lengua } from "../../../../ui/src/lib/i18n";
 
 /** La lengua del workspace entre las que trae Excalidraw: `es` cae en `es-ES`; sin traducción, la suya. */
 function excalidrawLang(code: string): string {

@@ -1,5 +1,5 @@
 import { createSignal, onCleanup } from "solid-js";
-import { createPref } from "../../../../apps/desktop/src/lib/prefs";
+import { createPref } from "../../../session/src/prefs";
 
 
 /**

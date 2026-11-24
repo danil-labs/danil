@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { errorCode } from "../../../../ui/src/lib/errorCode.ts";
 import { claveDe, detalleDe, prosaDe } from "../../../../ui/src/Failure";
 import { Button } from "../../../../ui/src/Button";

@@ -1,7 +1,7 @@
 import { confirm } from "@tauri-apps/plugin-dialog";
 import type { GithubInstallation, GithubInstallations, GithubMachine, GithubStatus } from "../../../../platform-client/src/github.ts";
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { accountCredentialRemoveMachine, accountCredentialRestoreMachine, danilWorkspaceAccount, githubAccountAuthorize, githubAccountDisconnect, githubAccountInstallations, githubAccountStatus, githubAuthorizeOf, githubCredentialOf, githubInstallationsOf, githubStatusOf } from "../queries/engine-github";
 import { openExternal } from "../queries/engine-open";
 import { capabilities } from "../../../../host/src/platform";

@@ -1,4 +1,4 @@
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { type Agent, type Project } from "../../../ui/src/lib/model.ts";
 import { type CatalogosDeModelos, type OpcionDeModelo } from "../../../ui/src/lib/models.ts";
 import { type Layout, type PanelGroup, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../ui/src/lib/panels-types.ts";

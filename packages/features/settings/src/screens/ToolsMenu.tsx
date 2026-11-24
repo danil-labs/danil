@@ -8,7 +8,7 @@ import { cn } from "../../../../ui/src/lib/utils";
 import { McpMark } from "../../../../ui/src/icons";
 import { MarcaServicio } from "../../../../ui/src/marcas";
 import { toolMarkId } from "../../../../ui/src/index";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { mcpLoginUrl, mcpPendingSignIn, mcpSignIn, mcpSignInFailure, mcpSignInState } from "./McpSignInNotice";

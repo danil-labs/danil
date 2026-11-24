@@ -9,7 +9,7 @@ import { crearCargaDeConexiones } from "./connect-load";
 import { crearConsentimiento } from "./connect-consent";
 import { crearEntradaDeConexiones } from "./connect-login";
 import { crearEstadoDeConexiones } from "./connect-state";
-import "../../../../../apps/desktop/src/locales/settingsPhrases";
+import "../../../../ui/src/locales/settingsPhrases";
 
 export type { Fila, Paso } from "./connect-rows";
 export { AL_FINAL, explicar, nombreDeFila, openExternal, ordenDelMapa } from "./connect-rows";

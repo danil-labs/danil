@@ -1,6 +1,6 @@
 import { joinableStep, joinSteps, stepCounts, type CountedStep, type StepCount } from "./chat/steps.ts";
 import { isMcpTool } from "./chat/tools.ts";
-import { manifiesto, t } from "../../../../apps/desktop/src/lib/i18n.ts";
+import { manifiesto, t } from "./i18n.ts";
 import { CLASE, type Clase, type Paso } from "./steps-model.ts";
 
 /**

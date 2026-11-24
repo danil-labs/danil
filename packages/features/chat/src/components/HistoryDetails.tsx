@@ -2,7 +2,7 @@ import type { HistoryChunk, HistoryRef } from "../../../../engine-client/src/ind
 import { createResource, createSignal, For, Show, onCleanup, type JSX } from "solid-js";
 import { retainRowWhile } from "../model/threadRow";
 import { currentRef, readDetailText, readTurns, readDetailChunk, type MachineOf } from "../queries";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Markdown } from "../../../../ui/src/Markdown";
 import type { Session } from "../model/transcript";
 import { Pressable } from "../../../../ui/src/Pressable";

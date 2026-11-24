@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Show, createSignal, onCleanup, onMount } from "solid-js";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { invoke as routedInvoke } from "../../../engine-client/src/client.ts";
 import { quietFinished } from "./TaskNotifier";
 import {

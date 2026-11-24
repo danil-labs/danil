@@ -2,7 +2,7 @@ import ExternalLink from "lucide-solid/icons/external-link";
 import Check from "lucide-solid/icons/check";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
 import { createSignal, Match, Show, Switch, type JSX } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";

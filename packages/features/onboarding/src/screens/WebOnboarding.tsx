@@ -2,7 +2,7 @@ import Check from "lucide-solid/icons/check";
 import { createSignal, For, Match, onMount, Show, Switch } from "solid-js";
 import { crearWorkspace, listarMaquinasDelAlta } from "../queries/onboarding-store";
 import { Pantalla } from "../components/Screen";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";

@@ -1,4 +1,4 @@
-import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { leerPref } from "../../../../session/src/prefs";
 import { type SliceChange } from "./router";
 import { refetchMachines } from "./store";
 

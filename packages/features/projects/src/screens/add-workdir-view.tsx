@@ -6,7 +6,7 @@ import { FailureNote } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
 import { ProgressBar } from "../../../../ui/src/ProgressBar";
 import { enfocar } from "../../../../ui/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { LazyPart, retryableLazy } from "../../../../ui/src/LazyPart";
 import type { AnadirCarpetaProps } from "./add-workdir-model";

@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
 import { type SenderTask } from "../../../../ui/src/lib/recipients";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { gestoDeLaFila, prosaDelFallo } from "../model/failures";
 import { citaInforme, idDeLaEntregaAntigua, prosaDeLaFila } from "../model/inboxRows";
 import type { Msg } from "../model/messageTypes";

@@ -19,7 +19,7 @@ import { isDeferrable, systemOf } from "../../../../platform-client/src/machine.
 import { arrangeSpaces } from "../../../../platform-client/src/space-order.ts";
 import { callWorkspace } from "../model/links.ts";
 import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "../model/fleet/index.ts";
-import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { clavesConocidas, t } from "../../../../ui/src/lib/i18n.ts";
 import { setMachineRoute as engineSetMachineRoute } from "../../../../engine-client/src/client.ts";
 import { isUnknownCommand } from "../../../../engine-client/src/support.ts";
 

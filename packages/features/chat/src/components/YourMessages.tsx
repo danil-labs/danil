@@ -1,5 +1,5 @@
 import { createEffect, createSignal, For, on, onCleanup, Show, type JSX } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Popover, PopoverContent } from "../../../../ui/src/Popover";
 import { RETARDO_TOOLTIP } from "../../../../ui/src/Tooltip";
 import { modelBrand } from "../../../../ui/src/lib/models";

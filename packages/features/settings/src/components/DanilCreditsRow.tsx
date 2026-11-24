@@ -1,5 +1,5 @@
 import { Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import type { PiezasDeAjustes } from "../model/features-port";

@@ -9,7 +9,7 @@ import Trash2 from "lucide-solid/icons/trash-2";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, FailureNote, type Failure } from "../../../../ui/src/Failure";
-import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { manifiesto, t } from "../../../../ui/src/lib/i18n";
 import type { Agent, MemoriaEntrada, MemoriaIndice, MemoriaScope } from "../../../../ui/src/lib/model";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import { capabilities } from "../../../../host/src/platform";

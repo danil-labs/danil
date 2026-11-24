@@ -1,7 +1,7 @@
 import type { AppBridge } from "@modelcontextprotocol/ext-apps/app-bridge";
 import AppWindow from "lucide-solid/icons/app-window";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import {
   hasMcpApp,
   readMcpApp,

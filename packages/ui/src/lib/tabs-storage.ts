@@ -1,4 +1,4 @@
-import { borrarPref, escribirPref, hayPref, leerPref, prefsQueEmpiezan } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { borrarPref, escribirPref, hayPref, leerPref, prefsQueEmpiezan } from "../../../session/src/prefs.ts";
 import { tabViewKey as key, workspaceViewKey } from "../../../session/src/workspace-view-scope.ts";
 import type { Tab, TaskTab } from "./tabs-types.ts";
 
