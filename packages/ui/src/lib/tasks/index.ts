@@ -58,7 +58,7 @@ export { type AttentionRow, delegatedAttention, delegatedFamilies, withFamilyAct
 export { type TaskTreeRow, type TaskBranch, taskIdentity, taskParent, buildTaskTree, withTaskAncestors, taskDescendants, familySubtasks } from "./tree.ts";
 
 export { type WorkState, WORK_STATES, workStateOf } from "./workState.ts";
-export { type ModelSession, type Surface, type SurfaceModel, chipModel, menuSurfaces, surfaceHas, surfaceOf } from "./surfaces.ts";
+export { type ModelSession, type Surface, type SurfaceModel, chipModel, defaultSurfaceModel, menuSurfaces, surfaceHas, surfaceOf } from "./surfaces.ts";
 
 export {
   DANIL_CREDITS_MODEL,
@@ -67,6 +67,7 @@ export {
   type DanilCreditsTierId,
   type DanilService,
   creditsBalanceState,
+  danilCreditsTierLabel,
   danilServiceOf,
   isDanilCreditsModel,
 } from "./danil-services.ts";

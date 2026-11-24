@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { splitProps, type JSX } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 const textareaVariants = cva(
   // El tamaño en rem sigue ⌘+/⌘−; en px el campo se queda. `font-family:

@@ -4,7 +4,7 @@ import { listKnownMcp, listMcpServers } from "../queries/engine-mcp";
 import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote } from "../../../../ui/src/Failure";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { McpMark } from "../../../../ui/src/icons";
 import { MarcaServicio } from "../../../../ui/src/marcas";
 import { toolMarkId } from "../../../../ui/src/index";

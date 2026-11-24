@@ -1,7 +1,7 @@
 import { Show, createSignal } from "solid-js";
 import { Input } from "../../../../ui/src/Input";
 import { enfocarYSeleccionar } from "../../../../ui/src/lib/focus";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 
 const ACCOUNT_LABEL_MAX_LENGTH = 80;

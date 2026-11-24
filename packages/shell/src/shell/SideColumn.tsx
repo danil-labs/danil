@@ -1,6 +1,6 @@
 import { Show, type JSX } from "solid-js";
 import { createPref } from "../../../../apps/desktop/src/lib/prefs";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 
 /** De qué lado de la conversación vive la columna. */
 export type Lado = "left" | "right";

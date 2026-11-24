@@ -1,7 +1,7 @@
 import SquarePen from "lucide-solid/icons/square-pen";
 import { lazy, Show, Suspense } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import { PANEL } from "../../../../ui/src/Panel";

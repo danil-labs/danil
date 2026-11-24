@@ -5,7 +5,7 @@ import {
   Index,
 } from "solid-js";
 import { SolidMarkdown } from "solid-markdown";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import { COMPONENTES } from "./markdown-components";
 import { partidorDeBloques } from "./markdown-blocks";
 import { remarkMatematicas } from "./markdown-math";

@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 /**
  * Que viene algo, dicho con forma en vez de con prosa.

@@ -1,8 +1,8 @@
 import type { MachineResources, MachineTaskUsage } from "../../../engine-client/src/index.ts";
 import { For, Show, createSignal } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { peso } from "../../../../apps/desktop/src/lib/format";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { peso } from "../../../ui/src/lib/format";
+import { cn } from "../../../ui/src/lib/utils";
 import { Badge } from "../../../ui/src/Badge";
 import { ProgressBar } from "../../../ui/src/ProgressBar";
 import { active, engineVersion, hasUsage, history, leftovers, level, split, topProcesses } from "./machineUsage";

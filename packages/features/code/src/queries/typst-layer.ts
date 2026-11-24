@@ -1,6 +1,6 @@
 import { createEffect, createRoot, createSignal, on } from "solid-js";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import { huecoLibre, moviendoHueco, zonasEncima, type Hueco } from "../../../../../apps/desktop/src/lib/sites";
+import { huecoLibre, moviendoHueco, zonasEncima, type Hueco } from "../../../../ui/src/lib/sites";
 
 const claveDe = (session: string, arbol: string) => `${session}\n${arbol}`;
 

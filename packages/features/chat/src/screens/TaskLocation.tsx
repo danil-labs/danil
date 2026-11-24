@@ -7,7 +7,7 @@ import { createCopied } from "../../../../host/src/clipboard";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { abbreviateHomePath } from "../../../../ui/src/lib/remote-path";
 import { capabilities, machineScreen } from "../../../../host/src/platform";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../../ui/src/Tooltip";
 
 export type TaskLocationProps = {

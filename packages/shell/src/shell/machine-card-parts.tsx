@@ -1,6 +1,6 @@
 import type { MachineTaskUsage } from "../../../engine-client/src/index.ts";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 
 /** El título y la carpeta de una tarea de la ventana, si se conocen. */
 export type TaskLookup = (session: string) => { title: string; project?: string } | undefined;

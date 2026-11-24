@@ -219,8 +219,8 @@ test("Danil Credits conserva el ejecutor y los niveles que anuncia el engine", (
       provider: "opencode",
       fallback: false,
       models: [
-        model("danil-credits/danil/equilibrado", "Equilibrado"),
         model("danil-credits/danil/ligero", "Ligero"),
+        model("danil-credits/danil/equilibrado", "Equilibrado"),
         model("danil-credits/danil/avanzado", "Avanzado"),
       ],
     },
@@ -232,7 +232,7 @@ test("Danil Credits conserva el ejecutor y los niveles que anuncia el engine", (
     assert.equal(option.proveedor.logo, "danil");
     assert.equal(modelBrand("opencode", option.model.id), "danil");
   }
-  assert.equal(options[0].model.id, DANIL_CREDITS.modelId);
+  assert.deepEqual(options.map((o) => o.model.id), [...DANIL_CREDITS.tiers]);
   assert.equal(agruparModelos(options, "Danil Credits")[0].id, "danil-credits");
   assert.equal(opcionesDeModelos([surface], {}).length, 0);
 });
@@ -253,8 +253,8 @@ test("missing, failed or incompatible balance data never becomes zero", () => {
   }
   assert.equal(DANIL_CREDITS.modelId, "danil-credits/danil/equilibrado");
   assert.deepEqual(DANIL_CREDITS.tiers, [
-    "danil-credits/danil/equilibrado",
     "danil-credits/danil/ligero",
+    "danil-credits/danil/equilibrado",
     "danil-credits/danil/avanzado",
   ]);
 });

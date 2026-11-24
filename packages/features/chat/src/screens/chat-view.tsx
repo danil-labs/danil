@@ -5,7 +5,7 @@ import type { VirtualThreadApi } from "../components/VirtualThread";
 import { type Lectura } from "../model/threadWindow";
 import { type PendingEdit } from "../../../../../apps/desktop/src/lib/taskMentions";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { FileMachine } from "../../../../ui/src/fileMachine";
 import { WorkFace } from "../model/workFace";

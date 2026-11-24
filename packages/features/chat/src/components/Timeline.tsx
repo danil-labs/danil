@@ -10,7 +10,7 @@ import {
   type Paso,
   rotuloDeFila,
 } from "../../../../../apps/desktop/src/lib/steps";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { AnsiText } from "../../../../ui/src/AnsiText";
 import BloqueDeDiff from "./DiffBlock";
 import { balance, comparado } from "../model/diff";

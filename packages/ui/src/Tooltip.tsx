@@ -1,6 +1,6 @@
 import { Tooltip as Kobalte } from "@kobalte/core/tooltip";
 import { splitProps, type ComponentProps } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 /**
  * Tooltip común sobre `@kobalte/core` **0.13.13**. Esta versión no tiene un

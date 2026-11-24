@@ -3,7 +3,7 @@ import { createSignal, For, type JSX, onCleanup, onMount, Show } from "solid-js"
 import { createStore, reconcile } from "solid-js/store";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { deleteAgent, listMachineAgents } from "../queries/engine-agents";
-import type { AgenteDeMaquina, CatalogoDeAgentes } from "../../../../../apps/desktop/src/lib/model";
+import type { AgenteDeMaquina, CatalogoDeAgentes } from "../../../../ui/src/lib/model";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { EmptyState } from "../../../../ui/src/EmptyState";

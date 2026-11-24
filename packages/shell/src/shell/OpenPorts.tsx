@@ -1,7 +1,7 @@
 import { SignalDot } from "../../../ui/src/SignalDot";
 import { For, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import Plug from "lucide-solid/icons/plug";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import ChevronDown from "lucide-solid/icons/chevron-down";

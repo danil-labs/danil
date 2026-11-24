@@ -1,5 +1,5 @@
 import { splitProps, type JSX } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 /**
  * La superficie de terminal, la segunda capa de color

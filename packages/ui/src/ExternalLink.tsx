@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js";
 import { invoke } from "../../engine-client/src/client.ts";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 export const ENLACE =
   "text-link underline underline-offset-2 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";

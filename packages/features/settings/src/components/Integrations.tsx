@@ -5,7 +5,7 @@ import MousePointerClick from "lucide-solid/icons/mouse-pointer-click";
 import Workflow from "lucide-solid/icons/workflow";
 import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { mb } from "../../../../../apps/desktop/src/lib/format";
+import { mb } from "../../../../ui/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { checkIntegration, installIntegration, listIntegrations, setIntegrationEnabled, typstLiveStop, uninstallIntegration, updateIntegration } from "../queries/engine-integrations";
 import { isMac } from "../../../../host/src/window";

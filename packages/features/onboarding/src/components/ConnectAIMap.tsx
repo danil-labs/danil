@@ -1,9 +1,9 @@
-import { marcaDeSuperficie } from "../../../../../apps/desktop/src/lib/surfaces";
+import { marcaDeSuperficie } from "../../../../ui/src/lib/surfaces";
 import Check from "lucide-solid/icons/check";
 import { For, Show } from "solid-js";
-import { lista } from "../../../../../apps/desktop/src/lib/format";
+import { lista } from "../../../../ui/src/lib/format";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { MarcaAgente } from "../../../../ui/src/icons";
 import { type Conexiones, type Fila, nombreDeFila, ordenDelMapa, type Paso } from "../queries/connect-store";
 

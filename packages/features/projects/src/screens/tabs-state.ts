@@ -1,9 +1,9 @@
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import type { AgentProfile } from "../../../../../apps/desktop/src/lib/model";
+import type { AgentProfile } from "../../../../ui/src/lib/model";
 import { flechaDeLista } from "../../../../../apps/desktop/src/lib/shortcuts";
-import { corta } from "../../../../../apps/desktop/src/lib/sites";
-import { type BatchCloseAction, isTaskTab, type Tab, tabsToClose } from "../../../../../apps/desktop/src/lib/tabs";
+import { corta } from "../../../../ui/src/lib/sites";
+import { type BatchCloseAction, isTaskTab, type Tab, tabsToClose } from "../../../../ui/src/lib/tabs";
 import { watchProfiles } from "../queries/profiles";
 import { type GitStatus, watchSessionGit } from "../queries/taskGit";
 import { EDGE, PEEK, scrollBySite, type TabStripProps } from "./tabs-model";

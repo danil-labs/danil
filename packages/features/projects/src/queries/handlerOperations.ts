@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
-import type { HandlerRequests } from "../../../../../apps/desktop/src/lib/model.ts";
+import type { HandlerRequests } from "../../../../ui/src/lib/model.ts";
 const [version, setVersion] = createSignal(0);
 const changed = () => setVersion(v => v + 1);
 type Pending = { operation: string; action: "approve" | "revoke" | "release" };

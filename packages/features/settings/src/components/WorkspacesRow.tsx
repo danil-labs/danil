@@ -7,7 +7,7 @@ import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, type Failure } from "../../../../ui/src/Failure";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { type Workspace } from "../queries/workspaces-store";
 
 // ------------------------------------------------ la fila de la lista

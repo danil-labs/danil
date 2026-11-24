@@ -12,7 +12,7 @@ import {
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listGitHosts } from "../../../../../apps/desktop/src/lib/gitHosts";
-import type { Source } from "../../../../../apps/desktop/src/lib/model";
+import type { Source } from "../../../../ui/src/lib/model";
 import { prosaDe } from "../../../../ui/src/Failure";
 import type { AlcanceProps, Paso, Proveedor } from "./scope-types";
 

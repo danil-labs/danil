@@ -7,7 +7,7 @@ import {
 import { SolidMarkdown } from "solid-markdown";
 import { t } from "../../../apps/desktop/src/lib/i18n";
 import { clicEnEnlaceWeb, destinoAbrible, imagenInerte, imagenLocal, internalTaskLink, localFilePath } from "./lib/chat/links";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import { isMac } from "../../host/src/window";
 import { EnlargeableImage } from "./EnlargeableImage";
 import { FilePreview } from "./FilePreview";

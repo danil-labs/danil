@@ -1,6 +1,6 @@
 import { Tabs as Kobalte } from "@kobalte/core/tabs";
 import { splitProps, type ComponentProps } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 /** Pestañas de página sobre `@kobalte/core`: flechas, foco y roles salen del primitivo. */
 export const Tabs = Kobalte;

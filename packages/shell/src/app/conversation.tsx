@@ -1,8 +1,8 @@
 import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { MIN_PANEL_HEIGHT, MIN_PANEL_WIDTH, gridTracks, sameSite } from "../../../../apps/desktop/src/lib/panels";
+import { MIN_PANEL_HEIGHT, MIN_PANEL_WIDTH, gridTracks, sameSite } from "../../../ui/src/lib/panels";
 import { type Layout, type PanelGroup, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../ui/src/lib/panels-types.ts";
 import { type ContentTab, type FileTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { type PermissionRequest } from "../../../features/chat/src/screens/Chat.tsx";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions.tsx";
 import TabStrip from "../../../features/projects/src/screens/Tabs";
@@ -15,7 +15,7 @@ import { type Accessor, For, Index, type JSX, type Setter, Show } from "solid-js
 import { DelegatedNone, type DelegatedPanelModel, DelegatedToolbar } from "../../../features/projects/src/screens/DelegatedTasks";
 import { type SearchSurface, ThreadSearch, type ThreadSearchTarget } from "../../../features/chat/src/screens/ThreadSearch";
 import UsageTool, {  } from "../shell/UsageTool";
-import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../../apps/desktop/src/lib/taskFiles.ts";
+import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../ui/src/lib/taskFiles.ts";
 import type { createUsage } from "../shell/usage";
 
 /** Lo que el bloque usaba del cuerpo de App. */

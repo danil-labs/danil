@@ -3,7 +3,7 @@ import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { spaceName, type Space } from "../../../../../apps/desktop/src/lib/spaces.ts";
-import { deleteStoredStrip, storedStrip } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import { deleteStoredStrip, storedStrip } from "../../../../ui/src/lib/tabs.ts";
 import type { SearchFilter } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 
 /** Lo que las acciones sobre espacios usan del estado de la ventana. */

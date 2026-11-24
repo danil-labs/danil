@@ -1,6 +1,6 @@
 
 import { pasoDe } from "../../../../../apps/desktop/src/lib/steps";
-import { type Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
+import { type Superficie } from "../../../../ui/src/lib/surfaces.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { type ComandoEnVivo } from "../components/ShellCard";

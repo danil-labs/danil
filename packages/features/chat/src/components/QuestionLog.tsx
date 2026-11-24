@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import MessageCircle from "lucide-solid/icons/message-circle";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import type { Pregunta, Respuesta } from "./Questions";
 import { Pressable } from "../../../../ui/src/Pressable";
 

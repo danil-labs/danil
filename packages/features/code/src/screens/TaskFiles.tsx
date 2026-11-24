@@ -20,9 +20,9 @@ import {
   treeChanges,
 } from "../queries";
 import { copyText } from "../../../../host/src/clipboard";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
-import type { TaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles";
+import type { TaskFiles } from "../../../../ui/src/lib/taskFiles";
 import { machineOf } from "../../../../host/src/machine";
 import type { Cambios } from "../components/Changes";
 import Codigo from "../components/Code";

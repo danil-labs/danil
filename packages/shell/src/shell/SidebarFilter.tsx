@@ -11,7 +11,7 @@ import {
   sameAgent,
   sortLabel,
 } from "../../../../apps/desktop/src/lib/sidebarView";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { Button } from "../../../ui/src/Button";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";

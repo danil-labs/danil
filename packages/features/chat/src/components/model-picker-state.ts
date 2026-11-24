@@ -3,9 +3,10 @@ import { routerOfferState } from "../../../../ui/src/lib/tasks/index.ts";
 import { createMemo, createSignal } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { listAccounts, getAccountLimits } from "../queries";
-import type { Query } from "../../../../../apps/desktop/src/lib/limits";
-import { modelPresentation, effortOptions, effortValue, esFavorito, favoritosDeModelos, seccionDeModelo, type GrupoDeModelos, type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
+import type { Query } from "../../../../ui/src/lib/limits";
+import { modelPresentation, effortOptions, effortValue, esFavorito, favoritosDeModelos, seccionDeModelo, type GrupoDeModelos, type OpcionDeModelo } from "../../../../ui/src/lib/models";
 import { createPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { danilCreditsTierLabel } from "../../../../ui/src/lib/tasks/index.ts";
 import { DANIL_CREDITS, isDanilCreditsModel } from "../model/danil-credits";
 import { esServicio, nombreDeServicio, gruposDeModelos, nombreDeNivel, type SelectorDeModeloProps } from "./model-picker-types";
 
@@ -53,14 +54,19 @@ export function createSelectorDeModelo(props: SelectorDeModeloProps, deps: { cam
     selected: !!opcion && opcion.key === elegido()?.key,
     onUse: () => { if (opcion) elegir(opcion.key); },
   });
-  const creditsTiers = () =>
-    creditsModels().map((option) => ({
-      id: option.model.id,
-      label: option.model.label,
-      ready: !props.disabled && disponible(option),
-      selected: option.key === elegido()?.key,
-      onUse: () => elegir(option.key),
-    }));
+  const creditsTiers = () => {
+    const byId = new Map(creditsModels().map((option) => [option.model.id, option]));
+    return DANIL_CREDITS.tiers
+      .map((tierId) => byId.get(tierId))
+      .filter((option): option is OpcionDeModelo => !!option)
+      .map((option) => ({
+        id: option.model.id,
+        label: option.model.label,
+        ready: !props.disabled && disponible(option),
+        selected: option.key === elegido()?.key,
+        onUse: () => elegir(option.key),
+      }));
+  };
   const grupos = createMemo<GrupoDeModelos[]>(() => {
     const busquedaActiva = busqueda().trim().length > 0;
     const actual = seccion();
@@ -85,6 +91,11 @@ export function createSelectorDeModelo(props: SelectorDeModeloProps, deps: { cam
   );
   const nivel = () => effortValue(props.effort ?? "", props.defaultEffort ?? null);
   const rotuloDeNivel = () => {
+    const option = elegido();
+    const id = option?.model.id ?? props.model;
+    if (isDanilCreditsModel(id)) {
+      return option?.model.label || danilCreditsTierLabel(id) || undefined;
+    }
     const opcion = niveles().find((o) => o.value === nivel());
     return opcion ? nombreDeNivel(opcion.label) : undefined;
   };

@@ -1,6 +1,6 @@
 import { lazy } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type Frase } from "../../../../../apps/desktop/src/lib/prose";
+import { type Frase } from "../../../../ui/src/lib/prose";
 import { maskServerSource } from "../../../../../apps/desktop/src/lib/secretScan";
 
 // Fuera de la carga inicial: este archivo también da el vistazo del riel.

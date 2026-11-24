@@ -3,7 +3,7 @@ import GripVertical from "lucide-solid/icons/grip-vertical";
 import { For, Show } from "solid-js";
 import { createNavigationReorder } from "../../../../apps/desktop/src/lib/navigation-order";
 import { type Space, spaceName } from "../../../../apps/desktop/src/lib/spaces";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import { Pressable } from "../../../ui/src/Pressable";
 import type { AttentionState } from "./attention";

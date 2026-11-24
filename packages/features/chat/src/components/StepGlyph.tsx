@@ -13,7 +13,7 @@ import { type Component, Match, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { type Clase, type Fila, origenDeFila } from "../../../../../apps/desktop/src/lib/steps";
 import { comandoDeFila } from "../../../../../apps/desktop/src/lib/stepMarks";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { MarcaServicio } from "../../../../ui/src/marcas";
 import { MarcaHerramienta } from "../../../../ui/src/toolMarks";
 

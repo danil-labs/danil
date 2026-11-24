@@ -3,7 +3,7 @@ import { createEffect, For, type JSX, Match, onCleanup, onMount, Show, Switch, c
 import { markConnected } from "../../../session/src/engineConnection.ts";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import {
   createFullscreen,
   HEADER_HEIGHT,
