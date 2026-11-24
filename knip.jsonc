@@ -3,11 +3,10 @@
   // Binarios del sistema que llaman los scripts de publicación y de prueba: no son paquetes npm.
   "ignoreBinaries": ["jq", "hdiutil", "icacls", "getent", "rustc", "ruby"],
   "ignoreIssues": {
-    // Estas pruebas y scripts importan las rutas de apps/desktop/src de antes del move
-    // (src/features/*, src/lib/*, src/web/*). Arreglar esos imports es otra tarea; mientras
-    // tanto knip no cuenta lo que citan, así que no se borra nada por ellas.
-    "apps/desktop/tests/**": ["unresolved"],
-    "apps/desktop/scripts/terminal-indent.test.ts": ["unresolved"],
+    // Pruebas de integración y seguridad que aún importan rutas anteriores al move.
+    "apps/desktop/tests/integration/mvp-contracts.test.mjs": ["unresolved"],
+    "apps/desktop/tests/security/hostile-window.tsx": ["unresolved"],
+    // web-mobile.mjs importa rutas heredadas o aún sin mover.
     "apps/desktop/scripts/web-mobile.mjs": ["unresolved"],
 
     // scripts/verify-parity se instala aparte con npm (su package.json trae playwright, pixelmatch
@@ -216,9 +215,6 @@
       "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"]
     },
     "packages/features/*": {
-      "project": ["src/**/*.{ts,tsx}"]
-    },
-    "packages/features/{artifacts,chat,code,projects,settings}": {
       "ignoreDependencies": ["@tauri-apps/api"],
       "project": ["src/**/*.{ts,tsx}"]
     },
