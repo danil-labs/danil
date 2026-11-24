@@ -8,7 +8,8 @@
  * `<canal>:<huésped>` (`wsl:<distro>`) y sólo existe en esta computadora.
  */
 import { invoke } from "@tauri-apps/api/core";
-import type { CallResult, EngineInfo, EventsPage, MachineState } from "@terminus/computers";
+import type { MachineState } from "../../../../platform-client/src/machine.ts";
+import type { CallResult, EngineInfo, EventsPage } from "../model/relay-frames.ts";
 import { classOf, type Link, type MachineInfo } from "../model/fleet/index.ts";
 import type { Invoke } from "../model/router-commands";
 import { formatWslMachineName, isAnyGuestMachine, isLocalGuestMachine, WSL_MACHINE_PREFIX, type WslChild } from "../model/wsl";

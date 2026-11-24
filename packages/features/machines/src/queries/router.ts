@@ -15,7 +15,9 @@
  * id, y su lista junta las de todas. Un workspace de la cuenta que esta computadora
  * no tiene se lee de sus miembros y actúa en el primero.
  */
-import { arrangeSpaces, callWorkspace, isDeferrable, systemOf } from "@terminus/computers";
+import { isDeferrable, systemOf } from "../../../../platform-client/src/machine.ts";
+import { arrangeSpaces } from "../../../../platform-client/src/space-order.ts";
+import { callWorkspace } from "../model/links.ts";
 import { AttentionBook, classOf, type Envelope, FleetError, type MachineInfo, registryRow, type Slice, unwrap, wrap } from "../model/fleet/index.ts";
 import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { setMachineRoute as engineSetMachineRoute } from "../../../../engine-client/src/client.ts";

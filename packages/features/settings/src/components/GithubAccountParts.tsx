@@ -1,4 +1,4 @@
-import { type GithubMachine } from "@terminus/computers";
+import type { GithubMachine } from "../../../../platform-client/src/github.ts";
 import Ellipsis from "lucide-solid/icons/ellipsis";
 import ExternalIcon from "lucide-solid/icons/external-link";
 import { For, Show } from "solid-js";

@@ -12,24 +12,14 @@
  * Lazy from `app/main.tsx`.
  */
 import "../../../../../apps/desktop/src/web/phrases";
-import {
-  type Computer,
-  createScreenAccess,
-  listComputers,
-  type MachineState,
-  orderComputers,
-  RelaySession,
-  type SystemId,
-  serviceFeatures,
-  sessionProbe,
-  startComputer,
-  startedOf,
-  systemOf,
-  wakes,
-} from "@terminus/computers";
+import type { Computer } from "../../../../platform-client/src/api.ts";
+import type { MachineState, SystemId } from "../../../../platform-client/src/machine.ts";
+import { serviceFeatures } from "../model/links.ts";
+import { RelaySession } from "../queries/relay.ts";
+import { createScreenAccess } from "../queries/screen-access.ts";
 import { isRetiredComputersEndpoint } from "../../../../platform-client/src/api.ts";
 import { settledContextIds } from "../../../../session/src/settled-contexts.ts";
-import { cancelEdgeWrites, setMachineRoute, wokeOf } from "../queries";
+import { cancelEdgeWrites, listComputers, sessionProbe, setMachineRoute, startComputer, startedOf, wokeOf } from "../queries";
 import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
 import { createRoot, createSignal } from "solid-js";
 import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
@@ -49,7 +39,7 @@ import { createEngineWorkspaces } from "../queries/engine-workspaces";
 import { guestChannels } from "../queries/guestChannels";
 import { createGuestLink, guestMachineInfo, invalidateGuestChildren, isGuestMachine, wakeGuestMachine } from "../queries/guestLink";
 import { MachinePicker } from "./MachinePicker";
-import { infoOf } from "../model/machine-info";
+import { infoOf, orderComputers, systemOf, wakes } from "../model/machine-info";
 import { createRouter, type Invoke } from "../queries/router";
 import { createSessionCloud } from "../queries/session-cloud";
 import { readContextSpaces } from "../../../../platform-client/src/workspace-spaces.ts";

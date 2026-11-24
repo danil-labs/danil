@@ -8,6 +8,7 @@ export {
   COMPUTERS_ENDPOINT,
   apiUrl,
   listComputers,
+  listWorkspaces,
   sessionProbe,
   startComputer,
   startedOf,
@@ -166,7 +167,7 @@ export {
 export { type McpBlockCheck, MCP_BLOCK_ARGS, checkMcpBlock, relayArgs, urlWithCredentials } from "./mcp-block.ts";
 export { type SealOptions, type SealRecipient, SEAL_MAX_BYTES, canSeal, fromBase64, sealCredential, sealForRecipients, toBase64 } from "./seal.ts";
 
-export { arrangeSpaces, spaceOrder, type SpaceOrderSource } from "./space-order.ts";
+export { arrangeSpaces, createSpaceOrderSource, spaceOrder, type SpaceOrderSource } from "./space-order.ts";
 export { ACCOUNT_ASSET_MAX_BYTES, ACCOUNT_ASSET_TYPES, type AccountAssetKind, type BlobFetch, accountAssetUrl, readAccountAsset } from "./assets.ts";
 
 export { type CapabilityList, announces, capabilityList, mayCall } from "./capabilities.ts";

@@ -8,7 +8,8 @@
  * Si el motor anfitrión no anuncia `guest_machines_v1` (o rechaza `guest_children`
  * como comando desconocido), el gestor retrocede en silencio sin afectar a la flota.
  */
-import { type CallResult, type EngineInfo, type EventsPage, type MachineState, requestId as defaultRequestId } from "@terminus/computers";
+import type { MachineState } from "../../../../platform-client/src/machine.ts";
+import { type CallResult, type EngineInfo, type EventsPage, requestId as defaultRequestId } from "../model/relay-frames.ts";
 import { isUnknownCommand } from "../../../../engine-client/src/index.ts";
 import { classOf, type Link, type MachineInfo, memberKey } from "../model/fleet/index.ts";
 import {

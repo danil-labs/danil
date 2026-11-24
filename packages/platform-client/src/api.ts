@@ -215,6 +215,25 @@ export function accountWorkspace(raw: unknown): AccountWorkspace | null {
 }
 
 /**
+ * Los workspaces de la cuenta, con sus proyectos y computadoras. Acepta el JWT de
+ * la persona o el token de cliente del escritorio. Un plano de control anterior
+ * al registro contesta `missing` (404): quien llama sigue sin él.
+ */
+export function listWorkspaces(endpoint: string, token: string, f: Fetch = globalFetch): Promise<Answer<AccountWorkspace[]>> {
+  return request(
+    apiUrl(endpoint, "/v1/workspaces"),
+    token,
+    "GET",
+    (body) => {
+      const list = (body as { workspaces?: unknown } | null)?.workspaces;
+      if (!Array.isArray(list)) throw new Error("bad_registry");
+      return list.map(accountWorkspace).filter((w): w is AccountWorkspace => w !== null);
+    },
+    f,
+  );
+}
+
+/**
  * Por qué no abrió la sesión de una computadora: un upgrade fallido no trae
  * cuerpo en el navegador, así que se pregunta por HTTP. `license_required`
  * (`403`, computers#22) o `null` si no lo dice.

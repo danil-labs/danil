@@ -3,7 +3,7 @@
  * devuelve como dato de máquina. Es una heurística: un falso positivo se
  * resuelve con «Pegar como texto»; un falso negativo deja el texto como hoy.
  */
-import { urlWithCredentials } from "@terminus/computers";
+import { urlWithCredentials } from "../../../../platform-client/src/connections.ts";
 
 export type SecretFamily = "prefix" | "jwt" | "pem" | "entropy" | "url";
 

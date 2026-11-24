@@ -1,5 +1,5 @@
 import { createEffect, createSignal, onCleanup, type Accessor } from "solid-js";
-import { arrangeSpaces, type SpaceOrderSource } from "@terminus/computers/space-order";
+import { arrangeSpaces, type SpaceOrderSource } from "../../../platform-client/src/space-order.ts";
 import { capabilities } from "../../../host/src/platform";
 import { createNavigationOrder } from "./navigation-order";
 

@@ -1,4 +1,6 @@
-import { linkedWorkspaces, organizationOf, serviceFeatures, systemOf, wakes } from "@terminus/computers";
+import { linkedWorkspaces, organizationOf, serviceFeatures } from "./links.ts";
+import { orderComputers, systemOf, wakes } from "../../../../platform-client/src/machine.ts";
+export { orderComputers, systemOf, wakes };
 import type { MachineInfo } from "./fleet/index.ts";
 import type { ContextComputer } from "../queries/session-cloud";
 

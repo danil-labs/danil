@@ -1,4 +1,4 @@
-import { createOrganizationSelection, type OrganizationSource } from "@terminus/computers";
+import { createOrganizationSelection, type OrganizationSource } from "../../platform-client/src/organizations.ts";
 import type { platformTransport } from "./platform-session.ts";
 import { webOrganizationSource } from "../../../apps/desktop/src/web/organizations.ts";
 

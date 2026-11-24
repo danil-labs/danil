@@ -1,5 +1,6 @@
-import type { AccountWorkspace, Computer, Connection, ConnectionCapabilities, ConnectionPatch } from "@terminus/computers";
-import { PERMISSION_MODES } from "@terminus/computers";
+import type { AccountWorkspace, Computer } from "../../../../platform-client/src/api.ts";
+import type { Connection, ConnectionCapabilities, ConnectionPatch } from "../../../../platform-client/src/connections.ts";
+import { PERMISSION_MODES } from "../model/connections.ts";
 import { createSignal, createUniqueId, For, Show } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { Button } from "../../../../ui/src/Button";

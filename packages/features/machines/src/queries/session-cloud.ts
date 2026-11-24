@@ -1,4 +1,4 @@
-import type { Computer } from "@terminus/computers";
+import type { Computer } from "../../../../platform-client/src/api.ts";
 import { reportOrganizationProblem } from "../../../../session/src/organization-problems.ts";
 import { settledContextIds } from "../../../../session/src/settled-contexts.ts";
 import { createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines.ts";
