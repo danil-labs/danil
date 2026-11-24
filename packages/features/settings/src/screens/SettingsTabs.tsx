@@ -11,7 +11,7 @@ import { createResource, type JSX, lazy, Show, Suspense } from "solid-js";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { machineAction } from "../../../../host/src/machine-action";
-import { type Superficie } from "../../../../../apps/desktop/src/lib/surfaces";
+import { type Superficie } from "../../../../ui/src/lib/surfaces";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../../../../ui/src/sidebar";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { PiezasDeAjustes } from "../model/features-port";

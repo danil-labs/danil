@@ -1,7 +1,7 @@
 import { createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../engine-client/src/client.ts";
-import { legible, type Query, type Read } from "../../../../apps/desktop/src/lib/limits";
+import { legible, type Query, type Read } from "../../../ui/src/lib/limits";
 import { detalleDe } from "../../../ui/src/Failure";
 import { displayWorkspaceContext } from "../../../../apps/desktop/src/lib/workspace-context";
 import { workspaceMachineSources } from "../../../features/machines/src/queries/danil-source";

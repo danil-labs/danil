@@ -1,7 +1,7 @@
-import { type Project } from "../../../../apps/desktop/src/lib/model.ts";
-import { createPanels, gridCell, sameSite, type PanelSite as SitioDePanel } from "../../../../apps/desktop/src/lib/panels";
+import { type Project } from "../../../ui/src/lib/model.ts";
+import { createPanels, gridCell, sameSite, type PanelSite as SitioDePanel } from "../../../ui/src/lib/panels";
 import { type SenderTask } from "../../../../apps/desktop/src/lib/recipients";
-import { isTaskTab, type Tab, type createTabs } from "../../../../apps/desktop/src/lib/tabs";
+import { isTaskTab, type Tab, type createTabs } from "../../../ui/src/lib/tabs";
 import { captureWorkspaceContext } from "../../../engine-client/src/client.ts";
 import { machineOf, setTaskRowMachine } from "../../../features/machines/src/queries/store";
 import { esChatDeAgente } from "../../../features/projects/src/model/taskTree";

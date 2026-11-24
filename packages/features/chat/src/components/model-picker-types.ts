@@ -1,6 +1,6 @@
 import { danilServiceOf } from "../../../../ui/src/lib/tasks/index.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { agruparModelos, type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
+import { agruparModelos, type OpcionDeModelo } from "../../../../ui/src/lib/models";
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
 
 /** Solo los dos ids de `danilServiceOf` se presentan como servicios de Danil; otros gratuitos siguen en la lista. */

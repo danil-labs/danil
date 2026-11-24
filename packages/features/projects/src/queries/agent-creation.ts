@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { CreatedHandler } from "../../../../../apps/desktop/src/lib/model";
+import type { CreatedHandler } from "../../../../ui/src/lib/model";
 
 export const createAgent = (payload: {
   name: string;

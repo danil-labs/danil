@@ -3,7 +3,7 @@ import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ShieldCheck from "lucide-solid/icons/shield-check";
 import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import type { ModoDePermiso } from "../../../../../apps/desktop/src/lib/model";
+import type { ModoDePermiso } from "../../../../ui/src/lib/model";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
 import { prosa } from "../../../../ui/src/lib/prose";

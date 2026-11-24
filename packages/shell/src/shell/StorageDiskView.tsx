@@ -1,8 +1,8 @@
 import { SignalDot } from "../../../ui/src/SignalDot";
 import { For, Show } from "solid-js";
 import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { haceCuanto } from "../../../ui/src/lib/limits";
 import { peso } from "../../../ui/src/lib/format";
-import { haceCuanto } from "../../../../apps/desktop/src/lib/limits";
 import { cn } from "../../../ui/src/lib/utils";
 import Trash2 from "lucide-solid/icons/trash-2";
 import ChevronRight from "lucide-solid/icons/chevron-right";

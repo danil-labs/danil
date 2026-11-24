@@ -1,6 +1,6 @@
 import { Channel, type InvokeOptions } from "@tauri-apps/api/core";
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { Project } from "../../../../../apps/desktop/src/lib/model";
+import type { Project } from "../../../../ui/src/lib/model";
 
 export const cloneProject = (
   payload: {

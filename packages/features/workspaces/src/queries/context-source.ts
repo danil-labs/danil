@@ -1,11 +1,11 @@
-import type { AgentProfile as AgentProfileData } from "../../../../../apps/desktop/src/lib/model.ts";
+import type { AgentProfile as AgentProfileData } from "../../../../ui/src/lib/model.ts";
 import type { Session } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { MentionSources } from "../../../../../apps/desktop/src/lib/mentions.ts";
 import { escritorioDeFila } from "../../../../../apps/desktop/src/lib/spaces.ts";
 import { esProvisional, sameSources, unirFuentes } from "../../../../../apps/desktop/src/lib/taskDraft.ts";
-import { isTaskTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import { isTaskTab, type Tab } from "../../../../ui/src/lib/tabs.ts";
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
-import { type SessionUsage, ventanaDe } from "../../../../../apps/desktop/src/lib/usage.ts";
+import { type SessionUsage, ventanaDe } from "../../../../ui/src/lib/usage.ts";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { canonicalAgentId } from "../../../../ui/src/lib/tasks/agents.ts";
 import { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";

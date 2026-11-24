@@ -1,5 +1,5 @@
 import { invoke } from "../../../../engine-client/src/client.ts";
-import type { HandlerList } from "../../../../../apps/desktop/src/lib/model";
+import type { HandlerList } from "../../../../ui/src/lib/model";
 
 export const listSourceBranches = (payload: {
   source: string;

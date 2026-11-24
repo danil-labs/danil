@@ -1,7 +1,7 @@
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
-import type { AgentProfile as Profile, HandlerDefinition, HandlerStatus } from "../../../../../apps/desktop/src/lib/model";
-import type { CatalogosDeModelos } from "../../../../../apps/desktop/src/lib/models";
-import type { Superficie } from "../../../../../apps/desktop/src/lib/surfaces";
+import type { AgentProfile as Profile, HandlerDefinition, HandlerStatus } from "../../../../ui/src/lib/model";
+import type { CatalogosDeModelos } from "../../../../ui/src/lib/models";
+import type { Superficie } from "../../../../ui/src/lib/surfaces";
 
 /** Las extensiones que el webview pinta como `data:` URI (`preview::data_url`). */
 const IMAGES = ["png", "jpg", "jpeg", "webp", "gif"];

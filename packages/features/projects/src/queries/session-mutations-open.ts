@@ -3,8 +3,8 @@ import { invoke } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
 import { carpetasDelEscritorio, type Space } from "../../../../../apps/desktop/src/lib/spaces.ts";
-import { artifactTabId, browserTabId, fileTabId, siteTabId, type ArtifactTab, type SiteTab } from "../../../../../apps/desktop/src/lib/tabs.ts";
-import type { ArbolEnTarea, Project, Source } from "../../../../../apps/desktop/src/lib/model.ts";
+import { artifactTabId, browserTabId, fileTabId, siteTabId, type ArtifactTab, type SiteTab } from "../../../../ui/src/lib/tabs.ts";
+import type { ArbolEnTarea, Project, Source } from "../../../../ui/src/lib/model.ts";
 import type { ChatExportado, DraftsStore, PanelsStore, TabsStore, TaskFilesStore } from "../../../../../apps/desktop/src/lib/project-block-types.ts";
 import type { SessionRow } from "../screens/Sessions.tsx";
 
