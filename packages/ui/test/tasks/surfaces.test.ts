@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chipModel, menuSurfaces, type Surface, surfaceHas, surfaceOf } from "../../src/lib/tasks/index.ts";
+import { chipModel, defaultSurfaceModel, menuSurfaces, type Surface, surfaceHas, surfaceOf } from "../../src/lib/tasks/index.ts";
 
 const zen: Surface = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
 const free: Surface = { id: "opencode-zen:free", provider: "opencode-zen", label: "Modelos Free", catalogo: "gratuitos", usable: false, marca: "sin activar", porque: null };
@@ -92,4 +92,17 @@ test("con el motor nuevo, OpenCode y el Free Router son dos filas de una superfi
   assert.equal(surfaceOf([opencode, router], "opencode-local", "llamacpp/qwen", [], undefined), undefined);
   const credits: Surface = { ...opencode, id: "danil-credits", label: "Danil Credits" };
   assert.equal(surfaceHas(credits, { id: "danil-credits/danil/equilibrado", gratis: false }), true);
+});
+
+test("Danil Credits elige Equilibrado por omisión aunque Ligero aparezca primero", () => {
+  const credits: Surface = { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
+  const tiers = [
+    { id: "danil-credits/danil/ligero", gratis: false },
+    { id: "danil-credits/danil/equilibrado", gratis: false },
+    { id: "danil-credits/danil/avanzado", gratis: false },
+  ];
+  assert.equal(defaultSurfaceModel(credits, tiers)?.id, "danil-credits/danil/equilibrado");
+  assert.equal(defaultSurfaceModel(credits, [tiers[0], tiers[2]])?.id, "danil-credits/danil/ligero");
+  const claude: Surface = { id: "claude", provider: "claude", label: "Claude", catalogo: "todo", usable: true, marca: null, porque: null };
+  assert.equal(defaultSurfaceModel(claude, [{ id: "sonnet" }, { id: "opus" }])?.id, "sonnet");
 });

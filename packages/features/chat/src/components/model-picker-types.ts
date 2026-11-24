@@ -7,7 +7,7 @@ import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterC
 const esServicio = (opcion: OpcionDeModelo | undefined) => !!opcion && danilServiceOf(opcion.model.id) !== null;
 function nombreDeServicio(id: string | undefined) {
   const servicio = danilServiceOf(id);
-  if (servicio === "credits") return t("chat.credits.label");
+  if (servicio === "credits") return t("chat.services.label");
   if (servicio === "router") return t("surfaces.label.free");
   return null;
 }
