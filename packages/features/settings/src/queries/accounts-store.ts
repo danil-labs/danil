@@ -6,7 +6,7 @@
  * trabaja es parte de con quién trabajas (`src-tauri/src/secrets/accounts.rs`).
  */
 import { createEffect, createSignal, on, onCleanup } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { legible, type Query, type Read } from "../../../../ui/src/lib/limits";
 import { t } from "../../../../ui/src/lib/i18n";
 import { detalleDe } from "../../../../ui/src/Failure";
@@ -40,7 +40,7 @@ export function createAccountLimit(props: {
     if (!props.enabled || preguntando()) return;
     setPreguntando(true);
     try {
-      const r = await invoke<Query>("account_limits", {
+      const r = await callEngine<Query>("account_limits", {
         provider: props.agent,
         id: props.id,
         force,

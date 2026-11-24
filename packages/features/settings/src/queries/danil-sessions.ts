@@ -5,7 +5,7 @@
  * cuenta única de `danil-account.ts`. Sin dependencias de Solid: las pruebas de
  * Node lo importan.
  */
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { forgetMachineNames } from "../../../../session/src/known-machine-names.ts";
 import { type DanilConnectStatus, failureCode } from "./danil-account.ts";
 
@@ -53,7 +53,7 @@ export async function readSessions(): Promise<DanilSessionInfo[] | null> {
 /** `null` con un motor anterior; la cuenta de `workspace` (sin él, el abierto). */
 export async function readWorkspaceAccount(workspace?: string | null): Promise<WorkspaceAccount | null> {
   try {
-    const result = await invoke<WorkspaceAccount>("danil_workspace_account", workspace ? { workspace } : {});
+    const result = await callEngine<WorkspaceAccount>("danil_workspace_account", workspace ? { workspace } : {});
     if (!result || !(result.account === null || typeof result.account === "string") || typeof result.signed_in !== "boolean" || typeof result.linked !== "boolean") throw { detail: "invalid_response" };
     return result;
   } catch (e) {
@@ -166,18 +166,18 @@ export function statusOf(s: DanilSessionInfo): DanilConnectStatus {
 /** Otra cuenta más: el motor deja el código pendiente y la ventana abre la página de aprobación. */
 export async function addAccount(name?: string): Promise<DanilConnectStatus> {
   const trimmed = name?.trim();
-  const started = await invoke<DanilConnectStatus>("danil_connect_start", trimmed ? { name: trimmed, add: true } : { add: true });
+  const started = await callEngine<DanilConnectStatus>("danil_connect_start", trimmed ? { name: trimmed, add: true } : { add: true });
   const url = started.verification_uri_complete ?? started.verification_uri;
-  if (url) await invoke("open_external", { target: url }).catch(() => {});
+  if (url) await callEngine("open_external", { target: url }).catch(() => {});
   return started;
 }
 
-export const setDefaultAccount = (account: string) => invoke<DanilSessionInfo[]>("danil_set_default_account", { account });
+export const setDefaultAccount = (account: string) => callEngine<DanilSessionInfo[]>("danil_set_default_account", { account });
 
 export const signOutAccount = (account: string) => {
   // Los nombres son de las flotas de todas las cuentas: se borran todos y la siguiente lectura los repone.
   forgetMachineNames();
-  return invoke<DanilConnectStatus>("danil_disconnect", { account });
+  return callEngine<DanilConnectStatus>("danil_disconnect", { account });
 };
 
 

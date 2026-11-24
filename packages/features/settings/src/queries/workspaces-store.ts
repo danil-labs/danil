@@ -8,7 +8,7 @@
  * Linux no, así que el CI de Ubuntu daría verde.
  */
 import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { createNavigationOrder } from "../../../../ui/src/lib/navigation-order";
 import { activeWorkspaceContext, workspaceContextOptions } from "../../../../session/src/workspace-context.ts";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
@@ -42,7 +42,7 @@ export function anunciarRenombrado() {
 let enVuelo: Promise<Startup> | null = null;
 
 function pedirEspacios(): Promise<Startup> {
-  enVuelo ??= invoke<Startup>("list_workspaces").finally(() => {
+  enVuelo ??= callEngine<Startup>("list_workspaces").finally(() => {
     enVuelo = null;
   });
   return enVuelo;
@@ -101,7 +101,7 @@ export function createWorkspaces() {
   async function cambiarA(id: string | null, context?: string) {
     if (id === activo() && (context ?? null) === activeWorkspaceContext()) return;
     try {
-      await invoke("set_active_workspace", { id }, workspaceContextOptions(context ?? null));
+      await callEngine("set_active_workspace", { id }, workspaceContextOptions(context ?? null));
       // Una lista pedida antes del cambio trae el anterior como activo; los
       // demás montajes la heredarían y un clic de vuelta a él no haría nada.
       enVuelo = null;

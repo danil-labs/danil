@@ -28,7 +28,7 @@ import { canSeal, sealForRecipients } from "../../../../platform-client/src/seal
 export { credentialMachines };
 import { createRoot, createSignal } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { detalleDe, type Failure } from "../../../../ui/src/Failure";
 import type { Startup } from "./workspaces-store";
@@ -129,17 +129,17 @@ const engineBackend: CredentialsBackend = {
   where: "engine",
   async list() {
     try {
-      return credentialsListingOf(await invoke<unknown>("account_credentials_list"));
+      return credentialsListingOf(await callEngine<unknown>("account_credentials_list"));
     } catch (e) {
       if (HIDDEN.test(JSON.stringify(e ?? null))) return null;
       throw e;
     }
   },
-  remove: async (_ws, credential) => void (await invoke("account_credential_delete", { credential })),
-  removeMachine: async (_ws, credential, computer) => void (await invoke("account_credential_remove_machine", { credential, computer })),
-  restoreMachine: async (_ws, credential, computer) => void (await invoke("account_credential_restore_machine", { credential, computer })),
+  remove: async (_ws, credential) => void (await callEngine("account_credential_delete", { credential })),
+  removeMachine: async (_ws, credential, computer) => void (await callEngine("account_credential_remove_machine", { credential, computer })),
+  restoreMachine: async (_ws, credential, computer) => void (await callEngine("account_credential_restore_machine", { credential, computer })),
   async upload(_ws, slots) {
-    const report = await invoke<{ uploaded?: string[]; failed?: { slot: string; error: string }[] } | null>("account_credentials_upload", { slots });
+    const report = await callEngine<{ uploaded?: string[]; failed?: { slot: string; error: string }[] } | null>("account_credentials_upload", { slots });
     const failed = report?.failed ?? [];
     if (failed.length) throw { what: { clave: failed[0]!.error }, detail: failed.map((f) => `${f.slot}: ${f.error}`).join("\n") };
   },
@@ -158,7 +158,7 @@ let readAt = 0;
 const FRESH_MS = 5_000;
 
 async function read(): Promise<void> {
-  const startup = await invoke<Startup>("list_workspaces").catch(() => null);
+  const startup = await callEngine<Startup>("list_workspaces").catch(() => null);
   const workspace = startup?.active ?? null;
   if (!workspace) {
     setView({ kind: "none" });
