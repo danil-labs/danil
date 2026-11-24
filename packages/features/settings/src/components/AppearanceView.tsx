@@ -10,7 +10,7 @@ import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
 import { Pressable } from "../../../../ui/src/Pressable";
-import { LogoDelWorkspace } from "./Workspaces";
+import { LogoDelWorkspace } from "./WorkspacesLogo";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { PiezasDeAjustes } from "../model/features-port";
 import { createApariencia } from "./AppearanceState";

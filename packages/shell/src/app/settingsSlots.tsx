@@ -4,6 +4,7 @@ import type { MaquinasDeAjustes } from "../../../features/settings/src/model/mac
 import type { PiezasDeAjustes } from "../../../features/settings/src/model/features-port";
 import type { SesionesDeAjustes } from "../../../features/settings/src/model/sessions-port";
 import { accountReturn, MoveWorkspaceDialog, noteWebAccountMode, sessionRailState, usesGroupAccounts } from "../shell";
+import { organizationLogo } from "../shell/organization-logo";
 import { MarcaDeWorkspace } from "../shell/WorkspaceMarks";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import NewAgent from "../../../features/projects/src/screens/NewAgent";
@@ -37,6 +38,7 @@ const sesionesDeAjustes: SesionesDeAjustes = {
   usesGroupAccounts,
   MoveWorkspaceDialog,
   MarcaDeWorkspace,
+  organizationLogo,
 };
 
 /** Configuración con sus máquinas: viaja en el mismo chunk perezoso que la pantalla. */

@@ -605,6 +605,12 @@ const steps = [
     root,
   ],
   [
+    "Settings resolves workspaces across Desk and Web with metadata and scope badges",
+    process.execPath,
+    ["--test", "--experimental-strip-types", join(root, "tests/unit/settings-workspaces.test.ts")],
+    root,
+  ],
+  [
     "A site's layer shows when due",
     process.execPath,
     ["--test", "--experimental-strip-types", join(root, "tests/unit/sites.test.ts")],

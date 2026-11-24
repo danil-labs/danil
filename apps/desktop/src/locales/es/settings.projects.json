@@ -1,9 +1,0 @@
-{
-  "settings.projects.delete": "Borrar el proyecto",
-  "settings.projects.delete_now": "Borrar",
-  "settings.projects.delete_title": "¿Borrar «{name}»?",
-  "settings.projects.delete_with": {
-    "one": "Borrar con su tarea",
-    "other": "Borrar con sus {count} tareas"
-  }
-}

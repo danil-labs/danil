@@ -8,7 +8,6 @@
  * Linux no, así que el CI de Ubuntu daría verde.
  */
 import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
 import { invoke } from "../../../../engine-client/src/client.ts";
 import { createNavigationOrder } from "../../../../ui/src/lib/navigation-order";
 import { activeWorkspaceContext, workspaceContextOptions } from "../../../../session/src/workspace-context.ts";
@@ -50,15 +49,12 @@ function pedirEspacios(): Promise<Startup> {
 }
 
 /**
- * Estado que comparten los montajes —la columna, el riel y el panel de
- * Configuración—: la lista, cuál está activo, si hay un turno vivo, y cómo se
- * cambia.
+ * Estado que comparten los montajes —la columna, el riel y el selector de
+ * Configuración—: la lista, cuál está activo y cómo se cambia.
  *
  * Cambiar con una tarea contestando es válido: el turno captura su workspace al
  * arrancar y su transcripción y consumo aterrizan donde salieron
- * (`chat::Cierre`). `turnosVivos` solo bloquea BORRAR un workspace — la carpeta
- * donde el turno escribe dejaría de existir; `remove_workspace` lo niega en el
- * backend y aquí no se ofrece un clic que va a fallar.
+ * (`chat::Cierre`).
  */
 export function createWorkspaces() {
   const [lista, setLista] = createSignal<Workspace[] | null>(null);
@@ -70,9 +66,6 @@ export function createWorkspaces() {
   const [activo, setActivo] = createSignal<string | null>(null);
   const [cargando, setCargando] = createSignal(true);
   const [fallo, setFallo] = createSignal<Failure | null>(null);
-  // Cuántas sesiones están contestando. Lo emite la pantalla del chat; aquí
-  // solo decide no ofrecer el borrado.
-  const [turnosVivos, setTurnosVivos] = createSignal(0);
 
   async function cargar() {
     setCargando(true);
@@ -103,11 +96,6 @@ export function createWorkspaces() {
       window.removeEventListener("harness:workspace", alMudar);
       window.removeEventListener("harness:workspace-name", alMudar);
     });
-
-    const alTurno = (e: Event) =>
-      setTurnosVivos((e as CustomEvent<number>).detail ?? 0);
-    window.addEventListener("harness:turn", alTurno);
-    onCleanup(() => window.removeEventListener("harness:turn", alTurno));
   });
 
   async function cambiarA(id: string | null, context?: string) {
@@ -125,14 +113,6 @@ export function createWorkspaces() {
     }
   }
 
-  /** Por qué no se puede borrar ahora mismo, o `null` si sí se puede. */
-  const bloqueado = () => {
-    const n = turnosVivos();
-    return n > 0
-      ? t("settings.workspaces.blocked", { count: n })
-      : null;
-  };
-
   return {
     lista: orderedList,
     reorder: order.save,
@@ -145,8 +125,6 @@ export function createWorkspaces() {
     cargar,
     cambiarA,
     clearActive: () => cambiarA(null),
-    turnosVivos,
-    bloqueado,
   };
 }
 

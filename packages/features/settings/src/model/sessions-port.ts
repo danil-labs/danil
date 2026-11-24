@@ -2,7 +2,7 @@ import type { Component } from "solid-js";
 import type { GroupReply } from "../../../../platform-client/src/treasury-config.ts";
 
 /** Una fila del riel de sesiones: lo que Configuración lee de cada contexto. */
-type GrupoDelRiel = {
+export type GrupoDelRiel = {
   context_id: string;
   org: string;
   org_name: string | null;
@@ -11,7 +11,7 @@ type GrupoDelRiel = {
   email: string | null;
   family: string;
   added: ReadonlySet<string> | null;
-  available: readonly { id: string }[] | null;
+  available: readonly { id: string; name?: string; logo?: string | null }[] | null;
 };
 
 /** Lo mínimo del riel de sesiones del shell que usa Configuración (y el diálogo de mover que pinta). */
@@ -38,4 +38,5 @@ export type SesionesDeAjustes = {
   usesGroupAccounts: () => boolean;
   MoveWorkspaceDialog: Component<{ sessions: RielDeAjustes; workspace: { id: string; name: string }; onClose: () => void }>;
   MarcaDeWorkspace: Component<{ id?: string; name: string; logo?: string | null; load?: () => Promise<string | null> }>;
+  organizationLogo?: (context: string, workspace: string, path: string | null) => Promise<string | null>;
 };

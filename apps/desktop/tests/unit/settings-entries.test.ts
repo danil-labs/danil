@@ -9,7 +9,8 @@ test("old settings ids open the entry and tab that now hold them", () => {
   assert.deepEqual(settingsTarget("appearance"), { entry: "appearance", tab: null });
   assert.deepEqual(settingsTarget("cuenta-danil"), { entry: "account", tab: "cuenta-danil" });
   assert.deepEqual(settingsTarget("security"), { entry: "security", tab: null });
-  assert.deepEqual(settingsTarget("workspaces"), { entry: "preferences", tab: "workspaces" });
+  assert.equal(settingsTarget("workspaces"), null);
+  assert.equal(settingsTarget("preferences"), null);
   assert.deepEqual(settingsTarget("languages"), { entry: "general", tab: null });
   assert.deepEqual(settingsTarget("proveedores-ia"), { entry: "ai-accounts", tab: "proveedores-ia" });
   assert.equal(settingsTarget("machines"), null);
@@ -40,30 +41,36 @@ test("unknown or empty ids open nothing in particular", () => {
   assert.equal(settingsTarget("bitacora"), null);
 });
 
-test("eleven entries, general first then appearance, security after account, maintenance in footer, every tab in exactly one", () => {
-  assert.equal(SETTINGS_ENTRIES.length, 11);
-  assert.equal(SETTINGS_ENTRIES[0].id, "general");
-  assert.equal(SETTINGS_ENTRIES[0].group, "you");
+test("ten flat entries in final order, no preferences or workspaces/languages tabs, maintenance in footer, every tab in exactly one", () => {
+  assert.deepEqual(
+    SETTINGS_ENTRIES.map((e) => e.id),
+    [
+      "general",
+      "appearance",
+      "account",
+      "security",
+      "ai-accounts",
+      "source-control",
+      "agents-skills",
+      "connections",
+      "billing",
+      "maintenance",
+    ],
+  );
   assert.deepEqual([...SETTINGS_ENTRIES[0].tabs], ["general"]);
-  assert.equal(SETTINGS_ENTRIES[1].id, "appearance");
-  assert.equal(SETTINGS_ENTRIES[1].group, "you");
   assert.deepEqual([...SETTINGS_ENTRIES[1].tabs], ["appearance"]);
   const accountIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "account");
   const securityIndex = SETTINGS_ENTRIES.findIndex((e) => e.id === "security");
-  const preferences = SETTINGS_ENTRIES.find((e) => e.id === "preferences");
   const maintenance = SETTINGS_ENTRIES.find((e) => e.id === "maintenance");
   assert.equal(securityIndex, accountIndex + 1);
-  assert.equal(SETTINGS_ENTRIES[securityIndex].group, "you");
   assert.deepEqual([...SETTINGS_ENTRIES[securityIndex].tabs], ["security"]);
   assert.ok(!(SETTINGS_ENTRIES[accountIndex].tabs as readonly string[]).includes("security"));
-  assert.ok(preferences);
-  assert.ok(!(preferences.tabs as readonly string[]).includes("general"));
-  assert.ok(!(preferences.tabs as readonly string[]).includes("appearance"));
-  assert.ok(!(preferences.tabs as readonly string[]).includes("notify"));
-  assert.ok(!(preferences.tabs as readonly string[]).includes("download"));
-  assert.equal(maintenance?.group, "footer");
+  assert.ok(maintenance && "footer" in maintenance && maintenance.footer === true);
   assert.deepEqual(maintenance ? [...maintenance.tabs] : [], ["maintenance"]);
   const tabs = SETTINGS_ENTRIES.flatMap((e) => [...e.tabs]);
   assert.ok(!tabs.includes("languages"));
+  assert.ok(!tabs.includes("workspaces"));
+  assert.ok(!tabs.includes("notify"));
+  assert.ok(!tabs.includes("download"));
   assert.equal(new Set(tabs).size, tabs.length);
 });
