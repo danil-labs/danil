@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { createTaskFiles, taskFileTabId, taskSidePanelKind, taskSideUsesSplitWidth } = await import("../../src/lib/taskFiles.ts");
+const { createTaskFiles, taskFileTabId, taskSideLayout, taskSidePanelKind, taskSideUsesSplitWidth } = await import("../../src/lib/taskFiles.ts");
 
 const ids = (files: ReturnType<typeof createTaskFiles>, task: string) => files.panel(task).tabs.map((tab) => tab.path);
 
@@ -147,4 +147,18 @@ test("archivos/buscador y subtareas mantienen estado independiente con uno visib
   assert.equal(files.panel("t").subtask, null);
   assert.equal(taskSideUsesSplitWidth(files.panel("t")), false);
   assert.deepEqual(files.activeSubtasks(), []);
+  assert.equal(taskSideLayout(files.panel("t"), false), "floating");
+
+  files.openSubtask("t", { project: "p1", session: "sub-2" });
+  assert.equal(taskSideLayout(files.panel("t"), false), "split-thread");
+  assert.equal(taskSideLayout(files.panel("t"), true), "replace");
+
+  files.present("t", "files");
+  assert.equal(taskSideLayout(files.panel("t"), false), "replace");
+
+  files.present("t", "search");
+  assert.equal(taskSideLayout(files.panel("t"), false), "floating");
+
+  files.setOpen("t", false);
+  assert.equal(taskSideLayout(files.panel("t"), false), "closed");
 });
