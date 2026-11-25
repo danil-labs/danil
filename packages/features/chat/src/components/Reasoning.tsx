@@ -10,6 +10,7 @@ import { Spinner } from "../../../../ui/src/Spinner";
 import type { Razonamiento } from "../model/messageTypes";
 import { createRowSignal } from "../model/threadRow";
 import { HUECO_DE_GLIFO } from "./StepGlyph";
+import { reasoningHeadline, withEllipsis } from "../model/activityNarration";
 
 /** Reasoning renders as a collapsible row matching tool rows inside the turn's activity disclosure. */
 export default function Reasoning(props: { bloques: Razonamiento[]; slot?: string; active?: boolean }) {
@@ -18,7 +19,10 @@ export default function Reasoning(props: { bloques: Razonamiento[]; slot?: strin
   const open = () => Boolean(openMap()[slotKey()]);
   const toggle = () => setOpenMap({ ...openMap(), [slotKey()]: !open() });
   const durationMs = () => props.bloques.reduce((acc, b) => acc + (b.durationMs ?? 0), 0);
+  const headline = () => reasoningHeadline(props.bloques, { latest: Boolean(props.active), allowSentence: false });
   const label = () => {
+    const title = headline();
+    if (title) return props.active ? withEllipsis(title) : title;
     if (props.active) return t("chat.reasoning.thinking");
     return durationMs() > 0
       ? t("chat.reasoning.row_duration", { duration: formatearDuracion(durationMs()) })
@@ -50,7 +54,10 @@ export default function Reasoning(props: { bloques: Razonamiento[]; slot?: strin
               <Spinner size={12} class="text-primary" />
             </span>
           </Show>
-          <span class="shrink-0 font-medium text-neutral-700">{label()}</span>
+          <span class="min-w-0 truncate font-medium text-neutral-700">{label()}</span>
+          <Show when={headline() && !props.active && durationMs() > 0}>
+            <span class="shrink-0 text-caption text-neutral-500">· {formatearDuracion(durationMs())}</span>
+          </Show>
         </Pressable>
         <Show when={open()}>
           <div class="ml-5 grid gap-2 border-l border-border py-1 pl-3 text-sm text-neutral-500 select-text" data-reasoning-body="">

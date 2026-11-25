@@ -50,8 +50,10 @@ export function RegistroDeTrabajo(props: {
   const todos = createMemo(() => [...avance().flatMap((a) => a.pasos), ...props.pasos]);
   const runningSteps = createMemo(() => todos().filter((step) => step.corriendo).length);
   const action = createMemo(() => currentActivityAction(props.latestAction, todos()));
-  const presentation = createMemo(() => presentActivity({ active: props.corriendo, outcome: props.outcome, stopping: props.stopping, blocked: props.blocked, paused: props.animando === false, duration: props.duracion, action: action(), runningSteps: runningSteps(), label: props.label }));
+  const presentation = createMemo(() => presentActivity({ active: props.corriendo, outcome: props.outcome, stopping: props.stopping, blocked: props.blocked, paused: props.animando === false, duration: props.duracion, action: action(), reasoning: props.razonamiento, runningSteps: runningSteps(), label: props.label }));
   const rotulo = () => presentation().label;
+  // Solo cicla palabras genéricas («Pensando…», «Cavilando…») cuando aún no llegó un título vivo.
+  const genericThinking = () => action()?.kind === "thinking" && rotulo() === t("chat.reasoning.thinking");
   const hasContent = () => todos().length > 0 || avance().some(chunk => chunk.msg.razonamiento?.length || (!chunk.outside && chunk.msg.text)) || Boolean(props.razonamiento?.length);
   // Solo hay dropdown (>) si realmente hubo herramientas, lecturas o razonamiento.
   // Un turno sin herramientas ni razonamiento solo muestra «Trabajó durante Xs».
@@ -74,7 +76,7 @@ export function RegistroDeTrabajo(props: {
   );
   const girando = () => <ActivityIndicator mode={!props.corriendo ? "finished" : presentation().animate ? "running" : "paused"} />;
   const blocked = () => props.corriendo && !props.stopping && props.blocked;
-  const caption = () => <Show when={!blocked()} fallback={props.status?.()}><ActivityCaption active={presentation().animate} thinking={action()?.kind === "thinking"} text={rotulo()} /></Show>;
+  const caption = () => <Show when={!blocked()} fallback={props.status?.()}><ActivityCaption active={presentation().animate} thinking={genericThinking()} text={rotulo()} /></Show>;
   const showHeader = () => inspectable() || props.corriendo;
 
 
