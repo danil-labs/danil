@@ -24,8 +24,12 @@ function orderedCards(usage: Usage, agent: string) {
   return [...all.filter((c) => c.agent === agent), ...all.filter((c) => c.agent !== agent)];
 }
 
-function hasDanilCreditsCapability() {
+export function hasDanilCreditsCapability() {
   return Boolean(capabilities().danilCredits || capabilities().nativeWindow);
+}
+
+export function useDanilCreditsStatus(enabled: () => boolean) {
+  return createDanilCreditsBalance({ enabled });
 }
 
 /** El consumo de la cuenta del agente de esta ventana. El detalle vive en la ventana de la tarea. */

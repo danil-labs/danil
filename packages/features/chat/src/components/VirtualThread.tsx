@@ -53,6 +53,10 @@ export function VirtualThread(props: {
     initialOffset: FROM_THE_END,
     anchorTo: "end",
     followOnAppend: false,
+    // `seguirElFondo` es el único dueño de seguir el final: desactivar `wasAtEnd` en TanStack
+    // impide que `resizeItem` sume `+delta` a su `scrollOffset` interno cuando un desplegable
+    // crece cerca del fondo sin que la barra se mueva (lo que desmontaba filas visibles).
+    scrollEndThreshold: -1,
     // `seguirElFondo` es el único dueño de `scrollTop`: TanStack nunca escribe la barra
     // por su cuenta (evita saltos a estimaciones viejas al anteponer o cambiar el conteo).
     scrollToFn: () => {},
@@ -213,7 +217,14 @@ export function VirtualThread(props: {
     const nextMargins = list.map((item) => `${item.before}:${item.after}`).join(",");
     const layoutChanged = added.length > 0 || removed || nextMargins !== prevMargins;
     prevMargins = nextMargins;
-    if (layoutChanged) props.settled();
+    if (layoutChanged) {
+      props.settled();
+      // Alinea el offset interno de TanStack con el `scrollTop` real que acaba de escribir
+      // `settled()` antes de medir filas recién montadas (el evento `scroll` llega después).
+      if (virtualizer.scrollOffset !== null) {
+        virtualizer.scrollOffset = props.scroller.scrollTop;
+      }
+    }
     if (added.length > 0) {
       batch(() => {
         for (const row of added) {

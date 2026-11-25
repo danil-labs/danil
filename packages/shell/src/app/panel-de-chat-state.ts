@@ -129,7 +129,7 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
       loading: delegation.loading,
       error: delegationData()?.error,
       onRetry: () => void refreshDelegation(),
-      onDismiss: () => { if (pp.sesion) archivosDeTarea.setOpen(pp.sesion, false); },
+      onDismiss: () => { if (pp.sesion) archivosDeTarea.closePopover(pp.sesion); },
     });
     createEffect(() => {
       if (pp.inline || !pp.sesion || !hasDelegation()) return;

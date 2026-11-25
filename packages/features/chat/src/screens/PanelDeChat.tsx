@@ -2,7 +2,7 @@ import { t } from "../../../../ui/src/lib/i18n";
 import { type Agent, type Project, type Source } from "../../../../ui/src/lib/model.ts";
 import { sameSite, type PanelSite as SitioDePanel } from "../../../../ui/src/lib/panels";
 import { type Tab, type TaskTab } from "../../../../ui/src/lib/tabs.ts";
-import { type TaskSideMode } from "../../../../ui/src/lib/taskFiles";
+import { isTaskToolActive, type TaskSideMode } from "../../../../ui/src/lib/taskFiles";
 import { isWindows } from "../../../../host/src/window";
 import { BotonConAtajo } from "../../../../ui/src/Shortcut";
 import { type Lectura } from "../model/threadWindow";
@@ -238,7 +238,7 @@ export function createPanelDeChat<Usage, Delegated>(deps: PanelDeChatDeps<Usage>
   // La sesión llega como accesor: leída al llamar, cada cambio de tarea volvería a montar el botón.
   const muestra = (id: string, mode: TaskSideMode) => {
     const panel = archivosDeTarea.panel(id);
-    return !!id && panel.open && panel.mode === mode;
+    return !!id && isTaskToolActive(panel, mode);
   };
   const botonDeArchivos = (sesion: () => string) => (
     <BotonConAtajo
