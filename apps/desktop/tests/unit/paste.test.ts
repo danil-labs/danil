@@ -632,3 +632,92 @@ test("el relleno de un turno se suelta al cerrarlo", async () => {
   assert.equal(h.c.style.paddingBottom ?? "", "", "el relleno del turno siguió puesto después de cerrarlo");
   assert.equal(h.p.alFondo(), true);
 });
+
+test("subir con la rueda estando ya suelto no se atora ni rebota al punto anterior", async () => {
+  // Síntoma: al subir con rueda en un hilo largo, `alRodar` re-tomaba el ancla ANTES
+  // de que el navegador aplicara el desplazamiento y `sostener()` o el observador
+  // devolvían `scrollTop` hacia abajo en cada paso.
+  const { el, emitir } = contenedorFalso(400, 2000);
+  const p = createRoot(() => seguirElFondo());
+  const c = contenidoFalso(el, Array(10).fill(200));
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 2000);
+  await cuadros(3);
+
+  // Suelto a media conversación.
+  el.scrollTop = 900;
+  await cuadros(1);
+  assert.equal(p.alFondo(), false);
+
+  // Rueda hacia arriba -> el navegador aplica el paso -> `sostener()` y el observador corren.
+  emitir("wheel", { target: el, deltaY: -120 });
+  el.scrollTop = 780;
+  // Antes de que llegue el microtask de `scroll`, un `sostener()` no puede deshacer la rueda.
+  p.sostener();
+  assert.equal(el.scrollTop, 780, "sostener en vuelo no debe regresar la barra hacia abajo");
+  await cuadros(1);
+
+  // Segundo paso de rueda hacia arriba con cambio de tamaño en medio.
+  emitir("wheel", { target: el, deltaY: -120 });
+  el.scrollTop = 660;
+  c.crecer(9, 40);
+  el.scrollHeight += 40;
+  disparar!(c, el.scrollHeight);
+  await cuadros(2);
+  assert.equal(el.scrollTop, 660, "la rueda continua hacia arriba no debe atorarse");
+});
+
+test("subir pocos píxeles cerca del final suelta y un encogimiento inmediato no vuelve a enganchar", async () => {
+  const { el, emitir } = contenedorFalso(400, 2000);
+  const p = createRoot(() => seguirElFondo());
+  const c = contenidoFalso(el, Array(10).fill(200));
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 2000);
+  await cuadros(3);
+
+  // Subir 30 px desde el fondo (todavía dentro de MARGEN_DE_FONDO = 70 px).
+  emitir("wheel", { target: el, deltaY: -30 });
+  el.scrollTop = el.scrollTop - 30;
+  await cuadros(1);
+
+  // Un encogimiento mientras la persona acaba de rodar hacia arriba no la vuelve a pegar.
+  c.crecer(9, -20);
+  el.scrollHeight -= 20;
+  disparar!(c, el.scrollHeight);
+  await cuadros(2);
+
+  // Al crecer el hilo después, sigue suelto en vez de arrastrar hacia el fondo.
+  const donde = el.scrollTop;
+  c.crecer(9, 400);
+  el.scrollHeight += 400;
+  disparar!(c, el.scrollHeight);
+  await cuadros(2);
+  assert.equal(el.scrollTop, donde, "debe seguir suelto tras subir cerca del final");
+});
+
+test("sostener actualiza el ancla tras compensar un cambio por encima", async () => {
+  const { el } = contenedorFalso(400, 2000);
+  const p = createRoot(() => seguirElFondo());
+  const c = contenidoFalso(el, Array(10).fill(200));
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 2000);
+  await cuadros(3);
+
+  el.scrollTop = 600;
+  await cuadros(1);
+
+  // Crece por encima (como una fila recién medida en VirtualThread) y `sostener()` corrige.
+  c.crecer(1, 140);
+  el.scrollHeight += 140;
+  p.sostener();
+  assert.equal(el.scrollTop, 740);
+  await cuadros(1);
+
+  // El ResizeObserver que llega después no vuelve a sumar 140 px.
+  disparar!(c, el.scrollHeight);
+  await cuadros(2);
+  assert.equal(el.scrollTop, 740, "el observador no debe corregir dos veces tras sostener()");
+});
