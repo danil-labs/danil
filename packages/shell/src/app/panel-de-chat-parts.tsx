@@ -28,18 +28,11 @@ export function createPanelDeChatParts(deps: PanelDeChatPartsDeps) {
     proyecto?: string | null;
     soloLectura?: boolean;
     inline?: boolean;
-    toolbar?: () => JSX.Element;
   }, { proyectoDeLaCelda, estadoDelTrabajo }: ReturnType<typeof estadoDePanelDeChat>) => {
-    // Una sola barra superior de 38 px (`LOCATION_BAR`) con ubicación a la izquierda y herramientas
-    // a la derecha: queda alineada al píxel con la cabecera del panel derecho en el split.
-    const barraDeLaTarea = (contenido: JSX.Element) => (
-      <div data-task-bar="" class={cn("flex min-w-0 shrink-0 items-center justify-between gap-2 border-b border-border/60 pr-2.5", LOCATION_BAR)}>
-        <div class="flex h-full min-w-0 flex-1 items-center overflow-hidden">{contenido}</div>
-        <Show when={pp.toolbar}>
-          <div class="flex shrink-0 items-center">{pp.toolbar?.()}</div>
-        </Show>
-      </div>
-    );
+    // Máquina, carpeta y rama de la tarea. Fija en la parte superior a todo lo ancho:
+    // no se mueve al abrir archivos, buscador, subtareas o hilo dividido.
+    const barraDeLaTarea = (contenido: JSX.Element) =>
+      <div data-task-bar="" class={cn("flex min-w-0 shrink-0 flex-col overflow-hidden", LOCATION_BAR)}>{contenido}</div>;
     const ubicacion = () => <Show when={pp.sesion} fallback={<Show when={!paginaDeAgente()}>{barraDeLaTarea(<Suspense fallback={null}><TaskLocation
       /* La tarea nueva: la máquina y la carpeta donde va a correr. La rama sale al empezarla. */
       machine={(draftMachine() ?? (capabilities().nativeWindow ? null : rememberedRunOn(workspaceActivo()))) ?? undefined} machineName={machineName} machineWakes={machineWakes} folderIcon={folderIcon}

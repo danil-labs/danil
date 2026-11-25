@@ -7,7 +7,7 @@ import { left, legible, tono } from "../../../ui/src/lib/limits";
 import { sharedLazy } from "../../../ui/src/lib/sharedLazy";
 import { cn } from "../../../ui/src/lib/utils";
 import { capabilities } from "../../../host/src/platform";
-import { LOCATION_BAR } from "../../../host/src/window";
+import { HEADER_HEIGHT } from "../../../host/src/window";
 import { Button } from "../../../ui/src/Button";
 import { MarcaAgente } from "../../../ui/src/icons";
 import { ProgressBar } from "../../../ui/src/ProgressBar";
@@ -138,7 +138,7 @@ export function UsagePanel(props: { usage: Usage; agent: string; onManage: () =>
   const cards = () => orderedCards(props.usage, props.agent);
   return (
     <>
-      <div class={cn("flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3", LOCATION_BAR)}>
+      <div class={cn("flex shrink-0 items-center justify-between gap-2 border-b border-border px-3", HEADER_HEIGHT)}>
         <span class="text-xs font-semibold text-neutral-950">{t("usage.heading")}</span>
         <Show when={props.onClose}>
           {(close) => (

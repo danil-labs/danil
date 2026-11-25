@@ -20,6 +20,9 @@ export type TaskSideMode = "files" | "search" | "usage" | "delegated";
 /** Logical ownership group of the right-hand panel: files & search vs subtasks vs usage. */
 export type TaskSidePanelKind = "files-search" | "subtasks" | "usage";
 
+/** Presentation geometry of the task side pane, keeping the top bar untouched. */
+export type TaskSideLayout = "closed" | "replace" | "floating" | "split-thread";
+
 export type SubtaskTarget = {
   project: string;
   session: string;
@@ -29,6 +32,22 @@ export function taskSidePanelKind(mode: TaskSideMode): TaskSidePanelKind {
   if (mode === "delegated") return "subtasks";
   if (mode === "usage") return "usage";
   return "files-search";
+}
+
+/**
+ * Single owner of how each side panel appears below the fixed top bar:
+ * - Files opens in place of the conversation ("replace").
+ * - Search, Usage and the Subtasks list open as floating Danil cards ("floating").
+ * - Selecting a subtask splits the conversation area with a vertical divider ("split-thread", or "replace" when narrow).
+ */
+export function taskSideLayout(
+  panel: Pick<TaskFilesPanel, "open" | "mode" | "subtask">,
+  narrow: boolean,
+): TaskSideLayout {
+  if (!panel.open) return "closed";
+  if (panel.mode === "files") return "replace";
+  if (panel.mode === "delegated" && panel.subtask !== null) return narrow ? "replace" : "split-thread";
+  return "floating";
 }
 
 export type TaskFilesPanel = {

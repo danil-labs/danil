@@ -134,10 +134,10 @@ if (!broken) {
   }
   treeButton.click();
   await sleep(300);
-  const resizeHandle = normal.w.document.querySelector('[role="separator"][aria-label="Ancho del panel de archivos"]');
   const filesPanel = normal.w.document.querySelector("[data-task-files]");
-  if (!resizeHandle || !filesPanel || normal.failures.length > 0) {
-    console.error(`El panel de archivos de la tarea no montó: tirador=${!!resizeHandle}, tarjeta=${!!filesPanel}.`);
+  const replacesChat = filesPanel?.getAttribute("data-task-layout") === "replace";
+  if (!filesPanel || !replacesChat || normal.failures.length > 0) {
+    console.error(`El panel de archivos de la tarea no montó: tarjeta=${!!filesPanel}, layout=${filesPanel?.getAttribute("data-task-layout")}.`);
     for (const f of normal.failures.slice(0, 3)) {
       for (const l of String(f).split("\n").slice(0, 6)) console.error(`      ${l}`);
     }
@@ -165,8 +165,10 @@ if (!broken) {
       .filter((buttonEl) => !buttonEl.closest('[style*="width: 0px"]')).length;
   // El tirador es lo único que distingue abierta de cerrada: la cabecera de la
   // columna sigue en el documento colapsada, y su botón de cerrar con ella.
-  const columnOpen = () =>
-    Boolean(trafficLight.w.document.querySelector('[role="separator"][aria-label="Ancho del panel de archivos"]'));
+  const columnOpen = () => {
+    const panel = trafficLight.w.document.querySelector("[data-task-files]");
+    return Boolean(panel && panel.getAttribute("data-task-layout") !== "closed" && !panel.closest(".hidden"));
+  };
   assert.equal(columnOpen(), false, "la columna nace cerrada");
   assert.equal(trafficLights(), 1, "con la columna cerrada el semáforo es el del chasis");
   trafficLight.w.document.querySelector('[data-sesion="s1"]').click();

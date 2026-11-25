@@ -5,7 +5,7 @@ import { createEffect, For, Show } from "solid-js";
 import { df } from "../../../../ui/src/lib/format";
 import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
-import { LOCATION_BAR } from "../../../../host/src/window";
+import { HEADER_HEIGHT } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { groupSearchHits, type SearchHit } from "../model/searchCards";
@@ -27,7 +27,7 @@ export default function SearchPanel(props: { surface: SearchSurface }) {
   const groups = () => groupSearchHits(props.surface.cards());
   return (
     <>
-      <div class={cn("flex shrink-0 items-center gap-1 border-b border-border/60 px-2", LOCATION_BAR)} role="search" aria-label={t("chat.search.label")}>
+      <div class={cn("flex shrink-0 items-center gap-1 border-b border-border px-1.5", HEADER_HEIGHT)} role="search" aria-label={t("chat.search.label")}>
         <Input ref={(el) => props.surface.bindInput(el)} class="h-7 min-h-0 flex-1 py-0 text-xs focus-visible:border-border-strong focus-visible:outline-none" value={props.surface.query()}
           placeholder={t("chat.search.placeholder")} aria-label={t("chat.search.label")}
           onInput={(event) => props.surface.setQuery(event.currentTarget.value)}
