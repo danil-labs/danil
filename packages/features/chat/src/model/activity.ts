@@ -3,7 +3,7 @@ import type { Msg } from "./messageTypes.ts";
 import { ActivityAnchor, savedActivityTurn as savedTurn } from "./activityAnchor.ts";
 import type { TurnOutcome } from "./turnActivity.ts";
 export type { TurnActivity, TurnOutcome } from "./turnActivity.ts";
-type RecordOfActivity = { key: string; active: boolean; outcome: TurnOutcome; startConfirmed: boolean; startedAt: number | null; saved: Set<string>; baseline: readonly string[] | null; lastObserved: Msg | null; lastObservedKind: ActivityObservationKind | null; anchor: ActivityAnchor; alias?: RecordOfActivity };
+type RecordOfActivity = { key: string; active: boolean; outcome: TurnOutcome; startConfirmed: boolean; startedAt: number | null; saved: Set<string>; baseline: readonly string[] | null; lastObserved: Msg | null; lastObservedKind: ActivityObservationKind | null; anchor: ActivityAnchor; shown: readonly Msg[]; alias?: RecordOfActivity };
 const scopeKey = (workspace: string | null, session: string) => JSON.stringify([workspace, session]);
 const epoch = (value: number | null) => value !== null && Number.isFinite(value) && value > 0 ? value : null;
 const isInterruption = (m: Msg) =>
@@ -32,7 +32,7 @@ export function createActivityProjection() {
     const key = scopeKey(workspace, session);
     const known = before?.map(savedTurn).filter((id): id is string => Boolean(id));
     const baseline = before === null || (before.length > 0 && !known?.length) ? null : known ?? [];
-    records.set(key, [...list(workspace, session), { key: `${key}:activity:${++serial}`, active: true, outcome: "running", startConfirmed, startedAt: epoch(startedAt), saved: new Set(), baseline, lastObserved: null, lastObservedKind: null, anchor: new ActivityAnchor(before) }]);
+    records.set(key, [...list(workspace, session), { key: `${key}:activity:${++serial}`, active: true, outcome: "running", startConfirmed, startedAt: epoch(startedAt), saved: new Set(), baseline, lastObserved: null, lastObservedKind: null, anchor: new ActivityAnchor(before), shown: [] }]);
     return true;
   }
   function observe(workspace: string | null, session: string, before: readonly Msg[], after: readonly Msg[]) {
@@ -94,7 +94,15 @@ export function createActivityProjection() {
   }
   function project(workspace: string | null, session: string, visible: readonly Msg[]): TurnActivity<Msg>[] {
     return list(workspace, session).flatMap(record => {
-      const messages = visible.filter(message => { const owner = owners.get(message); return (owner?.alias ?? owner) === record; });
+      const fresh = visible.filter(message => { const owner = owners.get(message); return (owner?.alias ?? owner) === record; });
+      // **Un turno conserva lo que ya mostró.** Releer el disco, sellar lo vivo o
+      // adoptar un borrador sustituye los objetos del hilo: el dueño se resuelve
+      // por identidad y por los ids guardados, y mientras ese enlace falta la
+      // lista quedaría vacía. La cabecera caía entonces en «Pensando…» y las
+      // herramientas ya vistas desaparecían en mitad del turno. Lo que el turno
+      // ya mostró es un hecho de presentación: no se pierde.
+      if (fresh.some(isRealWork)) record.shown = fresh;
+      const messages = fresh.some(isRealWork) || record.shown.length === 0 ? fresh : record.shown;
       const hasWork = messages.some(isRealWork);
       const hasResponse = messages.some(isAgentOutput);
       const outcome: TurnOutcome = record.active
@@ -104,7 +112,9 @@ export function createActivityProjection() {
           : record.outcome === "failed" || messages.some(isFailure)
             ? "failed"
             : "done";
-      const output = messages.find(message => message.role !== "user");
+      // El ancla se busca entre los mensajes frescos: uno recordado puede no estar
+      // ya en el hilo y colocaba la fila en el índice -1.
+      const output = fresh.find(message => message.role !== "user") ?? messages.find(message => message.role !== "user");
       const anchor = record.anchor.before(visible) ?? output;
       const duration = [...messages].reverse().find(message => message.role === "agent" && message.duration_ms !== undefined)?.duration_ms;
       if (!record.active) {
@@ -113,7 +123,8 @@ export function createActivityProjection() {
         if ((outcome === "failed" || outcome === "interrupted") && !hasWork) return [];
         if (outcome === "done" && !hasWork && !hasResponse && duration === undefined) return [];
       }
-      return [{ key: record.key, anchor: anchor ?? null, anchorIndex: anchor ? visible.indexOf(anchor) : visible.length,
+      const at = anchor ? visible.indexOf(anchor) : visible.length;
+      return [{ key: record.key, anchor: anchor ?? null, anchorIndex: at < 0 ? visible.length : at,
         active: record.active, outcome, startConfirmed: record.startConfirmed, startedAt: record.startedAt, durationMs: duration ?? null, messages, observation: record.lastObserved && record.lastObservedKind ? { message: record.lastObserved, kind: record.lastObservedKind } : null }];
     });
   }

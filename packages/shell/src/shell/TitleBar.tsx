@@ -57,8 +57,8 @@ export default function TitleBar(props: {
         <span class="min-w-0 flex-1" data-tauri-drag-region="" />
         {props.finDeIzquierda}
       </div>
-      {/* La tira de pestañas trae su propio margen; se compensa para que la primera nazca en la línea. */}
-      <div class="-ml-1.5 flex min-w-0 flex-1 items-center self-stretch">{props.centro}</div>
+      {/* El margen vive aquí, fuera de la tira: si fuera su padding, el scroll horizontal se lo come y recorta la primera esquina. */}
+      <div class="flex min-w-0 flex-1 items-center self-stretch pl-2">{props.centro}</div>
       <div class="flex shrink-0 items-center gap-1 pr-2 pb-1.5">
         {props.derecha}
         <WindowControls />

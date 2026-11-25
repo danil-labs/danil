@@ -49,14 +49,15 @@ export function presentActivity(input: {
   runningSteps?: number;
   label?: string;
 }): { label: string; animate: boolean } {
-  if (!input.active) {
+  // Parar no cambia el rótulo: el loader sigue hasta que suelta `stopping`.
+  // «Deteniendo…» y «Trabajó» saltan el alto que el hilo venía sosteniendo.
+  if (!input.active && !input.stopping) {
     if (input.outcome === "failed") return { label: t("chat.activity.before_error"), animate: false };
     if (input.outcome === "interrupted") return { label: t("chat.work.title"), animate: false };
     return { label: input.duration ? t("chat.work.duration", { duration: input.duration }) : t("chat.work.title"), animate: false };
   }
-  if (input.stopping) return { label: t("chat.turn.stopping"), animate: false };
-  const animate = !input.blocked && !input.paused;
-  if (input.blocked) return { label: t("chat.activity.title"), animate: false };
+  const animate = !input.paused && (!input.blocked || Boolean(input.stopping));
+  if (input.blocked && !input.stopping) return { label: t("chat.activity.title"), animate: false };
   const action = input.action;
   if (!action) return { label: input.label ?? t("chat.activity.preparing"), animate };
   const thinkingLabel = (detail?: string) => {

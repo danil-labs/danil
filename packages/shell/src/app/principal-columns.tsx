@@ -105,7 +105,7 @@ export function createColumnasDePrincipal(deps: ColumnasDePrincipalDeps) {
           onNewTask={(id) => nuevaSesion(id)}
         />
         {/* El velo del marco cubre la columna y el hueco alrededor de la caja: un solo tono también en la esquina. */}
-        <div class="tab-veil window-frame relative flex min-h-0 flex-1 overflow-visible">
+        <div class="tab-veil window-frame relative flex min-h-0 flex-1 overflow-visible pb-2 pr-2">
           <WorkspaceColumn
             attention={attention.list()}
             onSettings={(panel) => setSettings(panel ?? "")}
@@ -130,7 +130,7 @@ export function createColumnasDePrincipal(deps: ColumnasDePrincipalDeps) {
             </>}
           />
           {/* La superficie: barra, ventana y panel derecho, una caja redondeada que flota sobre el marco. */}
-          <div class="relative mr-1 mb-1 flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[10px] bg-surface" data-surface="">
+          <div class="relative mt-2 flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[10px] bg-surface" data-surface="">
           {/* Los topes los pone quien monta: el ancho por debajo del
               cual algo deja de caber solo lo sabe su contenido. Por
               debajo de 220 los títulos del historial dejan de caber; por

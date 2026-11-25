@@ -64,6 +64,38 @@ test("question permission and an injected user never create a turn boundary", ()
   const activities = model.project("A", "s", rows);
   assert.equal(activities.length, 1); assert.equal(activities[0].anchor, first); assert.deepEqual(activities[0].messages, rows);
 });
+test("an active turn keeps the rows it already showed when a re-read cannot bind them", () => {
+  const model = createActivityProjection();
+  model.begin("A", "s", 1_000, []);
+  const prompt = message("prompt", { role: "user" });
+  const tool = message("Read a.ts", { role: "system", meta: "usó" });
+  model.observe("A", "s", [], [prompt, tool]);
+  assert.equal(model.project("A", "s", [prompt, tool])[0].messages.length, 2);
+  // Una relectura trae objetos nuevos y todavía sin el id de turno que los ata
+  // al registro: el dueño se resuelve por identidad y por `clave`, y aquí falla.
+  const rereadPrompt = message("prompt", { role: "user", clave: "otro:0" });
+  const rereadTool = message("Read a.ts", { role: "system", meta: "usó", clave: "otro:1" });
+  model.reconcile("A", "s", [prompt, tool], [rereadPrompt, rereadTool], false);
+  const kept = model.project("A", "s", [rereadPrompt, rereadTool])[0];
+  assert.equal(kept.active, true);
+  assert.ok(kept.messages.some(row => row.meta === "usó"), "the tool row already shown survives the re-read");
+  assert.ok(kept.anchorIndex >= 0 && kept.anchorIndex <= 2, "the row stays inside the thread");
+});
+
+test("a closed turn does not lose its tools when the re-read brings no ownership", () => {
+  const model = createActivityProjection();
+  model.begin("A", "s", 1_000, []);
+  const tool = message("Read a.ts", { role: "system", meta: "usó" });
+  model.observe("A", "s", [], [tool]);
+  model.finish("A", "s");
+  assert.equal(model.project("A", "s", [tool])[0].messages.length, 1);
+  const reread = message("Read a.ts", { role: "system", meta: "usó", clave: "otro:0" });
+  model.reconcile("A", "s", [tool], [reread], false);
+  const kept = model.project("A", "s", [reread]);
+  assert.equal(kept.length, 1, "the finished turn is not dropped");
+  assert.ok(kept[0].messages.some(row => row.meta === "usó"));
+});
+
 test("done and persisted history preserve the observed activity key and answer order", () => {
   const model = createActivityProjection(); model.begin("A", "s", 1_000, []);
   const live = message("first"), last = message("last"); model.observe("A", "s", [], [live, last]);

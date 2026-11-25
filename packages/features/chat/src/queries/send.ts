@@ -47,6 +47,7 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
   olvidarPestana: ReturnType<typeof createPanelDeChat>["olvidarPestana"];
   opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; };
   pendingStarts: ReturnType<typeof createThreadStream>["pendingStarts"]; pestanas: ReturnType<typeof createTabs>; pintarNaciendo: ReturnType<typeof createHandover>["pintarNaciendo"];
+  paneles: { showDraft(): void };
   project: Accessor<string>; reconcileActiveTurns: ReturnType<typeof createResync>["reconcileActiveTurns"]; refetchMachines: () => Promise<void | never[]>;
   refreshSessions: (proyectos: string[]) => Promise<void>; retirarNaciendo: (id: string) => { project: string; row: SessionRow; }[]; sessionId: Accessor<string | null>;
   setArrancando: ReturnType<typeof createThreadStream>["setArrancando"]; setError: Setter<string | null>; setHablandoCon: Setter<{ project: string; name: string; } | null>;
@@ -58,7 +59,7 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 4892–5203, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createSend(deps: SendDeps) {
-  const { adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, taskSpaceCreate, threads, traspasos, workspaceActivo, workspaceContext } = deps;
+  const { adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, paneles, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, taskSpaceCreate, threads, traspasos, workspaceActivo, workspaceContext } = deps;
   const carryModule: SendDeps["carryModule"] = (...a: Parameters<SendDeps["carryModule"]>) => deps.carryModule(...a);
   const olvidarPestana: SendDeps["olvidarPestana"] = (...a: Parameters<SendDeps["olvidarPestana"]>) => deps.olvidarPestana(...a);
   /**
@@ -158,6 +159,8 @@ export function createSend(deps: SendDeps) {
       author: firmaDelTurno?.person ?? null,
       // Las rutas absolutas preparadas al adjuntar también sirven al releer del disco.
       attachments: m.attachments.length ? m.attachments : undefined,
+      // Sin turno todavía: al releer, el del disco con este texto después de `tras` es él.
+      inyectado: { tras: [...(threads.rows()[clave]?.base ?? [])].reverse().find((row) => row.turno)?.turno ?? null },
     };
     threads.appendOptimistic(clave, [...entrando, turnoPropio]);
     // Mandar a una tarea de una máquina apagada la enciende: el proxy espera a que
@@ -168,6 +171,7 @@ export function createSend(deps: SendDeps) {
     const destino = creationOptions?.headers["x-terminus-machine"] ?? null;
     const naceDormida = destino && machines().find((x) => x.id === destino)?.on === false ? destino : null;
     if (provisional && naceDormida) threads.markMachineWait(provisional, { machine: naceDormida, phase: "waking" });
+    let enviado = false;
     try {
       const llevado = llevar ? await llevar(claveBorrador) : null;
       if (llevar && !llevado) throw CARRY_STOPPED;
@@ -260,6 +264,7 @@ export function createSend(deps: SendDeps) {
           });
         },
       });
+      enviado = true;
       const id = traspaso.answer;
       if (!abierta) spacePlan.record(id);
       if (generation === workspaceContext.generation()) handoff.observe({ kind: "accepted", scope: conversationScope(id, proyecto) });
@@ -334,16 +339,24 @@ export function createSend(deps: SendDeps) {
       if (provisional && naceDormida) threads.markMachineWait(provisional, null);
       // Sin esto queda una tarea que nadie creó: la fila y la pestaña se
       // pintaron contando con que Rust aceptara el turno.
-      if (provisional) {
+      if (provisional && !enviado) {
         retirarNaciendo(provisional);
-        pestanas.close(provisional);
+        // Cerrar la pestaña provisional con `close` deja delante a su vecina
+        // (la tarea anterior) y la vista volvía a lo que se estaba mirando.
+        // Se vuelve al blanco en el mismo lote: el fallo se pinta en la celda
+        // vacía y el texto vuelve a la caja (`mandar` lo repone con `false`).
+        batch(() => {
+          pestanas.close(provisional);
+          pestanas.activate(null);
+          paneles.showDraft();
+        });
         olvidarPestana(provisional);
       }
       if (generation !== workspaceContext.generation()) {
         threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
         return false;
       }
-      if (abierta) handoff.observe({ kind: "rejected", scope: conversationScope(abierta, proyecto), error: e });
+      if (abierta && !enviado) handoff.observe({ kind: "rejected", scope: conversationScope(abierta, proyecto), error: e });
       if (e === CARRY_STOPPED) {
         // El texto vuelve a la caja: el globo se iría duplicado.
         threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
@@ -360,8 +373,9 @@ export function createSend(deps: SendDeps) {
         batch(() => { threads.rejectOptimistic(clave, [turnoPropio, ...entrando]); taskQueues.enqueue({ ...m, id: clientMessageId }, true); setArrancando(false); if (abierta) marcarQuieta(abierta); });
         return true;
       }
-      // Error real de envío: conservamos el mensaje de la persona para que el hilo muestre
-      // «Mensaje → Hubo un error: … [Reintentar]» y «Reintentar» reenvíe este mensaje.
+      // Ya salió: un fallo posterior no es un envío fallido ni devuelve el texto a la caja.
+      if (enviado) { threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]); return true; }
+      // Error real de envío: el globo se queda con «Reintentar» y la caja no lo repone.
       threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]);
       if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
       if (abierta) marcarQuieta(abierta, "failed");

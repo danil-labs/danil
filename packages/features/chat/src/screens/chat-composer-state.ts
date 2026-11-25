@@ -17,6 +17,15 @@ import type { ChatProps } from "./chat-props";
 import { isRetiredAgent } from "../../../../ui/src/lib/tasks/index.ts";
 import { isNoMachines } from "../../../../host/src/platform";
 import { createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js";
+import {
+  cancelar as marcarCancelada,
+  cerrar as cerrarCajas,
+  ordenesCanceladas,
+  reservar as reservarHuecos,
+  visibles,
+  type CajaEnCamino,
+  type FormaDeCaja,
+} from "../model/attachmentSlots";
 
 /** Lo que el bloque usa del cuerpo de Chat. */
 export type ChatComposerStateDeps = { campo: HTMLTextAreaElement | undefined; preguntaPendiente: Accessor<Msg | undefined>; reclamaElFoco: boolean };
@@ -27,6 +36,33 @@ export function createChatComposerState(props: ChatProps, deps: ChatComposerStat
   // `null` mientras nadie movió el resaltado: ahí empieza en `filaDeArranque`.
   const [pick, setPick] = createSignal<number | null>(null);
   const [preparingAttachments, setPreparingAttachments] = createSignal(0);
+  const [cajasEnCamino, setCajasEnCamino] = createSignal<CajaEnCamino[]>([]);
+  let siguienteCaja = 0;
+
+  /** Reserva una caja por archivo antes de que exista la ruta. `cerrar` la suelta. */
+  function reservarCajas(formas: FormaDeCaja[], yaEnLaCaja: number) {
+    let ids: number[] = [];
+    setCajasEnCamino((cs) => {
+      const paso = reservarHuecos(cs, formas, yaEnLaCaja, () => ++siguienteCaja);
+      ids = paso.ids;
+      return paso.cajas;
+    });
+    if (formas.length) setPreparingAttachments((n) => n + formas.length);
+    let cerrado = false;
+    return {
+      ordenesCanceladas: () => ordenesCanceladas(cajasEnCamino(), ids),
+      cerrar(noLlegaron: number) {
+        if (cerrado) return;
+        cerrado = true;
+        setCajasEnCamino((cs) => cerrarCajas(cs, ids, noLlegaron));
+        if (formas.length) setPreparingAttachments((n) => Math.max(0, n - formas.length));
+      },
+    };
+  }
+
+  const cancelarCaja = (id: number) => setCajasEnCamino((cs) => marcarCancelada(cs, id));
+  const cajasVisibles = (yaEnLaCaja: number) => visibles(cajasEnCamino(), yaEnLaCaja);
+  const ordenesOcultas = () => cajasEnCamino().filter((c) => c.cancelada).map((c) => c.orden);
   const [attachmentFailure, setAttachmentFailure] = createSignal<Failure | null>(null);
   const presentation = () => taskChatPresentation;
   const margenDelHilo = "px-4 py-3";
@@ -93,7 +129,8 @@ export function createChatComposerState(props: ChatProps, deps: ChatComposerStat
    * carga. El `ResizeObserver` los cubre todos sin enumerarlos.
    */
   // Memo: el observador lo lee sin dueño, y `busy` llega como prop con condición.
-  const enTurno = createMemo(() => Boolean(props.busy));
+  // Parar sigue ocupando el relleno: soltarlo al pulsar stop encoge el hueco bajo el último mensaje.
+  const enTurno = createMemo(() => Boolean(props.busy || props.stopping));
   const hilo = seguirElFondo(enTurno);
   // La caja que se remonta llega después del efecto, y el `focus()` de aquel
   // cae sobre el campo viejo. La reclamación la recoge el campo nuevo.
@@ -312,5 +349,5 @@ export function createChatComposerState(props: ChatProps, deps: ChatComposerStat
     // A mitad de frase el CLI no corre comandos: solo las skills que carga.
     return slashSuggestions(props.skills, d.inline ? [] : props.commands, d.query);
   });
-  return { actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, centrada, commandNames, copiado, copiando, dirigido, dismissed, efforts, elegido, esElVivo, escribible, esperaVisible, faltaUnanime, fieldSpans, forkeando, hasHighlight, hilo, listo, margenDelHilo, opciones, pick, preguntaPlegada, preguntasPlegadas, presentation, pulsoDeModo, razonamientos, respuestaRapida, saludo, setAttachmentFailure, setCaret, setCopiado, setCopiando, setDismissed, setForkeando, setPick, setPlegadaEn, setPreguntasPlegadas, setPreparingAttachments, setRazonamientos, setSoltando, setTrabajos, skillNames, slashGroups, soltando, tomarCampo, trabajos, trigger, vacia, visualBudget };
+  return { actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, centrada, commandNames, copiado, copiando, dirigido, dismissed, efforts, elegido, esElVivo, escribible, esperaVisible, faltaUnanime, fieldSpans, forkeando, hasHighlight, hilo, listo, margenDelHilo, opciones, pick, preguntaPlegada, preguntasPlegadas, presentation, pulsoDeModo, razonamientos, respuestaRapida, saludo, setAttachmentFailure, setCaret, setCopiado, setCopiando, setDismissed, setForkeando, setPick, setPlegadaEn, setPreguntasPlegadas, setPreparingAttachments, reservarCajas, cajasVisibles, cancelarCaja, ordenesOcultas, setRazonamientos, setSoltando, setTrabajos, skillNames, slashGroups, soltando, tomarCampo, trabajos, trigger, vacia, visualBudget };
 }
