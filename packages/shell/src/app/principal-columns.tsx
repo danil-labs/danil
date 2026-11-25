@@ -88,7 +88,6 @@ export function createColumnasDePrincipal(deps: ColumnasDePrincipalDeps) {
           sidebarExtra={capabilities().sidebarExtra?.()}
           searchOpen={buscando() !== null}
           onSearch={() => setBuscando("all")}
-          onAddProject={() => setAnadiendoCarpeta(true)}
           tabs={tiraDeLaVentana()}
         />
         <GlobalSearch
@@ -187,6 +186,7 @@ export function createColumnasDePrincipal(deps: ColumnasDePrincipalDeps) {
                 void abrirSesion(p, id);
               }}
               onNew={() => nuevaSesion()}
+              onAddProject={() => setAnadiendoCarpeta(true)}
               onRenombrarProyecto={(id, name) =>
                 void renombrarProyecto(id, name)
               }
