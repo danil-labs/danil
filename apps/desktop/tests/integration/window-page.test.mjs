@@ -625,6 +625,44 @@ for (const redirect of [false, true]) test(`the picker ${redirect ? 'redirects w
   assert.deepEqual(app.failures, []);
 });
 
+test('the workspace tooltip is suppressed while the add menu is open and returns on hover after closing', async t => {
+  const fetcher = async input => {
+    const { pathname } = new URL(String(input));
+    if (pathname === '/v1/identity/me') {
+      return Response.json({ id: 'user_A', workspace: '41', organizations: [{ id: 'org_A', name: 'Danil' }] });
+    }
+    if (pathname === '/v1/workspaces') {
+      return Response.json({ items: [{ id: '41', org: 'org_A', name: 'Catálogo' }], next_cursor: null });
+    }
+    return new Response(null, { status: 404 });
+  };
+  globalThis.fetch = Object.assign(fetcher, { __jsdomApp: true });
+  const { w, failures } = await open(t, 'listo', 'web-picker-tooltip', {}, undefined, {}, { web: true });
+  const doc = w.document;
+  const add = () => doc.querySelector('[data-add-workspace]');
+  const tile = () => doc.querySelector('[data-workspace-tile="41"]');
+  const tooltip = () => doc.querySelector('[data-organization-tooltip]');
+  const pointer = (event) => tile().dispatchEvent(new w.PointerEvent(event, { pointerType: 'mouse' }));
+
+  await until(() => add() && tile());
+  add().click();
+  await until(() => add().getAttribute('aria-expanded') === 'true' && doc.querySelector('[data-add-danil-step]'));
+  pointer('pointerenter');
+  // Allow the tooltip's 180 ms hover delay to expire while the menu stays open.
+  await new Promise(resolve => setTimeout(resolve, 250));
+  assert.equal(add().getAttribute('aria-expanded'), 'true');
+  assert.equal(tooltip(), null, 'hover must not mount a tooltip over the open add menu');
+  pointer('pointerleave');
+
+  add().click();
+  await until(() => add().getAttribute('aria-expanded') === 'false');
+  pointer('pointerenter');
+  await until(tooltip);
+  assert.match(tooltip().textContent, /Saldo/);
+  pointer('pointerleave');
+  assert.deepEqual(failures, []);
+});
+
 test('Desk adds a catalog workspace with the organization machine offline', async t => {
   const context = 'desk_danil';
   const target = 'engine42';
