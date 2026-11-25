@@ -99,6 +99,7 @@
   "chat.failure.modelo_no_existe": "El modelo elegido no existe para esta cuenta.",
   "chat.failure.other_account": "Usar otra cuenta",
   "chat.failure.politica": "El proveedor rechazó la petición por su política.",
+  "chat.failure.prefix": "Hubo un error:",
   "chat.failure.proveedor_caido": "El proveedor no está respondiendo ahora mismo.",
   "chat.failure.reconnect": "Reconectar la cuenta",
   "chat.failure.retries": {
@@ -287,6 +288,7 @@
   "chat.work.open_changes": "Ver los cambios en el panel de la tarea",
   "chat.work.running": "Trabajando",
   "chat.activity.syncing": "Sincronizando actividad…",
+  "chat.activity.before_error": "Actividad antes del error",
   "chat.activity.title": "Actividad",
   "chat.activity.running": "En curso",
   "chat.activity.continuing": "Continuando…",

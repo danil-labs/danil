@@ -82,7 +82,7 @@ export function createPanelDeChatCell(deps: PanelDeChatCellDeps) {
             return next;
           });
         }}
-        soloLectura={pp.soloLectura || (!!pp.sesion && !esProvisional(pp.sesion) && capabilities().taskWritable?.(pp.sesion) === false) || !!estadoDelTrabajo()?.history.archived || estadoDelTrabajo()?.available === false || historialAnteriorEnReposo()}
+        soloLectura={pp.soloLectura || !!estadoDelTrabajo()?.history.archived || (estadoDelTrabajo()?.available === false && recuperable()) || historialAnteriorEnReposo()}
         recovery={pp.sesion && (recuperable() || origenArchivada() !== undefined || soloPorSerAnterior()) ? <>
           <Show when={recuperable()}>
             <ResumeTask project={proyectoDeLaCelda()?.id ?? ""} id={pp.sesion ?? ""} onChanged={() => {

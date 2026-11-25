@@ -205,7 +205,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     finishedTurns.set(session, ok);
     batch(() => {
       setSettlingTurns((ids) => [...new Set([...ids, session])]);
-      marcarQuieta(session);
+      marcarQuieta(session, ok === false || unsaved ? "failed" : "done");
       threads.finishSteps(session);
       // Igual que en el `done`: el turno se acabó, y con él la espera de sus
       // hijas. Este camino es el del turno que cerró sin que su evento llegara.

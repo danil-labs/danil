@@ -1,5 +1,5 @@
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { createMemo, createUniqueId, Index, type JSX, Show } from "solid-js";
+import { createMemo, createUniqueId, For, Index, type JSX, Match, Show, Switch } from "solid-js";
 import { t } from "../../../../../ui/src/lib/i18n";
 import { sharedLazy } from "../../../../../ui/src/lib/sharedLazy";
 import { partesDelTramo, type Paso } from "../../../../../ui/src/lib/steps";
@@ -11,6 +11,8 @@ import McpAppView from "../McpAppView";
 import type { Msg, Razonamiento } from "../../model/messageTypes";
 import LineaDeTiempo, { SUPERFICIE_DE_EJECUCION } from "../../components/Timeline";
 import { currentActivityAction, presentActivity, type ActivityAction } from "../../model/activityPresentation";
+import { buildActivityTimeline } from "../../model/activityTimeline";
+import type { TurnOutcome } from "../../model/turnActivity";
 import { Pressable } from "../../../../../ui/src/Pressable";
 type Avance = ActivityChunk<Msg>;
 const SIN_AVANCE: Avance[] = [];
@@ -23,7 +25,10 @@ export function RegistroDeTrabajo(props: {
   pasos: Paso[];
   /** Lo que el turno hizo y dijo antes de su respuesta; se pliega con los pasos. */
   avance?: Avance[];
+  /** Mensajes cronológicos del turno (cuando vienen de `TurnActivity`). */
+  messages?: readonly Msg[];
   corriendo: boolean;
+  outcome?: TurnOutcome;
   stopping?: boolean;
   latestAction?: ActivityAction | null;
   status?: () => JSX.Element;
@@ -43,16 +48,22 @@ export function RegistroDeTrabajo(props: {
   // correcto, y «1 con error» alarmaba. El fallo del turno va aparte.
   const avance = () => props.avance ?? SIN_AVANCE;
   const todos = createMemo(() => [...avance().flatMap((a) => a.pasos), ...props.pasos]);
+  const runningSteps = createMemo(() => todos().filter((step) => step.corriendo).length);
   const action = createMemo(() => currentActivityAction(props.latestAction, todos()));
-  const presentation = createMemo(() => presentActivity({ active: props.corriendo, stopping: props.stopping, blocked: props.blocked, paused: props.animando === false, duration: props.duracion, action: action(), label: props.label }));
+  const presentation = createMemo(() => presentActivity({ active: props.corriendo, outcome: props.outcome, stopping: props.stopping, blocked: props.blocked, paused: props.animando === false, duration: props.duracion, action: action(), runningSteps: runningSteps(), label: props.label }));
   const rotulo = () => presentation().label;
   const hasContent = () => todos().length > 0 || avance().some(chunk => chunk.msg.razonamiento?.length || (!chunk.outside && chunk.msg.text)) || Boolean(props.razonamiento?.length);
-  const inspectable = () => hasContent() || Boolean(!props.corriendo && props.duracion);
+  // Solo hay dropdown (>) si realmente hubo herramientas, lecturas o razonamiento.
+  // Un turno sin herramientas ni razonamiento solo muestra «Trabajó durante Xs».
+  const inspectable = () => hasContent();
   const hasChanges = () => props.onVerCambios && partesDelTramo(todos(), props.corriendo).some(part => part.clase === "editar");
   const duracion = () =>
-    !props.corriendo && props.duracion ? t("chat.work.duration", { duration: props.duracion }) : null;
+    !props.corriendo && props.outcome !== "failed" && props.outcome !== "interrupted" && props.duracion
+      ? t("chat.work.duration", { duration: props.duracion })
+      : null;
+  const timeline = createMemo(() => buildActivityTimeline(props.messages, props.pasos, props.razonamiento));
   // El chevron y el cuerpo leen esto; si divergen, el primer clic abre lo que ya se veía abierto.
-  const desplegado = () => Boolean(props.abierto);
+  const desplegado = () => inspectable() && Boolean(props.abierto);
   const chevron = () => (
     <ChevronRight
       size={13}
@@ -64,6 +75,7 @@ export function RegistroDeTrabajo(props: {
   const girando = () => <ActivityIndicator mode={!props.corriendo ? "finished" : presentation().animate ? "running" : "paused"} />;
   const blocked = () => props.corriendo && !props.stopping && props.blocked;
   const caption = () => <Show when={!blocked()} fallback={props.status?.()}><ActivityCaption active={presentation().animate} thinking={action()?.kind === "thinking"} text={rotulo()} /></Show>;
+  const showHeader = () => inspectable() || props.corriendo;
 
 
   // Sin envoltorio y con los datos de la derecha en un solo texto: cada
@@ -72,8 +84,8 @@ export function RegistroDeTrabajo(props: {
     <>
       <span role="status" aria-live="polite" aria-atomic="true" class="sr-only">{props.corriendo && props.stopping ? t("chat.turn.stopping") : presentation().animate ? t("chat.turn.working_aria") : ""}</span>
       <Show
-        when={inspectable() || props.corriendo || props.observed}
-        fallback={<p class="m-0 mb-2 px-1 py-1.5 text-xs text-neutral-500">{duracion()}</p>}
+        when={showHeader()}
+        fallback={<Show when={duracion()}>{(text) => <p class="m-0 mb-2 py-1.5 text-ui font-normal text-neutral-500" data-activity-label="">{text()}</p>}</Show>}
       >
         <div class={cn("flex flex-wrap items-center gap-2", !desplegado() && "mb-2")}>
           <Show when={!inspectable()}><span class={FILA_DEL_TRAMO}><span class="activity-label inline-flex min-w-0 items-center">{girando()}{caption()}</span><Show when={props.corriendo && !props.stopping && !props.blocked}>{props.status?.()}</Show></span></Show>
@@ -89,7 +101,6 @@ export function RegistroDeTrabajo(props: {
 
         <Show when={desplegado()}>
           <div id={panelId} class={cn(SUPERFICIE_DE_EJECUCION, "mb-2")} data-turn-activity-content="">
-            <Show when={!hasContent() && !props.corriendo}><p class="m-0 px-1 py-2 text-sm text-neutral-500">{t("chat.work.no_details")}</p></Show>
             <Index each={avance()}>
               {(tramo) => (
                 <>
@@ -107,10 +118,18 @@ export function RegistroDeTrabajo(props: {
                 </>
               )}
             </Index>
-            <Show when={props.pasos.length > 0}>
-              <LineaDeTiempo pasos={props.pasos} active={presentation().animate} individual />
-            </Show>
-            <Show when={props.razonamiento?.length ? props.razonamiento : null}>{(blocks) => <Reasoning bloques={blocks()} />}</Show>
+            <For each={timeline()}>
+              {(item) => (
+                <Switch>
+                  <Match when={item.kind === "steps" ? item : null}>
+                    {(entry) => <LineaDeTiempo pasos={entry().pasos} active={presentation().animate} individual />}
+                  </Match>
+                  <Match when={item.kind === "reasoning" ? item : null}>
+                    {(entry) => <Reasoning bloques={entry().bloques} />}
+                  </Match>
+                </Switch>
+              )}
+            </For>
       <Index each={todos()}>
         {(step) => (
           <Show when={!step().corriendo && step().mcpApp}>

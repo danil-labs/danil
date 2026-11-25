@@ -1,14 +1,15 @@
 import { batch, createMemo, createSignal, type Setter, untrack } from "solid-js";
-import { anexarDeltas, type ChatEvent, mensajesDelHilo, type Session, type TranscriptOrigin, transcripcion } from "../model/transcript.ts";
+import { anexarDeltas, anexarRazonamiento, type ChatEvent, mensajesDelHilo, type Session, type TranscriptOrigin, transcripcion } from "../model/transcript.ts";
 import type { HandoverState } from "../model/handover.ts";
 import { HistoryPager, hasOlder, hasRecentGap, type OlderState } from "../model/history.ts";
-import { lotesDeDeltas } from "../model/deltaFrames.ts";
+import { lotesDeDeltas, type StreamChunk } from "../model/deltaFrames.ts";
 import type { Msg } from "../screens/Chat.tsx";
 import { vivoTrasLeer } from "../model/threadOrder.ts";
-import { createActivityProjection } from "../model/activity.ts";
+import { createActivityProjection, type TurnOutcome } from "../model/activity.ts";
 import { createAssistantHistory, idsDeTurnos } from "../model/assistant-history.ts";
 import { createOptimisticHistory, hasUnsettledPrefix, type OptimisticHistoryState } from "../model/optimistic-history.ts";
 import { type TranscriptMetadata, transcriptEvent } from "../model/transcript-events.ts";
+import { sealLiveIntoBase } from "../model/turnSeal.ts";
 
 export type MachineWait = { machine: string; phase: "waking" | "connecting" };
 
@@ -60,8 +61,26 @@ export function createThreadsCore(deps: {
       return { ...hs, [session]: { ...h, vivo: next } };
     });
   };
-  const deltasPorCuadro = lotesDeDeltas((session, workspace, deltas) =>
-    escribirVivo(session, (m) => anexarDeltas(m, deltas), workspace),
+  const aplicarLote = (mensajes: Msg[], chunks: StreamChunk[]): Msg[] => {
+    let current = mensajes;
+    let pendingDeltas: Extract<StreamChunk, { kind: "delta" }>[] = [];
+    const flushDeltas = () => {
+      if (!pendingDeltas.length) return;
+      current = anexarDeltas(current, pendingDeltas);
+      pendingDeltas = [];
+    };
+    for (const chunk of chunks) {
+      if (chunk.kind === "delta") pendingDeltas.push(chunk);
+      else {
+        flushDeltas();
+        current = anexarRazonamiento(current, chunk);
+      }
+    }
+    flushDeltas();
+    return current;
+  };
+  const deltasPorCuadro = lotesDeDeltas((session, workspace, chunks) =>
+    escribirVivo(session, (m) => aplicarLote(m, chunks), workspace),
   );
   const anexar = (session: string, fn: (vivo: Msg[]) => Msg[], workspace = deps.scope.workspace()) => {
     if (disposed) return;
@@ -110,7 +129,10 @@ export function createThreadsCore(deps: {
                 ? { ...m, questionRequestId: ataduras.get(m.turno) }
                 : m,
             );
-      const { base, optimistic, readRevision: appliedRevision } = optimisticHistory.reconcile(previo, atada, persistidos, antepuesta, readRevision);
+      const sellada = vaciarVivo && !antepuesta && vivoPrevio.length > 0
+        ? sealLiveIntoBase(previo?.base ?? [], vivoPrevio, atada)
+        : atada;
+      const { base, optimistic, readRevision: appliedRevision } = optimisticHistory.reconcile(previo, sellada, persistidos, antepuesta, readRevision);
       activity.reconcile(deps.scope.workspace(), session, previo?.base ?? [], base, vaciarVivo, antepuesta);
       const pending = new Set(optimistic.map(entry => entry.row));
       const accepted = new Set(previo?.optimistic?.filter(entry => !pending.has(entry.row)).map(entry => entry.row));
@@ -274,8 +296,11 @@ export function createThreadsCore(deps: {
     if (payload.kind === "segment_saved" && (!payload.id || ((!payload.workspace || payload.workspace === deps.scope.workspace()) && !assistantHistory.segment(payload.session, payload.id, untrack(hilos)[payload.session]?.base ?? [])))) return;
     if (payload.kind === "image" && (payload.detail?.kind !== "output" || !payload.detail.images?.length)) return;
     if (payload.kind === "delta") {
-      deltasPorCuadro.meter(payload.session, workspace ?? undefined, { text: payload.text, messageId: payload.message_id, segmentId: payload.segment_id,
+      deltasPorCuadro.meter(payload.session, workspace ?? undefined, { kind: "delta", text: payload.text, messageId: payload.message_id, segmentId: payload.segment_id,
         startsMessage: payload.starts_message, author: metadata.author, model: metadata.model });
+    } else if (payload.kind === "reasoning") {
+      deltasPorCuadro.meter(payload.session, workspace ?? undefined, { kind: "reasoning", text: payload.text, messageId: payload.message_id, segmentId: payload.segment_id,
+        author: metadata.author });
     } else batch(() => {
       anexar(payload.session, before => transcriptEvent(before, payload, metadata), workspace);
       const pager = historias.get(payload.session);
@@ -323,7 +348,7 @@ export function createThreadsCore(deps: {
       if (startConfirmed && thread) activity.observe(workspace, id, [], thread.vivo);
       activityChanged();
     },
-    finishActivity: (id: string, workspace = deps.scope.workspace()) => { if (!disposed && activity.finish(workspace, id)) { if (workspace === deps.scope.workspace()) assistantHistory.finish(id); activityChanged(); } },
+    finishActivity: (id: string, workspace = deps.scope.workspace(), outcome: Exclude<TurnOutcome, "running"> = "done") => { if (!disposed && activity.finish(workspace, id, outcome)) { if (workspace === deps.scope.workspace()) assistantHistory.finish(id); activityChanged(); } },
     rows: hilos, current: hiloAbierto, messages: msgs, loading: cargandoHilo, origins: origenes, offline: apagadas, machineWaits, handovers: traspasos,
     olderAvailable: conAntiguos, recentAvailable: conRecientes, olderStatus: estadoAntiguos, recentTail: colaSuelta,
     appendLive, appendPersisted, appendOptimistic, acknowledgeOptimistic, commitUniqueTurn, replaceTurn, reviseOptimistic, rejectOptimistic, question, replay, finishSteps, event,

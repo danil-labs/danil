@@ -339,25 +339,32 @@ export function createSend(deps: SendDeps) {
         pestanas.close(provisional);
         olvidarPestana(provisional);
       }
-      threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
-      if (generation !== workspaceContext.generation()) return false;
+      if (generation !== workspaceContext.generation()) {
+        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+        return false;
+      }
       if (abierta) handoff.observe({ kind: "rejected", scope: conversationScope(abierta, proyecto), error: e });
       if (e === CARRY_STOPPED) {
         // El texto vuelve a la caja: el globo se iría duplicado.
+        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
         setArrancando(false);
         return false;
       }
       if (destination && claveDe(e) === "history.error.busy") {
-        marcarQuieta(destination.session);
+        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+        marcarQuieta(destination.session, "failed");
         throw e;
       }
       // Lo escrito para una tarea que otro turno ocupa espera en su cola, con la misma identidad.
       if (!respuestas && !deLaCola && claveDe(e) === "history.error.busy" && abierta === sessionId()) {
-        batch(() => { taskQueues.enqueue({ ...m, id: clientMessageId }, true); setArrancando(false); if (abierta) marcarQuieta(abierta); });
+        batch(() => { threads.rejectOptimistic(clave, [turnoPropio, ...entrando]); taskQueues.enqueue({ ...m, id: clientMessageId }, true); setArrancando(false); if (abierta) marcarQuieta(abierta); });
         return true;
       }
-      if (!abierta) { threads.finishActivity(""); setArrancando(false); }
-      if (abierta) marcarQuieta(abierta);
+      // Error real de envío: conservamos el mensaje de la persona para que el hilo muestre
+      // «Mensaje → Hubo un error: … [Reintentar]» y «Reintentar» reenvíe este mensaje.
+      threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]);
+      if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
+      if (abierta) marcarQuieta(abierta, "failed");
       threads.appendLive(clave, [{
                   role: "system",
                   // Una negativa de comando llega como clave: la frase nombra lo escrito.

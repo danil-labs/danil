@@ -99,6 +99,7 @@
   "chat.failure.modelo_no_existe": "The chosen model does not exist for this account.",
   "chat.failure.other_account": "Use another account",
   "chat.failure.politica": "The provider refused the request under its policy.",
+  "chat.failure.prefix": "An error occurred:",
   "chat.failure.proveedor_caido": "The provider is not responding right now.",
   "chat.failure.reconnect": "Reconnect the account",
   "chat.failure.retries": {
@@ -287,6 +288,7 @@
   "chat.work.open_changes": "View the changes in the task panel",
   "chat.work.running": "Working",
   "chat.activity.syncing": "Synchronizing activity…",
+  "chat.activity.before_error": "Activity before error",
   "chat.activity.title": "Activity",
   "chat.activity.running": "In progress",
   "chat.activity.continuing": "Continuing…",

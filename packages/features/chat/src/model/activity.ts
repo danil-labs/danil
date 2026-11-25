@@ -1,10 +1,18 @@
 import { observedActivityUpdate, type ActivityObservationKind, type ObservedTurnActivity as TurnActivity } from "./activityObservation.ts";
-import type { Msg } from "../screens/Chat.tsx";
+import type { Msg } from "./messageTypes.ts";
 import { ActivityAnchor, savedActivityTurn as savedTurn } from "./activityAnchor.ts";
-export type { TurnActivity } from "./turnActivity.ts";
-type RecordOfActivity = { key: string; active: boolean; startConfirmed: boolean; startedAt: number | null; saved: Set<string>; baseline: readonly string[] | null; lastObserved: Msg | null; lastObservedKind: ActivityObservationKind | null; anchor: ActivityAnchor; alias?: RecordOfActivity };
+import type { TurnOutcome } from "./turnActivity.ts";
+export type { TurnActivity, TurnOutcome } from "./turnActivity.ts";
+type RecordOfActivity = { key: string; active: boolean; outcome: TurnOutcome; startConfirmed: boolean; startedAt: number | null; saved: Set<string>; baseline: readonly string[] | null; lastObserved: Msg | null; lastObservedKind: ActivityObservationKind | null; anchor: ActivityAnchor; alias?: RecordOfActivity };
 const scopeKey = (workspace: string | null, session: string) => JSON.stringify([workspace, session]);
 const epoch = (value: number | null) => value !== null && Number.isFinite(value) && value > 0 ? value : null;
+const isInterruption = (m: Msg) =>
+  m.role === "system" && m.meta === "fallo" && (m.text === "Interrumpido." || m.text === "chat.turn.cancelled" || m.text.startsWith("Turno interrumpido."));
+const isFailure = (m: Msg) => m.role === "system" && m.meta === "fallo" && !isInterruption(m);
+const isRealWork = (m: Msg) =>
+  !m.shell && Boolean(m.paso || m.permission || (m.role === "system" && m.meta === "usó") || m.razonamiento?.length);
+const isAgentOutput = (m: Msg) =>
+  m.role === "agent" && Boolean(m.text.trim() || m.images?.length || m.preguntas?.length || m.historyRefs?.length);
 /** Projection provenance, never execution state: only explicit lifecycle facts open/close it. */
 export function createActivityProjection() {
   let serial = 0;
@@ -24,7 +32,7 @@ export function createActivityProjection() {
     const key = scopeKey(workspace, session);
     const known = before?.map(savedTurn).filter((id): id is string => Boolean(id));
     const baseline = before === null || (before.length > 0 && !known?.length) ? null : known ?? [];
-    records.set(key, [...list(workspace, session), { key: `${key}:activity:${++serial}`, active: true, startConfirmed, startedAt: epoch(startedAt), saved: new Set(), baseline, lastObserved: null, lastObservedKind: null, anchor: new ActivityAnchor(before) }]);
+    records.set(key, [...list(workspace, session), { key: `${key}:activity:${++serial}`, active: true, outcome: "running", startConfirmed, startedAt: epoch(startedAt), saved: new Set(), baseline, lastObserved: null, lastObservedKind: null, anchor: new ActivityAnchor(before) }]);
     return true;
   }
   function observe(workspace: string | null, session: string, before: readonly Msg[], after: readonly Msg[]) {
@@ -49,10 +57,18 @@ export function createActivityProjection() {
       if (message.turno) owner.saved.add(message.turno);
     });
   }
-  function finish(workspace: string | null, session: string) {
+  function finish(workspace: string | null, session: string, outcome: Exclude<TurnOutcome, "running"> = "done") {
     const activity = current(workspace, session);
-    if (!activity?.active) return false;
+    if (!activity) return false;
+    if (!activity.active) {
+      if (outcome !== "done" && activity.outcome !== outcome) {
+        activity.outcome = outcome;
+        return true;
+      }
+      return false;
+    }
     activity.active = false;
+    activity.outcome = outcome;
     return true;
   }
   function reconcile(workspace: string | null, session: string, _before: readonly Msg[], after: readonly Msg[], closed: boolean, prepend = false) {
@@ -79,12 +95,26 @@ export function createActivityProjection() {
   function project(workspace: string | null, session: string, visible: readonly Msg[]): TurnActivity<Msg>[] {
     return list(workspace, session).flatMap(record => {
       const messages = visible.filter(message => { const owner = owners.get(message); return (owner?.alias ?? owner) === record; });
+      const hasWork = messages.some(isRealWork);
+      const hasResponse = messages.some(isAgentOutput);
+      const outcome: TurnOutcome = record.active
+        ? "running"
+        : messages.some(isInterruption)
+          ? "interrupted"
+          : record.outcome === "failed" || messages.some(isFailure)
+            ? "failed"
+            : "done";
       const output = messages.find(message => message.role !== "user");
       const anchor = record.anchor.before(visible) ?? output;
-      if (!record.active && !output) return [];
       const duration = [...messages].reverse().find(message => message.role === "agent" && message.duration_ms !== undefined)?.duration_ms;
+      if (!record.active) {
+        // Error o interrupción sin herramientas ni razonamiento previo: se oculta
+        // por completo «Trabajo / Trabajó» y solo queda el error o marcador.
+        if ((outcome === "failed" || outcome === "interrupted") && !hasWork) return [];
+        if (outcome === "done" && !hasWork && !hasResponse && duration === undefined) return [];
+      }
       return [{ key: record.key, anchor: anchor ?? null, anchorIndex: anchor ? visible.indexOf(anchor) : visible.length,
-        active: record.active, startConfirmed: record.startConfirmed, startedAt: record.startedAt, durationMs: duration ?? null, messages, observation: record.lastObserved && record.lastObservedKind ? { message: record.lastObserved, kind: record.lastObservedKind } : null }];
+        active: record.active, outcome, startConfirmed: record.startConfirmed, startedAt: record.startedAt, durationMs: duration ?? null, messages, observation: record.lastObserved && record.lastObservedKind ? { message: record.lastObserved, kind: record.lastObservedKind } : null }];
     });
   }
   function adopt(workspace: string | null, from: string, to: string) {
