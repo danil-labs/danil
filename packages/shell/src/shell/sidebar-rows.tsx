@@ -44,6 +44,8 @@ export type SidebarProps = {
   dragFolder?: string | null;
   onDrag?: (project: string, row: SessionRow, event: PointerEvent) => void;
   onNew: () => void;
+  /** Abre el diálogo para añadir una carpeta al espacio actual. */
+  onAddProject?: () => void;
   onRenombrarProyecto: (id: string, name: string) => Promise<void> | void;
   onBorrarProyecto: (id: string) => Promise<void> | void;
   /** With more than one space, the folder leaves the active one instead of being deleted. */

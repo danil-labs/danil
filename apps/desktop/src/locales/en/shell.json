@@ -190,6 +190,7 @@
   "shell.sidebar.mcp.manage": "Manage tools",
   "shell.sidebar.mcp.trigger": "MCP tools",
   "shell.sidebar.new_task": "New task",
+  "shell.sidebar.new_folder": "New folder",
   "shell.sidebar.new_task_in": "New task in {name}",
   "shell.sidebar.collapse_group": "Collapse “{name}”",
   "shell.sidebar.expand_group": "Expand “{name}”",
