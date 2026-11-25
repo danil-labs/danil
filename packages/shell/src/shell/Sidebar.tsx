@@ -1,4 +1,5 @@
 import { SignalDot } from "../../../ui/src/SignalDot";
+import FolderPlus from "lucide-solid/icons/folder-plus";
 import History from "lucide-solid/icons/history";
 import Plus from "lucide-solid/icons/plus";
 import SquarePen from "lucide-solid/icons/square-pen";
@@ -164,11 +165,14 @@ export default function Sidebar(props: SidebarProps) {
             data-arrastre-scroll={!props.collapsed ? "" : undefined}
           >
             <SidebarMenu class="shrink-0 gap-1.5">
-              <SidebarMenuItem>
+              <SidebarMenuItem class={cn(!props.collapsed && "@container flex min-w-0 items-center gap-1.5")}>
                 {/* Nueva tarea es la acción principal, negra y sólida.
                     `primary` queda reservado para las acciones del agente. */}
                 <SidebarMenuButton
-                  class="bg-neutral-950 font-bold text-neutral-50 hover:bg-neutral-950"
+                  class={cn(
+                    "bg-neutral-950 font-bold text-neutral-50 hover:bg-neutral-950",
+                    !props.collapsed && "min-w-0 flex-1",
+                  )}
                   aria-keyshortcuts={ariaDeAtajo("newTask")}
                   aria-label={t("shell.sidebar.new_task")}
                   onClick={() => {
@@ -182,7 +186,35 @@ export default function Sidebar(props: SidebarProps) {
                     <TeclaDeAtajo accion="newTask" />
                   </Show>
                 </SidebarMenuButton>
+                <Show when={!props.collapsed && props.onAddProject}>
+                  {(addProject) => (
+                    <Pressable
+                      class="inline-flex h-[30px] min-w-[30px] shrink-0 items-center justify-center gap-1.5 rounded-sm border border-border bg-surface px-2 text-ui font-medium text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
+                      data-add-project=""
+                      aria-label={t("projects.add.title")}
+                      title={t("projects.add.title")}
+                      onClick={() => addProject()()}
+                    >
+                      <FolderPlus size={14} class="shrink-0" aria-hidden="true" />
+                      <span class="hidden truncate @[280px]:inline">{t("shell.sidebar.new_folder")}</span>
+                    </Pressable>
+                  )}
+                </Show>
               </SidebarMenuItem>
+              <Show when={props.collapsed && props.onAddProject}>
+                {(addProject) => (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      data-add-project=""
+                      tooltip={t("projects.add.title")}
+                      aria-label={t("projects.add.title")}
+                      onClick={() => addProject()()}
+                    >
+                      <FolderPlus size={15} aria-hidden="true" />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </Show>
               <Show when={props.collapsed}>
                 <SidebarMenuItem>
                   <SidebarMenuButton
