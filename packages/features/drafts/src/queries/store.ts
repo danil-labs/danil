@@ -37,8 +37,8 @@ export function createDraftsStore(deps: Dependencies) {
   const pendingMaterial = createMemo(() => sourcesOf(sourceIds()));
   const context = createMemo(() => sourcesOf(unirFuentes(inherited(), attached())));
 
-  function changeText(value: string, inputType?: string, change?: TextEdit) {
-    edit(deps.key(), draft => {
+  function changeTextAt(key: string, value: string, inputType?: string, change?: TextEdit) {
+    edit(key, draft => {
       const history = [...(draft.mentionHistory ?? []), entry(draft)].slice(-100);
       const restored = inputType?.startsWith("history") ? [...history].reverse().find(item => item.text === value) : undefined;
       const next = editDraft(entry(draft), value, change);
@@ -46,33 +46,38 @@ export function createDraftsStore(deps: Dependencies) {
         recipients: restored?.recipients ?? next.recipients, mentionHistory: history, mentionFuture: [] };
     });
   }
-  function history(redo: boolean) {
-    const draft = current();
+  const changeText = (value: string, inputType?: string, change?: TextEdit) =>
+    changeTextAt(deps.key(), value, inputType, change);
+  function historyAt(key: string, redo: boolean) {
+    const draft = peek(key) ?? EMPTY;
     const past = draft.mentionHistory ?? [];
     const future = draft.mentionFuture ?? [];
     if (![...past, ...future, draft].some(item => item.task_mentions?.length || item.recipients?.length)) return false;
     const next = (redo ? future : past).at(-1);
     if (!next) return false;
-    edit(deps.key(), before => ({ ...before, input: next.text, task_mentions: next.task_mentions, recipients: next.recipients,
+    edit(key, before => ({ ...before, input: next.text, task_mentions: next.task_mentions, recipients: next.recipients,
       mentionHistory: redo ? [...past, entry(draft)] : past.slice(0, -1),
       mentionFuture: redo ? future.slice(0, -1) : [...future, entry(draft)],
     }));
     return true;
   }
-  function insert(next: (before: HistoryEntry) => HistoryEntry) {
-    edit(deps.key(), draft => {
+  const history = (redo: boolean) => historyAt(deps.key(), redo);
+  function insertAt(key: string, next: (before: HistoryEntry) => HistoryEntry) {
+    edit(key, draft => {
       const after = next(entry(draft));
       return { ...draft, input: after.text, task_mentions: after.task_mentions, recipients: after.recipients,
         mentionHistory: [...(draft.mentionHistory ?? []), entry(draft)].slice(-100), mentionFuture: [] };
     });
   }
-  async function addFiles(paths: string[]) {
+  const insert = (next: (before: HistoryEntry) => HistoryEntry) => insertAt(deps.key(), next);
+  async function addFilesAt(key: string, projectId: string, paths: string[]) {
     if (disposed) return;
-    const key = deps.key(), workspace = deps.workspace(), generation = deps.generation(), requestEpoch = epoch;
-    const prepared = await deps.prepareAttachments(paths, deps.project());
+    const workspace = deps.workspace(), generation = deps.generation(), requestEpoch = epoch;
+    const prepared = await deps.prepareAttachments(paths, projectId);
     if (disposed || workspace !== deps.workspace() || generation !== deps.generation() || requestEpoch !== epoch) return;
     edit(key, draft => ({ ...draft, archivos: [...new Set([...draft.archivos, ...prepared])] }));
   }
+  const addFiles = (paths: string[]) => addFilesAt(deps.key(), deps.project(), paths);
   function addSource(id: string) {
     const projectIds = untrack(projectSources), attachedIds = untrack(attached);
     edit(deps.key(), draft => ({ ...draft,
@@ -89,12 +94,16 @@ export function createDraftsStore(deps: Dependencies) {
   }
   return {
     peek, current, sourceIds, excludedSourceIds, attached, pendingMaterial, context,
+    draftFor: (key: string) => peek(key) ?? EMPTY,
     input: () => current().input,
     files: () => current().archivos,
-    changeText, history, addFiles, addSource, removeSource,
+    changeText, changeTextAt, history, historyAt, addFiles, addFilesAt, addSource, removeSource,
     recipient: (name: string, label: string, trigger: Trigger) => insert(before => insertRecipient(before, trigger, name, label)),
+    recipientAt: (key: string, name: string, label: string, trigger: Trigger) => insertAt(key, before => insertRecipient(before, trigger, name, label)),
     reference: (target: MentionTarget, label: string, trigger: Trigger) => insert(before => insertMention(before, trigger, target, label)),
+    referenceAt: (key: string, target: MentionTarget, label: string, trigger: Trigger) => insertAt(key, before => insertMention(before, trigger, target, label)),
     replaceFiles: (files: string[]) => edit(deps.key(), draft => ({ ...draft, archivos: files })),
+    replaceFilesAt: (key: string, files: string[]) => edit(key, draft => ({ ...draft, archivos: files })),
     replaceAttached: (ids: string[]) => setAttached(ids),
     acceptSources: (ids: string[]) => setAttached(before => unirFuentes(before, ids)),
     configure: (configuration: DraftConfiguration, key = deps.key()) => edit(key, draft => ({ ...draft,

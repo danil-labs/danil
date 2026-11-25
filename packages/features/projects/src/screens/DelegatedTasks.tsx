@@ -1,8 +1,9 @@
 import { type ComponentProps, createEffect, createSignal, on, Show } from "solid-js";
 import GitBranch from "lucide-solid/icons/git-branch";
+import X from "lucide-solid/icons/x";
 import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
-import { HEADER_HEIGHT } from "../../../../host/src/window";
+import { LOCATION_BAR } from "../../../../host/src/window";
 import type { SenderTask } from "../../../../ui/src/lib/recipients";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, FailureNote } from "../../../../ui/src/Failure";
@@ -101,8 +102,11 @@ export function DelegatedToolbar(props: { model: DelegatedPanelModel; pressed: b
   </Show>;
 }
 
-/** La lista de delegadas, en la ventana de la tarea: filtros en la caja de 30 px. */
-export function DelegatedPanel(props: { model: () => DelegatedPanelModel | undefined }) {
+/** La lista de delegadas, en el panel dedicado de subtareas: cabecera de 38 px alineada con la barra superior. */
+export function DelegatedPanel(props: {
+  model: () => DelegatedPanelModel | undefined;
+  onOpenSubtask?: (folder: string, id: string) => void;
+}) {
   const [all, setAll] = createSignal(false);
   const data = () => props.model();
   createEffect(on(() => data()?.context, () => setAll(false)));
@@ -114,19 +118,28 @@ export function DelegatedPanel(props: { model: () => DelegatedPanelModel | undef
   // «Activas» son solo las que te necesitan o siguen trabajando, sin sus madres de contexto.
   const shown = () => all() ? rows() : active();
   return <>
-    <div class={cn("flex shrink-0 items-center justify-between gap-2 border-b border-border px-2", HEADER_HEIGHT)} aria-label={t("chat.delegation.heading")}>
+    <div class={cn("flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2.5", LOCATION_BAR)} aria-label={t("chat.delegation.heading")}>
       <span class="min-w-0 truncate text-xs font-medium">{t("chat.delegation.total", { count: rows().length })}</span>
-      <div class="flex shrink-0 gap-1" role="group" aria-label={t("chat.delegation.filter")}>
+      <div class="flex shrink-0 items-center gap-1" role="group" aria-label={t("chat.delegation.filter")}>
         <Button size="sm" variant="ghost" class="h-6 px-2 text-xs aria-pressed:bg-surface-muted aria-pressed:text-neutral-950" aria-pressed={!all()} onClick={() => setAll(false)}>{t("chat.delegation.activity")}</Button>
         <Button size="sm" variant="ghost" class="h-6 px-2 text-xs aria-pressed:bg-surface-muted aria-pressed:text-neutral-950" aria-pressed={all()} onClick={() => setAll(true)}>{t("chat.delegation.all")}</Button>
+        <Show when={data()?.onDismiss}>
+          <Button size="iconCompact" variant="ghost" class="size-6 text-neutral-500" title={t("chat.delegation.close_panel")} aria-label={t("chat.delegation.close_panel")} onClick={() => data()?.onDismiss()}>
+            <X size={14} />
+          </Button>
+        </Show>
       </div>
     </div>
-    <div data-delegated-list class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
+    <div data-delegated-list class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 pb-3">
       <Show when={data()?.error}>{error => <><FailureNote f={asFailure(error())} /><Button variant="ghost" size="sm" onClick={() => data()?.onRetry()}>{t("chat.delegation.retry")}</Button></>}</Show>
       <Show when={shown().length} fallback={data()?.loading ? <DelegatedSkeleton /> : <p class="m-0 px-2 py-3 text-xs text-neutral-500">{t("chat.delegation.idle")}</p>}>
         <DelegatedTaskList rows={shown()} hoverCardPlacement="left-start" list={folder => {
           const model = data();
           return { ...model!.list(folder), onPick: id => {
+            if (props.onOpenSubtask) {
+              props.onOpenSubtask(folder, id);
+              return;
+            }
             model!.onDismiss();
             model!.list(folder).onPick(id);
           } };

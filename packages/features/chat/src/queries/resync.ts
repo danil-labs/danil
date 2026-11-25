@@ -28,13 +28,13 @@ export type ResyncDeps = { applyPushed: ReturnType<typeof createAttachmentsMount
   serviceListenersReady: Promise<unknown>; sesionesConPestana: Accessor<string[]>; sessionId: Accessor<string | null>; setConnectionError: Setter<string | null>;
   setDesdeDeTurno: ReturnType<typeof createThreadStream>["setDesdeDeTurno"]; setEnFondo: ReturnType<typeof createThreadStream>["setEnFondo"]; setError: Setter<string | null>;
   setPermissions: ReturnType<typeof createThreadStream>["setPermissions"]; settleTurn: ReturnType<typeof createAttachmentsMount>["settleTurn"];
-  settlingTurns: ReturnType<typeof createThreadStream>["settlingTurns"]; soltarVistasHuerfanas: () => void; tareaDelRiel: (id: string) => SenderTask | null;
+  settlingTurns: ReturnType<typeof createThreadStream>["settlingTurns"]; soltarVistasHuerfanas: () => void; subtasks?: () => string[]; tareaDelRiel: (id: string) => SenderTask | null;
   terminales: ReturnType<typeof createThreadStream>["terminales"]; threads: ReturnType<typeof createThreadsStore>; vivas: ReturnType<typeof createThreadStream>["vivas"];
   workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2197–2350, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createResync(deps: ResyncDeps) {
-  const { applyPushed, asleep, conversationScope, createServiceStream, esDeLaAbierta, handoff, leerTarea, liveThreads, loadResult, machines, marcarViva, pendingStarts, pestanas, project, recargarMaterial, releerTrasHueco, sesionesConPestana, sessionId, setConnectionError, setDesdeDeTurno, setEnFondo, setError, setPermissions, settleTurn, settlingTurns, soltarVistasHuerfanas, tareaDelRiel, terminales, threads, vivas, workspaceActivo, workspaceContext } = deps;
+  const { applyPushed, asleep, conversationScope, createServiceStream, esDeLaAbierta, handoff, leerTarea, liveThreads, loadResult, machines, marcarViva, pendingStarts, pestanas, project, recargarMaterial, releerTrasHueco, sesionesConPestana, sessionId, setConnectionError, setDesdeDeTurno, setEnFondo, setError, setPermissions, settleTurn, settlingTurns, soltarVistasHuerfanas, subtasks, tareaDelRiel, terminales, threads, vivas, workspaceActivo, workspaceContext } = deps;
   const ponerTerminal: ResyncDeps["ponerTerminal"] = (...a: Parameters<ResyncDeps["ponerTerminal"]>) => deps.ponerTerminal(...a);
   const reponerGates: ResyncDeps["reponerGates"] = (...a: Parameters<ResyncDeps["reponerGates"]>) => deps.reponerGates(...a);
   /** `session_resync`: el turno en curso no cupo en el reenvío; se relee lo guardado y se conserva lo vivo. */
@@ -48,12 +48,12 @@ export function createResync(deps: ResyncDeps) {
   }
   // El filtro de la suscripción: de las demás tareas solo llegan inicio y fin, no su flujo token a token.
   const tareasQueSeVen = () => {
-    const ids = new Set([...sesionesConPestana(), sessionId() ?? "", ...vivas()]);
+    const ids = new Set([...sesionesConPestana(), sessionId() ?? "", ...vivas(), ...(subtasks?.() ?? [])]);
     for (const key of liveThreads) ids.add(key.slice(key.indexOf("/") + 1));
     return [...ids].filter((id) => id !== "" && !esProvisional(id)).sort();
   };
   const enviarFiltro = () => serviceStream.filterChanged();
-  createEffect(on([sesionesConPestana, sessionId, vivas], enviarFiltro, { defer: true }));
+  createEffect(on([sesionesConPestana, sessionId, vivas, () => subtasks?.() ?? []], enviarFiltro, { defer: true }));
 
   const serviceStream = createServiceStream({
     ready: () => deps.serviceListenersReady,

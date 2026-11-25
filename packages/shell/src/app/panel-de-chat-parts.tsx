@@ -2,7 +2,7 @@ import { type createPanelDeChatState as T_createPanelDeChatState } from "./panel
 import { carpetaDeTrabajo, type HandlerDefinition } from "../../../ui/src/lib/model";
 import { type CatalogosDeModelos } from "../../../ui/src/lib/models.ts";
 import { type Superficie } from "../../../ui/src/lib/surfaces.ts";
-import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../ui/src/lib/taskFiles.ts";
+import { type TaskFiles } from "../../../ui/src/lib/taskFiles.ts";
 import { cn } from "../../../ui/src/lib/utils";
 import { capabilities } from "../../../host/src/platform";
 import { LOCATION_BAR } from "../../../host/src/window";
@@ -17,7 +17,7 @@ import { Show, Suspense, batch, type Accessor, type Component, type ComponentPro
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type PanelDeChatPartsDeps = { AgentProfile: Component<ComponentProps<typeof AgentProfileScreen>>; TaskLocation: ReturnType<typeof lazy<typeof TaskLocationScreen>>; createFreeRouterConsent: ComponentProps<typeof AgentProfileScreen>["createFreeRouterConsent"]; folderIcon: ComponentProps<typeof TaskLocationScreen>["folderIcon"]; abrirPantalla: (machine: string) => void; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; agent: Accessor<string>; apagadas: ReturnType<typeof createDeskStrip>["apagadas"]; archivosDeTarea: { panel: (task: string) => TaskFilesPanel; setOpen: (task: string, open: boolean) => void; present: (task: string, mode: TaskSideMode) => void; toggle: (task: string) => void; setExpanded: (task: string, expanded: boolean) => void; setTree: (task: string, tree: boolean) => void; setSide: (task: string, side: TaskFilesSide) => void; open: (task: string, file: { tree: string; path: string; changes: boolean; changed?: boolean; pinned?: boolean; }) => void; pin: (task: string, id: string) => void; activate: (task: string, id: string) => void; setDirty: (task: string, id: string, dirty: boolean) => void; close: (task: string, ids: string[]) => string[]; renamed: (task: string, tree: string, from: string, to: string) => void; removed: (task: string, tree: string, path: string) => void; dirtyOf: (task: string) => string[]; forget: (task: string) => void; }; busy: () => boolean; catalogos: Accessor<CatalogosDeModelos>; composer: ReturnType<typeof T_createDeskStrip>["composer"]; draftMachine: () => string | null; effort: Accessor<string>; estadoDePanelDeChat: ReturnType<typeof T_createPanelDeChatState>["estadoDePanelDeChat"]; filaDe: (id: string) => SessionRow | undefined; machineName: (id: string, local?: boolean) => string; machineWakes: (id: string) => boolean; machines: typeof machines; paginaDeAgente: () => boolean; rememberedRunOn: (workspace: string | null) => string | null; saveDraftConfiguration: (mode?: string, clave?: string) => void; sessionId: ReturnType<typeof createWorkspaceSession>["sessionId"]; superficies: Accessor<Superficie[] | null>; workspaceActivo: ReturnType<typeof createWorkspaceSession>["workspaceActivo"] };
+export type PanelDeChatPartsDeps = { AgentProfile: Component<ComponentProps<typeof AgentProfileScreen>>; TaskLocation: ReturnType<typeof lazy<typeof TaskLocationScreen>>; createFreeRouterConsent: ComponentProps<typeof AgentProfileScreen>["createFreeRouterConsent"]; folderIcon: ComponentProps<typeof TaskLocationScreen>["folderIcon"]; abrirPantalla: (machine: string) => void; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; agent: Accessor<string>; apagadas: ReturnType<typeof createDeskStrip>["apagadas"]; archivosDeTarea: TaskFiles; busy: () => boolean; catalogos: Accessor<CatalogosDeModelos>; composer: ReturnType<typeof T_createDeskStrip>["composer"]; draftMachine: () => string | null; effort: Accessor<string>; estadoDePanelDeChat: ReturnType<typeof T_createPanelDeChatState>["estadoDePanelDeChat"]; filaDe: (id: string) => SessionRow | undefined; machineName: (id: string, local?: boolean) => string; machineWakes: (id: string) => boolean; machines: typeof machines; paginaDeAgente: () => boolean; rememberedRunOn: (workspace: string | null) => string | null; saveDraftConfiguration: (mode?: string, clave?: string) => void; sessionId: ReturnType<typeof createWorkspaceSession>["sessionId"]; superficies: Accessor<Superficie[] | null>; workspaceActivo: ReturnType<typeof createWorkspaceSession>["workspaceActivo"] };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 180–243, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createPanelDeChatParts(deps: PanelDeChatPartsDeps) {
@@ -27,14 +27,19 @@ export function createPanelDeChatParts(deps: PanelDeChatPartsDeps) {
     /** El proyecto de esa tarea. `null` en la ventana en blanco, que no tiene. */
     proyecto?: string | null;
     soloLectura?: boolean;
+    inline?: boolean;
+    toolbar?: () => JSX.Element;
   }, { proyectoDeLaCelda, estadoDelTrabajo }: ReturnType<typeof estadoDePanelDeChat>) => {
-    // Máquina, carpeta y rama de la tarea. Una función y no un elemento: el chat la pinta
-    // y, cuando los archivos lo tapan, la fila de la tarea pinta la suya.
-    // Es una sola barra con las herramientas de la ventana (que flotan a su derecha):
-    // la caja guarda su altura aunque `TaskLocation` aún no cargue, para que el chat
-    // empiece siempre debajo y el primer mensaje no quede bajo esas herramientas.
-    const barraDeLaTarea = (contenido: JSX.Element) =>
-      <div data-task-bar="" class={cn("flex min-w-0 shrink-0 flex-col overflow-hidden", LOCATION_BAR)}>{contenido}</div>;
+    // Una sola barra superior de 38 px (`LOCATION_BAR`) con ubicación a la izquierda y herramientas
+    // a la derecha: queda alineada al píxel con la cabecera del panel derecho en el split.
+    const barraDeLaTarea = (contenido: JSX.Element) => (
+      <div data-task-bar="" class={cn("flex min-w-0 shrink-0 items-center justify-between gap-2 border-b border-border/60 pr-2.5", LOCATION_BAR)}>
+        <div class="flex h-full min-w-0 flex-1 items-center overflow-hidden">{contenido}</div>
+        <Show when={pp.toolbar}>
+          <div class="flex shrink-0 items-center">{pp.toolbar?.()}</div>
+        </Show>
+      </div>
+    );
     const ubicacion = () => <Show when={pp.sesion} fallback={<Show when={!paginaDeAgente()}>{barraDeLaTarea(<Suspense fallback={null}><TaskLocation
       /* La tarea nueva: la máquina y la carpeta donde va a correr. La rama sale al empezarla. */
       machine={(draftMachine() ?? (capabilities().nativeWindow ? null : rememberedRunOn(workspaceActivo()))) ?? undefined} machineName={machineName} machineWakes={machineWakes} folderIcon={folderIcon}
