@@ -52,8 +52,9 @@ export function VirtualThread(props: {
     anchorTo: "end",
     followOnAppend: false,
     scrollToFn: (offset, { adjustments = 0 }) => {
-      wanted = offset + adjustments;
-      props.write(wanted);
+      // Las correcciones de alto las lleva `seguirElFondo`; aceptar `adjustments` aquí pelea al subir.
+      if (adjustments !== 0) return;
+      wanted = offset;
     },
     // Una pestaña escondida mide cero: aceptarlo desmontaría lo que se lee.
     observeElementRect: (instance, callback) => observeElementRect(instance, (rect) => {
@@ -102,13 +103,6 @@ export function VirtualThread(props: {
   createMemo(() => {
     const first = placed()[0];
     if (first) props.onRange?.(first.index);
-  });
-
-  createEffect(() => {
-    placed();
-    if (wanted !== null && Math.abs(props.scroller.scrollTop - wanted) >= 1) props.write(wanted);
-    wanted = null;
-    props.settled();
   });
 
   const rowOf = (key: string) => props.scroller.querySelector<HTMLElement>(`[data-thread-key="${CSS.escape(key)}"]`);
@@ -183,12 +177,20 @@ export function VirtualThread(props: {
   }) as unknown as Accessor<HTMLElement[]>;
 
   // Conserva los nodos y solo mueve los que cambiaron de lugar al reconciliar sus claves.
+  // Corre ANTES de `settled()` para que el ancla mida contra el DOM ya reconciliado.
   const end = document.createComment("");
   let mounted = new Set<HTMLElement>();
   createEffect(() => {
+    placed();
     const next = rows();
     const kept = new Set(next);
-    for (const row of mounted) if (!kept.has(row)) row.remove();
+    let removed = false;
+    for (const row of mounted) {
+      if (!kept.has(row)) {
+        row.remove();
+        removed = true;
+      }
+    }
     let after: Node = end;
     const parent = end.parentNode as (Node & { moveBefore?: (node: Node, child: Node | null) => void }) | null;
     for (let at = next.length - 1; at >= 0; at--) {
@@ -200,9 +202,19 @@ export function VirtualThread(props: {
       after = row;
     }
     mounted = kept;
+    if (removed) virtualizer.measureElement(null);
+    if (wanted !== null) {
+      const target = wanted;
+      wanted = null;
+      if (Math.abs(props.scroller.scrollTop - target) >= 1) props.write(target);
+      else props.settled();
+    } else {
+      props.settled();
+    }
   });
   onCleanup(() => {
     for (const row of mounted) row.remove();
+    virtualizer.measureElement(null);
   });
 
   return end as unknown as JSX.Element;
