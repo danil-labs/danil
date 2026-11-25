@@ -40,6 +40,8 @@
   ${If} ${FileExists} "$INSTDIR\old_${WINDOW}"
   ${OrIf} ${FileExists} "$INSTDIR\old_danil-engine.exe"
   ${OrIf} ${FileExists} "$INSTDIR\old_seldon-runtime.exe"
+  ${OrIf} ${FileExists} "$INSTDIR\old_danil.exe"
+  ${OrIf} ${FileExists} "$INSTDIR\old_kn.exe"
     System::Call 'kernel32::GetTickCount()i.R9'
     StrCpy $R8 "$INSTDIR\old_$R9_"
   ${EndIf}
@@ -51,6 +53,12 @@
   ${EndIf}
   ${If} ${FileExists} "$INSTDIR\seldon-runtime.exe"
     Rename "$INSTDIR\seldon-runtime.exe" "$R8seldon-runtime.exe"
+  ${EndIf}
+  ${If} ${FileExists} "$INSTDIR\danil.exe"
+    Rename "$INSTDIR\danil.exe" "$R8danil.exe"
+  ${EndIf}
+  ${If} ${FileExists} "$INSTDIR\kn.exe"
+    Rename "$INSTDIR\kn.exe" "$R8kn.exe"
   ${EndIf}
 !macroend
 

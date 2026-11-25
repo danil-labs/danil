@@ -130,6 +130,7 @@ const steps = [
   ["Installing the hooks keeps a foreign core.hooksPath", process.execPath, ["--test", join(root, "tests/unit/install-hooks.test.mjs")], root],
   ["A release package cannot be built without the bundled tools", process.execPath, ["--test", join(root, "tests/unit/desktop-build.test.mjs")], root],
   ["A release artifact without its bundled tools is not published", process.execPath, ["--test", join(root, "tests/unit/desktop-release-verify.test.mjs")], root],
+  ["Wave 2 thin danil and kn sidecars are downloaded, verified and pinned without breaking Wave 1 locks", process.execPath, ["--test", join(root, "tests/unit/engine-thin-cli.test.mjs")], root],
   ["All code is reviewable", process.execPath, [join(root, "scripts/guards/reviewable.mjs")], root],
   [
     "A guard without git says so and does not kill the chain",
