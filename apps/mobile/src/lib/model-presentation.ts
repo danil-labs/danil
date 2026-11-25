@@ -1,4 +1,4 @@
-import { canonicalAgentId, danilCreditsTierLabel, danilServiceOf, isDanilCreditsModel, isFreeRouterAgent, isRetiredAgent, modelName, OPENCODE } from "@terminus/tasks";
+import { canonicalAgentId, danilCreditsTierLabel, danilServiceOf, isDanilCreditsModel, isDanilCreditsSurface, isFreeRouterAgent, isRetiredAgent, modelName, OPENCODE } from "@terminus/tasks";
 
 type ModelCatalog = Parameters<typeof modelName>[1];
 
@@ -7,7 +7,7 @@ type SurfaceIdentity = { id?: string; provider: string; catalogo: string; label:
 /** Presentación móvil; los ids de proveedor, superficie y modelo no cambian. */
 export function surfacePresentation(surface: SurfaceIdentity, labels: { free: string; credits?: string }) {
   const provider = canonicalAgentId(surface.provider);
-  if (surface.id === "danil-credits") return { label: labels.credits ?? surface.label, mark: "danil" };
+  if (isDanilCreditsSurface(surface.id)) return { label: labels.credits ?? surface.label, mark: "danil" };
   if (surface.catalogo === "gratuitos" || isFreeRouterAgent(provider)) return { label: labels.free, mark: "danil" };
   if (provider === OPENCODE) return { label: "OpenCode", mark: OPENCODE };
   return { label: surface.label, mark: surface.provider };

@@ -1,5 +1,5 @@
 import { canonicalAgentId, OPENCODE } from "./agents.ts";
-import { DANIL_CREDITS_MODEL, isDanilCreditsModel } from "./danil-services.ts";
+import { DANIL_CREDITS_MODEL, isDanilCreditsModel, isDanilCreditsSurface } from "./danil-services.ts";
 
 /**
  * Con qué modelo y por qué superficie sigue una tarea: la misma regla en la
@@ -42,8 +42,9 @@ export type SurfaceModel = { id: string; gratis?: boolean | null };
  * publica; la partición los deja fuera aquí.
  */
 export function surfaceHas(s: Surface | undefined, m: SurfaceModel): boolean {
-  if (s?.id === "danil-credits") {
-    return canonicalAgentId(s.provider) === OPENCODE && isDanilCreditsModel(m.id) && m.gratis !== true;
+  if (s && isDanilCreditsSurface(s.id)) {
+    const provider = canonicalAgentId(s.provider);
+    return (provider === OPENCODE || provider === "claude") && isDanilCreditsModel(m.id) && m.gratis !== true;
   }
   if (m.id.startsWith("danil-credits/")) return false;
   if (s && canonicalAgentId(s.provider) === OPENCODE && s.catalogo !== "gratuitos" && m.id.startsWith("opencode/")) return false;
@@ -134,7 +135,7 @@ export function defaultSurfaceModel<M extends SurfaceModel>(
   surface: Surface | undefined,
   models: readonly M[],
 ): M | undefined {
-  if (surface?.id === "danil-credits") {
+  if (isDanilCreditsSurface(surface?.id)) {
     return models.find((m) => m.id === DANIL_CREDITS_MODEL) ?? models[0];
   }
   return models[0];

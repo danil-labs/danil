@@ -120,14 +120,18 @@ test("grupos: varias superficies del mismo proveedor comparten grupo, en orden d
   assert.deepEqual(g.map((x) => x.map((s) => s.id)), [["a", "b"], ["codex"]]);
 });
 
-test("grupos: danil-credits queda fuera de los grupos de proveedor", () => {
+test("grupos: danil-credits y danil-credits-claude quedan fuera de los grupos de proveedor", () => {
   const todas = [
     sup("opencode", { id: "opencode", catalogo: "de_pago" }),
     sup("opencode", { id: "danil-credits", label: "Danil Credits", catalogo: "todo" }),
+    sup("claude", { id: "danil-credits-claude", label: "Danil Credits", catalogo: "todo" }),
     sup("claude"),
   ];
   assert.deepEqual(grupos(todas).map((g) => g.map((s) => s.id)), [["opencode"], ["claude"]]);
-  assert.deepEqual(idsDeGrupos([sup("opencode", { id: "danil-credits", label: "Danil Credits" })]), []);
+  assert.deepEqual(idsDeGrupos([
+    sup("opencode", { id: "danil-credits", label: "Danil Credits" }),
+    sup("claude", { id: "danil-credits-claude", label: "Danil Credits" }),
+  ]), []);
 });
 
 test("visibles: con un proveedor ya cargado y otro pendiente nunca queda vacio='cargando'", () => {
