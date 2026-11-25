@@ -2,7 +2,7 @@ import { t } from "../../../ui/src/lib/i18n";
 import { panelReadingOrder, sameSite, type PanelSite as SitioDePanel } from "../../../ui/src/lib/panels";
 import { type Layout, type PanelGroup, type Side } from "../../../ui/src/lib/panels-types.ts";
 import { destinoDePestana, type NavegacionDePestanas } from "../../../ui/src/lib/shortcuts";
-import { isContentTab, isTaskTab, screenTabId, type Tab } from "../../../ui/src/lib/tabs";
+import { isContentTab, isTaskTab, pluginTabId, screenTabId, type Tab } from "../../../ui/src/lib/tabs";
 import { type ContentTab, type FileTab } from "../../../ui/src/lib/tabs-types.ts";
 import { machineName } from "../../../features/machines/src/queries/store";
 import { type createDeskStrip as T_createDeskStrip } from "../../../features/projects/src";
@@ -76,9 +76,9 @@ export function createWindows(deps: WindowsDeps) {
     // las pestañas nuevas— a un solo gesto (`lib/panels.ts`).
     paneles.activate(p.id);
     setProyectoAbierto(null);
-    // El navegador del «+» tampoco cuelga de ninguna tarea: detrás no se
-    // abre nada.
-    if (p.clase === "pantalla" || (p.clase === "sitio" && p.navegador)) {
+    // El navegador del «+», las pantallas y los plugins tampoco cuelgan de ninguna tarea:
+    // detrás no se abre nada.
+    if (p.clase === "pantalla" || p.clase === "plugin" || (p.clase === "sitio" && p.navegador)) {
       pestanas.activate(p.id);
       return;
     }
@@ -120,6 +120,25 @@ export function createWindows(deps: WindowsDeps) {
     if (recorrido.length < 2) return;
     const i = recorrido.findIndex((s) => sameSite(s, paneles.activeSite()));
     mandarVentana(recorrido[(i + salto + recorrido.length) % recorrido.length]);
+  }
+
+  /** Abre (o enfoca si ya está abierta) la pestaña de un plugin en `<iframe>`. */
+  function abrirPlugin(plugin: { pluginId: string; titulo: string; url: string }) {
+    const id = pluginTabId(plugin.pluginId);
+    batch(() => {
+      setProyectoAbierto(null);
+      pestanas.openContent({
+        clase: "plugin",
+        id,
+        project: "",
+        session: "",
+        pluginId: plugin.pluginId,
+        titulo: plugin.titulo,
+        url: plugin.url,
+      });
+      paneles.sync(pestanas.open().map((x) => x.id));
+      paneles.activate(id);
+    });
   }
 
   /** La pantalla de una computadora, en una ventana al lado de la conversación. */
@@ -179,5 +198,5 @@ export function createWindows(deps: WindowsDeps) {
 
   const puedeSepararseDe = (sitio: SitioDePanel) =>
     !paginaDeAgente() && paneles.activeTabAt(sitio) !== null && paneles.canSplit();
-  return { abrirPantalla, activarPestana, cerrarPestanasYa, irAPestanaDe, irAVentanaVecina, mandarVentana, partirLaActiva, partirVentana, puedeSepararseDe, reabrirPestana };
+  return { abrirPantalla, abrirPlugin, activarPestana, cerrarPestanasYa, irAPestanaDe, irAVentanaVecina, mandarVentana, partirLaActiva, partirVentana, puedeSepararseDe, reabrirPestana };
 }

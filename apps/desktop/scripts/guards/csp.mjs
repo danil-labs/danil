@@ -71,7 +71,14 @@ const PERMITIDO = {
   // esto el HTML del agente hace `location.href = "http://…/?" + contenido`.
   // `terminus-page` es la vista previa de un `.html` de la tarea (`page_preview.rs`):
   // sirve solo archivos de su carpeta: navegar ahí no saca nada.
-  "frame-src": ["'self'", "terminus-page:", "http://terminus-page.localhost"],
+  // `messaging.danil.ai` / `messaging-staging.danil.ai`: conector visual en pestaña (#398, #400).
+  "frame-src": [
+    "'self'",
+    "terminus-page:",
+    "http://terminus-page.localhost",
+    "https://messaging.danil.ai",
+    "https://messaging-staging.danil.ai",
+  ],
   "object-src": ["'none'"],
   // Las dos que NO heredan de `default-src`: sin escribirlas quedan abiertas.
   "base-uri": ["'none'"],
