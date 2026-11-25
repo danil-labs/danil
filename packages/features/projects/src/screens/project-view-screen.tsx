@@ -10,7 +10,6 @@ import Sessions from "./Sessions";
 import { createVistaDeProyecto, type VistaDeProyectoProps } from "./project-view-state";
 import { createPanelDeAgentes } from "./project-view-agents";
 import { createPanelDeCarpeta } from "./project-view-workdir";
-import { createPanelDeFuentes } from "./project-view-sources";
 
 
 // Fuera de la carga inicial: la memoria solo se pinta en Configuración y trae el cliente de la cuenta.
@@ -35,7 +34,6 @@ export default function VistaDeProyecto(props: VistaDeProyectoProps) {
   const { pestana, setPestana, encargados } = vista;
   const { PanelDeAgentes } = createPanelDeAgentes(props, vista);
   const { PanelDeCarpeta } = createPanelDeCarpeta(props, vista);
-  const { PanelDeFuentes } = createPanelDeFuentes(props, vista);
 
   return (
     <div class="min-h-0 flex-1 overflow-y-auto">
@@ -99,7 +97,6 @@ export default function VistaDeProyecto(props: VistaDeProyectoProps) {
         <TabsContent value="settings" class="grid min-w-0 gap-3 outline-none">
           <PanelDeCarpeta />
 
-          <PanelDeFuentes />
 
           <Suspense>
             <Memoria

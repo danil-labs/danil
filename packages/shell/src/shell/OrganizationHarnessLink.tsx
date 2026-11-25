@@ -2,7 +2,7 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createMemo, createResource, createSignal, onCleanup, onMount, Show } from "solid-js";
 import { openExternalTarget } from "../../../host/src/file-preview";
 import { capabilities } from "../../../host/src/platform";
-import { activeWorkspaceContext } from "../../../session/src/workspace-context";
+import { activeWorkspaceContext, displayWorkspaceContext } from "../../../session/src/workspace-context";
 import { t } from "../../../ui/src/lib/i18n";
 import { canOpenOrganizationHarness, HARNESS_URL, type HarnessOrgInfo } from "./organization-harness";
 import { sessionRailState } from "./session-groups";
@@ -27,7 +27,7 @@ export default function OrganizationHarnessLink(props: {
 }) {
   const [orgs, setOrgs] = createSignal<OrgSnapshot | null>(null);
   const railGroups = () => sessionRailState()?.groups();
-  const activeContext = () => props.context ?? activeWorkspaceContext();
+  const activeContext = () => props.context ?? activeWorkspaceContext() ?? displayWorkspaceContext();
 
   const [webGroup] = createResource(
     () => (!capabilities().nativeWindow && !railGroups()?.length ? capabilities().groupAccount : undefined),

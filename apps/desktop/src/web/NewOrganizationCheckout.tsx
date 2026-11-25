@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, Show, untrack } from "solid-js";
 import { t } from "../lib/i18n";
 import { Button } from "../../../../packages/ui/src/Button";
 import { Input } from "../../../../packages/ui/src/Input";
@@ -15,8 +15,9 @@ import { bindCreationCheckout, creationKey } from "./billing-v2-idempotency";
 type Api = ReturnType<typeof billingV2>;
 
 export default function NewOrganizationCheckout(props: { api: Api; initialPlan?: string; initialPromotion?: string }) {
+  const api = untrack(() => props.api);
   const [open, setOpen] = createSignal(false);
-  const [catalog, { refetch }] = createResource(open, () => props.api.catalog());
+  const [catalog, { refetch }] = createResource(open, () => api.catalog());
   const [name, setName] = createSignal("");
   const [plan, setPlan] = createSignal(props.initialPlan ?? "pro");
   const [promotion, setPromotion] = createSignal(props.initialPromotion ?? "");
@@ -56,9 +57,9 @@ export default function NewOrganizationCheckout(props: { api: Api; initialPlan?:
       const organizationName = name();
       const key = await creationKey(sessionStorage, option.id, version, organizationName, code);
       signal.throwIfAborted();
-      const created = await props.api.createOrganization(choice.plan_key, version, organizationName, key, choice.variant, code);
+      const created = await api.createOrganization(choice.plan_key, version, organizationName, key, choice.variant, code);
       bindCreationCheckout(sessionStorage, key, created.checkout_id);
-      const url = await waitForPaymentUrl(created, () => props.api.checkoutStatus(created.checkout_id, signal), signal, () => setStatus("checkout_preparing"));
+      const url = await waitForPaymentUrl(created, () => api.checkoutStatus(created.checkout_id, signal), signal, () => setStatus("checkout_preparing"));
       rememberBillingReturn(created.checkout_id);
       window.location.assign(url);
     } catch (error) {

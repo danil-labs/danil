@@ -1,19 +1,18 @@
 import { enfocar } from "../../../../ui/src/lib/focus";
+import { isNoMachines, isPaidPlan } from "../../../../host/src/platform";
 import { t } from "../../../../ui/src/lib/i18n";
 import { modelBrand } from "../../../../ui/src/lib/models";
 import { prosa } from "../../../../ui/src/lib/prose";
-import { nombreDe } from "../../../../ui/src/lib/steps";
 import { cn } from "../../../../ui/src/lib/utils";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote } from "../../../../ui/src/Failure";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { MARCA_SIN_ELEGIR } from "../../../../ui/src/lib/surfaceMarks";
-import { Adjunto, rodarEnHorizontal } from "./Attachments";
+import { FilaDeAdjuntos } from "./Attachments";
 import VentanaDeContexto from "../components/ContextWindow";
 import ColaDeMensajes from "../components/MessageQueue";
 import SelectorDeModo from "../components/ModePicker";
-import Alcance from "./Scope";
 import { PanelAlMargen } from "../components/SideQuestion";
 import { ComposerAction } from "../components/composer/ComposerAction";
 import type { createChatAttachments } from "./chat-attachments";
@@ -29,16 +28,15 @@ import MessageCircleQuestion from "lucide-solid/icons/message-circle-question-ma
 import Paperclip from "lucide-solid/icons/paperclip";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import X from "lucide-solid/icons/x";
-import { For, Show } from "solid-js";
+import { Show } from "solid-js";
 import { Input } from "../../../../ui/src/Input";
 
 /** Lo que el bloque usa del cuerpo de Chat. */
-export type ChatComposerDeps = { CampoDeLaCaja: ReturnType<typeof createChatComposerField>["CampoDeLaCaja"]; MenuDeSugerencias: ReturnType<typeof createChatComposerPrompts>["MenuDeSugerencias"]; PermisoDeLaCaja: ReturnType<typeof createChatComposerPrompts>["PermisoDeLaCaja"]; PreguntaDeLaCaja: ReturnType<typeof createChatComposerPrompts>["PreguntaDeLaCaja"]; actual: ReturnType<typeof createChatComposerState>["actual"]; attachmentFailure: ReturnType<typeof createChatComposerState>["attachmentFailure"]; bloqueoDeSuperficie: ReturnType<typeof createChatComposerState>["bloqueoDeSuperficie"]; cambiarModo: ReturnType<typeof createChatComposerState>["cambiarModo"]; campo: HTMLTextAreaElement | undefined; carpetaDeTerminal: ReturnType<typeof createChatTurnState>["carpetaDeTerminal"]; composerBox: HTMLDivElement | undefined; efforts: ReturnType<typeof createChatComposerState>["efforts"]; elegido: ReturnType<typeof createChatComposerState>["elegido"]; elegirArchivos: ReturnType<typeof createChatAttachments>["elegirArchivos"]; entradaActiva: ReturnType<typeof createChatTurnState>["entradaActiva"]; entradaArchivo: HTMLInputElement | undefined; faltaUnanime: ReturnType<typeof createChatComposerState>["faltaUnanime"]; fuentes: ReturnType<typeof createChatTurnState>["fuentes"]; listo: ReturnType<typeof createChatComposerState>["listo"]; mandar: ReturnType<typeof createChatAttachments>["mandar"]; menuOpen: ReturnType<typeof createChatComposerInput>["menuOpen"]; modoAlMargen: ReturnType<typeof createChatTurnState>["modoAlMargen"]; modoTerminal: ReturnType<typeof createChatTurnState>["modoTerminal"]; opciones: ReturnType<typeof createChatComposerState>["opciones"]; preguntaPendiente: ReturnType<typeof createChatTurnState>["preguntaPendiente"]; preguntaPlegada: ReturnType<typeof createChatComposerState>["preguntaPlegada"]; presentation: ReturnType<typeof createChatComposerState>["presentation"]; pulsoDeModo: ReturnType<typeof createChatComposerState>["pulsoDeModo"]; setSoltadoDe: ReturnType<typeof createChatTurnState>["setSoltadoDe"]; trigger: ReturnType<typeof createChatComposerState>["trigger"] };
+export type ChatComposerDeps = { CampoDeLaCaja: ReturnType<typeof createChatComposerField>["CampoDeLaCaja"]; MenuDeSugerencias: ReturnType<typeof createChatComposerPrompts>["MenuDeSugerencias"]; PermisoDeLaCaja: ReturnType<typeof createChatComposerPrompts>["PermisoDeLaCaja"]; PreguntaDeLaCaja: ReturnType<typeof createChatComposerPrompts>["PreguntaDeLaCaja"]; actual: ReturnType<typeof createChatComposerState>["actual"]; attachmentFailure: ReturnType<typeof createChatComposerState>["attachmentFailure"]; bloqueoDeSuperficie: ReturnType<typeof createChatComposerState>["bloqueoDeSuperficie"]; cambiarModo: ReturnType<typeof createChatComposerState>["cambiarModo"]; campo: HTMLTextAreaElement | undefined; carpetaDeTerminal: ReturnType<typeof createChatTurnState>["carpetaDeTerminal"]; composerBox: HTMLDivElement | undefined; efforts: ReturnType<typeof createChatComposerState>["efforts"]; elegido: ReturnType<typeof createChatComposerState>["elegido"]; elegirArchivos: ReturnType<typeof createChatAttachments>["elegirArchivos"]; entradaActiva: ReturnType<typeof createChatTurnState>["entradaActiva"]; entradaArchivo: HTMLInputElement | undefined; faltaUnanime: ReturnType<typeof createChatComposerState>["faltaUnanime"]; listo: ReturnType<typeof createChatComposerState>["listo"]; mandar: ReturnType<typeof createChatAttachments>["mandar"]; menuOpen: ReturnType<typeof createChatComposerInput>["menuOpen"]; modoAlMargen: ReturnType<typeof createChatTurnState>["modoAlMargen"]; modoTerminal: ReturnType<typeof createChatTurnState>["modoTerminal"]; opciones: ReturnType<typeof createChatComposerState>["opciones"]; preguntaPendiente: ReturnType<typeof createChatTurnState>["preguntaPendiente"]; preguntaPlegada: ReturnType<typeof createChatComposerState>["preguntaPlegada"]; presentation: ReturnType<typeof createChatComposerState>["presentation"]; pulsoDeModo: ReturnType<typeof createChatComposerState>["pulsoDeModo"]; setSoltadoDe: ReturnType<typeof createChatTurnState>["setSoltadoDe"]; cajasVisibles: ReturnType<typeof createChatComposerState>["cajasVisibles"]; cancelarCaja: ReturnType<typeof createChatComposerState>["cancelarCaja"]; ordenesOcultas: ReturnType<typeof createChatComposerState>["ordenesOcultas"]; trigger: ReturnType<typeof createChatComposerState>["trigger"] };
 
 /** Movido tal cual de Chat.tsx (el componente `Chat`, tarea 2.6). Lo que usa del cuerpo de Chat llega por `deps`. */
 export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
-  const { CampoDeLaCaja, MenuDeSugerencias, PermisoDeLaCaja, PreguntaDeLaCaja, actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, carpetaDeTerminal, efforts, elegido, elegirArchivos, entradaActiva, faltaUnanime, fuentes, listo, mandar, menuOpen, modoAlMargen, modoTerminal, opciones, preguntaPendiente, preguntaPlegada, presentation, pulsoDeModo, setSoltadoDe, trigger } = deps;
+  const { CampoDeLaCaja, MenuDeSugerencias, PermisoDeLaCaja, PreguntaDeLaCaja, actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, carpetaDeTerminal, efforts, elegido, elegirArchivos, entradaActiva, faltaUnanime, listo, mandar, menuOpen, modoAlMargen, modoTerminal, opciones, preguntaPendiente, preguntaPlegada, presentation, pulsoDeModo, setSoltadoDe, cajasVisibles, cancelarCaja, ordenesOcultas, trigger } = deps;
   const BarraDeLaCaja = () => (
         <div class="flex min-w-0 items-center gap-1 px-2">
           {/* Vuelve a abrir el diálogo de archivos de golpe. Contexto y
@@ -96,8 +94,53 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
                 un agente desconectado deja una entrada y ninguna utilizable,
                 y ahí también hace falta. El rótulo cambia con lo que falta;
                 el porqué entero va en el título de la superficie. */}
+            <Show when={isNoMachines()}>
+              <div class="flex min-w-0 items-center gap-1" data-composer-no-machines="">
+                <span class="truncate px-1.5 text-xs text-neutral-500">{t("chat.no_machines.status")}</span>
+                <Show
+                  when={isPaidPlan()}
+                  fallback={
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.dispatchEvent(new window.CustomEvent("harness:open-settings", { detail: "maintenance" }))}
+                      >
+                        {t("chat.no_machines.download_desk")}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.dispatchEvent(new window.CustomEvent("harness:open-settings", { detail: "cuenta-danil" }))}
+                      >
+                        {t("chat.no_machines.view_plans")}
+                      </Button>
+                    </>
+                  }
+                >
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.dispatchEvent(new window.CustomEvent("harness:open-settings", { detail: "cuenta-danil" }))}
+                  >
+                    {t("chat.no_machines.manage_plan")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.dispatchEvent(new window.CustomEvent("harness:open-settings", { detail: "maintenance" }))}
+                  >
+                    {t("chat.no_machines.download_desk")}
+                  </Button>
+                </Show>
+              </div>
+            </Show>
             <Show
-              when={props.superficies && !props.superficies.some((s) => s.usable)}
+              when={!isNoMachines() && props.superficies && !props.superficies.some((s) => s.usable)}
             >
               <Button
                 variant="ghost"
@@ -117,7 +160,7 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
               </Button>
             </Show>
 
-            <Show when={props.superficies != null && !modoTerminal()}>
+            <Show when={!isNoMachines() && props.superficies != null && !modoTerminal()}>
               {/* Una opción decide agente, superficie y modelo. Separarlos hacía
                   imposible buscar Claude, Codex y OpenCode en el mismo menú.
                   La marca sale del agente que sirve la superficie: «OpenCode»
@@ -190,22 +233,6 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
           exige un acto separado, con el literal que Rust conserva. */}
       <PermisoDeLaCaja />
 
-      {/* Encima de la caja: lo que la tarea lee se ve antes de escribir, no
-          dentro del control de escribir. Dónde escribe no es una fuente: es
-          la carpeta de trabajo del proyecto, en el panel de la columna. */}
-      <Alcance
-        rotulo={t("chat.scope.sources")}
-        agregar={t("chat.scope.sources_add")}
-        items={fuentes()}
-        materialOptions={props.materialOptions}
-        materialTarget={props.materialTarget}
-        materialAvailable={props.materialAvailable}
-        bloqueado={props.busy}
-        onTraer={props.onAdjuntarFuente}
-        onQuitar={props.onQuitarFuente}
-        onCambiarRama={props.onCambiarRama}
-      />
-
       <form
         class={cn(
           !props.permission && preguntaPendiente()
@@ -253,35 +280,19 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
             enseñaría dos veces en la misma pantalla, con dos formas de
             quitarlo que hacen cosas distintas. Un archivo sí es de este
             mensaje y solo de este. */}
-        <Show when={props.adjuntos.length > 0}>
-          {/* Una fila y no varias: si envuelve, la bandeja crece hasta tapar
-              el campo de texto. */}
-          <div
-            class="flex gap-2 overflow-x-auto overflow-y-hidden px-1 pt-1 pb-1 select-none"
-            onWheel={rodarEnHorizontal}
-          >
-            <For each={props.adjuntos}>
-              {(p) => (
-                <div class="group relative shrink-0">
-                  <Adjunto rel={p} miniatura={props.onMiniatura} preview={props.onPreview} renderPdf={props.renderPdf} />
-                  {/* Dentro de la esquina: fuera de ella, el scroll horizontal la recorta. */}
-                  <Pressable
-                    class="absolute top-1 right-1 grid size-[1.125rem] place-items-center rounded-full bg-neutral-950 text-neutral-50 opacity-0 ring-2 ring-surface-raised transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none"
-                    aria-label={t("chat.attachments.remove", {
-                      name: nombreDe(p),
-                    })}
-                    title={t("chat.attachments.remove", { name: nombreDe(p) })}
-                    onClick={() =>
-                      props.onAdjuntos(props.adjuntos.filter((x) => x !== p))
-                    }
-                  >
-                    <X size={11} />
-                  </Pressable>
-                </div>
-              )}
-            </For>
-          </div>
-        </Show>
+        {/* Una fila y no varias: si envuelve, la bandeja crece hasta tapar
+            el campo de texto. La caja del pegado ya está aquí, cuadrada,
+            antes de que el archivo tenga ruta. */}
+        <FilaDeAdjuntos
+          rels={props.adjuntos}
+          ocultas={ordenesOcultas()}
+          cajas={cajasVisibles(props.adjuntos.length)}
+          miniatura={props.onMiniatura}
+          preview={props.onPreview}
+          renderPdf={props.renderPdf}
+          onQuitar={(p) => props.onAdjuntos(props.adjuntos.filter((x) => x !== p))}
+          onCancelar={cancelarCaja}
+        />
 
         <Show when={modoAlMargen() && props.sideCommand}>
           {(comando) => (

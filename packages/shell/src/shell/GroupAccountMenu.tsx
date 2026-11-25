@@ -1,6 +1,7 @@
 import { createResource, type JSX, Show } from "solid-js";
 import { type GroupAccount, type GroupSend, readGroupBalance, redeemGroupCode } from "../../../session/src/group-account";
 import { t } from "../../../ui/src/lib/i18n";
+import { formatCreditsCount } from "../../../ui/src/lib/tasks/danil-services.ts";
 import { canRedeemPromo } from "../../../session/src/promo-role";
 import { cn } from "../../../ui/src/lib/utils";
 import { SEPARADOR_DE_MENU } from "../../../ui/src/ContextMenu";
@@ -9,7 +10,7 @@ import PromoRedeem from "./PromoRedeem";
 import { Pressable } from "../../../ui/src/Pressable";
 
 function groupBalanceLabel(amount: number | null | undefined) {
-  return amount === undefined ? t("shell.workspaces.danil_loading") : amount === null ? t("chat.credits.unavailable") : t("chat.credits.amount", { count: amount });
+  return amount === undefined ? t("shell.workspaces.danil_loading") : amount === null ? t("chat.credits.unavailable") : t("chat.credits.amount", { count: formatCreditsCount(amount) });
 }
 
 export function GroupAccountMenu(props: { group: GroupAccount; send: GroupSend; promo: boolean; web?: boolean; notice?: JSX.Element; onPromo: () => void }) {

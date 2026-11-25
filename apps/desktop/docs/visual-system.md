@@ -1,7 +1,7 @@
 # Sistema visual
 
-Los controles de Danil usan tokens de `src/styles/global.css` y átomos de
-`src/ui/`. Los valores por paleta están en [`color-tokens.md`](./color-tokens.md).
+Los controles de Danil usan tokens de `packages/ui/src/styles/global.css` y átomos de
+`packages/ui/src/`. Los valores por paleta están en [`color-tokens.md`](./color-tokens.md).
 
 ## Tema y paletas
 
@@ -51,7 +51,7 @@ se indica mediante las variantes del átomo; no se sustituye por un hover.
 
 ## Geometría de la ventana
 
-`src/lib/window.ts` define la altura de cabecera y la reserva del semáforo de macOS.
+`packages/host/src/window.ts` define la altura de cabecera y la reserva del semáforo de macOS.
 La fila de título usa esas medidas; el riel y el panel de trabajo empiezan debajo.
 Windows usa controles de ventana propios y Linux conserva decoración nativa.
 La apariencia final requiere comprobarse en cada plataforma.
@@ -84,13 +84,13 @@ su limitación de contraste sobre el riel oscuro y no se sustituye por `primary`
 ## Página de carpeta
 
 La página abre en Tareas; Configuración es otra pestaña con carpeta, fuentes,
-agentes y memoria. Cada sección usa `Panel` de `src/ui/`, con `surface` sólido: el
+agentes y memoria. Cada sección usa `Panel` de `packages/ui/src/`, con `surface` sólido: el
 contraste de su texto no depende de la imagen de fondo. Un agente ocupa una línea
 y solo muestra quién lo lee cuando esa combinación se sale de la más común.
 
 ## Tema de terminal
 
-`src/lib/terminal-themes.ts` y `src/styles/terminal.css` conservan los temas Danil,
+`src/lib/terminal-themes.ts` y `packages/ui/src/styles/terminal.css` conservan los temas Danil,
 Tomorrow Night Blue, Nord, Gruvbox Dark y Dracula. `Workspace.terminal_theme` guarda
 la elección y `data-terminal-theme` aplica los tokens `terminal-*`.
 

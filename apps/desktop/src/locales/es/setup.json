@@ -8,7 +8,7 @@
   "setup.tips.context.title": "Contexto que potencia su trabajo",
   "setup.tips.context.body": "Las fuentes de contexto gobernadas ayudan a tus agentes a encontrar lo que necesitan y a enfocar su trabajo.",
   "setup.tips.workspaces.title": "Un espacio para cada contexto",
-  "setup.tips.workspaces.body": "Crea los espacios de trabajo que necesites. Cada uno conserva su propia configuración, cuentas y fuentes.",
+  "setup.tips.workspaces.body": "Crea los espacios de trabajo que necesites. Cada uno conserva su propia configuración y cuentas.",
   "setup.tips.memory.title": "Aprendizajes que se comparten",
   "setup.tips.memory.body": "Los agentes comparten memoria dentro del workspace, como un equipo que construye conocimiento en conjunto.",
   "setup.tips.go": "Consejo {number}",

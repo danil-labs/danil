@@ -29,8 +29,10 @@ export { credentialMachines };
 import { createRoot, createSignal } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
 import { callEngine } from "../../../../engine-client/src/client.ts";
+import { isOwnMachine } from "../../../../host/src/machine";
 import { capabilities } from "../../../../host/src/platform";
 import { detalleDe, type Failure } from "../../../../ui/src/Failure";
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { Startup } from "./workspaces-store";
 
 type CredentialsView =
@@ -185,6 +187,12 @@ export function reloadCredentials(force = true): Promise<void> {
 }
 
 if (typeof window !== "undefined") window.addEventListener("harness:workspace", () => void reloadCredentials());
+
+/** Dónde corre el motor que contesta: esta máquina, salvo que el workspace viva en otra. */
+export function whereName({ machines, machineName }: MaquinasDeAjustes): string | null {
+  const lead = machines().find((m) => m.active);
+  return lead && !isOwnMachine(lead) ? machineName(lead.id, false) : null;
+}
 
 /** Corre una acción sobre la cuenta y vuelve a leer, haya salido bien o no. */
 export async function act(run: (backend: CredentialsBackend, workspace: string) => Promise<void>): Promise<Failure | null> {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CHUNK, chunkIds, chunkOf, tailChunk } from "../../src/features/chat/threadWindow.ts";
+import { CHUNK, chunkIds, chunkOf, tailChunk } from "../../../../packages/features/chat/src/model/threadWindow.ts";
 
 test("abrir uno largo monta sus dos últimos tramos, y el último puede ir a medias", () => {
   const total = 10 * CHUNK + 3;
@@ -16,7 +16,7 @@ test("si el hilo encoge por debajo de lo montado, el último tramo sigue a la vi
 });
 
 test("anteponer páginas del historial no cambia los tramos ya montados", async () => {
-  const { chunkStart, headChunk } = await import("../../src/features/chat/threadWindow.ts");
+  const { chunkStart, headChunk } = await import("../../../../packages/features/chat/src/model/threadWindow.ts");
   const blocks = [...Array(30).keys()];
   const before = chunkIds(blocks.length, 1).map((id) => [id, chunkOf(blocks, id)]);
   // Entran 35 bloques por delante: los de antes conservan su id y su contenido.

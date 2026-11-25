@@ -1,7 +1,7 @@
 import { FleetError } from "../model/fleet/index.ts";
 import { rememberWorkspaceSnapshot, setActiveWorkspaceContext } from "../../../../session/src/workspace-context.ts";
 import { createContextAttention } from "./context-attention.ts";
-import type { Invoke, RouterConfig } from "../model/router-config.ts";
+import type { CatalogWorkspaceEntry, Invoke, RouterConfig } from "../model/router-config.ts";
 import { scopedFleet } from "./scoped-fleet.ts";
 
 type LocalListing = { workspaces?: { id?: unknown; account?: { org?: unknown } }[] };
@@ -9,6 +9,7 @@ type ContextInfo = { org: string; plan?: string | null };
 export type ContextRouterConfig = RouterConfig & {
   contextInfo?: (context: string) => ContextInfo | null;
   readContextSpaces?: (context: string, organization: string, workspace: string) => ReturnType<NonNullable<RouterConfig["readWorkspaceSpaces"]>>;
+  contextCatalogWorkspaces?: (context: string) => readonly CatalogWorkspaceEntry[] | null;
 };
 type Core = {
   handle: Invoke; events(machine: string, events: {name:string; payload:unknown}[], metadata?: EventMetadata): void;
@@ -20,9 +21,6 @@ const HEADER = "x-danil-context";
 
 /** La selección y todas las cachés viven en la ventana, separadas por identidad. */
 export function createContextRouter(config: ContextRouterConfig, createRouterCore: (config: RouterConfig) => Core) {
-  const legacy = createRouterCore({ ...config, fleet: scopedFleet(config.fleet, {}) });
-  const contexts = new Map<string, Core>();
-  const placement = new Map<string, string>();
   let localWorkspaces = new Map<string, unknown>();
   const rememberLocal = (value: unknown) => {
     const { workspaces } = (value ?? {}) as LocalListing;
@@ -30,6 +28,17 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
       localWorkspaces = new Map(workspaces.flatMap(row => typeof row?.id === "string" ? [[row.id, row.account?.org]] : []));
     }
   };
+  const trackedNative: Invoke | null = config.native
+    ? async (command, args, options) => {
+        const value = await config.native!(command, args, options);
+        if (command === "list_workspaces" || command === "workspaces_startup") rememberLocal(value);
+        return value;
+      }
+    : null;
+  const routerConfig: ContextRouterConfig = trackedNative ? { ...config, native: trackedNative } : config;
+  const legacy = createRouterCore({ ...routerConfig, fleet: scopedFleet(config.fleet, {}) });
+  const contexts = new Map<string, Core>();
+  const placement = new Map<string, string>();
   const selectedWorkspaces = new Map<string, string>();
   const attention = createContextAttention(config.deliver);
   const isLocalChild = (machine: string, context?: string) => {
@@ -57,10 +66,12 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     }
     if (!router) {
       const free = info.plan === "free";
-      router = createRouterCore({ ...config,
+      router = createRouterCore({ ...routerConfig,
         fleet: scopedFleet(config.fleet, { context, org: info.org, localOnly: free, includeLocalChildren: config.native !== null }),
         localWorkspace: !free && config.native ? workspace => localWorkspaces.get(workspace) === info.org : undefined,
+        organizationCatalog: !free,
         readWorkspaceSpaces: config.readContextSpaces && (workspace => config.readContextSpaces!(context, info.org, workspace)),
+        catalogWorkspaces: config.contextCatalogWorkspaces ? () => config.contextCatalogWorkspaces!(context) : undefined,
         deliverRemote: config.native !== null,
         deliver: events => config.deliver?.(events.filter(event => event.name === "attention" || activeContext === context).map(event => event.name === "attention" ? { ...event, payload: attention.project(event.payload, context) } : event.name === "loopback-login" && event.payload && typeof event.payload === "object" ? { ...event, payload: { ...(event.payload as Record<string, unknown>), context } } : event)),
         registry: undefined, engineWorkspaces: undefined,
@@ -97,8 +108,8 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     if (selectedWorkspace && !headers.has("x-terminus-workspace") && !["set_active_workspace", "list_workspaces", "workspaces_startup"].includes(command)) {
       headers.set("x-terminus-workspace", selectedWorkspace); clean = { ...clean, headers: Object.fromEntries(headers) };
     }
-    if (selected && typeof args.id === "string" && command === "set_active_workspace" && config.native && config.contextInfo?.(selected)?.plan !== "free") {
-      await config.native("list_workspaces", {}).then(rememberLocal).catch(() => {});
+    if (selected && typeof args.id === "string" && command === "set_active_workspace" && trackedNative && config.contextInfo?.(selected)?.plan !== "free") {
+      await trackedNative("list_workspaces", {}).catch(() => {});
     }
     const value = await router.handle(command, args, clean);
     if (command === "list_workspace_attention") return attention.project(value, selected);

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { PlatformSessionError } from "../../src/web/platform-session.ts";
-import { awaitingWorkspace, readWorkspaces, retryWait, sessionExit, workspaceCache } from "../../src/web/session-wait.ts";
+import { PlatformSessionError } from "../../../../packages/session/src/platform-session.ts";
+import { awaitingWorkspace, readWorkspaces, retryWait, sessionExit, workspaceCache } from "../../../../packages/session/src/session-wait.ts";
 
 const memory = () => {
   const entries = new Map<string, string>();

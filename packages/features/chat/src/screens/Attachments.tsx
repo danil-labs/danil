@@ -35,6 +35,43 @@ export default function Adjuntos(props: {
   );
 }
 
+/** La miniatura final es un cuadrado de 3.5rem. El skeleton ocupa ese mismo sitio. */
+const PARECE_IMAGEN = /\.(png|jpe?g|gif|webp|bmp|avif|heic|heif|svg)$/i;
+const PARECE_DOCUMENTO = /\.(pdf|txt|md|markdown|csv|json|docx?|xlsx?|pptx?|odt|ods|odp|rtf)$/i;
+
+export function pareceImagen(rel: string) {
+  return PARECE_IMAGEN.test(nombreDe(rel));
+}
+
+/** Un documento ya se conoce: su caja final es la tarjeta ancha, no el cuadrado. */
+function pareceDocumento(rel: string) {
+  return PARECE_DOCUMENTO.test(nombreDe(rel));
+}
+
+/**
+ * Mientras la miniatura viaja, la caja ya tiene la forma del preview.
+ * Sin sufijo (una captura pegada) también: si no era imagen, al resolver
+ * pasa a la tarjeta. Un documento no pasa por el cuadrado.
+ */
+export function esperaCuadrada(rel: string) {
+  if (pareceImagen(rel)) return true;
+  if (pareceDocumento(rel)) return false;
+  return !nombreDe(rel).includes(".");
+}
+
+/** La caja vacía, del mismo tamaño que lo que va a ocupar. `archivo` es la tarjeta ancha. */
+export function EsqueletoDeAdjunto(props: { forma?: "imagen" | "archivo" }) {
+  const archivo = () => props.forma === "archivo";
+  return (
+    <div
+      class={archivo()
+        ? "h-14 w-[150px] rounded-md border border-border bg-neutral-100 motion-safe:animate-skeleton"
+        : "size-14 rounded-md border border-border bg-neutral-100 motion-safe:animate-skeleton"}
+      aria-busy="true"
+    />
+  );
+}
+
 /** Una fila de miniaturas que desborda: la rueda vertical la recorre de lado. */
 export function rodarEnHorizontal(e: WheelEvent & { currentTarget: HTMLElement }) {
   const fila = e.currentTarget;
@@ -105,7 +142,10 @@ export function Adjunto(props: {
         aria-label={t("chat.attachments.open", { name: nombreDe(props.rel) })}
         onClick={() => void abrir()}
       >
-        <Show when={imagen()} fallback={<Tarjeta rel={props.rel} />}>
+        <Show
+          when={imagen()}
+          fallback={imagen.loading && esperaCuadrada(props.rel) ? <EsqueletoDeAdjunto /> : <Tarjeta rel={props.rel} />}
+        >
           {(src) => (
             <img
               src={src()}
@@ -152,6 +192,61 @@ export function Adjunto(props: {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function Quitar(props: { label: string; onClick: () => void }) {
+  return (
+    <Pressable
+      class="absolute top-1 right-1 grid size-[1.125rem] place-items-center rounded-full bg-neutral-950 text-neutral-50 opacity-0 ring-2 ring-surface-raised transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 motion-reduce:transition-none"
+      aria-label={props.label}
+      title={props.label}
+      onClick={props.onClick}
+    >
+      <X size={11} />
+    </Pressable>
+  );
+}
+
+/** La fila del compositor: los archivos que ya están y las cajas que todavía viajan. */
+export function FilaDeAdjuntos(props: {
+  rels: string[];
+  ocultas: number[];
+  cajas: { id: number; forma: "imagen" | "archivo" }[];
+  miniatura: (rel: string) => Promise<string | null>;
+  preview?: (rel: string) => Promise<Preview | null>;
+  renderPdf: (props: { base64: string; name: string }) => JSX.Element;
+  onQuitar: (rel: string) => void;
+  onCancelar: (id: number) => void;
+}) {
+  const visibles = () => props.rels.filter((_, i) => !props.ocultas.includes(i));
+  return (
+    <Show when={visibles().length > 0 || props.cajas.length > 0}>
+      <div
+        class="flex gap-2 overflow-x-auto overflow-y-hidden px-1 pt-1 pb-1 select-none"
+        onWheel={rodarEnHorizontal}
+      >
+        <For each={visibles()}>
+          {(p) => (
+            <div class="group relative shrink-0">
+              <Adjunto rel={p} miniatura={props.miniatura} preview={props.preview} renderPdf={props.renderPdf} />
+              <Quitar
+                label={t("chat.attachments.remove", { name: nombreDe(p) })}
+                onClick={() => props.onQuitar(p)}
+              />
+            </div>
+          )}
+        </For>
+        <For each={props.cajas}>
+          {(caja) => (
+            <div class="group relative shrink-0">
+              <EsqueletoDeAdjunto forma={caja.forma} />
+              <Quitar label={t("chat.attachments.remove_pending")} onClick={() => props.onCancelar(caja.id)} />
+            </div>
+          )}
+        </For>
+      </div>
+    </Show>
   );
 }
 

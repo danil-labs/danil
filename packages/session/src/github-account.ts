@@ -17,6 +17,8 @@ import {
   restoreGithubMachine,
   setGithubAreas,
 } from "../../platform-client/src/github.ts";
+import { EdgeError, type EdgeTransport } from "../../platform-client/src/edge.ts";
+import { withIdempotencyKey } from "../../platform-client/src/idempotency.ts";
 import { githubAccountFailure } from "../../features/settings/src/model/github-account-failures.ts";
 
 type Args = Record<string, unknown>;
@@ -94,6 +96,54 @@ export function webGithubAccount(options: {
           return { credential: await value(restoreGithubMachine(source, scope, text(args.credential), text(args.computer))) };
       }
       throw failure("command");
+    },
+  };
+}
+
+/** GitHub de la cuenta sobre el transporte de cookie/CSRF del borde (`/v1`). */
+export function webEdgeGithubAccount(
+  origin: string,
+  transport: EdgeTransport,
+  href: () => string,
+  onUnauthorized?: () => void,
+): ControlPlaneCommands {
+  const base = `${origin.replace(/\/+$/, "")}/v1/`;
+  const edgeFetch: GithubFetch = async (url, init) => {
+    const relative = url.startsWith(base) ? url.slice(base.length) : url.replace(/^\/?v1\//, "");
+    const method = init?.method ?? "GET";
+    try {
+      const response = method === "GET"
+        ? await transport.call(relative)
+        : await transport.mutation(relative, {
+            method,
+            headers: withIdempotencyKey(init?.headers),
+            ...(init?.body === undefined ? {} : { body: init.body }),
+          });
+      const raw = response.status === 204 ? "" : await response.text();
+      return { status: response.status, ok: response.ok, json: async () => (raw ? JSON.parse(raw) : null) };
+    } catch (e) {
+      if (!(e instanceof EdgeError)) throw e;
+      return { status: e.status, ok: false, json: async () => (e.code ? { error: { code: e.code } } : null) };
+    }
+  };
+  return webGithubAccount({
+    endpoint: origin.replace(/\/+$/, ""),
+    getToken: () => "",
+    href,
+    fetch: edgeFetch,
+    onUnauthorized,
+  });
+}
+
+/** Compone varios manejadores del plano de control en orden de prioridad. */
+export function composeControlPlane(...handlers: (ControlPlaneCommands | undefined)[]): ControlPlaneCommands {
+  const active = handlers.filter((h): h is ControlPlaneCommands => Boolean(h));
+  return {
+    answers: (command) => active.some((h) => h.answers(command)),
+    handle: (command, args) => {
+      const owner = active.find((h) => h.answers(command));
+      if (!owner) throw failure("command");
+      return owner.handle(command, args);
     },
   };
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createServiceStream, type ServicePage, type PollRequest, type ServiceFailure } from "../../src/features/service-stream/index.ts";
+import { createServiceStream, type ServicePage, type PollRequest, type ServiceFailure } from "../../../../packages/features/service-stream/src/index.ts";
 const page = (extra: Partial<ServicePage> = {}): ServicePage => ({ cursor: 1, gap: false, replay: false, runtime: "r1", reset: false, ...extra });
 const settle = () => new Promise(resolve => setImmediate(resolve));
 function fixture(read: (request: PollRequest) => Promise<ServicePage>, failure: ServiceFailure = "unavailable", ready = Promise.resolve()) {

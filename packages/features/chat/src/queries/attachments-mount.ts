@@ -3,6 +3,7 @@ import { t } from "../../../../ui/src/lib/i18n";
 import { type Frase } from "../../../../ui/src/lib/prose.ts";
 import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
 import { deliver, listen } from "../../../../host/src/serviceEvents.ts";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform.ts";
 import { callEngine } from "../../../../engine-client/src/client.ts";
 import { claveDe, prosaDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
@@ -118,7 +119,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
           return;
         }
         // Una máquina apagada tiene su indicador; al conectarse trae sus workspaces.
-        if (!asleep(e)) setStartupReadError(prosaDe(e));
+        if (!asleep(e) && !isNoMachines()) setStartupReadError(prosaDe(e));
         // La lista ya abrió la ventana: se dice el error y no se vacía lo que se está usando.
         if (aplicadaDeLista) return;
         if (enCache()) {
@@ -143,10 +144,22 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
       const request = ++workspaceRequest;
       void callEngine<Startup>("list_workspaces")
         .then((startup) => request === workspaceRequest ? aplicar(startup) : undefined)
-        .catch((e) => { if (request === workspaceRequest && !asleep(e)) setStartupReadError(prosaDe(e)); });
+        .catch((e) => { if (request === workspaceRequest && !asleep(e) && !isNoMachines()) setStartupReadError(prosaDe(e)); });
     };
     window.addEventListener("harness:workspace", alMudar);
     onCleanup(() => window.removeEventListener("harness:workspace", alMudar));
+
+    let lastAvailability = machineAvailability().kind;
+    createEffect(on(() => machineAvailability().kind, (kind) => {
+      const prev = lastAvailability;
+      lastAvailability = kind;
+      if (kind === prev) return;
+      if (kind === "no_machines") {
+        setStartupReadError(null);
+        return;
+      }
+      if (prev === "no_machines" && (kind === "ready" || kind === "offline")) alMudar();
+    }, { defer: true }));
 
     // Y el otro aviso, que se parece y no es el mismo: cambió el material
     // de este workspace, no el workspace. Son dos eventos: dos
@@ -192,7 +205,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     finishedTurns.set(session, ok);
     batch(() => {
       setSettlingTurns((ids) => [...new Set([...ids, session])]);
-      marcarQuieta(session);
+      marcarQuieta(session, ok === false || unsaved ? "failed" : "done");
       threads.finishSteps(session);
       // Igual que en el `done`: el turno se acabó, y con él la espera de sus
       // hijas. Este camino es el del turno que cerró sin que su evento llegara.

@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import "../helpers/catalog.ts";
 import { returnToOf, webGithubAccount } from "../../src/web/github-account.ts";
-import { notHere } from "../../src/features/settings/github-account/failures.ts";
+import { notHere } from "../../../../packages/features/settings/src/model/github-account-failures.ts";
 import { type BrowserHost, createWebTransport } from "../../src/web/transport.ts";
 
 type Seen = { url: string; method?: string; headers?: Record<string, string>; body?: string };
@@ -144,7 +144,7 @@ test("las instalaciones llegan del Worker con su página, su número de repos y 
 });
 
 test("an account Worker that does not answer, seen through the relay, stays silent and keeps the local connection", async () => {
-  const { silent } = await import("../../src/features/settings/github-account/failures.ts");
+  const { silent } = await import("../../../../packages/features/settings/src/model/github-account-failures.ts");
   for (const e of [
     { what: { clave: "providers.github.account.unavailable" }, detail: "unsupported" },
     { what: { clave: "shell.service.failed" }, detail: { what: { clave: "x.y" }, detail: "unsupported" } },

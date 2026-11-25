@@ -167,6 +167,27 @@ corresponde al plan front-move 3.4.
 
 ## 2. Motor RPC1 (`packages/engine-client`)
 
+### «Tus agentes» en la barra lateral
+
+`packages/shell/src/shell/AgentDock.tsx` presenta el catálogo existente sobre
+«Tareas», con cinco agentes por página y filtros workspace, carpeta y archivos
+del repositorio. Cada icono señala si alguno de sus agentes está `working`,
+incluidos los de otras páginas; su etiqueta accesible enumera los nombres.
+Seleccionar un origen vuelve a la primera página y conserva el orden por
+presencia de `orderDockAgents`; seleccionarlo otra vez muestra todos.
+`dockPagination.ts` acota la página cuando disminuye el catálogo.
+
+La actividad corresponde al catálogo de la **carpeta activa**, que obtiene
+`sidebar-dock.ts` con `list_agents` y `watchHandlerStatuses`. No agrega agentes
+de carpetas o máquinas que no están en ese catálogo. La paginación y los filtros
+no añaden RPC ni sondeos. Los AstroAvatar conservan su identidad por nombre
+durante los refrescos; los indicadores de origen siguen montados al paginar.
+No cambian el tema. El clic inicia la conversación existente; el menú contextual
+conserva tareas, perfil y acceso a la administración de agentes.
+
+El consumo del nuevo repositorio de agentes por workspace depende del motor y
+del backend correspondientes; este componente no sustituye ni simula esa API.
+
 ### Transporte
 
 | Qué | Dónde |

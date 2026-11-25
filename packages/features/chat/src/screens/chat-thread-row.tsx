@@ -48,7 +48,9 @@ export function createChatThreadRow(props: ChatProps, deps: ChatThreadRowDeps) {
                   <div class="col-start-1 min-w-0" data-turn-activity-anchor={b().activity?.key}>
                     <RegistroDeTrabajo
                       observed
-                      stopping={Boolean(b().activity?.active) && props.stopping}
+                      outcome={b().activity?.outcome}
+                      messages={b().activity?.messages}
+                      stopping={props.stopping && isCurrentActivity(b().activity)}
                       latestAction={observedActivityAction(b().activity?.observation?.message, b().activity?.observation?.kind) ?? (b().activity?.startConfirmed ? { kind: "thinking" } : null)}
                       pasos={activitySteps(b().activity)}
                       razonamiento={b().activity?.messages.flatMap(message => message.razonamiento ?? []) ?? []}
@@ -126,6 +128,7 @@ export function createChatThreadRow(props: ChatProps, deps: ChatThreadRowDeps) {
                     <RegistroDeTrabajo
                       pasos={pasosDe(b())?.pasos ?? []}
                       avance={pasosDe(b())?.avance}
+                      outcome={b().failedBeforeError ? "failed" : undefined}
                       stopping={props.stopping && esLaTiraViva(b())}
                       corriendo={esLaTiraViva(b())}
                       animando={!props.permission && !props.esperando && !props.reintento && !props.enFondo && !props.machineWait}

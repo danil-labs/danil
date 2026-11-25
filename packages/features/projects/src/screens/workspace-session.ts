@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js";
+import { isNoMachines } from "../../../../host/src/platform.ts";
 import { lastActivity } from "../../../../ui/src/lib/tasks/index.ts";
 import { createProjectsStore, invoke } from "../queries/store.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
@@ -86,6 +87,10 @@ export function createWorkspaceSession(deps: WorkspaceSessionDeps) {
   createEffect(on([workspaceActivo, draftMachine], () => setDraftProjectError(null)));
   createEffect(on([workspaceActivo, draftMachine, draftMachineOn, projectList, readRevision], ([workspace, machine, encendida]) => {
     setDraftProjects(previous => previous?.workspace === workspace && previous.machine === machine ? previous : null);
+    if (isNoMachines()) {
+      setDraftProjectError(null);
+      return;
+    }
     if (!workspace || !machine || machines().find(m => m.id === machine)?.local) return;
     if (encendida === false) {
       setDraftProjects({ workspace, machine, rows: null });
@@ -102,7 +107,7 @@ export function createWorkspaceSession(deps: WorkspaceSessionDeps) {
       // Se apagó entre la lista de máquinas y la pregunta, o la pregunta la está
       // encendiendo: lo mismo que apagada.
       if (asleep(e)) setDraftProjects({ workspace, machine, rows: null });
-      else setDraftProjectError(prosaDe(e));
+      else if (!isNoMachines()) setDraftProjectError(prosaDe(e));
     });
   }));
   createEffect(on(draftMachine, (machine, before) => {

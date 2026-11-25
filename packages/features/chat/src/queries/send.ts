@@ -158,6 +158,8 @@ export function createSend(deps: SendDeps) {
       author: firmaDelTurno?.person ?? null,
       // Las rutas absolutas preparadas al adjuntar también sirven al releer del disco.
       attachments: m.attachments.length ? m.attachments : undefined,
+      // Sin turno todavía: al releer, el del disco con este texto después de `tras` es él.
+      inyectado: { tras: [...(threads.rows()[clave]?.base ?? [])].reverse().find((row) => row.turno)?.turno ?? null },
     };
     threads.appendOptimistic(clave, [...entrando, turnoPropio]);
     // Mandar a una tarea de una máquina apagada la enciende: el proxy espera a que
@@ -168,6 +170,7 @@ export function createSend(deps: SendDeps) {
     const destino = creationOptions?.headers["x-terminus-machine"] ?? null;
     const naceDormida = destino && machines().find((x) => x.id === destino)?.on === false ? destino : null;
     if (provisional && naceDormida) threads.markMachineWait(provisional, { machine: naceDormida, phase: "waking" });
+    let enviado = false;
     try {
       const llevado = llevar ? await llevar(claveBorrador) : null;
       if (llevar && !llevado) throw CARRY_STOPPED;
@@ -260,6 +263,7 @@ export function createSend(deps: SendDeps) {
           });
         },
       });
+      enviado = true;
       const id = traspaso.answer;
       if (!abierta) spacePlan.record(id);
       if (generation === workspaceContext.generation()) handoff.observe({ kind: "accepted", scope: conversationScope(id, proyecto) });
@@ -334,30 +338,38 @@ export function createSend(deps: SendDeps) {
       if (provisional && naceDormida) threads.markMachineWait(provisional, null);
       // Sin esto queda una tarea que nadie creó: la fila y la pestaña se
       // pintaron contando con que Rust aceptara el turno.
-      if (provisional) {
+      if (provisional && !enviado) {
         retirarNaciendo(provisional);
         pestanas.close(provisional);
         olvidarPestana(provisional);
       }
-      threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
-      if (generation !== workspaceContext.generation()) return false;
-      if (abierta) handoff.observe({ kind: "rejected", scope: conversationScope(abierta, proyecto), error: e });
+      if (generation !== workspaceContext.generation()) {
+        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+        return false;
+      }
+      if (abierta && !enviado) handoff.observe({ kind: "rejected", scope: conversationScope(abierta, proyecto), error: e });
       if (e === CARRY_STOPPED) {
         // El texto vuelve a la caja: el globo se iría duplicado.
+        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
         setArrancando(false);
         return false;
       }
       if (destination && claveDe(e) === "history.error.busy") {
-        marcarQuieta(destination.session);
+        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+        marcarQuieta(destination.session, "failed");
         throw e;
       }
       // Lo escrito para una tarea que otro turno ocupa espera en su cola, con la misma identidad.
       if (!respuestas && !deLaCola && claveDe(e) === "history.error.busy" && abierta === sessionId()) {
-        batch(() => { taskQueues.enqueue({ ...m, id: clientMessageId }, true); setArrancando(false); if (abierta) marcarQuieta(abierta); });
+        batch(() => { threads.rejectOptimistic(clave, [turnoPropio, ...entrando]); taskQueues.enqueue({ ...m, id: clientMessageId }, true); setArrancando(false); if (abierta) marcarQuieta(abierta); });
         return true;
       }
-      if (!abierta) { threads.finishActivity(""); setArrancando(false); }
-      if (abierta) marcarQuieta(abierta);
+      // Ya salió: un fallo posterior no es un envío fallido ni devuelve el texto a la caja.
+      if (enviado) { threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]); return true; }
+      // Error real de envío: el globo se queda con «Reintentar» y la caja no lo repone.
+      threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]);
+      if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
+      if (abierta) marcarQuieta(abierta, "failed");
       threads.appendLive(clave, [{
                   role: "system",
                   // Una negativa de comando llega como clave: la frase nombra lo escrito.
@@ -368,7 +380,7 @@ export function createSend(deps: SendDeps) {
                   meta: "fallo",
                 }]);
       if (respuestas) throw e;
-      return false;
+      return true;
     } finally {
       if (abierta && pendingStarts.get(abierta) === start) pendingStarts.delete(abierta);
       void reconcileActiveTurns();

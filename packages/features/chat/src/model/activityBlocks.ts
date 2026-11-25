@@ -29,7 +29,7 @@ export function visibleActivityMessages<M>(block: ActivityBlock<M>): M[] {
   return [...(block.tipo === "msg" ? [] : block.avance?.filter(chunk => chunk.outside).map(chunk => chunk.msg) ?? []), ...(block.tipo === "pasos" ? [] : [block.msg])];
 }
 
-export type PresentedActivityBlock<M> = ActivityBlock<M> & { activity?: TurnActivity<M>; responseOnly?: boolean };
+export type PresentedActivityBlock<M> = ActivityBlock<M> & { activity?: TurnActivity<M>; responseOnly?: boolean; failedBeforeError?: boolean };
 /** Interleave a semantic activity anchor; response objects and their order never change. */
 export function placeActivities<M>(blocks: PresentedActivityBlock<M>[], activities: readonly TurnActivity<M>[]): PresentedActivityBlock<M>[] {
   const pending = [...activities].sort((a, b) => a.anchorIndex - b.anchorIndex);

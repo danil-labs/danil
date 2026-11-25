@@ -15,14 +15,14 @@ import {
   gestoDeLaFila as rowAction,
   prosaDelCambioPorCupo as quotaChangeText,
   prosaDelFallo as failureText,
-} from "../../src/features/chat/failures.ts";
+} from "../../../../packages/features/chat/src/model/failures.ts";
 import {
   esFilaDeLaBandeja as isInboxRow,
   idDeLaEntregaAntigua as oldDeliveryId,
   prosaDeLaFila as rowText,
   TOPE_DE_SALTOS as MAX_HOPS,
-} from "../../src/features/chat/inboxRows.ts";
-import { transcripcion as transcript } from "../../src/features/chat/transcript.ts";
+} from "../../../../packages/features/chat/src/model/inboxRows.ts";
+import { transcripcion as transcript } from "../../../../packages/features/chat/src/model/transcript.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -316,7 +316,7 @@ test("a notice the engine saves as a catalog key reads as its phrase", () => {
   assert.match(failureText({ text: "chat.mentions.in_code" }), /código/);
 });
 
-import { handlerMutation, pendingHandlerOperation, resumeHandlerOperation, staleReason } from "../../src/features/settings/handlerOperations.ts";
+import { handlerMutation, pendingHandlerOperation, resumeHandlerOperation, staleReason } from "../../../../packages/features/projects/src/queries/handlerOperations.ts";
 test("an uncertain handler mutation survives scope switches and resumes without repeating", async () => {
   let mutations = 0;
   const unknown = { detail: { detail: { operation: "op-7" } } };

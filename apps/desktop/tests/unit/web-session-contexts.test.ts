@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { EdgeError, type EdgeTransport } from "@terminus/computers";
-import { createSessionContexts } from "../../src/features/shell/session-contexts.ts";
+import { createSessionContexts } from "../../../../packages/shell/src/shell/session-contexts.ts";
 import { webSessionCommands } from "../../src/web/web-session-contexts.ts";
 
 type Sent = { method: "call" | "mutation"; path: string; headers: Headers; init?: RequestInit };
@@ -165,7 +165,7 @@ test("the window transport sends the open workspace's context and refuses a repl
 });
 
 test("a URL can only reopen a workspace of its context's catalog that the person added", async () => {
-  const { requestedStartTarget } = await import("../../src/features/shell/organization-start-target.ts");
+  const { requestedStartTarget } = await import("../../../../packages/shell/src/shell/organization-start-target.ts");
   const group = { context_id: "ctx_x", org: "org_x", org_name: "X", plan: "pro", family: "ses_a", email: "a@example.com", available: [{ id: "wx1", name: "X Uno" }, { id: "wx2", name: "X Dos" }], added: new Set(["wx1"]), person: "user_a" };
   const families = [{ family: "ses_a", sub: "user_a" }];
   assert.deepEqual(requestedStartTarget([group], families, "?workspace=wx1&org=org_x&account=user_a"), { id: "wx1", context: "ctx_x" });
@@ -177,7 +177,7 @@ test("a URL can only reopen a workspace of its context's catalog that the person
 test("billing of each organization goes with that organization's context, also on the payment return of another one", async () => {
   const { windowActiveContext } = await import("../../src/web/window-active-context.ts");
   const { setActiveWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
-  const { billingV2 } = await import("../../src/platform/treasury.ts");
+  const { billingV2 } = await import("../../../../packages/platform-client/src/treasury.ts");
   const { transport, sent } = fakeEdge((s) => {
     if (s.path === "identity/sessions") return json(sessions);
     const context = s.headers.get("X-Danil-Session") ?? "";
@@ -209,3 +209,26 @@ test("the Free router of a workspace open in X gets X's platform account, never 
   assert.equal(await identity("wp"), null, "a workspace of the personal org is not in X's catalog");
   setActiveWorkspaceContext(null);
 });
+
+test("explicit personal: false is preserved on web session contexts for free-plan organization scopes", async () => {
+  const payload = {
+    version: 1,
+    items: [
+      {
+        session_id: "ses_a",
+        sub: "user_a",
+        email: "a@example.com",
+        contexts: [
+          { context_id: "ctx_free_org", org: "org_free_team", org_name: "Free Team", plan: "free", role: "admin", personal: false },
+          { context_id: "ctx_personal", org: "org_personal", org_name: "Personal", plan: "free", role: "owner", personal: true },
+        ],
+      },
+    ],
+  };
+  const { transport } = fakeEdge(() => json(payload));
+  const web = webSessionCommands(transport, { expired: () => {} });
+  const status = await web.handle("danil_session_status") as { sessions: { contexts: { context_id: string; personal?: boolean }[] }[] };
+  assert.equal(status.sessions[0].contexts[0].personal, false);
+  assert.equal(status.sessions[0].contexts[1].personal, true);
+});
+

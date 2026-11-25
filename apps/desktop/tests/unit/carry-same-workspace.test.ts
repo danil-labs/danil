@@ -10,7 +10,7 @@ import { type CarryEngine } from "../../../../packages/features/machines/src/mod
 import { carryWork, newState } from "../../../../packages/features/machines/src/queries/carryRun.ts";
 import { Fleet, type Link, type MachineInfo } from "@terminus/fleet";
 import "../helpers/catalog.ts";
-import { createRouter } from "../../src/features/machines/router.ts";
+import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
 
 type Args = Record<string, unknown>;
 type Call = { command: string; args: Args; workspace: string | null };

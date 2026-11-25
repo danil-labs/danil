@@ -57,7 +57,7 @@ con cada archivo y cada export clasificado.
 - La web carga `apps/desktop/src/web/bootstrap.ts` (`apps/desktop/web.html:467`) y se construye con
   `pnpm -C apps/desktop web:build`.
 
-`apps/workspace`, `apps/auth` y `apps/desk` **no existen**, aunque `pnpm-workspace.yaml` y el script
+Las carpetas `workspace`, `auth` y `desk` de `apps/` **no existen**, aunque `pnpm-workspace.yaml` y el script
 `front:build` todavía los nombran.
 
 **«Consume»** sale de contar imports por paquete (sin tests). `apps/desktop (N)` cuenta los imports
@@ -70,10 +70,10 @@ a otra feature rompen R3 (fase 2.4 en curso).
 |---|---|---|---|
 | `packages/platform-client` (`@danil/platform-client`) | Las rutas `/v1` por dominio: `identity.ts`, `workspaces.ts`, `machines.ts` (el único cliente de máquinas: lista, start, wake y ticket), `treasury.ts` (créditos y facturación) y `credentials.ts` (adaptador web). `client.ts` tiene `edgeUntil`, que reintenta 404/429/501/503 con idempotencia, y pone `X-Danil-Session` en la web. `shared-read.ts` hace que cada recurso se pida una vez por carga. | `engine-client` (`danil_edge_fetch` en Desk), `packages/computers` (tipos y `requestId`), `zod` | Borde `/v1`, con tipos escritos a mano. El cliente generado del OpenAPI es **propuesta** (4.2). |
 | `packages/engine-client` (`@danil/engine-client`) | `invoke(command, args)`: el `invoke` de Tauri o la ruta por máquina (`setMachineRoute`), con `untilConnected` y `retrying` (`retries.ts`), y `urlDeAvatar` (`previewFile.ts`). | `@tauri-apps/api`, `apps/desktop (6)`, `host (1)` | RPC1 sin tipar. El manifiesto está en `apps/desktop/src-tauri/crates/engine-protocol/commands.json` (550 comandos), pero no se genera nada de él: **propuesta** (4.2). |
-| `packages/session` (`@danil/session`) | Sesión e identidad: `platform-session.ts`, `person-session.ts`, `window-session.tsx`, `organization-session.ts`, `session-*.ts` y `sessionRefresh.ts`. | `apps/desktop (24)`, `platform-client (5)`, `@terminus/computers (3)`, `ui (2)`, `features/settings (2)`, `engine-client`, `shell`, `features/machines` | `/v1/identity/me`, `credits/balance`; RPC1 `danil_sign_in_complete` |
-| `packages/host` (`@danil/host`) | Lo que solo sabe hacer la plataforma: `platform.ts` (`setHost`, `host`, `LocalHost`, `DeskAuthHost`), portapapeles, descargas, ventana y `pick-image.ts`. | `apps/desktop (5)`, `features/settings (3)`, `@terminus/computers (2)`, `@terminus/protocol`, `ui`, `features/chat`, `features/machines` | Ningún `invoke` literal; escribe una ruta `/v1/workspaces/…` (`src/platform.ts`) |
-| `packages/ui` (`@danil/ui`) | Primitivas y componentes visuales (SolidJS, Tailwind, Kobalte, Lucide) y `src/styles/global.css`. | `apps/desktop (63)`, `@terminus/design (5)`, `engine-client (3)`, `features/viewers (3)`, `host (2)` | Invoca 5 comandos (`preview_file`, `office_preview`, `file_size`, `open_external`, `open_file_external`). Es deuda de R4: el gate R4 solo mira `@danil/*`. |
-| `packages/shell` (`@danil/shell`) | Arranque (`src/app/main.tsx`), `App.tsx` (3.105 líneas; el gate 2.5 pide menos de 300), los slots (`featureSlots.tsx`, `chatSlots.tsx`, `settingsSlots.tsx`) y el riel y los diálogos de `src/shell/`. Es el único que compone features. | `apps/desktop (203)`, `ui (155)`, todas las features (las de más imports: projects 40, machines 30, settings 23, chat 15), `host (34)`, `engine-client (28)`, `platform-client (18)`, `session (5)`, `@terminus/*` | 63 comandos RPC1 (launcher, tray, ventana, adopción, almacenamiento…) y `/v1/identity/me` en `account-move.ts` |
+| `packages/session` (`@danil/session`) | Sesión e identidad: `platform-session.ts`, `person-session.ts`, `window-session.tsx`, `organization-session.ts`, `session-*.ts` y `sessionRefresh.ts`. | `apps/desktop (24)`, `platform-client (5)`, `@terminus/computers (3)`, `ui (2)`, `packages/features/settings (2)`, `engine-client`, `shell`, `packages/features/machines` | `/v1/identity/me`, `credits/balance`; RPC1 `danil_sign_in_complete` |
+| `packages/host` (`@danil/host`) | Lo que solo sabe hacer la plataforma: `platform.ts` (`setHost`, `host`, `LocalHost`, `DeskAuthHost`), portapapeles, descargas, ventana y `pick-image.ts`. | `apps/desktop (5)`, `packages/features/settings (3)`, `@terminus/computers (2)`, `@terminus/protocol`, `ui`, `packages/features/chat`, `packages/features/machines` | Ningún `invoke` literal; escribe una ruta `/v1/workspaces/…` (`packages/host/src/platform.ts`) |
+| `packages/ui` (`@danil/ui`) | Primitivas y componentes visuales (SolidJS, Tailwind, Kobalte, Lucide) y `packages/ui/src/styles/global.css`. | `apps/desktop (63)`, `@terminus/design (5)`, `engine-client (3)`, `features/viewers (3)`, `host (2)` | Invoca 5 comandos (`preview_file`, `office_preview`, `file_size`, `open_external`, `open_file_external`). Es deuda de R4: el gate R4 solo mira `@danil/*`. |
+| `packages/shell` (`@danil/shell`) | Arranque (`packages/shell/src/app/main.tsx`), `App.tsx` (3.105 líneas; el gate 2.5 pide menos de 300), los slots (`featureSlots.tsx`, `chatSlots.tsx`, `settingsSlots.tsx`) y el riel y los diálogos de `packages/shell/src/shell/`. Es el único que compone features. | `apps/desktop (203)`, `ui (155)`, todas las features (las de más imports: projects 40, machines 30, settings 23, chat 15), `host (34)`, `engine-client (28)`, `platform-client (18)`, `session (5)`, `@terminus/*` | 63 comandos RPC1 (launcher, tray, ventana, adopción, almacenamiento…) y `/v1/identity/me` en `account-move.ts` |
 
 ### Features (`packages/features/*`)
 
@@ -85,12 +85,12 @@ a otra feature rompen R3 (fase 2.4 en curso).
 | `machines` | Las máquinas: la lista compartida (`queries/machines-query.ts`), el reparto por máquina (`router.ts`, `context-*.ts`), el relay, la flota, carry, WSL e invitados. | `ui (35)`, `apps/desktop (34)`, `host (14)`, `@terminus/fleet (13)`, `@terminus/computers (12)`, `platform-client (6)`, `engine-client (5)`, `@terminus/carry` | `/v1/machines` (por `platform-client`, más rutas escritas en `queries/`); 42 comandos (`guest_*`, `wsl_*`, `work_*`…) |
 | `settings` | Configuración: cuenta, cuentas de IA, integraciones, MCP, skills, idioma, harness y free-router. | `ui (255)`, `apps/desktop (176)`, `host (25)`, `engine-client (25)`, `@terminus/computers (9)`, `shell (6)`, `platform-client (6)` | 155 comandos (`radiant_*`, `account_credential*`, `github_account_*`…); `/v1/credentials/*` y `/v1/workspaces` |
 | `onboarding` | El alta: `Setup`, `ConnectAI` y `ConnectAccount`. | `apps/desktop (38)`, `ui (33)`, `features/settings (9)`, `host (6)`, `shell (3)`, `engine-client (3)` | 60 comandos (instalación, login de proveedores, Google Drive, Zotero…) |
-| `workspaces` | `createContextSource` (`queries/context-source.ts`), el contexto de la tarea que antes estaba en `App.tsx` (2.5c). El riel sigue en `packages/shell/src/shell`. | `apps/desktop (7)`, `ui/lib/tasks (2)`, `engine-client`, `ui` | `list_mentions`, `list_workspaces`, `load_session`, `session_usage`, `set_workspace_source` |
+| `workspaces` | `createContextSource` (`queries/context-source.ts`), el contexto de la tarea que antes estaba en `App.tsx` (2.5c). El riel sigue en `packages/shell/src/shell`. | `apps/desktop (7)`, `packages/ui/src/lib/tasks (2)`, `engine-client`, `ui` | `list_mentions`, `list_workspaces`, `load_session`, `session_usage`, `set_workspace_source` |
 | `workspace` | `createWorkspaceStore`: el contexto de trabajo del motor. | nada | ninguno |
 | `artifacts` | Visor, versiones, descargas y publicaciones de artefactos. | `ui (15)`, `apps/desktop (6)`, `features/{viewers,machines}`, `engine-client` | 10 comandos (`artifact_*`, `read_version`, `restore_version`…) |
 | `viewers` | Visores de CSV, imagen, multimedia y PDF. | `ui (9)`, `apps/desktop (6)`, `host (2)`, `@terminus/protocol` | ninguno |
 | `sites` | Los sitios web dentro del workspace. | `apps/desktop (3)`, `ui (2)`, `engine-client` | `site_*` (8) |
-| `composer` | El estado de la caja del compositor: modos, modelos, superficies y slash. | `apps/desktop (4)`, `ui/lib/tasks` | `list_models`, `list_permission_modes`, `list_providers`, `list_slash_menu`, `list_surfaces` |
+| `composer` | El estado de la caja del compositor: modos, modelos, superficies y slash. | `apps/desktop (4)`, `packages/ui/src/lib/tasks` | `list_models`, `list_permission_modes`, `list_providers`, `list_slash_menu`, `list_surfaces` |
 | `task-queues` | Las colas de turnos de una tarea. | `ui`, `apps/desktop` | `get_turn`, `queue_resume`, `stop_turn`, `stop_turn_if` |
 | `threads` | Los hilos y la proyección de actividad del turno. | `apps/desktop (7)`, `features/chat (6)`, `session` | `load_history`, `load_session` |
 | `screen` | La pantalla remota (noVNC). | `@terminus/computers (2)`, `apps/desktop`, `ui` | ninguno |
@@ -143,7 +143,7 @@ account type is the feature, not the product:
 
 | Name | Who has it | What it is |
 |---|---|---|
-| **Machine** | every account | Your own VMs, or machines connected to the central relay `computers` (`computers.danil.ai`). CLI `danil machines` / `dn machines`. |
+| **Machine** | every account | Your own VMs, or machines connected through `connect.danil.ai` (relay) and registered in `machine-provisioning`. CLI `danil machines` / `dn machines`. |
 | **Harness** | organizations only (Teams, Enterprise); a personal account has none | Policy, usage, members and evaluation. It is what Radiant used to be. |
 
 "Agents" survives only as a common noun (the agents dock, a task's agent, a
@@ -201,7 +201,7 @@ the pnpm workspace: it installs with npm from its own folder.
 
 - Code both apps need goes in `packages/`, not in a copy inside one app.
 - The source of the look is `packages/ui/src/styles/global.css` (it moved
-  there from `apps/desktop/src/styles/` in the front move) and its catalogs. `packages/ui/src/index.ts` (tokens, marks and words) repeats what other clients need, and the
+  there from apps/desktop/src/styles/ in the front move) and its catalogs. `packages/ui/src/index.ts` (tokens, marks and words) repeats what other clients need, and the
   `shared-design` guard fails when the two drift.
 - Packages are TypeScript sources without a build step; imports inside them
   carry the `.ts` extension so Node can load them directly.

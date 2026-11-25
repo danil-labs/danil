@@ -1,7 +1,7 @@
 # Fórmulas en el chat
 
 Las respuestas y los `.md` del visor pintan LaTeX con KaTeX. La sintaxis vive en
-`src/ui/markdown-math.ts` y el pintado en `src/ui/Markdown.tsx`.
+`packages/ui/src/markdown-math.ts` y el pintado en `packages/ui/src/Markdown.tsx`.
 
 ## Delimitadores
 

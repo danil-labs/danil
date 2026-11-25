@@ -20,10 +20,23 @@ impl LoginBrowser {
     pub fn open(app: &AppHandle, url: String, add: bool) -> Result<Self, Value> {
         if ephemeral(add, cfg!(target_os = "macos")) {
             #[cfg(target_os = "macos")]
-            return Ok(Self::Private(native::PrivateLogin::open(app, url)?));
+            match native::PrivateLogin::open(app, url.clone()) {
+                Ok(private) => return Ok(Self::Private(private)),
+                Err(_) => {
+                    log::warn!(
+                        "desk_auth: no se pudo iniciar sesión privada en macOS; usando navegador del sistema"
+                    );
+                }
+            }
         }
         let _ = app;
-        super::super::env::open_external(url).map_err(|_| super::coded("browser"))?;
+        Self::open_system(url)
+    }
+    pub fn open_system(url: String) -> Result<Self, Value> {
+        super::super::env::open_external(url).map_err(|err| {
+            log::warn!("desk_auth: no se pudo abrir el navegador del sistema: {err}");
+            super::coded("browser")
+        })?;
         Ok(Self::System)
     }
     pub fn cancelled(&self) -> bool {
@@ -31,6 +44,13 @@ impl LoginBrowser {
             Self::System => false,
             #[cfg(target_os = "macos")]
             Self::Private(private) => private.cancelled(),
+        }
+    }
+    pub fn failed(&self) -> bool {
+        match self {
+            Self::System => false,
+            #[cfg(target_os = "macos")]
+            Self::Private(private) => private.failed(),
         }
     }
 }

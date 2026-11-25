@@ -62,6 +62,8 @@ test("General and Apariencia mount first in Settings, Notificaciones lives in Ge
 
   const headings = [...w.document.querySelectorAll("#cfg-panel h3")].map((h) => h.textContent?.trim());
   assert.ok(headings.includes("Notificaciones"), "General contains Notificaciones as a SettingsSection");
+  assert.ok(!headings.includes("Contexto"), "General no longer renders the retired Contexto section");
+  assert.equal(w.document.querySelector('[aria-label="Adjuntar una fuente"]'), null, "Chat composer no longer renders the retired Fuentes bar");
   const notifyRow = w.document.querySelector('[data-setting="notify-behavior"]');
   assert.ok(notifyRow, "NotifyBehavior mounts inside General");
   const notifySelect = notifyRow.querySelector("select");
@@ -107,8 +109,8 @@ test("Desk Apariencia applies theme/styles, persists chat background, and reload
   let active = "w1";
   const workspaces = () => ({
     workspaces: [
-      { id: "w1", name: "Acme", context_root: null, sessions: 0 },
-      { id: "w2", name: "Beta", context_root: null, sessions: 0 },
+      { id: "w1", name: "Acme", context_root: null, sessions: 0, account: { org: "org-w1", account_id: "ctx-w1" } },
+      { id: "w2", name: "Beta", context_root: null, sessions: 0, account: { org: "org-w2", account_id: "ctx-w2" } },
     ],
     active,
   });
@@ -117,12 +119,37 @@ test("Desk Apariencia applies theme/styles, persists chat background, and reload
     w2: { preset: null, data_url: "data:image/png;base64,AAAA", veil: { chat: 0.2, tabs: 0.55, panels: 0.8 } },
   };
   const savedBackgrounds = [];
+  const appearanceContexts = [
+    { context_id: "ctx-w1", org: "org-w1", org_name: "Acme", plan: "pro", workspaces: "all", role: "owner" },
+    { context_id: "ctx-w2", org: "org-w2", org_name: "Beta", plan: "pro", workspaces: "all", role: "owner" },
+  ];
   const app = await boot("listo", "appearance-desk-workspace-switch", {
     ...RESPONSES,
+    machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true }],
     list_workspaces: () => workspaces(),
     workspaces_startup: () => workspaces(),
     set_active_workspace: ({ id }) => {
       active = id;
+    },
+    danil_session_status: () => ({
+      state: "connected",
+      default_context: "ctx-w1",
+      sessions: [{ family: "fam-1", email: "user@example.com", contexts: appearanceContexts }],
+    }),
+    danil_edge_fetch: (args) => {
+      if (args.path === "/v1/identity/me") return { status: 200, body: { id: "person" } };
+      if (args.path === "/v1/workspaces") {
+        return {
+          status: 200,
+          body: {
+            items: [
+              { id: "acc-w1", org: "org-w1", name: "Acme", engine_workspace_id: "w1" },
+              { id: "acc-w2", org: "org-w2", name: "Beta", engine_workspace_id: "w2" },
+            ],
+          },
+        };
+      }
+      return { status: 404, body: {} };
     },
     chat_background: () => structuredClone(backgrounds[active]),
     set_chat_background: (args) => {
@@ -146,6 +173,7 @@ test("Desk Apariencia applies theme/styles, persists chat background, and reload
     }),
   });
   const { w } = app;
+  for (let i = 0; i < 80 && !w.document.querySelector('[data-workspace-context="ctx-w2"]'); i++) await sleep(25);
 
   w.document.querySelector('button[aria-label="Configuración"]')?.click();
   await sleep(120);
@@ -180,7 +208,7 @@ test("Desk Apariencia applies theme/styles, persists chat background, and reload
 
   // Cambiar de workspace desde el selector recarga fondo, velos y avatares del nuevo workspace.
   w.document.querySelector("aside [data-settings-workspace-trigger]")?.click();
-  await sleep(80);
+  for (let i = 0; i < 40 && !w.document.querySelector('[data-settings-workspace-option="w2"]'); i++) await sleep(25);
   w.document.querySelector('[data-settings-workspace-option="w2"]')?.click();
   for (let i = 0; i < 80 && (!panel()?.textContent?.includes("beta-agent") || visInput()?.value !== "80"); i++) await sleep(25);
 

@@ -70,6 +70,7 @@ export {
   type DanilService,
   creditsBalanceState,
   danilCreditsTierLabel,
+  formatCreditsCount,
   danilServiceOf,
   isDanilCreditsModel,
   isDanilCreditsSurface,

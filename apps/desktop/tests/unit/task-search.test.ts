@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { matchesTaskQuery } from "../../src/features/projects/taskSearch.ts";
+import { matchesTaskQuery } from "../../../../packages/features/projects/src/model/taskSearch.ts";
 
 const fields = ["Revisar la sesión de QA", "feat/excalidraw", null, "tech-lead"];
 

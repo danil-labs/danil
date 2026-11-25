@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { coalesceLiveActivity, visibleActivityMessages, placeActivities, isActivityOnlyMessage, type ActivityBlock } from "../../src/features/chat/activityBlocks.ts";
+import { coalesceLiveActivity, visibleActivityMessages, placeActivities, isActivityOnlyMessage, type ActivityBlock } from "../../../../packages/features/chat/src/model/activityBlocks.ts";
 type Message = { nativeMessageId?: string; turno?: string; duration_ms?: number; text: string; preguntas?: unknown[] };
 const work = (i: number, msg: Message): ActivityBlock<Message> => ({ tipo: "trabajo", i, msg, pasos: [] });
 

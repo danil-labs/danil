@@ -6,6 +6,7 @@ import { listAccounts, getAccountLimits } from "../queries";
 import type { Query } from "../../../../ui/src/lib/limits";
 import { modelPresentation, effortOptions, effortValue, esFavorito, favoritosDeModelos, seccionDeModelo, type GrupoDeModelos, type OpcionDeModelo } from "../../../../ui/src/lib/models";
 import { createPref } from "../../../../session/src/prefs";
+import { freeModelPolicyAvailable } from "../../../../session/src/free-model-policy.ts";
 import { DANIL_CREDITS_CLAUDE_SURFACE, danilCreditsTierLabel } from "../../../../ui/src/lib/tasks/index.ts";
 import { DANIL_CREDITS, isDanilCreditsModel } from "../model/danil-credits";
 import { esServicio, nombreDeServicio, gruposDeModelos, nombreDeNivel, type SelectorDeModeloProps } from "../components/model-picker-types";
@@ -20,7 +21,7 @@ export function createSelectorDeModelo(props: SelectorDeModeloProps, deps: { cam
   const filas = new Map<string, HTMLElement>();
   const consent = props.createFreeRouterConsent({ agente: () => FREE_ROUTER_OPENCODE });
   const estadoRouter = () => routerOfferState(
-    consent.cargado() ? (consent.texto() ? { enabled: consent.texto()!.policy.enabled, accepted: consent.aceptado() } : null) : undefined,
+    consent.cargado() ? (consent.texto() ? { enabled: freeModelPolicyAvailable(consent.texto()!.policy), accepted: consent.aceptado() } : null) : undefined,
     consent.routeAvailable(),
   );
 

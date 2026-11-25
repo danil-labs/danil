@@ -4,7 +4,6 @@ import { sameSite, type PanelSite as SitioDePanel } from "../../../../ui/src/lib
 import { type Tab, type TaskTab } from "../../../../ui/src/lib/tabs.ts";
 import { type TaskSideMode } from "../../../../ui/src/lib/taskFiles";
 import { isWindows } from "../../../../host/src/window";
-import { Button } from "../../../../ui/src/Button";
 import { BotonConAtajo } from "../../../../ui/src/Shortcut";
 import { type Lectura } from "../model/threadWindow";
 import { type VistaDeLaConversacion, vistaNueva } from "./Chat";
@@ -24,7 +23,7 @@ import type { PanelSite } from "../../../../ui/src/lib/panels";
 /** Lo que el bloque usaba del cuerpo de App. */
 export type PanelDeChatDeps<Usage> = { createUsage: CreateUsagePort<Usage>; EmptyContext: (props: { onPickFolder: () => void; onConnect: () => void; }) => JSX.Element;
   MachinePicker: MachinePickerPort; ProjectPicker: ProjectPickerPort; TabStrip: TabStripPort; activarPestana: (p: Tab) => Promise<void>;
-  actividadDeProyectos: Accessor<Record<string, number>>; agent: Accessor<string>; agents: Accessor<Agent[]>; archivosDeTarea: ReturnType<typeof createTaskFiles>;
+  actividadDeProyectos: Accessor<Record<string, number>>; agent: Accessor<string>; model?: Accessor<string | null>; agents: Accessor<Agent[]>; archivosDeTarea: ReturnType<typeof createTaskFiles>;
   arrastrarPestana: (id: string, event: PointerEvent) => void; botonDeNuevaPestana: () => JSX.Element; busy: ReturnType<typeof createThreadStream>["busy"]; cargandoHilo: Accessor<string | null>;
   carpetaDelProyecto: ReturnType<typeof createThreadSide>["carpetaDelProyecto"]; celdaDe: (id: string) => { "grid-column": string; "grid-row": string; } | undefined;
   cerrarBorrador: (sitio: PanelSite) => void; cerrarPestana: (id: string) => void; cerrarPestanas: (ids: string[]) => void; composerProjects: Accessor<Project[]>; contextConfirmed: Accessor<boolean>;
@@ -43,7 +42,7 @@ export type PanelDeChatDeps<Usage> = { createUsage: CreateUsagePort<Usage>; Empt
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 5726–5970, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createPanelDeChat<Usage, Delegated>(deps: PanelDeChatDeps<Usage>) {
-  const { createUsage, EmptyContext, MachinePicker, ProjectPicker, TabStrip, activarPestana, actividadDeProyectos, agent, agents, archivosDeTarea, arrastrarPestana, botonDeNuevaPestana, busy, cargandoHilo, carpetaDelProyecto, celdaDe, cerrarBorrador, cerrarPestana, cerrarPestanas, composerProjects, contextConfirmed, contextRoot, cuentasTocadas, elegidosAqui, elegirCarpetaDelWorkspace, elegirProyecto, enBorrador, filaDe, hilos, llaveDeBorrador, mandarVentana, marcaDe, materialError, ocultarDelSelector, ocultosAqui, paginaDeAgente, paneles, permissions, pestanaDelanteEn, pestanas, pestanasDe, preguntadas, project, projectList, proyectoAbierto, reabrirPestana, recargarMaterial, recordarEleccion, setAnadiendoCarpeta, setDraftBases, setPreguntasAMedias, setReadRevision, setSettings, soltarPreguntas, sources, tapadoPorElProyecto, tareasActivas, tareasEnVentanas, taskSourcesError, vivas, vueltaDelBorrador, workspaceActivo } = deps;
+  const { createUsage, MachinePicker, ProjectPicker, TabStrip, activarPestana, actividadDeProyectos, agent, model, agents, archivosDeTarea, arrastrarPestana, botonDeNuevaPestana, busy, cargandoHilo, carpetaDelProyecto, celdaDe, cerrarBorrador, cerrarPestana, cerrarPestanas, composerProjects, cuentasTocadas, elegidosAqui, elegirProyecto, enBorrador, filaDe, hilos, llaveDeBorrador, mandarVentana, marcaDe, ocultarDelSelector, ocultosAqui, paginaDeAgente, paneles, permissions, pestanaDelanteEn, pestanas, pestanasDe, preguntadas, project, projectList, proyectoAbierto, reabrirPestana, recordarEleccion, setAnadiendoCarpeta, setDraftBases, setPreguntasAMedias, soltarPreguntas, sources, tapadoPorElProyecto, tareasActivas, tareasEnVentanas, vivas, vueltaDelBorrador, workspaceActivo } = deps;
   /** El proyecto que ocupa el panel principal, ya resuelto. */
   const proyectoDeLaVista = () =>
     projectList().find((p) => p.id === proyectoAbierto()) ?? null;
@@ -161,21 +160,6 @@ export function createPanelDeChat<Usage, Delegated>(deps: PanelDeChatDeps<Usage>
             </Show>
           }
         />
-      {/* A General, no a GitHub: la fuente principal del workspace se elige
-          en Configuración → General; mandar a GitHub lleva a conectar un
-          proveedor, dejando a la persona en una pantalla sin lo que buscaba. */}
-      <Show when={taskSourcesError() ?? materialError()}>{failure => <div class="flex items-center gap-2 text-caption text-neutral-500" data-material-status="" role="status">
-        <span>{failure()}</span>
-        <Button variant="ghost" size="compact" onClick={() => { setReadRevision(n => n + 1); void recargarMaterial(); }}>{t("common.part.retry")}</Button>
-      </div>}</Show>
-      <Show when={contextConfirmed() && !contextRoot()}>
-        <div class="justify-self-center">
-          <EmptyContext
-            onPickFolder={() => void elegirCarpetaDelWorkspace()}
-            onConnect={() => setSettings("general")}
-          />
-        </div>
-      </Show>
     </div>
   );
 
@@ -210,7 +194,7 @@ export function createPanelDeChat<Usage, Delegated>(deps: PanelDeChatDeps<Usage>
   const [threadSearchTargets, setThreadSearchTargets] = createSignal(new Map<string, ThreadSearchTarget>());
   const [searchSurfaces, setSearchSurfaces] = createSignal(new Map<string, SearchSurface>());
   const [delegatedPanels, setDelegatedPanels] = createSignal(new Map<string, () => Delegated>());
-  const consumo = createUsage({ agents, agent, busy, reload: cuentasTocadas, workspace: workspaceActivo });
+  const consumo = createUsage({ agents, agent, model, busy, reload: cuentasTocadas, workspace: workspaceActivo });
   // Una sola ventana: sus pestañas van en la franja de la ventana, entre la navegación y los controles.
   const tiraDeLaVentana = () => (
           <div

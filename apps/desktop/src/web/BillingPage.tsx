@@ -1,6 +1,6 @@
 import { isOrganizationSelectionRequired } from "@terminus/computers";
 import { machinesClient } from "../../../../packages/platform-client/src/machines.ts";
-import { createEffect, createResource, createSignal, onCleanup, Show } from "solid-js";
+import { createEffect, createResource, createSignal, onCleanup, Show, untrack } from "solid-js";
 import { render } from "solid-js/web";
 import { aplicarLengua, t } from "../lib/i18n";
 import { seguirElTema } from "../lib/theme";
@@ -30,6 +30,7 @@ export function startBilling(options: WebSessionDeployment, root: HTMLElement) {
 }
 
 function BillingPage(props: { options: WebSessionDeployment }) {
+  const options = untrack(() => props.options);
   const home = new URL(import.meta.env.BASE_URL, location.origin).href;
   const query = new URLSearchParams(location.search);
   const plan = query.get("plan") ?? "";
@@ -46,8 +47,8 @@ function BillingPage(props: { options: WebSessionDeployment }) {
     ...init,
     signal: init?.signal ? AbortSignal.any([init.signal, lifetime.signal]) : lifetime.signal,
   });
-  const raw = platformTransport(props.options, request);
-  const api = platformSession(props.options, request);
+  const raw = platformTransport(options, request);
+  const api = platformSession(options, request);
   async function authorized<T>(call: () => Promise<T>): Promise<T> {
     try { return await call(); }
     catch (error) {
@@ -67,7 +68,7 @@ function BillingPage(props: { options: WebSessionDeployment }) {
       }
     }),
   };
-  const machines = machinesClient({ endpoint: `${props.options.origin}/v1`, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__, transport });
+  const machines = machinesClient({ endpoint: `${options.origin}/v1`, relayOrigins: __DANIL_WEB_RELAY_ORIGINS__, transport });
   async function machine(id: string, signal: AbortSignal) {
     if (ready()?.active !== id) return null;
     const result = await machines.list(signal);

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import "../helpers/catalog.ts";
-import { anexarDelta, transcripcion, type Turn } from "../../src/features/chat/transcript.ts";
+import { anexarDelta, transcripcion, type Turn } from "../../../../packages/features/chat/src/model/transcript.ts";
 
 const pregunta = (extra: Partial<Turn> = {}): Turn => ({ role: "user", text: "hola", ...extra });
 const respuesta = (extra: Partial<Turn> = {}): Turn => ({ role: "agent", text: "listo", ...extra });

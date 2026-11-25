@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { parsearDiff, saltoEntre } from "../../src/features/code/diff.ts";
+import { parsearDiff, saltoEntre } from "../../../../packages/features/code/src/model/diff.ts";
 
 /**
  * **Lo que se prueba aquí es la numeración, no el parseo.** Un diff mal parseado

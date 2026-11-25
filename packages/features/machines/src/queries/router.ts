@@ -38,6 +38,9 @@ export { unconfirmedOpen } from "../model/unconfirmedOpen.ts";
 
 export type { RouterConfig } from "../model/router-config.ts";
 
+/** Escrituras que cambian las tareas de otra máquina: invalidan su lectura en caché. */
+const SESSION_WRITE = new Set(["task_lifecycle_apply", "send_message", "create_empty_session", "move_session", "delete_session"]);
+
 function createRouterCore(config: RouterConfig) {
   const { self, fleet } = config;
   const rawNative: Invoke = config.native ?? (() => Promise.reject(new FleetError("unknown_machine", null)));
@@ -131,6 +134,7 @@ function createRouterCore(config: RouterConfig) {
 
   /** La rebanada de otra máquina desde su copia en el motor de aquí; `null` si no la hay. */
   async function copySlice(envelope: Envelope): Promise<Slice | null> {
+    if (envelope.command === "list_live_sessions" && freshSessions.has(freshSessionKey(envelope.machine, envelope.workspace)) && fleet.power(envelope.machine) === "on") return null;
     const resource = INDEXED[envelope.command];
     if (!resource || !envelope.workspace || !announces(LIGHT_COPIES)) return null;
     const rows = await indexed(envelope.workspace, envelope.machine, resource);
@@ -155,6 +159,9 @@ function createRouterCore(config: RouterConfig) {
   const lastRead = new Map<string, number>();
   // Cambiar `open` no borra las filas ya vistas mientras llega la nueva lectura.
   const sessionReads = new Map<string, Envelope>();
+  // Máquinas con escritura reciente de tareas: su siguiente `list_live_sessions` pide estado fresco.
+  const freshSessions = new Set<string>();
+  const freshSessionKey = (machine: string, workspace: string | null) => `${machine}\0${workspace ?? ""}`;
   // Las lecturas con pestañas nuevas que su máquina no contestó a tiempo: la siguiente no vuelve a esperar.
   const unanswered = new Set<string>();
   let pending = new Set<SliceChange>();
@@ -191,20 +198,58 @@ function createRouterCore(config: RouterConfig) {
    */
   const childHosted = (m: MachineInfo, workspace: string) =>
     m.child === true && (!m.host ? hasHere(workspace) : fleet.lists(m.host, workspace) === true);
+  const hostsHere = (m: MachineInfo, workspace: string) =>
+    fleet.lists(m.id, workspace) === true || childHosted(m, workspace);
+  /**
+   * En un contexto de organización de pago, el catálogo de workspaces vive en
+   * el servicio de workspaces y cualquier máquina autorizada de esa organización
+   * (ya filtrada por `/v1/machines`) puede atenderlos bajo demanda sin exigir
+   * que ya tenga `workspaces/<id>` en disco.
+   */
+  const catalogMember = (m: MachineInfo, workspace: string | null): boolean =>
+    !!config.organizationCatalog
+    && !!workspace
+    && !m.child
+    && m.kind === "organization"
+    && !!m.organizationId
+    && (!m.organization || m.organization.workspaces.some((w) => w.id === workspace))
+    && (!m.linked || m.linked.has(workspace));
+  /** Una VM que despierta sola y sigue apagada sin lista conocida sigue elegible para despertar al enviar. */
+  const wakeableFor = (m: MachineInfo, workspace: string | null): boolean =>
+    !!workspace
+    && m.wakes
+    && fleet.power(m.id) !== "on"
+    && fleet.lists(m.id, workspace) === null
+    && (!m.organization || m.organization.workspaces.some((w) => w.id === workspace))
+    && (!m.linked || m.linked.has(workspace));
   const membersOf = (workspace: string | null) => {
     if (!workspace) return fleet.machines().map((m) => m.id);
     return local && !scopedLocal
       ? fleet.membersOf(workspace)
-      : fleet.machines().filter((m) => fleet.lists(m.id, workspace) === true || childHosted(m, workspace)).map((m) => m.id);
+      : fleet.machines().filter((m) => hostsHere(m, workspace) || catalogMember(m, workspace)).map((m) => m.id);
   };
   /** En la web: sin máquina que lo liste, se dice y no se intenta nada. */
   const noMachine = () => ({ what: t("web.machines.none_for_workspace"), detail: "no_machine" });
-  /** La máquina que atiende un workspace que no está aquí: la primera encendida de sus miembros, o la primera. */
+  /** La máquina que atiende un workspace que no está aquí: encendida que ya lo tiene > encendida elegible > apagada que ya lo tiene > despertable > resto. */
   const leadOf = (workspace: string | null): string | null => {
     const members = membersOf(workspace).filter((m) => fleet.power(m) !== "outdated");
     const primary = members.filter((m) => !fleet.info(m)?.child);
-    const pick = (list: string[]) => list.find((m) => fleet.power(m) === "on") ?? list[0] ?? null;
-    return pick(primary) ?? pick(members);
+    const pick = (list: string[]) => {
+      if (!workspace) return list.find((m) => fleet.power(m) === "on") ?? list[0] ?? null;
+      const hosted = (id: string) => {
+        const info = fleet.info(id);
+        return !!info && hostsHere(info, workspace);
+      };
+      return list.find((m) => fleet.power(m) === "on" && hosted(m))
+        ?? list.find((m) => fleet.power(m) === "on")
+        ?? list.find((m) => hosted(m))
+        ?? list.find((m) => fleet.info(m)?.wakes)
+        ?? list[0]
+        ?? null;
+    };
+    const found = pick(primary) ?? pick(members);
+    if (found || !workspace) return found;
+    return fleet.machines().find((m) => fleet.power(m.id) !== "outdated" && !m.child && wakeableFor(m, workspace))?.id ?? null;
   };
   /** Los workspaces de `machine` que su fila dice y el registro no le atribuye: los que le da una organización. */
   const givenTo = (info: MachineInfo): string[] => {
@@ -337,20 +382,43 @@ function createRouterCore(config: RouterConfig) {
     return out;
   }
 
-  const differs = (a: Slice | null, b: Slice) => !a || a.status !== b.status || a.has !== b.has || JSON.stringify(a.value) !== JSON.stringify(b.value);
+  /** Los listados traen telemetría viva (`machine_resources`, `cached_at`) que cambia en cada lectura sin alterar los workspaces. */
+  function stableSliceValue(value: unknown): unknown {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+    if (!("machine_resources" in value) && !("cached_at" in value)) return value;
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).filter(
+        ([name]) => name !== "machine_resources" && name !== "cached_at",
+      ),
+    );
+  }
+
+  const differs = (a: Slice | null, b: Slice, command?: string) => {
+    if (!a || a.has !== b.has) return true;
+    const statusChanged = a.status !== b.status && !(command === "list_live_sessions" && a.status === "cached" && b.status === "ok");
+    if (statusChanged) return true;
+    const va = command && LISTING.has(command) ? stableSliceValue(a.value) : a.value;
+    const vb = command && LISTING.has(command) ? stableSliceValue(b.value) : b.value;
+    return JSON.stringify(va) !== JSON.stringify(vb);
+  };
 
   /** Pregunta otra vez a `envelope.machine` si hace rato que no; si su rebanada cambió, la ventana relee. */
   function refresh(envelope: Envelope, before: Slice | null) {
-    const id = JSON.stringify([envelope.machine, envelope.command, envelope.workspace, envelope.args]);
+    const id = JSON.stringify([envelope.machine, envelope.command, envelope.workspace, fleet.argsFor(envelope.machine, envelope.args ?? {})]);
     const last = lastRead.get(id) ?? 0;
     if (Date.now() - last < REFRESH_GAP) return;
     lastRead.set(id, Date.now());
     void fleet.read(envelope).then(
       (slice) => {
-        if (differs(before, slice)) notify(envelope.command);
+        if (envelope.command === "list_live_sessions" && slice.has) {
+          sessionReads.set(JSON.stringify([envelope.machine, envelope.workspace, envelope.args?.project]), envelope);
+        }
+        if (differs(before, slice, envelope.command)) notify(envelope.command);
       },
       () => {},
-    );
+    ).finally(() => {
+      if (envelope.command === "list_live_sessions") freshSessions.delete(freshSessionKey(envelope.machine, envelope.workspace));
+    });
   }
 
   /**
@@ -380,7 +448,8 @@ function createRouterCore(config: RouterConfig) {
     if (quick) return quick;
     void live.then(
       (slices) => {
-        if (slices.some((slice, i) => differs(before[i], slice))) notify(envelopes[0]?.command ?? "");
+        const command = envelopes[0]?.command ?? "";
+        if (slices.some((slice, i) => differs(before[i], slice, command))) notify(command);
       },
       () => {},
     );
@@ -389,7 +458,11 @@ function createRouterCore(config: RouterConfig) {
 
   /** La primera máquina con datos libera la lista; las pendientes conservan su última rebanada y avisan al contestar. */
   async function gatherAvailable(envelopes: Envelope[], settles: boolean): Promise<Slice[]> {
-    const slices = envelopes.map(previousSlice);
+    const slices = envelopes.map((envelope) =>
+      envelope.command === "list_live_sessions" && freshSessions.has(freshSessionKey(envelope.machine, envelope.workspace)) && fleet.power(envelope.machine) === "on"
+        ? null
+        : previousSlice(envelope),
+    );
     let returned = false;
     let finish!: () => void;
     const available = new Promise<void>(resolve => { finish = resolve; });
@@ -399,10 +472,11 @@ function createRouterCore(config: RouterConfig) {
     const live = envelopes.map(async (envelope, i) => {
       const before = slices[i];
       const slice = await fleet.read(envelope);
+      if (envelope.command === "list_live_sessions") freshSessions.delete(freshSessionKey(envelope.machine, envelope.workspace));
       slices[i] = slice;
       if (envelope.command === "list_live_sessions" && slice.has) sessionReads.set(JSON.stringify([envelope.machine, envelope.workspace, envelope.args?.project]), envelope);
       if (returned) {
-        if (differs(before, slice)) notify(envelope.command);
+        if (differs(before, slice, envelope.command)) notify(envelope.command);
       } else if (slice.has) soon();
     });
     await Promise.race([Promise.all(live), available]);
@@ -471,7 +545,11 @@ function createRouterCore(config: RouterConfig) {
         return slice;
       }
       unanswered.add(key);
-      if (!slice) void live.then(late => { if (late.has && differs(before, late)) notify(envelope.command); }, () => {});
+      if (!slice) void live.then(late => {
+        if (!late.has) return;
+        sessionReads.set(JSON.stringify([envelope.machine, envelope.workspace, envelope.args?.project]), envelope);
+        if (differs(before, late, envelope.command)) notify(envelope.command);
+      }, () => {});
     }
     unconfirmed.push(...unknown);
     return before;
@@ -605,12 +683,32 @@ function createRouterCore(config: RouterConfig) {
       }
       // Con la máquina apagada el relay la guardó y su copia ya la refleja: la lista se relee de allá.
       if (isDeferrable(command)) deferredChanged(machine);
+      if (SESSION_WRITE.has(command)) sessionsChanged(machine, workspace);
+      if (
+        config.organizationCatalog
+        && workspace
+        && fleet.lists(machine, workspace) !== true
+        && fleet.power(machine) === "on"
+      ) {
+        void fleet.read({ machine, workspace: null, command: "list_workspaces", args: {} }).catch(() => {});
+      }
       return value;
     }
     const slice = await fleet.read(envelope);
     if (!slice.has) throw noAnswer([slice], workspace);
     rememberSources(command, machine, workspace, slice.value);
     return fleet.encode(machine, command === "list_session_git" ? gitSlice(slice).value : slice.value, command);
+  }
+
+  /** Una escritura remota de tareas invalida las lecturas y copias locales de esa máquina. */
+  function sessionsChanged(machine: string, workspace: string | null) {
+    for (const id of [...lastRead.keys()]) if (id.startsWith(`[${JSON.stringify(machine)},`)) lastRead.delete(id);
+    if (workspace) {
+      const known = index.get(indexKey(workspace, machine, "tasks"));
+      if (known) known.stale = true;
+    }
+    if (fleet.power(machine) === "on") freshSessions.add(freshSessionKey(machine, workspace));
+    notify("list_live_sessions");
   }
 
   /** Cambió la cola de aplazadas de `machine`: sus lecturas salen otra vez al relay ya, sin esperar el respiro. */
@@ -749,9 +847,28 @@ function createRouterCore(config: RouterConfig) {
   async function webListing(command: string, args: Args, localSlices: Slice[] = []): Promise<unknown> {
     const envelopes = fleet.machines().map((m) => ({ machine: m.id, workspace: null, command, args }));
     const slices = await gather(envelopes, { settles: !!fleet.getRegistry(), fresh: true });
-    const merged = withOrganizations(fleet.merge(command, [...localSlices, ...slices], null) as { workspaces?: { id?: unknown }[]; active?: unknown } | undefined);
-    unlisted = !merged;
-    if (!merged) throw noAnswer(slices, null);
+    const rawMerged = withOrganizations(fleet.merge(command, [...localSlices, ...slices], null) as { workspaces?: { id?: unknown }[]; active?: unknown } | undefined);
+    const catalog = config.catalogWorkspaces?.() ?? null;
+    const toCatalogRow = (w: { id: string; name: string; org?: string | null }) => ({
+      ...registryRow({ id: w.id, name: w.name, computers: [], projects: [], settings: null, created_at: null }),
+      id: w.id,
+      ...(w.org ? { account: { org: w.org } } : {}),
+    });
+    if (!rawMerged && localSlices.length === 0 && slices.length === 0 && catalog !== null) {
+      unlisted = true;
+      const workspaces = catalog.map(toCatalogRow);
+      const ids = workspaces.map((w) => w.id);
+      if (!active) active = ids[0] ?? null;
+      return { workspaces, active };
+    }
+    unlisted = !rawMerged;
+    if (!rawMerged) throw noAnswer(slices, null);
+    let merged: { workspaces?: { id?: unknown }[]; active?: unknown } = rawMerged;
+    if (catalog?.length) {
+      const existing = new Set((merged.workspaces ?? []).map((w) => w?.id).filter((id): id is string => typeof id === "string"));
+      const extra = catalog.filter((w) => !existing.has(w.id)).map(toCatalogRow);
+      if (extra.length) merged = { ...merged, workspaces: [...(merged.workspaces ?? []), ...extra] };
+    }
     const ids = (merged.workspaces ?? []).map((w) => w?.id).filter((id): id is string => typeof id === "string");
     // Una máquina sin workspaces no deja la página sin ninguno abierto: el primero de la cuenta.
     // El abierto es de la página: que ninguna máquina lo liste no lo cambia por otro (se dice «sin máquina»).
@@ -780,7 +897,7 @@ function createRouterCore(config: RouterConfig) {
     const workspace = active;
     const lead = defaultMachine(workspace);
     const members = new Set(membersOf(workspace));
-    // En la web, una máquina que no lista el workspace no lo sirve ni lo hace suyo.
+    // En la web o en contexto de organización, las máquinas no elegibles no sirven ni adoptan el workspace.
     const owned = (!local || !!scopedLocal) && !!workspace;
     const home = config.home?.();
     const selfOs = systemOf(home?.os);
@@ -790,6 +907,10 @@ function createRouterCore(config: RouterConfig) {
       // Una de otro contrato no corre tareas nuevas hasta actualizarse.
       ...fleet.machines().filter((m) => fleet.power(m.id) !== "outdated").map((m) => {
         const os = systemOf(m.os);
+        const listedHere = workspace ? fleet.lists(m.id, workspace) : null;
+        const hostedHere = !!workspace && (owned ? hostsHere(m, workspace) : members.has(m.id));
+        const eligible = catalogMember(m, workspace);
+        const wakeable = owned && wakeableFor(m, workspace);
         return {
           id: m.id,
           local: false,
@@ -797,9 +918,9 @@ function createRouterCore(config: RouterConfig) {
           on: fleet.power(m.id) === "on",
           connection: fleet.state(m.id),
           power: fleet.power(m.id),
-          hosts: workspace ? members.has(m.id) : null,
-          materializes: owned ? members.has(m.id) : adopts(m, workspace),
-          refuses: owned ? !members.has(m.id) : !permitted(m, workspace) && m.kind !== "organization",
+          hosts: workspace ? (hostedHere ? true : listedHere === null && (eligible || wakeable) ? null : false) : null,
+          materializes: owned ? (hostedHere || eligible) : adopts(m, workspace),
+          refuses: owned ? (!hostedHere && !eligible && !wakeable) : !permitted(m, workspace) && m.kind !== "organization",
           wakes: m.wakes,
           ...(m.features?.length ? { features: [...m.features] } : {}),
           ...(m.version ? { version: m.version } : {}),
@@ -989,7 +1110,15 @@ function createRouterCore(config: RouterConfig) {
     const picked = config.pickedFor?.(ws) ?? null;
     const lead = defaultMachine(ws);
     // Una elegida que no tiene permiso en este workspace no cuenta: «Ejecutar en» no la ofrece aquí.
-    const runs = (id: string) => (id === self ? !scopedLocal || hasHere(ws) : !!fleet.info(id) && (!ws || (local && !scopedLocal ? fleet.membersOf(ws).includes(id) || permitted(fleet.info(id) as MachineInfo, ws) : membersOf(ws).includes(id))));
+    const runs = (id: string) => {
+      if (id === self) return !scopedLocal || hasHere(ws);
+      const info = fleet.info(id);
+      if (!info) return false;
+      if (!ws) return true;
+      return local && !scopedLocal
+        ? fleet.membersOf(ws).includes(id) || permitted(info, ws)
+        : membersOf(ws).includes(id) || wakeableFor(info, ws);
+    };
     const machine = picked && runs(picked) ? picked : lead;
     return machine ? { machine, lead: machine === lead } : null;
   }
@@ -1026,6 +1155,7 @@ function createRouterCore(config: RouterConfig) {
     forget(machine: string) {
       attention.forget(machine);
       for (const [key, envelope] of sessionReads) if (envelope.machine === machine) sessionReads.delete(key);
+      for (const key of freshSessions) if (key.startsWith(`${machine}\0`)) freshSessions.delete(key);
     },
     /** El registro de la cuenta cambió (un workspace recién vinculado): la próxima lista lo vuelve a leer. */
     registryChanged() {
@@ -1033,6 +1163,7 @@ function createRouterCore(config: RouterConfig) {
     },
     close() {
       sessionReads.clear();
+      freshSessions.clear();
       clearTimeout(notifyTimer);
       webEvents.close();
       fleet.close();

@@ -10,6 +10,7 @@ import { RemoveButton } from "../../../../ui/src/IconAction";
 import { Input } from "../../../../ui/src/Input";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { Spinner } from "../../../../ui/src/Spinner";
+import { manualLoginMode } from "../../../../ui/src/lib/account-auth.ts";
 import { AvanceDeDescarga, BarraDeCarga, CodigoParaConfirmar, Peso } from "../components/DownloadProgress";
 import { MarcaDeFila } from "./ConnectAIMap";
 import { type Conexiones, type Fila, nombreDeFila, openExternal, type Paso } from "../queries/connect-store";
@@ -28,7 +29,15 @@ function detalle(c: Conexiones, f: Fila): string {
       return t("onboarding.ai.downloading");
     case "entrando":
       if (p.codigo) return t("onboarding.login.confirm_in_browser");
-      return p.pideCodigo ? t("onboarding.ai.paste_code") : t("onboarding.ai.finish_in_browser");
+      if (p.pideCodigo) {
+        const modo = manualLoginMode(p.url, p.aviso);
+        return modo === "callback_url"
+          ? t("onboarding.ai.paste_callback_url")
+          : modo === "hosted_code"
+            ? t("onboarding.ai.paste_hosted_code")
+            : t("onboarding.ai.paste_code");
+      }
+      return t("onboarding.ai.finish_in_browser");
     case "clave":
       return t("onboarding.ai.paste_key");
     case "comprobando":

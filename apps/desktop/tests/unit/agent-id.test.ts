@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { agentId } from "../../src/features/projects/agentId.ts";
+import { agentId } from "../../../../packages/features/projects/src/model/agentId.ts";
 
 test("a display name becomes a kebab-case id", () => {
   assert.equal(agentId("Giskard"), "giskard");

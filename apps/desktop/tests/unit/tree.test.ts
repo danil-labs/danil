@@ -9,7 +9,7 @@ import {
   localesDeKn,
   type Nodo,
   rutasDeCarpetas,
-} from "../../src/features/code/tree.ts";
+} from "../../../../packages/features/code/src/model/tree.ts";
 
 const RUTAS = [
   "README.md",

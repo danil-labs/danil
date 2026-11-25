@@ -12,7 +12,7 @@ export async function addSessionAccount(rpc: ContextInvoke, refresh: () => Promi
       result = await rpc("danil_sign_in");
     }
     await refresh();
-    if (result.error) throw { detail: result.error };
+    if (result?.error) throw { detail: result.error };
     accountReturn.returned(attempt);
   } catch (cause) {
     accountReturn.failed(attempt, cause);

@@ -4,8 +4,10 @@ import { callEngine } from "../../../../engine-client/src/client.ts";
 import { cancelLoopbackForAccount } from "../../../../engine-client/src/loopbackLogin.ts";
 import { freeModelScope } from "../../../../session/src/free-model-policy.ts";
 import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
+import { machineOf } from "../../../../host/src/machine.ts";
 import { listen } from "../../../../host/src/serviceEvents.ts";
 import { accountPresentation } from "../../../../ui/src/lib/accounts.ts";
+import { loginCodeErrorText, shouldOpenManualCodeInput } from "../../../../ui/src/lib/account-auth.ts";
 import type { AccountList, AccountStatus, AgentOpt, LoginEvent } from "../../../../ui/src/lib/accounts.ts";
 import { explicar } from "./connect-rows";
 import type { CargaDeConexiones } from "./connect-load";
@@ -39,8 +41,8 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
       if (!e || e.cuenta !== cuenta || pasos[id]?.k !== "entrando") return;
       entrada = null;
       cancelLoopbackForAccount(cuenta);
-      void callEngine("cancel_login", { id: cuenta }).catch(() => {});
-      void callEngine("discard_account", { provider: e.agente, id: cuenta }).catch(() => {});
+      void callEngine("cancel_login", { id: cuenta }, machineOf(cuenta)).catch(() => {});
+      void callEngine("discard_account", { provider: e.agente, id: cuenta }, machineOf(cuenta)).catch(() => {});
       setErrores(id, t("onboarding.ai.login_timeout"));
       poner(id, { k: "instalada" });
     }, PLAZO_DE_ENTRADA_MS);
@@ -90,10 +92,10 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
       entrada = { fila: id, agente: f.agente, cuenta };
       setSalidas(id, []);
       poner(id, { k: "entrando", cuenta });
-      await callEngine("login_account", { provider: f.agente, id: cuenta, mode: "tuberia" });
+      await callEngine("login_account", { provider: f.agente, id: cuenta, mode: "tuberia" }, machineOf(cuenta));
     } catch (e) {
       entrada = null;
-      if (cuenta) await callEngine("discard_account", { provider: f.agente, id: cuenta }).catch(() => {});
+      if (cuenta) await callEngine("discard_account", { provider: f.agente, id: cuenta }, machineOf(cuenta)).catch(() => {});
       setErrores(id, explicar(e));
       poner(id, { k: "instalada" });
     }
@@ -107,7 +109,7 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     clearTimeout(plazo);
     entrada = null;
     try {
-      const estado = await callEngine<AccountStatus>("account_status", { provider: e.agente, id: e.cuenta });
+      const estado = await callEngine<AccountStatus>("account_status", { provider: e.agente, id: e.cuenta }, machineOf(e.cuenta));
       if (!motivo && estado.authenticated) return void (await quedoConectada(e.fila, e.agente, e.cuenta));
       // La cuenta se queda: ya tiene la sesión, y en cuanto el alta exista se conecta sin volver a entrar.
       if (!motivo && estado.signup) {
@@ -119,13 +121,13 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     } catch {
       // Sin estado legible se trata como un intento que no llegó: la cuenta vacía se descarta.
     }
-    await callEngine("remove_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
+    await callEngine("remove_account", { provider: e.agente, id: e.cuenta }, machineOf(e.cuenta)).catch(() => {});
     setErrores(e.fila, motivo ? explicar(motivo) : t("onboarding.ai.login_failed"));
     poner(e.fila, { k: "instalada" });
   }
 
   async function quedoConectada(id: string, agent: string, cuenta: string) {
-    await callEngine("set_active_account", { provider: agent, id: cuenta }).catch(() => {});
+    await callEngine("set_active_account", { provider: agent, id: cuenta }, machineOf(cuenta)).catch(() => {});
     const conectada = await cuentaConectada(agent);
     poner(id, { k: "conectada", cuenta: conectada?.cuenta ?? "", id: cuenta });
   }
@@ -138,11 +140,11 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     setErrores(id, null);
     poner(id, { ...p, revisando: true });
     try {
-      const estado = await callEngine<AccountStatus>("account_status", { provider: f.agente, id: p.cuenta });
+      const estado = await callEngine<AccountStatus>("account_status", { provider: f.agente, id: p.cuenta }, machineOf(p.cuenta));
       if (pasos[id]?.k !== "alta") return;
       if (estado.authenticated) return void (await quedoConectada(id, f.agente, p.cuenta));
       if (estado.signup) return poner(id, { ...p, url: estado.signup.url ?? p.url, revisando: false });
-      await callEngine("remove_account", { provider: f.agente, id: p.cuenta }).catch(() => {});
+      await callEngine("remove_account", { provider: f.agente, id: p.cuenta }, machineOf(p.cuenta)).catch(() => {});
       setErrores(id, t("onboarding.ai.login_failed"));
       poner(id, { k: "instalada" });
     } catch {
@@ -156,16 +158,34 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     if (p?.k === "alta" && p.url) callEngine("open_external", { target: p.url }).catch(() => {});
   }
 
+  function limpiarErrorCodigo(id: string) {
+    const p = pasos[id];
+    if (p?.k === "entrando" && p.errorCodigo) poner(id, { ...p, errorCodigo: null });
+  }
+
   async function enviarCodigo(id: string, codigo: string) {
     const p = pasos[id];
-    if (p?.k !== "entrando" || !codigo.trim()) return;
+    const valor = codigo.trim();
+    if (p?.k !== "entrando" || !valor || p.enviandoCodigo) return;
     setErrores(id, null);
-    poner(id, { ...p, pideCodigo: false });
+    poner(id, { ...p, enviandoCodigo: true, errorCodigo: null });
     try {
-      await callEngine("submit_login_code", { id: p.cuenta, code: codigo.trim() });
+      await callEngine("submit_login_code", { id: p.cuenta, code: valor }, machineOf(p.cuenta));
+      const actual = pasos[id];
+      if (actual?.k === "entrando" && actual.cuenta === p.cuenta) {
+        poner(id, { ...actual, pideCodigo: false, enviandoCodigo: false, codigoEnviado: true, errorCodigo: null });
+      }
     } catch (e) {
-      setErrores(id, explicar(e));
-      poner(id, { ...p, pideCodigo: true });
+      const actual = pasos[id];
+      if (actual?.k === "entrando" && actual.cuenta === p.cuenta) {
+        poner(id, {
+          ...actual,
+          pideCodigo: true,
+          enviandoCodigo: false,
+          codigoEnviado: false,
+          errorCodigo: loginCodeErrorText(e, explicar(e)),
+        });
+      }
     }
   }
 
@@ -193,11 +213,11 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
       const e = entrada;
       entrada = null;
       cancelLoopbackForAccount(p.cuenta);
-      await callEngine("cancel_login", { id: p.cuenta }).catch(() => {});
-      if (e) await callEngine("discard_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
+      await callEngine("cancel_login", { id: p.cuenta }, machineOf(p.cuenta)).catch(() => {});
+      if (e) await callEngine("discard_account", { provider: e.agente, id: e.cuenta }, machineOf(e.cuenta)).catch(() => {});
     }
     const f = fila(id);
-    if (p?.k === "alta" && f) await callEngine("remove_account", { provider: f.agente, id: p.cuenta }).catch(() => {});
+    if (p?.k === "alta" && f) await callEngine("remove_account", { provider: f.agente, id: p.cuenta }, machineOf(p.cuenta)).catch(() => {});
     const sesion = sesionesDelSistema().find((x) => x.provider === f?.agente);
     poner(id, sesion ? { k: "sesion", identidad: sesion.identity ?? "" } : agente(f?.agente ?? "")?.available ? { k: "instalada" } : { k: "falta" });
   }
@@ -234,11 +254,26 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     const { kind, text } = ev.payload;
     if (kind === "url") {
       vigilarEntrada(e.fila, e.cuenta);
-      poner(e.fila, { ...p, url: text });
+      const abrirCodigo = !p.codigoEnviado && shouldOpenManualCodeInput(text, p.aviso);
+      poner(e.fila, {
+        ...p,
+        url: text,
+        ...(abrirCodigo ? { pideCodigo: true, errorCodigo: null } : {}),
+      });
       callEngine("open_external", { target: text }).catch(() => {});
-    } else if (kind === "notice") setSalidas(e.fila, (s) => [...(s ?? []), text]);
-    else if (kind === "confirm") poner(e.fila, { ...p, codigo: text });
-    else if (kind === "code") poner(e.fila, { ...p, pideCodigo: true });
+    } else if (kind === "notice") {
+      setSalidas(e.fila, (s) => [...(s ?? []), text]);
+      const msg = text.trim();
+      if (msg && !/^https?:\/\//.test(msg)) {
+        const abrirCodigo = !p.codigoEnviado && shouldOpenManualCodeInput(p.url, msg);
+        poner(e.fila, {
+          ...p,
+          aviso: msg,
+          ...(abrirCodigo ? { pideCodigo: true, errorCodigo: null } : {}),
+        });
+      }
+    } else if (kind === "confirm") poner(e.fila, { ...p, codigo: text });
+    else if (kind === "code") poner(e.fila, { ...p, pideCodigo: true, codigoEnviado: false, errorCodigo: null });
     else if (kind === "done") void terminarEntrada(text);
   });
   const alInstalar = listen<AvanceDeInstalacion>("install", (ev) => {
@@ -269,14 +304,14 @@ export function crearEntradaDeConexiones(estado: EstadoDeConexiones, carga: Carg
     const e = entrada;
     if (e) {
       cancelLoopbackForAccount(e.cuenta);
-      void callEngine("cancel_login", { id: e.cuenta }).catch(() => {});
-      void callEngine("discard_account", { provider: e.agente, id: e.cuenta }).catch(() => {});
+      void callEngine("cancel_login", { id: e.cuenta }, machineOf(e.cuenta)).catch(() => {});
+      void callEngine("discard_account", { provider: e.agente, id: e.cuenta }, machineOf(e.cuenta)).catch(() => {});
     }
     for (const f of filas()) {
       const p = pasos[f.id];
-      if (p?.k === "alta") void callEngine("remove_account", { provider: f.agente, id: p.cuenta }).catch(() => {});
+      if (p?.k === "alta") void callEngine("remove_account", { provider: f.agente, id: p.cuenta }, machineOf(p.cuenta)).catch(() => {});
     }
   });
 
-  return { conectar, usarSesion, cancelar, enviarCodigo, revisarAlta, abrirAlta, guardarClave, desconectar };
+  return { conectar, usarSesion, cancelar, enviarCodigo, limpiarErrorCodigo, revisarAlta, abrirAlta, guardarClave, desconectar };
 }

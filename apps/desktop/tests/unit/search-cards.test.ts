@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { dayKey, groupSearchHits, searchMatchCards } = await import("../../src/features/chat/searchCards.ts");
+const { dayKey, groupSearchHits, searchMatchCards } = await import("../../../../packages/features/chat/src/model/searchCards.ts");
 
 const at = (year: number, month: number, day: number, hour = 9) => new Date(year, month - 1, day, hour).getTime();
 

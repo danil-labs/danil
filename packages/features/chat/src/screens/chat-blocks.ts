@@ -12,7 +12,7 @@ import { esSalidaDeComando } from "../model/slashOutput";
 import { createBlockKeys } from "../model/threadRows";
 import type { Lectura } from "../model/threadWindow";
 import type { createChatComposerState } from "./chat-composer-state";
-import { claseDeSistema, claveDeBloque, fromWork, textoDeSistema, textoVisible, type Avance, type Bloque, type BloqueDeTrabajo } from "./chat-model";
+import { claseDeSistema, claveDeBloque, esInterrupcion, fromWork, textoDeSistema, textoVisible, type Avance, type Bloque, type BloqueDeTrabajo } from "./chat-model";
 import type { ChatProps } from "./chat-props";
 import { createEffect, createMemo, on, untrack } from "solid-js";
 
@@ -118,10 +118,16 @@ export function createChatBlocks(props: ChatProps, deps: ChatBlocksDeps) {
       // La línea del cupo resuelve el fallo que la precede: las dos juntas se leen como un error que sigue abierto.
       const anterior = out.at(-1);
       if (m.meta === "cupo" && anterior?.tipo === "msg" && cupoResuelveElFallo(anterior.msg.fallo?.clase)) out.pop();
+      // Si hubo pasos históricos antes de un fallo que cortó el turno, esos pasos
+      // quedan colapsados bajo «Actividad antes del error» en vez de «Trabajo».
+      if (m.role === "system" && m.meta === "fallo" && !esInterrupcion(m) && anterior?.tipo === "pasos") {
+        anterior.failedBeforeError = true;
+      }
       if (
         m.role !== "system" ||
         m.meta === "history_gap" ||
         m.meta === "fallo" ||
+        m.meta === "aviso" ||
         m.meta === "cupo" ||
         m.meta === "engine_updated" ||
         m.meta === "provider_handover" ||

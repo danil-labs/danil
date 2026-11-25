@@ -4,12 +4,12 @@ import BillingPlan from "../../src/web/BillingPlan";
 import NewOrganizationCheckout from "../../src/web/NewOrganizationCheckout";
 import CheckoutReturn from "../../src/web/CheckoutReturn";
 import { BillingReturnGate } from "../../src/web/window-billing";
-import { PlatformSessionError } from "../../src/web/platform-session";
+import { PlatformSessionError } from "../../../../packages/session/src/platform-session";
 import catalog from "./billing-v2/catalog.synthetic.json";
 import organization from "./billing-v2/organization.suspended.json";
 import balance from "./billing-v2/balance.with-debt.json";
 import transactions from "./billing-v2/transactions.page.json";
-import type { billingV2 } from "../../src/platform/treasury";
+import type { billingV2 } from "../../../../packages/platform-client/src/treasury";
 
 const params = new URLSearchParams(location.search);
 const calls: string[] = [];

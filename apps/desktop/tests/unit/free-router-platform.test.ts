@@ -10,7 +10,7 @@ import {
   type EdgeSend,
   type EngineCall,
   type FreeRouterScope,
-} from "../../src/features/settings/free-router-platform.ts";
+} from "../../../../packages/features/settings/src/queries/free-router-platform.ts";
 
 const SCOPE: FreeRouterScope = { account: "42", org: "org_A", sub: "user_A", workspace: "q3ce37ff" };
 const BASE = "/v1/workspaces/42/free-router";
@@ -335,7 +335,7 @@ test("sealed:false is a renewal of an installed grant, not a failure", async () 
 });
 
 test("the scope comes only from a row of the active organization of the same /v1/workspaces answer", async () => {
-  const { platformScope } = await import("../../src/features/settings/free-router-platform.ts");
+  const { platformScope } = await import("../../../../packages/features/settings/src/queries/free-router-platform.ts");
   const list = {
     active_workspace_id: "42",
     items: [

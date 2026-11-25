@@ -47,6 +47,16 @@ const problemCode = (body: unknown): string | undefined => {
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
+ * `machine-provisioning` devuelve `hosted | connected` y el contrato v1 usa `organization | personal`.
+ * Se normalizan aquí para que toda la flota (Desk y web) hable un solo idioma.
+ */
+export function normalizeMachineKind(kind: unknown): string | undefined {
+  if (kind === "hosted" || kind === "organization") return "organization";
+  if (kind === "connected" || kind === "personal") return "personal";
+  return typeof kind === "string" ? kind : undefined;
+}
+
+/**
  * Lo que las pantallas de máquinas y flota ya entienden (`Computer`). `running` solo es
  * `online` si el motor está conectado; un estado que no conocemos es `unknown`, no un error.
  */
@@ -60,10 +70,11 @@ export function machineToComputer(m: Machine): Computer & { state: MachineState 
     : raw === "starting" ? "starting"
     : raw === "stopped" || raw === "stopping" ? "stopped"
     : "unknown";
+  const kind = normalizeMachineKind(m.kind);
   // `wakeable` es «VM administrada», no «apagada ahora»: se apaga sola sin que la lista lo sepa. Una personal no se enciende desde la nube.
   return {
-    computer_id: m.machine_id, name: m.name ?? null, state, wakeable: POWER_STATES.has(raw ?? "") && m.kind !== "personal", provider: null,
-    ...(typeof m.kind === "string" ? { kind: m.kind } : {}),
+    computer_id: m.machine_id, name: m.name ?? null, state, wakeable: POWER_STATES.has(raw ?? "") && kind !== "personal", provider: null,
+    ...(kind !== undefined ? { kind } : {}),
     ...(typeof m.organization_id === "string" && m.organization_id ? { organization_id: m.organization_id } : {}),
   };
 }

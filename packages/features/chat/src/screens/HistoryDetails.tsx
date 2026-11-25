@@ -11,12 +11,13 @@ const REREADS = 5;
 const REREAD_MS = 150;
 
 /** El texto del mensaje es la respuesta misma: se trae al montar la fila y `render` lo pinta como cualquier otra. */
-function HistoryText(props: { reference: HistoryRef; turnId?: string; onUnavailable: () => void; render?: (text: string) => JSX.Element; route: MachineOf }) {
+function HistoryText(props: { reference: HistoryRef; turnId?: string; onUnavailable: () => void; onText?: (text: string) => void; render?: (text: string) => JSX.Element; route: MachineOf }) {
   const [text] = createResource(() => props.reference, (ref) => readDetailText<Session["turns"][number]>({
     part: (current, offset) => readDetailChunk(ref, { ...current, kind: "detail", offset }, props.route),
     turns: readTurns(ref, props.route),
   }, ref, props.turnId).then((value) => {
     if (value === null) props.onUnavailable();
+    else props.onText?.(value);
     return value;
   }).catch(() => {
     props.onUnavailable();
@@ -26,7 +27,7 @@ function HistoryText(props: { reference: HistoryRef; turnId?: string; onUnavaila
 }
 
 /** Una sola página de contenido crudo en memoria, incluso con resultados de muchos MB. */
-export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; renderText?: (text: string) => JSX.Element; route: MachineOf }) {
+export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; renderText?: (text: string) => JSX.Element; onText?: (text: string) => void; route: MachineOf }) {
   const [selected, setSelected] = createSignal<HistoryRef | null>(null);
   const [chunk, setChunk] = createSignal<HistoryChunk | null>(null);
   retainRowWhile(() => selected() !== null);
@@ -72,7 +73,7 @@ export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; ren
   const textRef = () => textFailed() ? undefined : props.refs.find((ref) => ref.pointer === "/text");
   const listed = () => props.refs.filter((ref) => ref !== textRef());
   return <>
-  <Show when={textRef()}>{(ref) => <HistoryText reference={ref()} turnId={props.turnId} render={props.renderText} route={props.route} onUnavailable={() => setTextFailed(true)} />}</Show>
+  <Show when={textRef()}>{(ref) => <HistoryText reference={ref()} turnId={props.turnId} render={props.renderText} onText={props.onText} route={props.route} onUnavailable={() => setTextFailed(true)} />}</Show>
   <Show when={listed().length > 0}>
   <div class="my-2 text-xs text-neutral-500">
     <For each={listed()}>{ref => <Pressable class="mr-2 underline" onClick={() => void read(ref, 0)}>

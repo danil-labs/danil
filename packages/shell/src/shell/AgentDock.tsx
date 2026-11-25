@@ -1,44 +1,50 @@
-import ChevronDown from "lucide-solid/icons/chevron-down";
-import ChevronUp from "lucide-solid/icons/chevron-up";
-import List from "lucide-solid/icons/list";
+import ChevronLeft from "lucide-solid/icons/chevron-left";
+import ChevronRight from "lucide-solid/icons/chevron-right";
+import FileText from "lucide-solid/icons/file-text";
+import Folder from "lucide-solid/icons/folder";
+import LayoutGrid from "lucide-solid/icons/layout-grid";
 import Plus from "lucide-solid/icons/plus";
-import SquarePen from "lucide-solid/icons/square-pen";
-import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import { t } from "../../../ui/src/lib/i18n";
 import type { AgentProfile } from "../../../ui/src/lib/model";
 import { cn } from "../../../ui/src/lib/utils";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "../../../ui/src/ContextMenu";
+import { KeyedList } from "../../../ui/src/KeyedList";
+import { Pressable } from "../../../ui/src/Pressable";
+import { SignalDot } from "../../../ui/src/SignalDot";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import { displayName } from "../../../features/projects/src/queries/profiles";
 import { agentFolder, type DockAgent, orderDockAgents } from "./dockLayout";
-import { Pressable } from "../../../ui/src/Pressable";
+import { pageDock } from "./dockPagination";
 
 export type { DockAgent } from "./dockLayout";
+type DockFolder = { id: string; name: string };
+export type DockGroups = { workspace: string[]; project: string[]; repo: string[] };
+type DockLevel = keyof DockGroups;
 
-/** Mismas palabras que la fila del agente en `AgentRows`. */
+const LEVELS = ["workspace", "project", "repo"] as const;
+const ICONS = { workspace: LayoutGrid, project: Folder, repo: FileText };
+const LABELS = { workspace: "shell.agent_dock.workspace", project: "shell.agent_dock.project", repo: "shell.agent_dock.repository" };
+const ICON_BUTTON = "relative grid size-6 shrink-0 place-items-center rounded-md bg-transparent p-0 text-neutral-500 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-30 disabled:hover:bg-transparent";
+
+/** Mismas palabras que la fila del agente en AgentRows. */
 function dockStatusText(agent: DockAgent): string {
   if (!agent.status || agent.status === "asleep") return t("projects.sessions.agent_asleep");
-  if (agent.status === "working") {
-    return agent.liveTasks > 0
-      ? t("projects.sessions.agent_working", { count: agent.liveTasks })
-      : t("projects.sessions.agent_working_alone");
-  }
+  if (agent.status === "working") return agent.liveTasks > 0
+    ? t("projects.sessions.agent_working", { count: agent.liveTasks })
+    : t("projects.sessions.agent_working_alone");
   return agent.minutesSinceLastTurn != null
     ? t("projects.sessions.agent_awake_since", { minutes: agent.minutesSinceLastTurn })
     : t("projects.sessions.agent_awake");
 }
-
-const ICONO = "grid size-7 place-items-center rounded-md border-0 bg-transparent text-neutral-500 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary";
-const ADD = "grid size-8 shrink-0 place-items-center rounded-full border-0 bg-neutral-200 p-0 text-neutral-700 hover:bg-neutral-300 focus-visible:outline-2 focus-visible:outline-primary";
-type DockFolder = { id: string; name: string };
-export type DockGroups = { workspace: string[]; project: string[]; repo: string[] };
 
 export default function AgentDock(props: {
   agents: DockAgent[];
   selected: string | null;
   foldersOf: (name: string) => DockFolder[];
   currentFolder: string | null;
-  currentFolderName?: string | null;
+  contextKey?: string;
   groups?: DockGroups;
   onTalk: (project: string, name: string) => void;
   onShowTasks: (name: string) => void;
@@ -48,73 +54,93 @@ export default function AgentDock(props: {
   profileOf?: (name: string) => AgentProfile | undefined;
   loading?: boolean;
 }) {
-  const [expanded, setExpanded] = createSignal(false);
-  // El panel cerrado no se monta: abrir otra tarea no debe repintar su lista invisible.
-  const [opened, setOpened] = createSignal(false);
-  createEffect(() => { if (expanded()) setOpened(true); });
-  const [names, setNames] = createSignal(false);
+  const [position, setPosition] = createSignal<{ context: string; level: DockLevel | null; page: number }>({ context: "", level: null, page: 0 });
   const [menu, setMenu] = createSignal<string | null>(null);
+  const context = () => `${props.contextKey ?? ""}\n${props.currentFolder ?? ""}`;
+  // Una carpeta nueva empieza en Todos/página 1 sin escribir estado derivado.
+  const navigation = () => position().context === context() ? position() : { level: null, page: 0 };
   const label = (name: string) => displayName(name, props.profileOf?.(name));
+  const levels = createMemo(() => new Map<string, DockLevel>(LEVELS.flatMap(level =>
+    (props.groups?.[level] ?? []).map(name => [name, level] as const))));
   const allowed = createMemo(() => new Set(props.groups ? [
     ...props.groups.workspace,
     ...(props.currentFolder ? [...props.groups.project, ...props.groups.repo] : []),
-  ] : props.agents.map(a => a.name)));
-  const agents = createMemo(() => orderDockAgents(props.agents.filter(a => allowed().has(a.name)), a => label(a.name), a => props.profileOf?.(a.name)?.hidden === true));
-  const faces = createMemo(() => {
-    const shown = agents().slice(0, 5);
-    const selected = agents().find(a => a.name === props.selected);
-    if (selected && !shown.includes(selected)) shown[4] = selected;
-    return shown;
-  });
-  const escape = (event: KeyboardEvent) => { if (event.key === "Escape") setExpanded(false); };
-  window.addEventListener("keydown", escape);
-  onCleanup(() => window.removeEventListener("keydown", escape));
-  const destination = (name: string) => agentFolder(props.foldersOf(name).map(f => f.id), props.currentFolder) ?? "";
-  const talk = (name: string) => { setExpanded(false); props.onTalk(destination(name), name); };
-  const face = (agent: DockAgent, size: number) => <AstroAvatar name={agent.name} status={agent.status ?? "asleep"} body={props.profileOf?.(agent.name)?.body} avatar={props.profileOf?.(agent.name)?.avatar} size={size} />;
-  const group = (title: string, members: string[] | undefined) => {
-    const rows = () => agents().filter(a => members?.includes(a.name));
-    return <Show when={rows().length}><section class="py-2">
-      <h3 class="m-0 px-2 py-1 text-caption font-medium text-neutral-500">{title}</h3>
-      <For each={rows()}>{agent => <Pressable class="flex w-full items-center gap-3 rounded-md border-0 bg-transparent px-2 py-2 text-left hover:bg-neutral-100" onClick={() => talk(agent.name)}>
-        {face(agent, 32)}<span class="min-w-0 flex-1 truncate text-ui">{label(agent.name)}</span><SquarePen size={14} class="text-neutral-500" />
-      </Pressable>}</For>
-    </section></Show>;
+  ] : props.agents.map(agent => agent.name)));
+  const agents = createMemo(() => orderDockAgents(props.agents.filter(agent => allowed().has(agent.name)), agent => label(agent.name), agent => props.profileOf?.(agent.name)?.hidden === true));
+  const filtered = createMemo(() => agents().filter(agent => !navigation().level || levels().get(agent.name) === navigation().level));
+  const page = createMemo(() => pageDock(filtered(), navigation().page));
+  const workingIn = (level: DockLevel) => agents().filter(agent => levels().get(agent.name) === level && agent.status === "working");
+  const levelTitle = (level: DockLevel) => {
+    const names = workingIn(level).map(agent => label(agent.name));
+    return names.length
+      ? t("shell.agent_dock.level_working", { level: t(LABELS[level]), count: names.length, names: names.join(", ") })
+      : t(LABELS[level]);
   };
-  return <div role="group" aria-label={t("shell.agent_dock.title")} class="h-[100px] shrink-0" data-dock-expanded={expanded() ? "" : undefined}>
-    <div inert={!expanded()} aria-hidden={!expanded()} data-dock-panel=""
-      class={cn("absolute inset-x-0 top-0 bottom-[100px] z-20 overflow-y-auto bg-surface px-2 motion-safe:transition-[transform,opacity,visibility] motion-safe:duration-[180ms] motion-safe:ease-out", expanded() ? "visible translate-y-0 opacity-100" : "invisible translate-y-full opacity-0")}>
-      <Show when={opened()}>
-        {group(t("shell.agent_dock.workspace"), props.groups?.workspace)}
-        <Show when={props.currentFolder}>
-          {group(t("shell.agent_dock.project"), props.groups?.project)}
-          {group(t("shell.agent_dock.repository"), props.groups?.repo)}
-        </Show>
-        <Pressable class="my-3 rounded-md border-0 bg-transparent px-2 py-1 text-caption text-neutral-500 hover:bg-neutral-100" onClick={() => { setExpanded(false); props.onSeeAll(); }}>{t("shell.agent_dock.see_all")}</Pressable>
+  const agentTitle = (agent: DockAgent) => {
+    const level = levels().get(agent.name);
+    return `${label(agent.name)} · ${dockStatusText(agent)}${level ? ` · ${t(LABELS[level])}` : ""}`;
+  };
+  const selectLevel = (level: DockLevel) => setPosition({ context: context(), level: navigation().level === level ? null : level, page: 0 });
+  const turnPage = (offset: number) => setPosition({ context: context(), level: navigation().level, page: page().page + offset });
+  const destination = (name: string) => agentFolder(props.foldersOf(name).map(folder => folder.id), props.currentFolder) ?? "";
+
+  return <section aria-label={t("shell.agent_dock.team")} class="h-[132px] shrink-0 px-1 pt-1 pb-2" data-agent-dock="">
+    <div class="flex h-7 items-center justify-between gap-2">
+      <span class="text-caption font-medium text-neutral-700">{t("shell.agent_dock.team")}</span>
+      <Pressable class={cn(ICON_BUTTON, "border-0")} aria-label={t("projects.agents.new_open")} title={t("projects.agents.new_open")} disabled={!props.onNewAgent} onClick={() => props.onNewAgent?.()}><Plus size={14} aria-hidden="true" /></Pressable>
+    </div>
+    <div class="flex h-[62px] min-w-0 items-center" aria-busy={props.loading}>
+      <Show when={agents().length} fallback={<Show when={props.loading} fallback={<span class="text-caption text-neutral-500">{t("shell.agent_dock.empty")}</span>}>
+        <div class="grid w-full grid-cols-5 justify-items-center" data-dock-loading=""><For each={[0, 1, 2, 3, 4]}>{() => <span class="size-7 rounded-full bg-neutral-200 motion-safe:animate-pulse" />}</For></div>
+      </Show>}>
+        <ContextMenu>
+          <ContextMenuTrigger class="w-full" onContextMenu={(event: MouseEvent) => {
+            const name = (event.target as HTMLElement).closest<HTMLElement>("[data-dock-agent]")?.dataset.dockAgent;
+            if (!name) event.preventDefault();
+            setMenu(name ?? null);
+          }}>
+            <div class="grid h-[62px] w-full grid-cols-5 items-center gap-1" data-dock-page={page().page + 1}>
+              <KeyedList each={page().shown} by={agent => agent.name}>{agent => <Pressable
+                data-dock-agent={agent().name}
+                aria-label={agentTitle(agent())}
+                aria-current={props.selected === agent().name ? "true" : undefined}
+                title={agentTitle(agent())}
+                class={cn("flex min-w-0 flex-col items-center gap-1 rounded-md border-0 bg-transparent px-0.5 py-1 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary", props.selected === agent().name && "bg-neutral-100")}
+                onClick={() => props.onTalk(destination(agent().name), agent().name)}
+              >
+                <span class="relative inline-flex">
+                  <AstroAvatar name={agent().name} status={agent().status ?? "asleep"} body={props.profileOf?.(agent().name)?.body} avatar={props.profileOf?.(agent().name)?.avatar} size={30} />
+                  <Show when={levels().get(agent().name)}>{level => <span class="absolute -right-1 -bottom-0.5 grid size-3.5 place-items-center rounded-full border border-border bg-surface text-neutral-500"><Dynamic component={ICONS[level()]} size={8} aria-hidden="true" /></span>}</Show>
+                </span>
+                <span class="w-full truncate text-center text-2xs leading-tight text-neutral-500">{label(agent().name)}</span>
+              </Pressable>}</KeyedList>
+              <Show when={filtered().length === 0}><span class="col-span-5 text-caption text-neutral-500">{t("shell.agent_dock.filter_empty")}</span></Show>
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuContent><Show when={menu()}>{name => <>
+            <ContextMenuItem onSelect={() => props.onShowTasks(name())}>{t("shell.agent_dock.see_tasks")}</ContextMenuItem>
+            <ContextMenuItem onSelect={() => props.onProfile(destination(name()), name())}>{t("projects.agents.profile_open")}</ContextMenuItem>
+            <ContextMenuItem onSelect={props.onSeeAll}>{t("shell.agent_dock.see_all")}</ContextMenuItem>
+          </>}</Show></ContextMenuContent>
+        </ContextMenu>
       </Show>
     </div>
-    <div class="relative z-30 h-full border-t border-border bg-surface px-2" data-dock-header="">
-      <div class="flex h-10 items-center gap-1 px-1">
-        <span class="text-caption text-neutral-500">{t("shell.agent_dock.team")}</span>
-        <Show when={agents().length > 5}><span class="text-caption text-neutral-500">+{agents().length - 5}</span></Show>
-        <Pressable class={cn(ICONO, "ml-auto")} aria-label={t("shell.agent_dock.names")} aria-pressed={names()} onClick={() => setNames(v => !v)}><List size={14} /></Pressable>
-        <Pressable class={ICONO} aria-label={t(expanded() ? "shell.agent_dock.collapse" : "shell.agent_dock.expand")} aria-expanded={expanded()} onClick={() => setExpanded(v => !v)}><Show when={expanded()} fallback={<ChevronUp size={14} />}><ChevronDown size={14} /></Show></Pressable>
+    <div class="flex h-7 items-center justify-between gap-1 border-t border-border pt-1">
+      <div role="group" aria-label={t("shell.agent_dock.pagination")} class="flex items-center gap-1">
+        <Pressable class={cn(ICON_BUTTON, "border border-border bg-surface")} aria-label={t("shell.agent_dock.previous")} disabled={page().page === 0} onClick={() => turnPage(-1)}>
+          <ChevronLeft size={12} aria-hidden="true" /><SignalDot tone="working" class={cn("absolute -top-0.5 -right-0.5", !page().workingBefore && "invisible")} />
+        </Pressable>
+        <span class="min-w-6 text-center text-2xs text-neutral-500 tabular-nums" role="status" aria-live="polite" aria-label={t("shell.agent_dock.page", { current: page().page + 1, total: page().pages })}>{page().page + 1}/{page().pages}</span>
+        <Pressable class={cn(ICON_BUTTON, "border border-border bg-surface")} aria-label={t("shell.agent_dock.next")} disabled={page().page >= page().pages - 1} onClick={() => turnPage(1)}>
+          <ChevronRight size={12} aria-hidden="true" /><SignalDot tone="working" class={cn("absolute -top-0.5 -right-0.5", !page().workingAfter && "invisible")} />
+        </Pressable>
       </div>
-      <div class="flex h-[60px] items-center gap-1">
-        <div class="min-w-0 flex-1">
-          <Show when={agents().length} fallback={<Show when={props.loading} fallback={<span class="px-1 text-caption text-neutral-500">{t("shell.agent_dock.empty")}</span>}><div class="flex justify-around" aria-busy="true" data-dock-loading=""><For each={[0,1,2,3,4]}>{() => <span class="size-6 rounded-full bg-neutral-200 motion-safe:animate-pulse" />}</For></div></Show>}>
-            <ContextMenu>
-              <ContextMenuTrigger class="grid grid-cols-5 items-center gap-1" onContextMenu={(event: MouseEvent) => { const name = (event.target as HTMLElement).closest<HTMLElement>("[data-dock-agent]")?.dataset.dockAgent; if (!name) event.preventDefault(); setMenu(name ?? null); }}>
-                <For each={faces()}>{agent => <Pressable data-dock-agent={agent.name} aria-label={`${label(agent.name)} · ${dockStatusText(agent)}`} class="flex min-w-0 flex-col items-center gap-1 rounded-md border-0 bg-transparent p-1 hover:bg-neutral-100" onClick={() => talk(agent.name)}>
-                  {face(agent, 28)}<Show when={names()}><span class="w-full truncate text-2xs text-neutral-500">{label(agent.name)}</span></Show>
-                </Pressable>}</For>
-              </ContextMenuTrigger>
-              <ContextMenuContent><Show when={menu()}>{name => <><ContextMenuItem onSelect={() => props.onShowTasks(name())}>{t("shell.agent_dock.see_tasks")}</ContextMenuItem><ContextMenuItem onSelect={() => props.onProfile(destination(name()), name())}>{t("projects.agents.profile_open")}</ContextMenuItem></>}</Show></ContextMenuContent>
-            </ContextMenu>
-          </Show>
-        </div>
-        <Pressable class={ADD} aria-label={t("projects.agents.new_open")} title={t("projects.agents.new_open")} onClick={() => props.onNewAgent?.()}><Plus size={19} /></Pressable>
+      <div role="group" aria-label={t("shell.agent_dock.filter")} class="flex items-center gap-0.5 rounded-md border border-border p-0.5">
+        <For each={LEVELS}>{level => <Pressable class={cn(ICON_BUTTON, "h-5 border-0", navigation().level === level && "bg-neutral-100 text-neutral-950")} data-dock-level={level} aria-label={levelTitle(level)} title={levelTitle(level)} aria-pressed={navigation().level === level} onClick={() => selectLevel(level)}>
+          <Dynamic component={ICONS[level]} size={12} aria-hidden="true" />
+          <SignalDot tone="working" pulse={workingIn(level).length > 0} class={cn("absolute -top-0.5 -right-0.5 motion-reduce:animate-none", workingIn(level).length === 0 && "invisible")} />
+        </Pressable>}</For>
       </div>
     </div>
-  </div>;
+  </section>;
 }

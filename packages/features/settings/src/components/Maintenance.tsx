@@ -2,12 +2,12 @@ import { getVersion } from "../../../../host/src/native.ts";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
-import { createSignal, Match, onMount, Show, Switch } from "solid-js";
+import { createEffect, createSignal, Match, on, onMount, Show, Switch } from "solid-js";
 import { lengua, t } from "../../../../ui/src/lib/i18n";
 import { prosa } from "../../../../ui/src/lib/prose";
 import { releaseNotes } from "../model/releaseNotes";
 import type { MachineResources } from "../../../../engine-client/src/index.ts";
-import { capabilities } from "../../../../host/src/platform";
+import { capabilities, isNoMachines, machineAvailability } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
@@ -263,6 +263,29 @@ export default function Maintenance(props: { maquinas: MaquinasDeAjustes }) {
     engineBuildFallback(),
   );
 
+  const loadEngine = async () => {
+    if (isNoMachines()) {
+      setEngineResources(undefined);
+      setEngineLoaded(true);
+      return;
+    }
+    try {
+      const machine = targetMachine();
+      const options = machine ? props.maquinas.machineOf(machine.id) : undefined;
+      const startup = await listWorkspaces<Partial<StartupWithResources>>({}, options).catch(() => null);
+      const resources = resourcesFromStartup(startup, machine?.id);
+      if (resources) setEngineResources(resources);
+
+      const resolved = parseEngineVersion(resources, machine?.version, null);
+      if (!resolved && capabilities().nativeWindow) {
+        const env = await checkEnvironment<{ engineBuild?: string }>().catch(() => null);
+        if (env?.engineBuild?.trim()) setEngineBuildFallback(env.engineBuild.trim());
+      }
+    } finally {
+      setEngineLoaded(true);
+    }
+  };
+
   onMount(() => {
     void getVersion()
       .then((value) => {
@@ -271,24 +294,24 @@ export default function Maintenance(props: { maquinas: MaquinasDeAjustes }) {
       .catch(() => {})
       .finally(() => setAppLoaded(true));
 
-    void (async () => {
-      try {
-        const machine = targetMachine();
-        const options = machine ? props.maquinas.machineOf(machine.id) : undefined;
-        const startup = await listWorkspaces<Partial<StartupWithResources>>({}, options).catch(() => null);
-        const resources = resourcesFromStartup(startup, machine?.id);
-        if (resources) setEngineResources(resources);
-
-        const resolved = parseEngineVersion(resources, machine?.version, null);
-        if (!resolved && capabilities().nativeWindow) {
-          const env = await checkEnvironment<{ engineBuild?: string }>().catch(() => null);
-          if (env?.engineBuild?.trim()) setEngineBuildFallback(env.engineBuild.trim());
-        }
-      } finally {
-        setEngineLoaded(true);
-      }
-    })();
+    void loadEngine();
   });
+
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setEngineResources(undefined);
+      setEngineLoaded(true);
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) {
+      setEngineLoaded(false);
+      void loadEngine();
+    }
+  }, { defer: true }));
 
   return (
     <SettingsPanel data-settings-maintenance="">
@@ -328,6 +351,9 @@ export default function Maintenance(props: { maquinas: MaquinasDeAjustes }) {
                   {formatEngineVersion(info())}
                 </span>
               )}
+            </Match>
+            <Match when={isNoMachines()}>
+              <span class="text-ui text-neutral-500">{t("settings.maintenance.no_machine")}</span>
             </Match>
             <Match when={engineLoaded()}>
               <span class="text-ui text-neutral-500">{t("settings.maintenance.unavailable")}</span>

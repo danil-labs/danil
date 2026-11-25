@@ -22,7 +22,7 @@ function window(reply: (args: Record<string, unknown> | undefined, n: number) =>
   return calls;
 }
 
-const edge = () => import("../../src/lib/edge.ts");
+const edge = () => import("../../../../packages/platform-client/src/client.ts");
 const ok = (body: unknown, extra: Record<string, unknown> = {}) => ({ status: 200, body, ...extra });
 const missing = { status: 501, body: null, retry_after_ms: 5 };
 

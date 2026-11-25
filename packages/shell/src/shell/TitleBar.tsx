@@ -2,7 +2,6 @@ import { createEffect, createSignal, type JSX, on, onCleanup, onMount } from "so
 import { cn } from "../../../ui/src/lib/utils";
 import {
   createFullscreen,
-  HEADER_HEIGHT,
   needsTrafficLightPadding,
   TRAFFIC_LIGHT_PADDING,
   toggleMaximizeFromHeader,
@@ -47,21 +46,20 @@ export default function TitleBar(props: {
     <div
       data-title-bar=""
       class={cn(
-        "tab-veil window-frame flex shrink-0 items-center",
-        HEADER_HEIGHT,
+        "tab-veil window-frame flex min-h-[42px] shrink-0 items-center pt-1.5",
         apartarSemaforo() ? TRAFFIC_LIGHT_PADDING : "pl-2",
       )}
       data-tauri-drag-region=""
       onDblClick={toggleMaximizeFromHeader}
     >
-      <div ref={grupo} class="flex min-w-0 shrink-0 items-center gap-1 pr-2 max-[600px]:max-w-[calc(100%-2rem)] max-[600px]:shrink" style={{ width: ancho() }}>
+      <div ref={grupo} class="flex min-w-0 shrink-0 items-center gap-1 pr-2 pb-1.5 max-[600px]:max-w-[calc(100%-2rem)] max-[600px]:shrink" style={{ width: ancho() }}>
         {props.izquierda}
         <span class="min-w-0 flex-1" data-tauri-drag-region="" />
         {props.finDeIzquierda}
       </div>
-      {/* La tira de pestañas trae su propio margen; se compensa para que la primera nazca en la línea. */}
-      <div class="-ml-1.5 flex min-w-0 flex-1 items-center self-stretch">{props.centro}</div>
-      <div class="flex shrink-0 items-center gap-1 pr-2">
+      {/* El margen vive aquí, fuera de la tira: si fuera su padding, el scroll horizontal se lo come y recorta la primera esquina. */}
+      <div class="flex min-w-0 flex-1 items-center self-stretch pl-2">{props.centro}</div>
+      <div class="flex shrink-0 items-center gap-1 pr-2 pb-1.5">
         {props.derecha}
         <WindowControls />
       </div>

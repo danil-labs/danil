@@ -111,3 +111,18 @@ test("Danil Credits elige Equilibrado por omisión aunque Ligero aparezca primer
   assert.equal(surfaceHas(claude, tiers[0]), false);
   assert.equal(defaultSurfaceModel(creditsClaude, tiers)?.id, "danil-credits/danil/equilibrado");
 });
+
+test("una tarea de Danil Credits no cae en OpenCode mientras carga o falta el catálogo", () => {
+  const opencode: Surface = { id: "opencode", provider: "opencode", label: "OpenCode", catalogo: "todo", usable: true, marca: null, porque: null };
+  const credits: Surface = { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
+  // El motor devuelve opencode antes que danil-credits; con catálogo vacío el modelo de Credits
+  // sigue perteneciendo a danil-credits y no debe saltar a opencode.
+  assert.equal(surfaceOf([opencode, credits], "opencode", "danil-credits/danil/avanzado", [], undefined), "danil-credits");
+  assert.equal(surfaceOf([opencode, credits], "opencode", "danil-credits/danil/avanzado", [], "opencode"), "danil-credits");
+  assert.equal(
+    surfaceOf([opencode, { ...credits, usable: false }], "opencode", "danil-credits/danil/equilibrado", [{ id: "opencode-go/deepseek-v4.1-flash", gratis: false }], "opencode"),
+    "danil-credits",
+  );
+  // Y un modelo de OpenCode Go con catálogo vacío tampoco queda atrapado en danil-credits.
+  assert.equal(surfaceOf([opencode, credits], "opencode", "opencode-go/deepseek-v4.1-flash", [], "danil-credits"), "opencode");
+});

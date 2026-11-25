@@ -32,13 +32,16 @@
  * escuchar lo que nadie emite es siempre esperar a Godot.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { relative } from "node:path";
+import { join, relative } from "node:path";
 // `.pathname` en Windows da `/C:/…` y revienta.
 import { fileURLToPath } from "node:url";
 import { walkFiles } from "../git.mjs";
 import { EVENTOS_PENDIENTES } from "../engine-pending.mjs";
 
 const RUST = fileURLToPath(new URL("../../src-tauri/src", import.meta.url));
+/** El front vive en `packages/`; `host` es el puente y no se cuenta como interfaz. */
+const PACKAGES = fileURLToPath(new URL("../../../../packages", import.meta.url));
+const FEATURES = join(PACKAGES, "features");
 
 /**
  * **Todos los árboles de interfaz, no uno.**
@@ -53,9 +56,17 @@ const RUST = fileURLToPath(new URL("../../src-tauri/src", import.meta.url));
  * vigila uno. Lo que impide que eso pase inadvertido es la comprobación de
  * abajo: si la cuenta de `listen` baja a cero, falla.
  */
-const WEB = [fileURLToPath(new URL("../../src", import.meta.url))].filter((d) =>
-  existsSync(d),
-);
+const WEB = [
+  fileURLToPath(new URL("../../src", import.meta.url)),
+  join(PACKAGES, "shell", "src"),
+  join(PACKAGES, "ui", "src"),
+  join(PACKAGES, "session", "src"),
+  ...(existsSync(FEATURES)
+    ? readdirSync(FEATURES, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => join(FEATURES, entry.name, "src"))
+    : []),
+].filter((dir) => existsSync(dir));
 
 /** `app.emit("nombre"` / `.emit(\n  "nombre"` — el nombre puede ir en la línea
  *  siguiente, que es como quedó el de `secrets/accounts.rs`. */

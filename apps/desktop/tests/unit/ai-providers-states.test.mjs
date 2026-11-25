@@ -47,7 +47,7 @@ test("a machine with no agents offers the ones Danil can install in Add account"
   const { app, panel, text } = await open("ai-providers-none", []);
   assert.ok(panel().querySelector('[data-ai-providers="supported"]'), panel()?.innerHTML.slice(0, 300));
   assert.ok(text().includes("Esta máquina todavía no tiene asistentes de IA instalados."));
-  // Desde 2026-11-19 (T3) los nombres salen en el selector de «Agregar cuenta», no como secciones.
+  // Los nombres salen en el selector de «Agregar cuenta», no como secciones.
   panel().querySelector("[data-add-account]").dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
   await sleep(300);
   const menu = app.w.document.querySelector("[data-add-account-menu]")?.textContent ?? "";

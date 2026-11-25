@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createEffect, createRoot } from "solid-js";
-import { createWorkspaceStore } from "../../src/features/workspace/index.ts";
+import { createWorkspaceStore } from "../../../../packages/features/workspace/src/index.ts";
 
 const startup = (active: string | null, root: string | null = null) => ({ active, workspaces: active ? [{ id: active, context_root: root, default_permission_mode: "plan" }] : [] });
 const source = (id: string, root = false, missing = false) => ({ id, root, missing });

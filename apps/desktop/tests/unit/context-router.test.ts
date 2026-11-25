@@ -4,6 +4,7 @@ import { Fleet, type Link } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { contextAttentionStale, createContextAttention } from "../../../../packages/features/machines/src/queries/context-attention.ts";
 import { createContextRouter } from "../../../../packages/features/machines/src/queries/context-router.ts";
+import { runsWorkspace } from "../../../../packages/features/machines/src/model/runs-workspace.ts";
 import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
 import { scopedFleet } from "../../../../packages/features/machines/src/queries/scoped-fleet.ts";
 import { activeWorkspaceContext, captureWorkspaceContext, displayWorkspaceContext, displayWorkspaceSnapshot, rememberWorkspaceSnapshot, requestedWorkspaceSnapshot, setActiveWorkspaceContext, setDisplayWorkspaceContext } from "../../src/lib/workspace-context.ts";
@@ -547,4 +548,411 @@ test("catalog spaces are authoritative without resurrecting deleted engine space
     { id: "sp_user1", name: "Personal", folders: ["p1"] },
   ]);
   router.close();
+});
+
+test("Web ignores volatile machine_resources changes when comparing progressive list_workspaces slices", async () => {
+  let measuredAt = 100;
+  let workspaceName = "Danil Workspace";
+  const changes: string[] = [];
+  const fleet = new Fleet({
+    self: null,
+    connect() {
+      return {
+        state: () => "online", start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {},
+        async call(_id, command) {
+          await new Promise((resolve) => setTimeout(resolve, 15));
+          if (command === "list_workspaces") {
+            return {
+              value: {
+                workspaces: [{ id: "same", name: workspaceName, logo: "/ws/logo.png" }],
+                active: "same",
+                machine_resources: { measured_at: ++measuredAt, storage: [] },
+              },
+              cached: null,
+            };
+          }
+          return { value: null, cached: null };
+        },
+      } satisfies Link;
+    },
+  });
+  fleet.setMachines([{ id: "vm", name: "Cloud", wakes: true, kind: "organization", organizationId: "org", context: "a", linked: new Set(["same"]) }]);
+  const router = createRouter({
+    self: null,
+    native: null,
+    fleet,
+    contextInfo: (context) => (context === "a" ? { org: "org", plan: "teams" } : null),
+    onSlices: (batch) => changes.push(...batch),
+  });
+  try {
+    // Initial read seeds the cached slice.
+    await router.handle("list_workspaces", {}, contextOptions("a"));
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    changes.length = 0;
+
+    // A progressive re-read where only machine_resources changes must not trigger onSlices("workspaces").
+    await router.handle("list_workspaces", {}, contextOptions("a"));
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    assert.deepEqual(changes, [], "volatile machine_resources must not trigger workspaces slice notifications");
+
+    // A genuine workspace metadata change still announces a workspaces slice change.
+    workspaceName = "Renamed Workspace";
+    await router.handle("list_workspaces", {}, contextOptions("a"));
+    await new Promise((resolve) => setTimeout(resolve, 260));
+    assert.ok(changes.includes("workspaces"), "real workspace change must still announce workspaces slice");
+  } finally {
+    router.close();
+  }
+});
+
+
+test("stopped wakeable cloud VM with unknown workspace listing stays pickable in machine_list and createsOn (Web and Desktop org)", async () => {
+  const offlineLink = (): Link => ({
+    state: () => "offline",
+    start() {},
+    close() {},
+    subscribe() {},
+    onState: () => () => {},
+    onEvents: () => () => {},
+    async call() {
+      throw { code: "machine_off" };
+    },
+  });
+
+  // Web mode (!local): Mac is online hosting "same"; Cloud VM is asleep (power=off, no listing yet).
+  let picked: string | null = null;
+  const webFleet = new Fleet({
+    self: null,
+    connect: (info) =>
+      info.id === "mac"
+        ? {
+            state: () => "online", start() {}, close() {}, subscribe() {}, onState: () => () => {}, onEvents: () => () => {},
+            async call(_id, command) {
+              if (command === "list_workspaces") return { value: { workspaces: [{ id: "same", name: "Danil" }], active: "same" }, cached: null };
+              return { value: null, cached: null };
+            },
+          }
+        : offlineLink(),
+  });
+  webFleet.setMachines([
+    { id: "mac", name: "Mac", wakes: false, kind: "personal", context: "a" },
+    { id: "vm_cloud", name: "Nube Danil", wakes: true, kind: "organization", organizationId: "org", context: "a", linked: new Set(["same"]) },
+    { id: "vm_other", name: "Otra Nube", wakes: true, kind: "organization", organizationId: "org", context: "a", linked: new Set(["other_ws"]) },
+  ]);
+  webFleet.setListing("mac", [{ id: "same", name: "Danil" }], "a");
+
+  const webRouter = createRouter({
+    self: null,
+    native: null,
+    fleet: webFleet,
+    pickedFor: () => picked,
+    contextInfo: (context) => (context === "a" ? { org: "org", plan: "teams" } : null),
+  });
+  try {
+    await webRouter.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    const rows = (await webRouter.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean; wakes: boolean; on: boolean;
+    }>;
+    const cloud = rows.find((r) => r.id === "vm_cloud");
+    const other = rows.find((r) => r.id === "vm_other");
+    assert.ok(cloud, "stopped wakeable org VM must appear in machine_list");
+    assert.equal(cloud.hosts, null, "unknown listing while asleep must report hosts: null");
+    assert.equal(cloud.refuses, false, "stopped wakeable VM linked to workspace must not be refused");
+    assert.equal(runsWorkspace(cloud), true, "MachinePicker must offer the stopped wakeable VM");
+    assert.ok(other && other.hosts === false && other.refuses === true && !runsWorkspace(other), "VM linked only to another workspace stays refused");
+
+    picked = "vm_cloud";
+    assert.equal(webRouter.createsOn("same")?.machine, "vm_cloud", "explicit pick of stopped wakeable VM is honored");
+
+    // Even after listing only "other_ws" on disk, an authorized org VM stays eligible to materialize "same" lazily on demand.
+    webFleet.setListing("vm_cloud", [{ id: "other_ws", name: "Other" }], "a");
+    const afterListing = (await webRouter.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    const cloudAfter = afterListing.find((r) => r.id === "vm_cloud");
+    assert.ok(
+      cloudAfter && cloudAfter.hosts === false && cloudAfter.materializes === true && cloudAfter.refuses === false && runsWorkspace(cloudAfter),
+      "authorized org VM without workspace on disk yet stays eligible to materialize on demand",
+    );
+  } finally {
+    webRouter.close();
+  }
+
+  // Web mode with NO online machine: stopped wakeable VM becomes default lead for createsOn; org-confined VM for another workspace stays refused.
+  const soloFleet = new Fleet({ self: null, connect: () => offlineLink() });
+  soloFleet.setMachines([
+    { id: "vm_cloud", name: "Nube Danil", wakes: true, kind: "organization", organizationId: "org", context: "a", linked: new Set(["same"]) },
+    { id: "vm_confined", name: "Otra Org", wakes: true, kind: "organization", organizationId: "org", context: "a", organization: { id: "org", workspaces: [{ id: "other_ws", name: "Other" }] } },
+  ]);
+  const soloRouter = createRouter({
+    self: null,
+    native: null,
+    fleet: soloFleet,
+    contextInfo: (context) => (context === "a" ? { org: "org", plan: "teams" } : null),
+  });
+  try {
+    await soloRouter.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    assert.deepEqual(soloRouter.createsOn("same"), { machine: "vm_cloud", lead: true }, "stopped wakeable VM becomes default lead when no online machine lists workspace");
+    const rows = (await soloRouter.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      id: string; hosts: boolean | null; refuses?: boolean;
+    }>;
+    const confined = rows.find((r) => r.id === "vm_confined");
+    assert.ok(confined && confined.hosts === false && confined.refuses === true && !runsWorkspace(confined), "VM confined to another org workspace stays refused even with null linked");
+  } finally {
+    soloRouter.close();
+  }
+
+    // Desktop org mode (scopedLocal): local Mac hosts "same"; Cloud VM is asleep with unknown listing.
+  let deskPicked: string | null = "vm_cloud";
+  const deskFleet = new Fleet({ self: "local", connect: () => offlineLink() });
+  deskFleet.setMachines([
+    { id: "vm_cloud", name: "Nube Danil", wakes: true, kind: "organization", organizationId: "org", context: "a", linked: new Set(["same"]) },
+  ]);
+  const deskRouter = createRouter({
+    self: "local",
+    fleet: deskFleet,
+    pickedFor: () => deskPicked,
+    contextInfo: (context) => (context === "a" ? { org: "org", plan: "teams" } : null),
+    native: async (command) => {
+      if (command === "list_workspaces") {
+        return { workspaces: [{ id: "same", name: "Danil", account: { org: "org" } }], active: "same" };
+      }
+      return null;
+    },
+  });
+  try {
+    await deskRouter.handle("list_workspaces", {});
+    await deskRouter.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    const rows = (await deskRouter.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      id: string; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    const cloud = rows.find((r) => r.id === "vm_cloud");
+    assert.ok(cloud && cloud.hosts === null && cloud.refuses === false && runsWorkspace(cloud));
+    assert.equal(deskRouter.createsOn("same")?.machine, "vm_cloud");
+  } finally {
+    deskRouter.close();
+  }
+});
+
+test("online org VM serves catalog workspace not yet on disk and refreshes listing after write", async () => {
+  const vmWorkspaces = [{ id: "v5463347", name: "Default" }];
+  const calls: Array<{ machine: string; command: string; workspace: string | null }> = [];
+  const fleet = new Fleet({
+    self: null,
+    connect: (machine) => {
+      if (machine.id === "vm_cloud") {
+        return {
+          state: () => "online" as const,
+          onState: () => () => {},
+          onEvents: () => () => {},
+          subscribe: () => {},
+          start: () => {},
+          close: () => {},
+          async call(_id, command, workspace) {
+            calls.push({ machine: machine.id, command, workspace });
+            if (command === "list_workspaces") {
+              return { value: { workspaces: [...vmWorkspaces], active: vmWorkspaces[0].id }, cached: null };
+            }
+            if (command === "list_live_sessions") {
+              return { value: [], cached: null };
+            }
+            if (command === "send_message") {
+              if (workspace && !vmWorkspaces.some((w) => w.id === workspace)) {
+                vmWorkspaces.push({ id: workspace, name: workspace });
+              }
+              return { value: { session: "sess_1" }, cached: null };
+            }
+            return { value: null, cached: null };
+          },
+        };
+      }
+      return {
+        state: () => "offline" as const,
+        onState: () => () => {},
+        onEvents: () => () => {},
+        subscribe: () => {},
+        start: () => {},
+        close: () => {},
+        async call() {
+          throw new Error("offline");
+        },
+      };
+    },
+  });
+
+  fleet.setMachines([
+    { id: "vm_cloud", name: "Nube Mauricio", wakes: true, kind: "organization", organizationId: "org_danil", context: "ctx_danil" },
+    { id: "vm_confined", name: "VM Confinada", wakes: true, kind: "organization", organizationId: "org_danil", context: "ctx_danil", linked: new Set(["other_only"]) },
+    { id: "personal_other", name: "Laptop ajena", wakes: false, kind: "personal", context: "ctx_danil" },
+  ]);
+  fleet.setListing("vm_cloud", [{ id: "v5463347", name: "Default" }], "ctx_danil");
+  fleet.setListing("vm_confined", [{ id: "other_only", name: "Otro" }], "ctx_danil");
+  fleet.setListing("personal_other", [{ id: "other_only", name: "Otro" }], "ctx_danil");
+
+  const router = createRouter({
+    self: null,
+    native: null,
+    fleet,
+    contextInfo: (context) => (context === "ctx_danil" ? { org: "org_danil", plan: "teams" } : null),
+  });
+  try {
+    await router.handle("set_active_workspace", { id: "ehfp2mcg" }, contextOptions("ctx_danil"));
+
+    // Eligible online org VM without "ehfp2mcg" on disk yet is offered and chosen as default lead;
+    // confined org VM stays refused; personal machine is excluded by scopedFleet.
+    const rows = (await router.handle("machine_list", {}, contextOptions("ctx_danil"))) as Array<{
+      id: string; active: boolean; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    const vm = rows.find((r) => r.id === "vm_cloud");
+    const confined = rows.find((r) => r.id === "vm_confined");
+    const personal = rows.find((r) => r.id === "personal_other");
+    assert.ok(vm && vm.active === true && vm.hosts === false && vm.materializes === true && vm.refuses === false && runsWorkspace(vm));
+    assert.ok(confined && confined.hosts === false && confined.materializes === false && confined.refuses === true && !runsWorkspace(confined));
+    assert.equal(personal, undefined, "personal machine stays excluded from paid org scopedFleet");
+    assert.deepEqual(router.createsOn("ehfp2mcg"), { machine: "vm_cloud", lead: true });
+
+    // Reads fan out cleanly without creating folders on disk.
+    const sessions = await router.handle("list_live_sessions", {}, contextOptions("ctx_danil"));
+    assert.deepEqual(sessions, []);
+    assert.ok(calls.some((c) => c.machine === "vm_cloud" && c.command === "list_live_sessions" && c.workspace === "ehfp2mcg"));
+
+    // A write routes to vm_cloud, materializes lazily on the engine side, and triggers a list_workspaces refresh.
+    await router.handle("send_message", { prompt: "hola" }, contextOptions("ctx_danil"));
+    await new Promise((r) => setTimeout(r, 20));
+    assert.ok(calls.some((c) => c.machine === "vm_cloud" && c.command === "send_message" && c.workspace === "ehfp2mcg"));
+    assert.ok(calls.some((c) => c.machine === "vm_cloud" && c.command === "list_workspaces"));
+
+    const afterWrite = (await router.handle("machine_list", {}, contextOptions("ctx_danil"))) as Array<{
+      id: string; hosts: boolean | null;
+    }>;
+    assert.equal(afterWrite.find((r) => r.id === "vm_cloud")?.hosts, true, "hosts flips to true once post-write list_workspaces refreshes");
+  } finally {
+    router.close();
+  }
+});
+
+test("leadOf prioritizes online hosting machine over online lazy org VM over offline hosting machine", async () => {
+  const connected = new Set(["vm_lazy", "mac_host"]);
+  const fleet = new Fleet({
+    self: null,
+    connect: (machine) => ({
+      state: () => (connected.has(machine.id) ? "online" : "offline"),
+      onState: () => () => {},
+      onEvents: () => () => {},
+      subscribe: () => {},
+      start: () => {},
+      close: () => {},
+      async call() {
+        return { value: null, cached: null };
+      },
+    }),
+  });
+  fleet.setMachines([
+    { id: "vm_sleep", name: "VM Dormida", wakes: true, kind: "organization", organizationId: "org_danil", context: "ctx_danil" },
+    { id: "vm_lazy", name: "VM Viva", wakes: true, kind: "organization", organizationId: "org_danil", context: "ctx_danil" },
+    { id: "mac_host", name: "Mac Con WS", wakes: false, kind: "organization", organizationId: "org_danil", context: "ctx_danil" },
+  ]);
+  fleet.setListing("vm_lazy", [{ id: "other_ws", name: "Otro" }], "ctx_danil");
+  fleet.setListing("mac_host", [{ id: "ehfp2mcg", name: "Danil" }], "ctx_danil");
+
+  const router = createRouter({
+    self: null,
+    native: null,
+    fleet,
+    contextInfo: (context) => (context === "ctx_danil" ? { org: "org_danil", plan: "teams" } : null),
+  });
+  try {
+    await router.handle("set_active_workspace", { id: "ehfp2mcg" }, contextOptions("ctx_danil"));
+    assert.deepEqual(router.createsOn("ehfp2mcg"), { machine: "mac_host", lead: true }, "online machine already hosting workspace wins over online lazy org VM");
+
+    connected.delete("mac_host");
+    assert.deepEqual(router.createsOn("ehfp2mcg"), { machine: "vm_lazy", lead: true }, "online lazy org VM wins over offline hosting machine and sleeping VM");
+
+    connected.delete("vm_lazy");
+    assert.deepEqual(router.createsOn("ehfp2mcg"), { machine: "mac_host", lead: true }, "offline hosting machine wins over offline non-hosting VMs");
+  } finally {
+    router.close();
+  }
+});
+
+test("Desk paid-org list_workspaces and preview_file preserve local workspace logo before set_active_workspace and across remote context_root", async () => {
+  const remoteCalls: { machine: string; command: string; workspace: string | null }[] = [];
+  const nativeCalls: { command: string; args: unknown }[] = [];
+  const fleet = new Fleet({
+    self: "mac_local",
+    connect: (machine) => ({
+      state: () => "online",
+      onState: () => () => {},
+      onEvents: () => () => {},
+      subscribe: () => {},
+      start: () => {},
+      close: () => {},
+      async call(_id, command, workspace) {
+        remoteCalls.push({ machine: machine.id, command, workspace });
+        if (command === "list_workspaces") {
+          return {
+            value: {
+              workspaces: [
+                { id: "ws_danil", name: "Danil Workspace", logo: null, context_root: "vm_ctx" },
+                { id: "ws_remote_logo", name: "Remote Logo WS", logo: "/vm/ws_remote_logo/logo.png", context_root: null },
+              ],
+              active: null,
+            },
+            cached: null,
+          };
+        }
+        return { value: { data_url: null }, cached: null };
+      },
+    }),
+  });
+  fleet.setMachines([
+    { id: "vm_cloud", name: "Cloud VM", wakes: true, kind: "organization", organizationId: "org_danil", context: "ctx_danil" },
+  ]);
+  fleet.setListing("vm_cloud", [{ id: "ws_danil", name: "Danil Workspace" }, { id: "ws_remote_logo", name: "Remote Logo WS" }], "ctx_danil");
+
+  const router = createRouter({
+    self: "mac_local",
+    fleet,
+    contextInfo: (context) => (context === "ctx_danil" ? { org: "org_danil", plan: "business" } : null),
+    native: async (command, args) => {
+      nativeCalls.push({ command, args });
+      if (command === "list_workspaces") {
+        return {
+          workspaces: [
+            { id: "ws_danil", name: "Danil Workspace", logo: "/Users/me/ws_danil/logo.png", context_root: null, account: { org: "org_danil" } },
+            { id: "ws_remote_logo", name: "Remote Logo WS", logo: null, context_root: "local_ctx", account: { org: "org_danil" } },
+            { id: "ws_other_org", name: "Other Org WS", logo: "/Users/me/ws_other_org/logo.png", context_root: null, account: { org: "org_other" } },
+          ],
+          active: "ws_danil",
+        };
+      }
+      if (command === "preview_file") {
+        return { data_url: "data:image/png;base64,LOCAL_LOGO" };
+      }
+      return null;
+    },
+  });
+
+  try {
+    // No set_active_workspace has run yet on ctx_danil (mirrors router install at boot / inactive org tiles).
+    const listed = (await router.handle("list_workspaces", {}, contextOptions("ctx_danil"))) as {
+      workspaces: Array<{ id: string; logo?: string | null }>;
+    };
+    const byId = new Map(listed.workspaces.map((w) => [w.id, w]));
+    assert.equal(byId.get("ws_danil")?.logo, "/Users/me/ws_danil/logo.png", "local Mac logo must survive remote VM listing and remote context_root before set_active_workspace");
+    assert.equal(byId.get("ws_remote_logo")?.logo, "vm_cloud~/vm/ws_remote_logo/logo.png", "remote logo must survive when local machine has no logo");
+    assert.equal(byId.has("ws_other_org"), false, "workspaces from another org must remain excluded");
+
+    // preview_file with explicit x-danil-context and x-terminus-workspace must read locally on Mac, not on vm_cloud.
+    const preview = (await router.handle(
+      "preview_file",
+      { workspace: "ws_danil", path: "/Users/me/ws_danil/logo.png", rel: "/Users/me/ws_danil/logo.png" },
+      { headers: { "x-danil-context": "ctx_danil", "x-terminus-workspace": "ws_danil" } },
+    )) as { data_url: string | null };
+    assert.equal(preview.data_url, "data:image/png;base64,LOCAL_LOGO");
+    assert.ok(nativeCalls.some((c) => c.command === "preview_file"), "local workspace logo preview_file must hit native engine");
+    assert.ok(!remoteCalls.some((c) => c.command === "preview_file"), "local workspace logo preview_file must not be sent to cloud VM");
+  } finally {
+    router.close();
+  }
 });

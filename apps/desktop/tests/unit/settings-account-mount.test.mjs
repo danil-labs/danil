@@ -21,12 +21,14 @@ test("Desk unified Cuenta has no tabs, shows Plan only for admin/owner, opens De
   ];
   const baseWorkspaces = contextWorkspaces(contexts);
   let activeWs = "workspace-ctx-admin";
-  const workspacesList = () =>
-    contexts.map((c) => ({
+  const workspacesList = () => [
+    { id: "w-local", name: "Local" },
+    ...contexts.map((c) => ({
       id: `workspace-${c.context_id}`,
       name: c.org_name,
       account: { org: c.org, account_id: c.context_id },
-    }));
+    })),
+  ];
 
   const app = await boot("listo", "settings-account-desk", {
     ...RESPONSES,
@@ -57,6 +59,22 @@ test("Desk unified Cuenta has no tabs, shows Plan only for admin/owner, opens De
   const doc = app.w.document;
   assert.ok(await until(() => doc.querySelector('[data-workspace-context="ctx-admin"]')));
 
+  // Profile menu on Desk: no «Cuentas de Danil», and «Ir a Harness de Organización» shown for owner/admin.
+  const openProfileMenu = async () => {
+    doc.querySelector("[data-profile-menu] button")?.click();
+    assert.ok(await until(() => doc.querySelector('[aria-label="Tu cuenta y preferencias"]')));
+    return doc.querySelector('[aria-label="Tu cuenta y preferencias"]');
+  };
+  const closeProfileMenu = async () => {
+    doc.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await until(() => !doc.querySelector('[aria-label="Tu cuenta y preferencias"]'));
+  };
+
+  const adminMenu = await openProfileMenu();
+  assert.ok(await until(() => adminMenu.querySelector("[data-profile-harness]")), "Desk owner must see Ir a Harness de Organización");
+  assert.ok(!adminMenu.textContent.includes("Cuentas de Danil"), "Desk profile menu must not show Cuentas de Danil");
+  await closeProfileMenu();
+
   app.w.dispatchEvent(new app.w.CustomEvent("harness:open-settings", { detail: "account" }));
   assert.ok(await until(() => doc.querySelector("[data-session-accounts]")));
 
@@ -82,11 +100,22 @@ test("Desk unified Cuenta has no tabs, shows Plan only for admin/owner, opens De
   assert.ok(trigger, "SettingsWorkspaceSelector trigger should exist");
   trigger.click();
   assert.ok(await until(() => doc.querySelector('[data-settings-workspace-option="workspace-ctx-member"]')));
+  const wsMenu = doc.querySelector("[data-settings-workspace-menu]");
+  assert.equal(wsMenu?.querySelector('[data-settings-workspace-option="w-local"]'), null, "Desk settings must not expose Local workspaces");
+  assert.ok(!wsMenu?.textContent?.includes("Local"), "Desk settings menu must not show Local label");
   doc.querySelector('[data-settings-workspace-option="workspace-ctx-member"]').click();
 
   assert.ok(await until(() => doc.querySelector("[data-session-accounts] [data-account-plan]") === null), "member must NOT see Plan section");
   assert.equal(doc.querySelector("[data-manage-plan]"), null, "member must NOT see Administrar plan button");
   assert.ok(panel().textContent.includes("owner@example.com"), "session email stays visible");
+
+  // Close settings and verify member does not see «Ir a Harness de Organización» or «Cuentas de Danil».
+  doc.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await until(() => !doc.querySelector("#cfg-panel"));
+  const memberMenu = await openProfileMenu();
+  assert.ok(!memberMenu.textContent.includes("Cuentas de Danil"), "Desk member profile menu must not show Cuentas de Danil");
+  assert.equal(memberMenu.querySelector("[data-profile-harness]"), null, "Desk member must NOT see Ir a Harness de Organización");
+  await closeProfileMenu();
   assert.deepEqual(app.failures, []);
 });
 
@@ -225,6 +254,21 @@ test("Web unified Cuenta renders identity, Cerrar sesión, /billing link for adm
   doc.querySelector('[data-workspace-tile="w_admin"]').click();
   assert.ok(await until(() => doc.querySelector('[data-workspace-tile="w_admin"]')?.getAttribute("aria-current") === "true"));
 
+  const openWebProfileMenu = async () => {
+    doc.querySelector("[data-profile-menu] button")?.click();
+    assert.ok(await until(() => doc.querySelector('[aria-label="Tu cuenta y preferencias"]')));
+    return doc.querySelector('[aria-label="Tu cuenta y preferencias"]');
+  };
+  const closeWebProfileMenu = async () => {
+    doc.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await until(() => !doc.querySelector('[aria-label="Tu cuenta y preferencias"]'));
+  };
+
+  const webAdminMenu = await openWebProfileMenu();
+  assert.ok(await until(() => webAdminMenu.querySelector("[data-profile-harness]")), "Web admin must see Ir a Harness de Organización");
+  assert.ok(!webAdminMenu.textContent.includes("Cuentas de Danil"), "Web profile menu must not show Cuentas de Danil");
+  await closeWebProfileMenu();
+
   app.w.dispatchEvent(new app.w.CustomEvent("harness:open-settings", { detail: "account" }));
   assert.ok(await until(() => doc.querySelector("[data-account-name]")));
 
@@ -252,6 +296,13 @@ test("Web unified Cuenta renders identity, Cerrar sesión, /billing link for adm
 
   assert.ok(await until(() => doc.querySelector("[data-account-plan]") === null), "Web member must NOT see Plan section");
   assert.equal(doc.querySelector("[data-manage-plan]"), null, "Web member must NOT see Administrar plan link");
+
+  doc.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await until(() => !doc.querySelector("#cfg-panel"));
+  const webMemberMenu = await openWebProfileMenu();
+  assert.ok(!webMemberMenu.textContent.includes("Cuentas de Danil"), "Web member profile menu must not show Cuentas de Danil");
+  assert.equal(webMemberMenu.querySelector("[data-profile-harness]"), null, "Web member must NOT see Ir a Harness de Organización");
+  await closeWebProfileMenu();
   assert.deepEqual(
     app.failures.filter((f) => !f.includes("Not implemented: HTMLCanvasElement")),
     [],

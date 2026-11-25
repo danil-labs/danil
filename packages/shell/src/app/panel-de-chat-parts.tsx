@@ -47,8 +47,8 @@ export function createPanelDeChatParts(deps: PanelDeChatPartsDeps) {
         on={!apagadas()[id()] && filaDe(id())?.machine_on !== false && (capabilities().nativeWindow || machines().find(m => m.id === filaDe(id())?.machine)?.hosts !== false)}
         onScreen={abrirPantalla}
         onFiles={() => {
-          const folder = proyectoDeLaCelda()?.id;
-          if (folder) void abrirSesion(folder, id()).then(() => archivosDeTarea.setOpen(id(), true));
+          const folder = proyectoDeLaCelda()?.id ?? pp.proyecto ?? "";
+          void abrirSesion(folder, id()).then(() => archivosDeTarea.setOpen(id(), true));
         }}
         project={proyectoDeLaCelda()}
         path={estadoDelTrabajo()?.path || undefined}

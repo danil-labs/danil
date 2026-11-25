@@ -4,7 +4,7 @@ El inventario de todos los colores de la app y su valor en cada paleta. Las regl
 
 Las muestras de color de cada token, lado a lado en las cuatro paletas, con el chat y el sidebar, están en [color-tokens.html](color-tokens.html); se regenera con `node scripts/color-tokens.mjs`.
 
-La única fuente de verdad es [`src/styles/global.css`](../src/styles/global.css). Si este documento y el CSS no coinciden, manda el CSS: copia los valores de ahí, no de otro documento.
+La única fuente de verdad es [`packages/ui/src/styles/global.css`](../../../packages/ui/src/styles/global.css). Si este documento y el CSS no coinciden, manda el CSS: copia los valores de ahí, no de otro documento.
 
 ## Las paletas y cómo se eligen
 
@@ -69,7 +69,7 @@ Las paletas se apilan: el oscuro grafito solo redeclara lo que cambia respecto a
 | `--color-chat-user-border` | `primary al 20%` | `#c9bb2a al 45%` | `brand-yellow al 22%` | `primary al 25%` | Borde del globo de la persona |
 | `--color-chat-incoming` | `= surface-muted` | `#f0f0f2` | = azul | `= surface-raised` | Globo de un agente u otra tarea |
 
-El globo de un agente u otra tarea usa `chat-incoming` ([`TaskChatPresentation.tsx`](../src/features/chat/TaskChatPresentation.tsx)). En oscuro es `surface-raised`; en claro no puede serlo, porque `surface-raised` es blanco como el chat (1,00:1). El globo de la persona **tiene** que llevar un tinte que lo separe de `chat-incoming`, o los dos se ven iguales.
+El globo de un agente u otra tarea usa `chat-incoming` ([`packages/features/chat/src/components/TaskChatPresentation.tsx`](../../../packages/features/chat/src/components/TaskChatPresentation.tsx)). En oscuro es `surface-raised`; en claro no puede serlo, porque `surface-raised` es blanco como el chat (1,00:1). El globo de la persona **tiene** que llevar un tinte que lo separe de `chat-incoming`, o los dos se ven iguales.
 
 Dentro del globo de la persona, la línea «Para: …» va en `neutral-900` y no en `neutral-500`: el tinte baja el gris secundario a 3,43:1 en azul y 4,02:1 en grafito.
 
@@ -125,7 +125,7 @@ El relleno (`success`, `error`…) es igual en todos los temas; el texto (`-stro
 
 ## Lo que no cambia con la paleta
 
-- **La terminal** tiene su propia capa de color (`--color-terminal-*`), oscura en todos los temas. Hay cinco esquemas escritos en [`src/styles/terminal.css`](../src/styles/terminal.css), pero hoy ninguna pantalla los ofrece.
+- **La terminal** tiene su propia capa de color (`--color-terminal-*`), oscura en todos los temas. Hay cinco esquemas escritos en [`packages/ui/src/styles/terminal.css`](../../../packages/ui/src/styles/terminal.css), pero hoy ninguna pantalla los ofrece.
 - **Los cuerpos celestes** (`--astro-*`, en `:root`) distinguen a quince agentes entre sí. El oscuro azul solo retoca la luna, el asteroide y el agujero negro; grafito los hereda.
 - **Los radios** (`--radius-sm/md/lg`: 4 / 6 / 8 px) son los mismos en todas las paletas. Grafito probó 6/8/10 y se descartó: los botones se veían demasiado redondos.
 
@@ -145,6 +145,6 @@ El relleno (`success`, `error`…) es igual en todos los temas; el texto (`-stro
    - `neutral-500` sobre la superficie más cercana a él y sobre la tarea abierta (`neutral-200`): **4,5:1 o más**;
    - `link` y `--action-text` sobre su fondo: 4,5:1 o más;
    - escalones contiguos de superficie, el hover del sidebar (`neutral-100` contra `bg`) y el globo de un agente contra el chat: alrededor de **1,1:1**, para que se distingan.
-4. **Añade la opción** en [`src/lib/theme.ts`](../src/lib/theme.ts) (`DarkStyle` o `LightStyle`) y en [`Appearance.tsx`](../src/features/settings/Appearance.tsx), con sus textos en `src/locales/{es,en}/settings.json`.
+4. **Añade la opción** en [`src/lib/theme.ts`](../src/lib/theme.ts) (`DarkStyle` o `LightStyle`) y en [`packages/features/settings/src/components/Appearance.tsx`](../../../packages/features/settings/src/components/Appearance.tsx), con sus textos en `src/locales/{es,en}/settings.json`.
 5. **Revisa en la app** chat, diff, editor, menús y Ajustes. `pnpm verify` cuida que ningún color salga de la paleta por omisión de Tailwind (`scripts/guards/theme-inversion.mjs`), pero no mira contrastes.
 6. **Actualiza este documento** con una columna nueva, añade la paleta a `PALETAS` en `scripts/color-tokens.mjs` y regenera el HTML.

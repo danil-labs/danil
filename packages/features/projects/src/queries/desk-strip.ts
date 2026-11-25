@@ -30,9 +30,9 @@ export function createDeskStrip(deps: DeskStripDeps) {
 
   const { activeSpace, adjuntosEn, attention, connected, createComposerStore, createDraftsStore, deLaTarea, escritorio, filaDe, grupos, hablandoCon, machines, modoInicial, modoRecordado, recordarModo, naciendo, paneles, pegadasEn, pestanaActiva, pestanas, project, projectList, sesiones, sessionId, setEscritorio, setProyectoAbierto, setSpaces, spaces, taskSources, topState, withLastAnswer, workspaceActivo, workspaceContext, workspaceMode, createThreadsStore } = deps;
   /** El panel conserva workspace y conversación; el título pertenece a la tira. */
-  const tareasEnVentanas = createMemo<(Pick<TaskTab, "id" | "session"> & { workspace: string | null })[]>((previous) =>
-    conservar(previous ?? [], pestanas.open().filter(isTaskTab).map(({ id, session }) =>
-      ({ id, session, workspace: workspaceActivo() })), (p) => p.id),
+  const tareasEnVentanas = createMemo<(Pick<TaskTab, "id" | "session" | "mountKey"> & { workspace: string | null })[]>((previous) =>
+    conservar(previous ?? [], pestanas.open().filter(isTaskTab).map(({ id, session, mountKey }) =>
+      ({ id, session, mountKey: mountKey ?? id, workspace: workspaceActivo() })), (p) => p.mountKey ?? p.id),
   );
   const proyectoDePestana = (id: string) => pestanas.open().find(tab => tab.id === id)?.project ?? "";
   /** Las tareas con pestaña: la lista viva las trae aunque estén archivadas. */

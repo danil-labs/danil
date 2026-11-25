@@ -3,8 +3,9 @@ import FileText from "lucide-solid/icons/file-text";
 import FileType from "lucide-solid/icons/file-type";
 import MousePointerClick from "lucide-solid/icons/mouse-pointer-click";
 import Workflow from "lucide-solid/icons/workflow";
-import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createSignal, For, on, onCleanup, onMount, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform";
 import { mb } from "../../../../ui/src/lib/format";
 import { t } from "../../../../ui/src/lib/i18n";
 import { checkIntegration, installIntegration, listIntegrations, setIntegrationEnabled, typstLiveStop, uninstallIntegration, updateIntegration } from "../queries/engine-integrations";
@@ -14,6 +15,7 @@ import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { Toggle } from "../../../../ui/src/Toggle";
 import { SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
+import { MachineRequiredState } from "./MachineRequiredNotice";
 
 type Plugin = "libreoffice" | "drawio" | "computer-use" | "typst";
 type IntegrationStatus = {
@@ -91,6 +93,11 @@ export default function Integrations() {
 
   async function refresh(clear = false) {
     const current = ++request;
+    if (isNoMachines()) {
+      setCatalog(null);
+      setFailure(null);
+      return;
+    }
     if (clear) {
       setCatalog(null);
       setFailure(null);
@@ -99,7 +106,7 @@ export default function Integrations() {
       const result = await listIntegrations<Catalog>();
       if (current === request && !disposed) setCatalog(result);
     } catch (error) {
-      if (current === request && !disposed) setFailure(asFailure(error));
+      if (current === request && !disposed && !isNoMachines()) setFailure(asFailure(error));
     }
   }
 
@@ -132,6 +139,18 @@ export default function Integrations() {
     void refresh();
     window.addEventListener("harness:workspace", workspaceChanged);
   });
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setCatalog(null);
+      setFailure(null);
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) void refresh(true);
+  }, { defer: true }));
   const events = listen("integrations-changed", () => void refresh());
   onCleanup(() => {
     disposed = true;
@@ -146,6 +165,7 @@ export default function Integrations() {
         title={t("settings.integrations.title")}
         description={t("settings.integrations.description")}
       >
+        <Show when={!isNoMachines()} fallback={<MachineRequiredState />}>
         <For each={catalog()?.plugins.filter(({ id }) => Object.hasOwn(ICONOS, id))}>
           {(plugin) => (
             <SettingsRow
@@ -232,6 +252,7 @@ export default function Integrations() {
           )}
         </For>
         <Show when={failure()}>{(error) => <FailureNote f={error()} />}</Show>
+        </Show>
       </SettingsSection>
       <Dialog open={removing() !== null} onOpenChange={(open) => { if (!open) setRemoving(null); }}>
         <DialogContent>

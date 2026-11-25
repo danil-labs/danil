@@ -34,11 +34,11 @@ export default function Chat(props: ChatProps) {
   let entradaArchivo: HTMLInputElement | undefined;
   let pendingCaret: number | null = null;
   let pendingEdit: PendingEdit | undefined;
-  const { actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, centrada, commandNames, copiado, copiando, dirigido, dismissed, efforts, elegido, esElVivo, escribible, esperaVisible, faltaUnanime, fieldSpans, forkeando, hasHighlight, hilo, listo, margenDelHilo, opciones, pick, preguntaPlegada, preguntasPlegadas, presentation, pulsoDeModo, razonamientos, respuestaRapida, saludo, setAttachmentFailure, setCaret, setCopiado, setCopiando, setDismissed, setForkeando, setPick, setPlegadaEn, setPreguntasPlegadas, setPreparingAttachments, setRazonamientos, setSoltando, setTrabajos, skillNames, slashGroups, soltando, tomarCampo, trabajos, trigger, vacia, visualBudget } = createChatComposerState(props, { get campo() { return campo; }, set campo(v) { campo = v; }, get preguntaPendiente() { return preguntaPendiente; }, get reclamaElFoco() { return reclamaElFoco; }, set reclamaElFoco(v) { reclamaElFoco = v; } });
+  const { actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, centrada, commandNames, copiado, copiando, dirigido, dismissed, efforts, elegido, esElVivo, escribible, esperaVisible, faltaUnanime, fieldSpans, forkeando, hasHighlight, hilo, listo, margenDelHilo, opciones, pick, preguntaPlegada, preguntasPlegadas, presentation, pulsoDeModo, razonamientos, respuestaRapida, saludo, setAttachmentFailure, setCaret, setCopiado, setCopiando, setDismissed, setForkeando, setPick, setPlegadaEn, setPreguntasPlegadas, reservarCajas, cajasVisibles, cancelarCaja, ordenesOcultas, setRazonamientos, setSoltando, setTrabajos, skillNames, slashGroups, soltando, tomarCampo, trabajos, trigger, vacia, visualBudget } = createChatComposerState(props, { get campo() { return campo; }, set campo(v) { campo = v; }, get preguntaPendiente() { return preguntaPendiente; }, get reclamaElFoco() { return reclamaElFoco; }, set reclamaElFoco(v) { reclamaElFoco = v; } });
 
   const { habilitada, insertSuggestion, mensajesNuevos, menuOpen, picked, suggestions } = createChatComposerInput(props, { dismissed, hilo, pick, setCaret, slashGroups, trigger, vacia, get bloqueDeLectura() { return bloqueDeLectura; }, get campo() { return campo; }, set campo(v) { campo = v; }, get hiloVirtual() { return hiloVirtual; }, get lecturaPorSaltar() { return lecturaPorSaltar; }, set lecturaPorSaltar(v) { lecturaPorSaltar = v; }, get origen() { return origen; }, get pendingCaret() { return pendingCaret; }, set pendingCaret(v) { pendingCaret = v; }, get reclamaElFoco() { return reclamaElFoco; }, set reclamaElFoco(v) { reclamaElFoco = v; }, get saltarALaLectura() { return saltarALaLectura; }, get shownFrom() { return shownFrom; } });
 
-  const { abrirFork, copiarMensaje, elegirArchivos, forkAgentChoice, forkDesde, forkTurn, mandar, pegar, setForkAgentChoice, setForkTurn, ultimoEscrito } = createChatAttachments(props, { copiando, forkeando, hilo, listo, setAttachmentFailure, setCopiado, setCopiando, setForkeando, setPreparingAttachments, setSoltando, get ancla() { return ancla; }, set ancla(v) { ancla = v; }, get entrada() { return entrada; }, get entradaActiva() { return entradaActiva; }, get puedeAdjuntar() { return puedeAdjuntar; }, get teclearAlComando() { return teclearAlComando; } });
+  const { abrirFork, copiarMensaje, elegirArchivos, forkAgentChoice, forkDesde, forkTurn, mandar, pegar, setForkAgentChoice, setForkTurn, ultimoEscrito } = createChatAttachments(props, { copiando, forkeando, hilo, listo, setAttachmentFailure, setCopiado, setCopiando, setForkeando, reservarCajas, setSoltando, get ancla() { return ancla; }, set ancla(v) { ancla = v; }, get entrada() { return entrada; }, get entradaActiva() { return entradaActiva; }, get puedeAdjuntar() { return puedeAdjuntar; }, get teclearAlComando() { return teclearAlComando; } });
   const { activityBlocked, bloqueDeLectura, bloques, claveFila, clavesDelHilo, esLaTiraViva, handoffStarting, isCurrentActivity, registroCorre, searchMessages } = createChatBlocks(props, { esElVivo, razonamientos, setRazonamientos, setTrabajos, trabajos });
   let hiloDeFilas: VirtualThreadApi | undefined;
   let lecturaPorSaltar: Lectura | null = null;
@@ -46,13 +46,13 @@ export default function Chat(props: ChatProps) {
 
   let elContenido: HTMLElement | undefined;
   let composerBox: HTMLDivElement | undefined;
-  const { altoDeLaCaja, cajaDelHilo, cancelarPregunta, carpetaDeTerminal, entrada, entradaActiva, entradaOculta, fuentes, inputsDelHilo, interrumpirConCola, interruptibles, medirCaja, mensajeVisto, menuAnchor, modoAlMargen, modoTerminal, pieDeTerminal, preguntaPendiente, puedeAdjuntar, respondido, rielVisible, saltarAlMensaje, setEntrada, setSoltadoDe, teclearAlComando, tomarHilo } = createChatTurnState(props, { bloques, filaDe, hilo, hiloVirtual, menuOpen, motivos, origen, retenerFila, searchMessages, setCajaDeFilas, setFirstChunk, setRetenidas, shownFrom, get composerBox() { return composerBox; }, set composerBox(v) { composerBox = v; }, get elContenido() { return elContenido; }, set elContenido(v) { elContenido = v; }, get hiloDeFilas() { return hiloDeFilas; }, set hiloDeFilas(v) { hiloDeFilas = v; } });
+  const { altoDeLaCaja, cajaDelHilo, cancelarPregunta, carpetaDeTerminal, entrada, entradaActiva, entradaOculta, inputsDelHilo, interrumpirConCola, interruptibles, medirCaja, mensajeVisto, menuAnchor, modoAlMargen, modoTerminal, pieDeTerminal, preguntaPendiente, puedeAdjuntar, respondido, rielVisible, saltarAlMensaje, setEntrada, setSoltadoDe, teclearAlComando, tomarHilo } = createChatTurnState(props, { bloques, filaDe, hilo, hiloVirtual, menuOpen, motivos, origen, retenerFila, searchMessages, setCajaDeFilas, setFirstChunk, setRetenidas, shownFrom, get composerBox() { return composerBox; }, set composerBox(v) { composerBox = v; }, get elContenido() { return elContenido; }, set elContenido(v) { elContenido = v; }, get hiloDeFilas() { return hiloDeFilas; }, set hiloDeFilas(v) { hiloDeFilas = v; } });
 
   const { MenuDeSugerencias, PermisoDeLaCaja, PreguntaDeLaCaja } = createChatComposerPrompts(props, { cancelarPregunta, insertSuggestion, menuAnchor, menuOpen, picked, preguntaPendiente, preguntaPlegada, setPlegadaEn, suggestions, trigger });
 
   const { CampoDeLaCaja } = createChatComposerField(props, { cambiarModo, dirigido, entrada, entradaActiva, entradaOculta, escribible, fieldSpans, habilitada, hasHighlight, insertSuggestion, interrumpirConCola, interruptibles, mandar, menuOpen, modoTerminal, pegar, picked, setCaret, setDismissed, setEntrada, setPick, setSoltadoDe, suggestions, teclearAlComando, tomarCampo, get mirror() { return mirror; }, set mirror(v) { mirror = v; }, get pendingCaret() { return pendingCaret; }, set pendingCaret(v) { pendingCaret = v; }, get pendingEdit() { return pendingEdit; }, set pendingEdit(v) { pendingEdit = v; } });
 
-  const { Caja } = createChatComposer(props, { CampoDeLaCaja, MenuDeSugerencias, PermisoDeLaCaja, PreguntaDeLaCaja, actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, carpetaDeTerminal, efforts, elegido, elegirArchivos, entradaActiva, faltaUnanime, fuentes, listo, mandar, menuOpen, modoAlMargen, modoTerminal, opciones, preguntaPendiente, preguntaPlegada, presentation, pulsoDeModo, setSoltadoDe, trigger, get campo() { return campo; }, set campo(v) { campo = v; }, get composerBox() { return composerBox; }, set composerBox(v) { composerBox = v; }, get entradaArchivo() { return entradaArchivo; }, set entradaArchivo(v) { entradaArchivo = v; } });
+  const { Caja } = createChatComposer(props, { CampoDeLaCaja, MenuDeSugerencias, PermisoDeLaCaja, PreguntaDeLaCaja, actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, carpetaDeTerminal, efforts, elegido, elegirArchivos, entradaActiva, faltaUnanime, listo, mandar, menuOpen, modoAlMargen, modoTerminal, opciones, preguntaPendiente, preguntaPlegada, presentation, pulsoDeModo, setSoltadoDe, cajasVisibles, cancelarCaja, ordenesOcultas, trigger, get campo() { return campo; }, set campo(v) { campo = v; }, get composerBox() { return composerBox; }, set composerBox(v) { composerBox = v; }, get entradaArchivo() { return entradaArchivo; }, set entradaArchivo(v) { entradaArchivo = v; } });
 
   const { filaDeUsuario } = createChatUserRow(props, { claveFila, commandNames, copiado, copiando, copiarMensaje, presentation, skillNames });
 
@@ -84,48 +84,34 @@ export default function Chat(props: ChatProps) {
         )}
       </Show>
 
-    {/* El esqueleto se pinta contra la caja (`justify-end`), donde va a
-        estar el final del hilo: lo que se sustituye ocupa el mismo sitio.
-        Sin barra de scroll (`overflow-hidden`) y sin rótulo: el esqueleto
-        ya trae su forma y su `aria-busy` (`ui/Skeleton.tsx`). */}
+    {/* El composer vive fuera del estado de carga del hilo para que nunca se
+        desmonte ni parpadee al abrir una tarea o adoptar una nueva. */}
+    <div class="relative flex min-h-0 flex-1 flex-col">
     <Show
       when={!props.cargando || props.msgs.length > 0 || Boolean(props.activities?.length)}
       fallback={
-        <>
-          <div class={cn("min-h-0 flex-1 overflow-hidden", margenDelHilo)}>
-            {/* El armazón está siempre —es lo que reserva el sitio de la caja y
-                del final del hilo—; lo que espera al umbral son las barras.
-                Ver `UMBRAL_DEL_ESQUELETO_MS`: por debajo, dibujarlas es meter
-                una forma que se va antes de que la veas. */}
-            <div
-              class={cn(
-                "mx-auto flex h-full w-full flex-col justify-end gap-6",
-                "max-w-[860px]",
-              )}
-            >
-              <Show when={esperaVisible()}>
-                <Skeleton class="ml-auto h-9 w-[40%] rounded-lg" />
-                <Skeleton filas={4} class="h-4 rounded-sm" />
-                <Skeleton class="ml-auto h-9 w-[28%] rounded-lg" />
-                <Skeleton filas={2} class="h-4 rounded-sm" />
-              </Show>
-            </div>
-          </div>
+        <div
+          class={cn("min-h-0 flex-1 overflow-hidden", margenDelHilo)}
+          style={{ "padding-bottom": `${altoDeLaCaja() + 12}px` }}
+        >
+          {/* El armazón está siempre —es lo que reserva el sitio de la caja y
+              del final del hilo—; lo que espera al umbral son las barras. */}
           <div
-            class="flex shrink-0 flex-col items-center px-4 pt-1 pb-3"
+            class={cn(
+              "mx-auto flex h-full w-full flex-col justify-end gap-6",
+              "max-w-[860px]",
+            )}
           >
-            <Show when={props.recovery} fallback={<Caja />}>{props.recovery}</Show>
+            <Show when={esperaVisible()}>
+              <Skeleton class="ml-auto h-9 w-[40%] rounded-lg" />
+              <Skeleton filas={4} class="h-4 rounded-sm" />
+              <Skeleton class="ml-auto h-9 w-[28%] rounded-lg" />
+              <Skeleton filas={2} class="h-4 rounded-sm" />
+            </Show>
           </div>
-        </>
+        </div>
       }
     >
-      {/* El overlay de soltar solo se pinta aquí — las rutas no salen de
-          él, el `drop` de HTML5 entrega un `File` sin ruta en disco y el
-          estado lo maneja `onDragDropEvent` (arriba). Tres niveles: el de
-          fuera es el marco del botón de bajar, el de en medio es el que
-          scrollea, el de dentro es lo único medible —tiene el alto de su
-          hueco y no cambia—. `lib/paste.ts`. */}
-      <div class="relative flex min-h-0 flex-1 flex-col">
       <Show when={props.masRecientes}><Pressable class="shrink-0 py-2 text-xs text-primary underline" onClick={volverAReciente}>{t("chat.history.latest")}</Pressable></Show>
       {props.coordinator}
       <CabeceraDelEncargado />
@@ -171,6 +157,7 @@ export default function Chat(props: ChatProps) {
           );
         })()}
       </Show>
+    </Show>
 
       {/* La caja flota sobre el hilo, no debajo: el hueco
           medido desde arriba es lo que mantiene legible la última línea,
@@ -179,8 +166,7 @@ export default function Chat(props: ChatProps) {
           puntero. Una pregunta pendiente no desaparece con otra ventana
           activa: la propia tarjeta activa su ventana al interactuar. */}
       <CapaDeLaCaja />
-      </div>
-    </Show>
+    </div>
     </WorkFace.Provider>
     </FileMachine.Provider>
   );

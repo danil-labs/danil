@@ -68,7 +68,7 @@ export function createContextSource(deps: Deps) {
   // se guarda en la sesión ni se acumula: manda el último turno registrado.
   createEffect(
     on([sessionId, project], ([id, p]) => {
-      if (!id || !p) {
+      if (!id) {
         setVentana(null);
         return;
       }
@@ -299,7 +299,10 @@ export function createContextSource(deps: Deps) {
     try {
       await taskQueues.openSession(id, proyecto, current, engineCanDispatch(id));
       // Lo que ya esperaba cuando se le pide al motor queda retenido por él: se relee tras pedírselo.
-      if (engineCanDispatch(id) && sessionId() === id) void taskQueues.persist(id, proyecto, cola()).then(() => releerCola(id), () => {});
+      if (engineCanDispatch(id) && sessionId() === id) {
+        const hadQueued = cola().length > 0;
+        void taskQueues.persist(id, proyecto, cola()).then(() => { if (hadQueued) void releerCola(id); }, () => {});
+      }
     } catch (e) {
       if (!current()) return;
       // Sin esto la cola queda sin dueño: no es «no pude leerla», es que

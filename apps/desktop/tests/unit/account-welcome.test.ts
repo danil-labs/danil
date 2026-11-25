@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ACCOUNT_WELCOME_KEY, accountWelcomeAnswered, offerAccountWelcome, rememberAccountWelcome } from "../../src/features/onboarding/account-welcome.ts";
-import { DESKTOP_DOWNLOADS, downloadsFor, platformOf } from "../../src/lib/downloads.ts";
+import { ACCOUNT_WELCOME_KEY, accountWelcomeAnswered, offerAccountWelcome, rememberAccountWelcome } from "../../../../packages/features/onboarding/src/model/account-welcome.ts";
+import { DESKTOP_DOWNLOADS, downloadsFor, platformOf } from "../../../../packages/host/src/downloads.ts";
 
 function memory() {
   const data = new Map<string, string>();

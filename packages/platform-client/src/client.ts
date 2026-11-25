@@ -77,11 +77,25 @@ const sleep = (ms: number, signal?: AbortSignal) =>
     signal?.addEventListener("abort", abort, { once: true });
   });
 
+/** Estado resumido de la sesión de Desk para resolver el contexto de una organización. */
+export type DeskSessionStatus = {
+  state?: string;
+  sessions?: Array<{
+    contexts?: Array<{ context_id?: string; org?: string }>;
+  }>;
+};
+
+/** Lee el estado de contextos de Desk (`danil_session_status`); `null` si no existe sesión. */
+export function readDeskSessionStatus(): Promise<DeskSessionStatus | null> {
+  return invoke<DeskSessionStatus>("danil_session_status").catch(() => null);
+}
+
 /** Una llamada, sin reintentos: el status del borde tal cual. */
-export function edgeFetch<T = unknown>(method: EdgeMethod, path: string, body?: unknown, idempotencyKey?: string): Promise<EdgeReply<T>> {
+export function edgeFetch<T = unknown>(method: EdgeMethod, path: string, body?: unknown, idempotencyKey?: string, context?: string): Promise<EdgeReply<T>> {
   const args: Record<string, unknown> = { method, path };
   if (body !== undefined) args.body = body;
   if (idempotencyKey) args.idempotencyKey = idempotencyKey;
+  if (context) args.context = context;
   return invoke<EdgeReply<T>>("danil_edge_fetch", args);
 }
 

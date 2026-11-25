@@ -11,7 +11,7 @@ import { type Space } from "../../../../ui/src/lib/spaces";
 import { isTaskTab } from "../../../../ui/src/lib/tabs";
 import { aplicarTemaDeTerminal } from "../model/terminal-themes";
 import { displayWorkspaceSnapshot, callEngine, requestedWorkspaceSnapshot } from "../../../../engine-client/src/client.ts";
-import { capabilities } from "../../../../host/src/platform";
+import { capabilities, isNoMachines } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { batch, type Accessor, type Setter } from "solid-js";
 import type { ComposerPort, ContextSourcePort, DraftsPort, Hilo, MachinesPort, ProjectsPort, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
@@ -123,7 +123,7 @@ export function createAttachments(deps: AttachmentsDeps) {
       if (workspace === null) await aplicar(startup);
       else if (startup.active === workspace) setStartupReadError(null);
     } catch (cause) {
-      if (current() && !asleep(cause)) setStartupReadError(prosaDe(cause));
+      if (current() && !asleep(cause) && !isNoMachines()) setStartupReadError(prosaDe(cause));
     }
   }
 
@@ -132,6 +132,11 @@ export function createAttachments(deps: AttachmentsDeps) {
     const workspace = workspaceActivo();
     if (!workspace) return;
     setMaterialError(null);
+    if (isNoMachines()) {
+      setProjectReadError(null);
+      setSources([]);
+      return;
+    }
     try {
       const arranque = await callEngine<Startup>("list_workspaces");
       if (!workspaceContext.currentMaterial(request)) return;
@@ -150,7 +155,7 @@ export function createAttachments(deps: AttachmentsDeps) {
       setSources(fuentes);
       confirmContext(request, root, fuentes);
     } catch (e) {
-      if (!workspaceContext.currentMaterial(request) || asleep(e)) return;
+      if (!workspaceContext.currentMaterial(request) || asleep(e) || isNoMachines()) return;
       setMaterialError(prosaDe(e));
     }
   }
@@ -273,41 +278,47 @@ export function createAttachments(deps: AttachmentsDeps) {
       return;
     }
     const pedidas = callEngine<Space[]>("list_spaces").catch(() => null);
-    // Con las carpetas de la caché, sus tareas se leen a la vez que la lista de carpetas.
-    const primeras = desdeCache ? refreshSessions(grupos()) : null;
-    try {
-      // A la vez, no una detrás de otra: no dependen entre sí, y
-      // encadenadas sumaban sus latencias en el arranque. `list_sources`
-      // esperaba a que volviera `list_projects` para preguntar algo que
-      // no usa su respuesta.
-      // Las fuentes que no llegan (su máquina apagada, sin copia) dejan las de antes y no tumban las carpetas.
-      const [, fuentes] = await Promise.all([
-        projectCatalog.refresh(),
-        callEngine<Source[]>("list_sources").catch(() => null),
-      ]);
-      if (generation !== workspaceContext.generation()) return;
+    if (isNoMachines()) {
+      setSources([]);
+      setMaterialError(null);
+      setProjectReadError(null);
+    } else {
+      // Con las carpetas de la caché, sus tareas se leen a la vez que la lista de carpetas.
+      const primeras = desdeCache ? refreshSessions(grupos()) : null;
+      try {
+        // A la vez, no una detrás de otra: no dependen entre sí, y
+        // encadenadas sumaban sus latencias en el arranque. `list_sources`
+        // esperaba a que volviera `list_projects` para preguntar algo que
+        // no usa su respuesta.
+        // Las fuentes que no llegan (su máquina apagada, sin copia) dejan las de antes y no tumban las carpetas.
+        const [, fuentes] = await Promise.all([
+          projectCatalog.refresh(),
+          callEngine<Source[]>("list_sources").catch(() => null),
+        ]);
+        if (generation !== workspaceContext.generation()) return;
 
-      if (workspaceContext.currentMaterial(transition)) {
-        if (fuentes) {
-          setSources(fuentes);
-          confirmContext(transition, activo?.context_root ?? null, fuentes);
-        } else setMaterialError(t("projects.context.unavailable"));
+        if (workspaceContext.currentMaterial(transition)) {
+          if (fuentes) {
+            setSources(fuentes);
+            confirmContext(transition, activo?.context_root ?? null, fuentes);
+          } else if (!isNoMachines()) setMaterialError(t("projects.context.unavailable"));
+        }
+      } catch (e) {
+        if (generation !== workspaceContext.generation() || !workspaceContext.currentMaterial(transition)) return;
+        // Una máquina dormida no es un fallo, pero el arranque sigue: sin salir
+        // de la caché, la ventana se queda inerte con la foto de la vez anterior
+        // y no restaura pestañas ni se entera de cuando la máquina enciende.
+        if (!asleep(e) && !isNoMachines()) {
+          setSources([]);
+          setMaterialError(prosaDe(e));
+        }
       }
-    } catch (e) {
-      if (generation !== workspaceContext.generation() || !workspaceContext.currentMaterial(transition)) return;
-      // Una máquina dormida no es un fallo, pero el arranque sigue: sin salir
-      // de la caché, la ventana se queda inerte con la foto de la vez anterior
-      // y no restaura pestañas ni se entera de cuando la máquina enciende.
-      if (!asleep(e)) {
-        setSources([]);
-        setMaterialError(prosaDe(e));
+      if (primeras) {
+        // Si cambiaron las carpetas, `grupos` relee también las nuevas; esta lectura ya vale para las de siempre.
+        await primeras;
+        if (generation !== workspaceContext.generation()) return;
+        setEnCache(false);
       }
-    }
-    if (primeras) {
-      // Si cambiaron las carpetas, `grupos` relee también las nuevas; esta lectura ya vale para las de siempre.
-      await primeras;
-      if (generation !== workspaceContext.generation()) return;
-      setEnCache(false);
     }
     // La tarea que estaba abierta en este workspace vuelve a estarlo, que es lo
     // que hace un navegador al arrancar. Si su pestaña apunta a una tarea que
@@ -337,7 +348,7 @@ export function createAttachments(deps: AttachmentsDeps) {
         threads.finishLoading(delante.session));
     }
     const enFrente = paneles.activeTabAt(paneles.activeSite());
-    await reconcileActiveTurns();
+    if (!isNoMachines()) await reconcileActiveTurns();
     if (generation !== workspaceContext.generation()) return;
     // Lo que la persona abrió mientras se conciliaba gana: abrir la restaurada ahora le quitaría la ventana.
     if (sessionId() !== null || pestanas.active() !== null || paneles.activeTabAt(paneles.activeSite()) !== enFrente) return;

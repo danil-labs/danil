@@ -44,7 +44,7 @@ export default function TabStrip(props: TabStripProps) {
       // La pestaña activa toca el borde inferior para fundirse con su panel bajo el velo.
       // flex-1 separaría el botón de añadir de la última pestaña.
       // Con touchpad en Windows, el rebote elástico al tope desplaza el texto sin el fondo de la pestaña.
-      class="group/strip relative flex min-w-0 items-end gap-0.5 self-stretch overflow-x-auto overflow-y-hidden overscroll-x-none px-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="group/strip relative flex min-w-0 items-end gap-0.5 self-stretch overflow-x-auto overflow-y-hidden overscroll-x-none pl-0 pr-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <div role="tablist" aria-label={t("projects.tabs.label")} class="flex shrink-0 items-end gap-0.5 self-stretch">
         <For each={keptTabs()}>{renderTab}</For>
@@ -61,7 +61,7 @@ export default function TabStrip(props: TabStripProps) {
         {(label) => (
           <div
             data-borrador=""
-            class="tab-active ml-0.5 group flex h-[30px] w-[220px] shrink-0 items-center rounded-sm pr-1 text-ui font-semibold text-neutral-950 select-none"
+            class="tab-active ml-0.5 group flex h-[30px] w-[220px] shrink-0 items-center rounded-sm pr-1 text-ui font-semibold text-neutral-950 select-none [[data-title-bar]_&]:h-full [[data-title-bar]_&]:pb-1.5"
           >
             <div
               aria-current="page"
@@ -139,7 +139,7 @@ export function NewTabButton(props: {
       <DropdownMenuTrigger
         aria-label={t("projects.tabs.new")}
         title={t("projects.tabs.new")}
-        class="ml-0.5 grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary data-[expanded]:bg-surface-muted data-[expanded]:text-neutral-950"
+        class="ml-0.5 grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary data-[expanded]:bg-surface-muted data-[expanded]:text-neutral-950 [[data-title-bar]_&]:mb-1.5"
       >
         <Plus size={14} />
       </DropdownMenuTrigger>

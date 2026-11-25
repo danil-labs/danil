@@ -90,6 +90,8 @@ export function conservarPorElFinal<T>(previous: T[], incoming: T[]): T[] {
 
 /** Lo más que espera la barra a la lectura de una carpeta. */
 export const READ_TIMEOUT = 20_000;
+/** Cuántas carpetas lee a la vez la barra: evita ráfagas que saturen el límite del motor. */
+export const READ_CONCURRENCY = 6;
 
 // Descartar una respuesta cuando salió otra después deja la lista vacía si esa
 // otra no vuelve; pintar vacío ante un fallo esconde las tareas hasta el
@@ -110,17 +112,36 @@ export function sessionRefresh<T>(options: {
    * congela la barra entera.
    */
   timeout?: number;
+  /** Tope de lecturas de carpeta simultáneas. */
+  concurrency?: number;
 }) {
   const schedule = options.schedule ?? ((run, ms) => setTimeout(run, ms));
   const cancel = options.cancel ?? ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>));
+  const limit = Math.max(1, Math.floor(options.concurrency ?? READ_CONCURRENCY));
   let generation = 0;
   let started = 0;
   // Por carpeta, el pedido más nuevo que ya se pintó: uno anterior que vuelve
   // tarde no la pisa, y no frena a las demás.
   const applied = new Map<string, number>();
+  // Por carpeta, el pedido más nuevo encolado: una lectura que todavía espera
+  // turno cuando ya salió otra más reciente se salta sin pegar al motor.
+  const latestRequest = new Map<string, number>();
+  const pendingRetry = new Set<string>();
+  let active = 0;
+  const waiters: ((acquired: boolean) => void)[] = [];
   let delay = 0;
   let retry: unknown;
   let batch: { projects: Set<string>; handle: unknown; waiting: (() => void)[] } | null = null;
+
+  function release() {
+    const next = waiters.shift();
+    if (next) next(true);
+    else active--;
+  }
+
+  function drainWaiters() {
+    while (waiters.length > 0) waiters.shift()!(false);
+  }
 
   function clearRetry() {
     if (retry === undefined) return;
@@ -139,6 +160,8 @@ export function sessionRefresh<T>(options: {
     const current = generation;
     const request = ++started;
     const timeout = options.timeout ?? READ_TIMEOUT;
+    const unique = [...new Set(projects)];
+    for (const project of unique) latestRequest.set(project, request);
     const paint = (project: string, rows: T[] | null) => {
       const vigentes = new Set(options.projects());
       // Un aviso de una carpeta que el riel no enseña no la mete.
@@ -152,7 +175,17 @@ export function sessionRefresh<T>(options: {
         return next;
       });
     };
-    const results = await Promise.all(projects.map(async (project) => {
+    const results = await Promise.all(unique.map(async (project) => {
+      if (active >= limit) {
+        const acquired = await new Promise<boolean>((resolve) => { waiters.push(resolve); });
+        if (!acquired) return null;
+        if (current !== generation || request < (latestRequest.get(project) ?? 0)) {
+          release();
+          return null;
+        }
+      } else {
+        active++;
+      }
       let handle: ReturnType<typeof setTimeout> | undefined;
       let rows: T[] | null;
       try {
@@ -164,25 +197,39 @@ export function sessionRefresh<T>(options: {
         rows = null;
       } finally {
         clearTimeout(handle);
+        release();
       }
       // Vieja: ya se pintó algo más nuevo de esta carpeta, o cambió el workspace.
       if (current !== generation || request < (applied.get(project) ?? 0)) return null;
-      if (rows !== null) applied.set(project, request);
+      if (rows !== null) {
+        applied.set(project, request);
+        pendingRetry.delete(project);
+      } else {
+        pendingRetry.add(project);
+      }
       paint(project, rows);
       return rows !== null;
     }));
     if (current !== generation) return;
     const vigentes = results.filter((ok): ok is boolean => ok !== null);
     if (vigentes.length === 0) return;
-    clearRetry();
-    if (vigentes.every(Boolean)) {
+    const activeProjects = new Set(options.projects());
+    for (const project of [...pendingRetry]) {
+      if (!activeProjects.has(project)) pendingRetry.delete(project);
+    }
+    if (pendingRetry.size === 0) {
+      clearRetry();
       delay = 0;
       return;
     }
+    if (vigentes.every(Boolean)) return;
+    clearRetry();
     delay = Math.min(delay === 0 ? 1000 : delay * 2, 30_000);
     retry = schedule(() => {
       retry = undefined;
-      if (current === generation) void refresh(options.projects());
+      if (current !== generation) return;
+      const toRetry = [...pendingRetry].filter((p) => options.projects().includes(p));
+      if (toRetry.length > 0) void refresh(toRetry);
     }, delay);
   }
 
@@ -207,6 +254,9 @@ export function sessionRefresh<T>(options: {
     reset() {
       generation++;
       applied.clear();
+      latestRequest.clear();
+      pendingRetry.clear();
+      drainWaiters();
       delay = 0;
       clearRetry();
       if (batch) {

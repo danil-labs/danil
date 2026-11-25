@@ -1,7 +1,7 @@
 /** El observador de tamaño de [`seguirElFondo`] y lo que solo él escribe. */
 import type { Accessor, Setter } from "solid-js";
 
-export function crearObservador({ cajaActual, sigue, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual, ponRelleno, topeDeRelleno }: { cajaActual: () => HTMLElement | undefined; sigue: Accessor<boolean>; enTurno: () => boolean; encogidoArriba: () => number; ponScrollTop: (valor: number) => void; fondo: () => number; scrollTop: () => number; ponCerca: Setter<boolean>; estaCerca: () => boolean; ponNuevos: Setter<boolean>; restaurarAncla: () => void; pegar: () => void; tomarAncla: () => void; ponEscapado: Setter<boolean>; ponSigue: Setter<boolean>; rellenoActual: () => number; ponRelleno: (valor: number) => void; topeDeRelleno: () => number }) {
+export function crearObservador({ cajaActual, sigue, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual, ponRelleno, topeDeRelleno, ruedaArribaActiva, ruedaPendiente }: { cajaActual: () => HTMLElement | undefined; sigue: Accessor<boolean>; enTurno: () => boolean; encogidoArriba: () => number; ponScrollTop: (valor: number) => void; fondo: () => number; scrollTop: () => number; ponCerca: Setter<boolean>; estaCerca: () => boolean; ponNuevos: Setter<boolean>; restaurarAncla: () => void; pegar: () => void; tomarAncla: () => void; ponEscapado: Setter<boolean>; ponSigue: Setter<boolean>; rellenoActual: () => number; ponRelleno: (valor: number) => void; topeDeRelleno: () => number; ruedaArribaActiva: () => boolean; ruedaPendiente: () => boolean }) {
   /**
    * Cuánto acaba de crecer o encoger el contenido, mientras dura el tic en que
    * eso se confunde con un gesto. Ver el `setTimeout` de [`alScrollear`].
@@ -67,15 +67,15 @@ export function crearObservador({ cajaActual, sigue, enTurno, encogidoArriba, po
             // Sin seguir, se devuelve la lectura donde estaba: el navegador
             // conserva la distancia al principio del contenido, no a lo que
             // se está mirando. Ver [`ancla`].
-            else restaurarAncla();
-          } else if (estaCerca()) {
+            else if (!ruedaPendiente()) restaurarAncla();
+          } else if (estaCerca() && !ruedaArribaActiva()) {
             // Encogió tanto que el fondo vino a buscarnos: eso no es un gesto
             // de nadie, y quedarse suelto ahí sería quedarse suelto mirando el
-            // final.
+            // final. Si la persona acaba de rodar hacia arriba, no se re-engancha.
             ponEscapado(false);
             ponSigue(true);
             ponNuevos(false);
-          } else {
+          } else if (!ruedaPendiente()) {
             // Encogió y sigues arriba: el mismo caso de arriba por la otra
             // puerta, y el que más se nota — un registro de ejecución que se
             // pliega al cerrarse el turno se lleva de golpe cientos de píxeles
@@ -83,10 +83,10 @@ export function crearObservador({ cajaActual, sigue, enTurno, encogidoArriba, po
             restaurarAncla();
           }
 
-          // El ancla se vuelve a tomar SIEMPRE y con el layout ya corregido:
-          // así el siguiente cambio se mide contra donde la vista quedó, no
-          // contra donde estaba antes de esta corrección.
-          tomarAncla();
+          // El ancla se vuelve a tomar SIEMPRE y con el layout ya corregido
+          // (salvo con rueda hacia arriba en vuelo, donde `alScrollear` la toma
+          // una vez aplicado el desplazamiento).
+          if (sigue() || !ruedaPendiente()) tomarAncla();
 
           altoPrevio = alto;
 

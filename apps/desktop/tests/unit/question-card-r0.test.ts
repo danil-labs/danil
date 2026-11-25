@@ -1,5 +1,5 @@
 /**
- * R0 de la tarjeta de pregunta (2026-11-20): la persona elige una respuesta,
+ * R0 de la tarjeta de pregunta: la persona elige una respuesta,
  * la respuesta llega y la tarjeta sigue visible hasta «Omitir».
  *
  * Usa el store de hilos real (`createThreadsCore`), sin ventana. La tarjeta se
@@ -15,9 +15,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createRoot, createSignal } from "solid-js";
-import type { ChatEvent, Msg, Session } from "../../src/features/chat/index.ts";
-import type { Respuesta } from "../../src/features/chat/Questions.tsx";
-import { createThreadsCore } from "../../src/features/threads/store-core.ts";
+import type { ChatEvent, Msg, Session } from "../../../../packages/features/chat/src/index.ts";
+import type { Respuesta } from "../../../../packages/features/chat/src/components/Questions.tsx";
+import { createThreadsCore } from "../../../../packages/features/chat/src/queries/threads-store-core.ts";
 
 
 // Copia literal del derivado de `Chat.tsx:1856-1874`.

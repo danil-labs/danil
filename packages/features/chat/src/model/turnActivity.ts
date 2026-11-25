@@ -1,8 +1,11 @@
+export type TurnOutcome = "running" | "done" | "failed" | "interrupted";
+
 export type TurnActivity<Message> = {
   readonly key: string;
   readonly anchor: Message | null;
   readonly anchorIndex: number;
   readonly active: boolean;
+  readonly outcome?: TurnOutcome;
   readonly startConfirmed?: boolean;
   readonly startedAt: number | null;
   readonly durationMs: number | null;

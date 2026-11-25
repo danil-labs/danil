@@ -71,6 +71,9 @@ function HitoDelHilo(props: {
   onOpenTask?: (folder: string, task: string, machine?: string | null) => void;
 }) {
   const esFallo = () => props.msg.meta === "fallo";
+  const textoDelFallo = () => prosaDelFallo(props.msg);
+  const prefijo = () => t("chat.failure.prefix");
+  const mostrarPrefijo = () => esFallo() && !textoDelFallo().toLowerCase().startsWith(prefijo().toLowerCase());
   return (
     <div
       class="col-start-1 flex items-start gap-3 py-2 text-xs"
@@ -84,7 +87,10 @@ function HitoDelHilo(props: {
       <span class="mt-[0.45rem] h-px w-6 shrink-0 bg-border" aria-hidden="true" />
       <span class="flex min-w-0 flex-col items-start gap-0.5">
         <span class="break-words">
-          {prosaDelFallo(props.msg)}
+          <Show when={mostrarPrefijo()}>
+            <strong class="font-medium">{prefijo()} </strong>
+          </Show>
+          {textoDelFallo()}
           <Show when={gestoDeLaFila(props.msg, props.vigente)}>
             {(g) => (
               <>

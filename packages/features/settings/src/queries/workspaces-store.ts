@@ -75,9 +75,9 @@ export function createWorkspaces() {
       setActivo(a.active);
       setFallo(null);
     } catch (e) {
-      // Cargando, vacío y error son tres estados distintos: «vacío» es el
-      // primer arranque, no un fallo.
-      setLista(null);
+      // Cargando, vacío y error son tres estados distintos: en un refresco
+      // posterior conservamos la última lista conocida para no parpadear logos ni el selector.
+      if (lista() === null) setLista(null);
       setFallo(asFailure(e));
     } finally {
       setCargando(false);

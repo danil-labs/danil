@@ -5,16 +5,13 @@ import type { Space } from "../../../../apps/desktop/src/lib/spaces.ts";
 import { workspaceSpacesForEngine, type WorkspaceSpaceCatalog, type WorkspaceSpaceEdit } from "../../../platform-client/src/workspace-spaces.ts";
 import { sessionRailState } from "../shell/session-groups.ts";
 import {
-  buildInitialSeed,
-  canonicalRef,
-  cleanFolders,
-  projectCatalogSessions,
-  projectCatalogSpaces,
-  statusOf,
-  type SessionLike,
+  buildInitialSeed, buildTaskSpacesBackfill, buildTaskSpacesBackfillEdit,
+  canonicalRef, cleanFolders, projectCatalogSessions, projectCatalogSpaces, statusOf, type SessionLike,
 } from "./space-catalog-projection.ts";
 
-export { buildInitialSeed, canonicalRef, projectCatalogSessions, projectCatalogSpaces };
+export { buildInitialSeed, buildTaskSpacesBackfill, buildTaskSpacesBackfillEdit, canonicalRef, projectCatalogSessions, projectCatalogSpaces };
+
+const BACKFILL_DEBOUNCE_MS = 400;
 
 type Client = NonNullable<Awaited<ReturnType<typeof workspaceSpacesForEngine>>>;
 type Ready = { client: Client; catalog: WorkspaceSpaceCatalog };
@@ -49,6 +46,13 @@ export function createSpaceCatalog(
   let forbiddenScope: ReturnType<typeof scope> = null;
   let lastImportKey = "";
   let syncing = false;
+  const attemptedBackfill = new Set<string>();
+  let backfillTimer: ReturnType<typeof setTimeout> | null = null;
+  let backfilling = false;
+  let latestBackfillSessions: Record<string, readonly SessionLike[]> | null = null;
+  const clearBackfillTimer = () => {
+    if (backfillTimer !== null) { clearTimeout(backfillTimer); backfillTimer = null; }
+  };
 
   const refresh = async (): Promise<Ready | undefined> => {
     const selected = scope();
@@ -72,6 +76,9 @@ export function createSpaceCatalog(
 
   createEffect(on(scope, () => {
     lastImportKey = "";
+    attemptedBackfill.clear();
+    latestBackfillSessions = null;
+    clearBackfillTimer();
     setPendingOrder(null);
     setPendingTasks(null);
     void refresh();
@@ -79,7 +86,7 @@ export function createSpaceCatalog(
   const timer = setInterval(() => { if (document.visibilityState !== "hidden") void refresh(); }, 15_000);
   const onFocus = () => { void refresh(); };
   window.addEventListener("focus", onFocus);
-  onCleanup(() => { generation++; clearInterval(timer); window.removeEventListener("focus", onFocus); });
+  onCleanup(() => { generation++; clearInterval(timer); clearBackfillTimer(); window.removeEventListener("focus", onFocus); });
 
   async function commit(edit: WorkspaceSpaceEdit, base: Ready, selected: NonNullable<ReturnType<typeof scope>>): Promise<WorkspaceSpaceCatalog> {
     const request = ++generation;
@@ -136,6 +143,43 @@ export function createSpaceCatalog(
     } finally {
       syncing = false;
     }
+  }
+
+  async function flushBackfill() {
+    const selected = scope();
+    const current = value();
+    const sesiones = latestBackfillSessions;
+    if (!selected || !current || !sesiones || syncing || backfilling || forbiddenScope === selected || current.catalog.spaces.length === 0) return;
+    latestBackfillSessions = null;
+    backfilling = true;
+    let sentKeys: string[] = [];
+    try {
+      await mutateWithRetry(catalog => {
+        const edit = buildTaskSpacesBackfillEdit(catalog, activePendingTasks(), sesiones, attemptedBackfill, selected.id);
+        sentKeys = edit?.kind === "import" && edit.task_spaces ? Object.keys(edit.task_spaces) : [];
+        return edit;
+      });
+    } catch (error) {
+      if (statusOf(error) === 403) forbiddenScope = selected;
+    } finally {
+      if (scope() === selected) { for (const key of sentKeys) attemptedBackfill.add(key); }
+      backfilling = false;
+      if (latestBackfillSessions && scope() === selected && forbiddenScope !== selected) {
+        scheduleBackfill(latestBackfillSessions);
+      }
+    }
+  }
+
+  /** Programa un backfill idempotente (con debounce) de `task_spaces` faltantes hacia `workspaces`. */
+  function scheduleBackfill(sesiones: Record<string, readonly SessionLike[]>) {
+    const selected = scope();
+    const current = value();
+    if (!selected || !current || syncing || forbiddenScope === selected || current.catalog.spaces.length === 0) return;
+    if (!buildTaskSpacesBackfill(current.catalog, activePendingTasks(), sesiones, attemptedBackfill, selected.id)) return;
+    latestBackfillSessions = sesiones;
+    if (backfilling) return;
+    clearBackfillTimer();
+    backfillTimer = setTimeout(() => { backfillTimer = null; void flushBackfill(); }, BACKFILL_DEBOUNCE_MS);
   }
 
   async function createSpace(name: string, folders: string[], seedRows: readonly Space[] = []): Promise<Space | null> {
@@ -298,6 +342,7 @@ export function createSpaceCatalog(
     catalog: () => value()?.catalog,
     isManaged: () => !!value(),
     sync,
+    scheduleBackfill,
     createSpace,
     rename,
     setFolders,

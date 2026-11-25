@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { bridgePersonSession, completeSignIn } from "../../src/lib/person-session.ts";
+import { bridgePersonSession, completeSignIn } from "../../../../packages/session/src/person-session.ts";
 
 test("each person-session event of the engine is re-announced as danil-connect with its state", async () => {
   const handlers: Record<string, (event: { payload: unknown }) => void> = {};

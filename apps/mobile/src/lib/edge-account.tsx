@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type Context, type R
 import type { Account, AccountSession } from "./account";
 import { edgeMachinesPlane } from "./controlPlane";
 import { edgeControlPlane, relayOriginsOf } from "./edge";
+import { contextFor } from "./edge-sessions";
 import { type EdgeSession, type EdgeSessionState, edgeSession } from "./edgeSession";
 
 /** Marca de «salió a propósito»: la entrada no vuelve a abrir WorkOS sola (`signin.web.tsx`). */
@@ -18,12 +19,25 @@ export function EdgeAccountProvider({ children, context: Provided, deployment }:
   const [session, setSession] = useState<EdgeSession | null>(null);
   const current = useRef<EdgeSession | null>(null);
   current.current = session;
+  const contextRef = useRef<string | null>(null);
+  const orgRef = useRef<string | null>(null);
+  const [contextId, setContextId] = useState<string | null>(null);
+  const [sessionsReady, setSessionsReady] = useState(false);
+  const reportSelection = useRef<() => void>(() => {});
+  contextRef.current = contextId;
   // Un 401 de cualquier llamada vuelve a preguntar a identity: solo él decide si la sesión terminó.
   const edge = useMemo(
-    () => edgeControlPlane(deployment, { relayOrigins: relayOriginsOf(process.env.EXPO_PUBLIC_DANIL_RELAY_ORIGINS), onUnauthorized: () => void current.current?.recheck() }),
+    () =>
+      edgeControlPlane(deployment, {
+        relayOrigins: relayOriginsOf(process.env.EXPO_PUBLIC_DANIL_RELAY_ORIGINS),
+        onUnauthorized: () => void current.current?.recheck(),
+        context: () => contextRef.current,
+        organization: () => orgRef.current,
+        onSelectionRequired: () => reportSelection.current(),
+      }),
     [deployment],
   );
-  const plane = useMemo(() => edgeMachinesPlane(edge), [edge]);
+  const plane = useMemo(() => edgeMachinesPlane(edge, contextId), [edge, contextId]);
 
   useEffect(() => {
     const made = edgeSession(edge.identity);
@@ -66,6 +80,31 @@ export function EdgeAccountProvider({ children, context: Provided, deployment }:
     };
   }, [selection]);
   const organizations = useMemo(() => (selection ? { state: orgState, choose: (id: string) => void selection.choose(id) } : null), [selection, orgState]);
+  reportSelection.current = () => selection?.report({ status: 403, code: "organization_selection_required" });
+
+  const activeOrg = orgState.kind === "ready" ? orgState.active : null;
+  useEffect(() => {
+    if (!personId) {
+      contextRef.current = null;
+      orgRef.current = null;
+      setContextId(null);
+      setSessionsReady(false);
+      return;
+    }
+    let gone = false;
+    setSessionsReady(false);
+    void edge.sessions().then((set) => {
+      if (gone) return;
+      const next = set ? contextFor(set, activeOrg) : null;
+      contextRef.current = next;
+      orgRef.current = next && set ? (set.contexts.find((context) => context.id === next)?.org ?? null) : null;
+      setContextId(next);
+      setSessionsReady(true);
+    });
+    return () => {
+      gone = true;
+    };
+  }, [edge, personId, activeOrg]);
 
   // El borde no da portador a JS: lo que lo pide no se ofrece (`plane.bearerServices`).
   const getToken = useCallback(async (): Promise<string> => {
@@ -75,7 +114,7 @@ export function EdgeAccountProvider({ children, context: Provided, deployment }:
   const accountSession = useMemo<AccountSession | null>(() => (person ? { user: { id: person.id, email: person.email ?? undefined } } : null), [person]);
   const value = useMemo<Account>(
     () => ({
-      ready: state.kind !== "loading",
+      ready: state.kind !== "loading" && (state.kind !== "signed_in" || sessionsReady),
       session: accountSession,
       unavailable: state.kind === "unavailable",
       retry,
@@ -88,7 +127,7 @@ export function EdgeAccountProvider({ children, context: Provided, deployment }:
       getToken,
       unauthorized,
     }),
-    [state, accountSession, retry, person, plane, organizations, edge, signOut, getToken, unauthorized],
+    [state, sessionsReady, accountSession, retry, person, plane, organizations, edge, signOut, getToken, unauthorized],
   );
   return <Provided.Provider value={value}>{children}</Provided.Provider>;
 }

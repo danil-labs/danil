@@ -166,3 +166,112 @@ test("stale provider reads from an earlier workspace are discarded", async () =>
   assert.deepEqual(f.store.agents().map(a => a.id), ["codex"]);
   f.dispose();
 });
+
+test("forced refresh failure preserves previously loaded models and selected model", async () => {
+  let failModels = false;
+  const f = fixture({
+    install: true,
+    invoke: async <T>(command: string, args?: Record<string, unknown>) => {
+      if (command === "list_models") {
+        if (failModels) throw new Error("list_models timeout");
+        return { provider: String(args?.provider), models: [model("sonnet"), model("opus")], fallback: false } as T;
+      }
+      if (command === "list_surfaces") return [surface] as T;
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  await f.store.refreshSurfaces(true);
+  await tick();
+  f.store.selectModel({
+    key: "claude:opus",
+    superficie: "claude",
+    agent: "claude",
+    usable: true,
+    proveedor: { id: "claude", label: "Claude", logo: "claude" },
+    model: model("opus"),
+  });
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet", "opus"]);
+  assert.equal(f.store.model(), "opus");
+
+  failModels = true;
+  await f.store.refreshSurfaces(false);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet", "opus"]);
+  assert.equal(f.store.model(), "opus");
+
+  await f.store.readModels("claude", true);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet", "opus"]);
+  assert.equal(f.store.model(), "opus");
+  f.dispose();
+});
+
+test("initial catalog load failure sets agent catalog to null", async () => {
+  const f = fixture({
+    invoke: async <T>(command: string) => {
+      if (command === "list_models") throw new Error("list_models timeout");
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  await f.store.readModels("claude");
+  assert.equal("claude" in f.store.catalogos(), true);
+  assert.equal(f.store.catalogos().claude, null);
+  assert.equal(f.store.models(), null);
+  f.dispose();
+});
+
+test("empty fallback refresh preserves loaded models, while authoritative empty catalog replaces them", async () => {
+  let response: AgentModels = catalog("claude", "sonnet");
+  const f = fixture({
+    install: true,
+    invoke: async <T>(command: string) => {
+      if (command === "list_models") return response as T;
+      if (command === "list_surfaces") return [surface] as T;
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  await f.store.refreshSurfaces(true);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet"]);
+  assert.equal(f.store.model(), "sonnet");
+
+  response = { provider: "claude", models: [], fallback: true };
+  await f.store.readModels("claude", true);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet"]);
+  assert.equal(f.store.catalogos().claude?.fallback, false);
+  assert.equal(f.store.model(), "sonnet");
+
+  response = { provider: "claude", models: [], fallback: false };
+  await f.store.readModels("claude", true);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude, { provider: "claude", models: [], fallback: false });
+  f.dispose();
+});
+
+test("switching machine or workspace still clears previous catalogs", async () => {
+  const f = fixture({
+    install: true,
+    connected: false,
+    invoke: async <T>(command: string, args?: Record<string, unknown>) => {
+      if (command === "list_models") return catalog(String(args?.provider), "sonnet") as T;
+      if (command === "list_surfaces") return [surface] as T;
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  await f.store.refreshSurfaces(true);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet"]);
+
+  f.setMachine("m2");
+  await tick();
+  assert.deepEqual(f.store.catalogos(), {});
+
+  await f.store.readModels("claude");
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet"]);
+
+  f.setWorkspace("B");
+  await tick();
+  assert.deepEqual(f.store.catalogos(), {});
+  f.dispose();
+});

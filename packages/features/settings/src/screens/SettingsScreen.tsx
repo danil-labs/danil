@@ -64,6 +64,7 @@ export default function Settings(props: {
       engineWorkspaces: ws.lista() ?? [],
       groups: props.sesiones.sessionRailState()?.groups(),
       otherAccounts: webAccounts?.others(),
+      allowLocalFallback: !capabilities().nativeWindow,
     }),
   );
 
@@ -76,6 +77,7 @@ export default function Settings(props: {
       else webAccounts?.add?.(option.otherAccount.email);
       return;
     }
+    if (capabilities().nativeWindow && !option.context) return;
     void ws.cambiarA(option.id, option.context ?? undefined);
   }
 

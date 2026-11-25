@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { comandoDeTerminal as commandOf, sangrarTerminal as indent } from "../src/features/chat/terminalIndent.ts";
+import { comandoDeTerminal as commandOf, sangrarTerminal as indent } from "../../../packages/features/chat/src/model/terminalIndent.ts";
 
 test("teclear `!` deja el cursor después de la sangría", () => {
   assert.deepEqual(indent("", "!", 1, "insertText"), { text: "!\t", caret: 2 });

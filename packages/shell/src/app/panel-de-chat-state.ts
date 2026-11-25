@@ -57,7 +57,7 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
     // reservaría el hueco de la tarjeta y la caja quedaría encima de ella.
     const clavePanel = () => pp.sesion
       ?? (carpetaDelProyecto() ? llaveDeBorrador(project()) : "");
-    const [estadoDelTrabajo, { refetch: refreshWork }] = createTaskWork(() => pp.sesion
+    const [estadoDelTrabajo, { refetch: refreshWork }] = createTaskWork(() => pp.sesion && !esProvisional(pp.sesion)
       ? { project: proyectoDeLaCelda()?.id ?? "", id: pp.sesion }
       : undefined);
     const hasDelegation = createMemo(() => !!pp.sesion && (

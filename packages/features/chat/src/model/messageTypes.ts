@@ -22,6 +22,8 @@ export type Author = {
 /** Un bloque de lo que el agente pensó. No es su respuesta. */
 export type Razonamiento = {
   text: string;
+  /** Título breve opcional del razonamiento cuando el motor o un resumidor lo entrega. */
+  summary?: string;
   /** Cuánto duró, cuando el turno guardado lo trae. */
   durationMs?: number;
   /** El motor cortó el bloque por su tope. */

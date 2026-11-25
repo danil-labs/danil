@@ -39,7 +39,7 @@ export function edgeTransport(options: EdgeDeployment, request: typeof fetch = f
     const response = await request(`${options.origin}/v1/${path}`, {
       ...init,
       credentials: "include",
-      cache: "no-store",
+      cache: init.cache ?? "no-store",
       redirect: "error",
       signal: init.signal ? AbortSignal.any([init.signal, deadline]) : deadline,
       headers: withHeaders(init.headers, { Accept: "application/json" }, false),

@@ -1,5 +1,6 @@
 import { SignalDot } from "../../../ui/src/SignalDot";
 import { For, Show } from "solid-js";
+import { isNoMachines } from "../../../host/src/platform";
 import { t } from "../../../ui/src/lib/i18n";
 import { cn } from "../../../ui/src/lib/utils";
 import Plug from "lucide-solid/icons/plug";
@@ -121,7 +122,7 @@ export default function PuertosAbiertos(props: PuertosProps) {
               when={datos()?.tareas.length}
               fallback={
                 <p class="m-0 px-3 py-4 text-center text-xs text-neutral-500">
-                  {consultando() ? t("shell.ports.checking") : t("shell.ports.none")}
+                  {isNoMachines() ? t("shell.ports.no_machines") : consultando() ? t("shell.ports.checking") : t("shell.ports.none")}
                 </p>
               }
             >
@@ -165,6 +166,7 @@ export default function PuertosAbiertos(props: PuertosProps) {
               </For>
             </Show>
 
+            <Show when={!isNoMachines()}>
             <section class="border-t border-border">
               {/* Plegada por omisión: son decenas y no son accionables. Se abre
                   para contestar «¿quién tiene el 3000?», que es la pregunta que
@@ -205,6 +207,7 @@ export default function PuertosAbiertos(props: PuertosProps) {
                 </Show>
               </Show>
             </section>
+            </Show>
           </div>
         </Show>
       </PopoverContent>

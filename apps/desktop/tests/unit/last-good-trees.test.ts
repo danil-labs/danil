@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { siguienteLista } from "../../src/features/code/trees.ts";
+import { siguienteLista } from "../../../../packages/features/code/src/model/trees.ts";
 
 /**
  * **Un error transitorio no puede vaciar la lista de árboles.**
@@ -30,7 +30,7 @@ test("un fallo conserva lo último bueno", () => {
 
 
 test("Git conserva la última rama ante un error, pero una carpeta sin Git la retira", async () => {
-  const { retainGitObservation } = await import("../../src/features/projects/taskGit.ts");
+  const { retainGitObservation } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
   const row = { kind: "branch" as const, kn: null, repository: "repo", branch: "feature", alias: "vega-260910", head: "abc", shared_with: null,
     pull: { number: 2, state: "merged" as const, head_sha: "abc" }, pull_known: true, checked_at: 10, stale: false, has_remote: true, merged_locally: false };
   const previous = { task: row };
