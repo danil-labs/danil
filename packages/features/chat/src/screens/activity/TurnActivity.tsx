@@ -74,17 +74,19 @@ export function RegistroDeTrabajo(props: {
       aria-hidden="true"
     />
   );
-  const girando = () => <ActivityIndicator mode={!props.corriendo ? "finished" : presentation().animate ? "running" : "paused"} />;
+  // Parar sigue siendo el mismo tramo: si el indicador pasa a «terminó», la fila encoge antes del siguiente globo.
+  const sigue = () => props.corriendo || Boolean(props.stopping);
+  const girando = () => <ActivityIndicator mode={!sigue() ? "finished" : presentation().animate ? "running" : "paused"} />;
   const blocked = () => props.corriendo && !props.stopping && props.blocked;
   const caption = () => <Show when={!blocked()} fallback={props.status?.()}><ActivityCaption active={presentation().animate} thinking={genericThinking()} text={rotulo()} /></Show>;
-  const showHeader = () => inspectable() || props.corriendo;
+  const showHeader = () => inspectable() || sigue();
 
 
   // Sin envoltorio y con los datos de la derecha en un solo texto: cada
   // elemento de más se multiplica por los tramos del hilo (`open-task-cost`).
   return (
     <>
-      <span role="status" aria-live="polite" aria-atomic="true" class="sr-only">{props.corriendo && props.stopping ? t("chat.turn.stopping") : presentation().animate ? t("chat.turn.working_aria") : ""}</span>
+      <span role="status" aria-live="polite" aria-atomic="true" class="sr-only">{sigue() && props.stopping ? t("chat.turn.stopping") : presentation().animate ? t("chat.turn.working_aria") : ""}</span>
       <Show
         when={showHeader()}
         fallback={<Show when={duracion()}>{(text) => <p class={cn("m-0 py-0.5 text-ui font-normal text-neutral-500", !props.observed && "mb-1")} data-activity-label="">{text()}</p>}</Show>}

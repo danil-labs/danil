@@ -4,17 +4,19 @@ import { dragDropInPoints, getCurrentWebview, getCurrentWindow } from "../../../
 import { capabilities } from "../../../../host/src/platform";
 import { asFailure, prosaDe } from "../../../../ui/src/Failure";
 import type { createChatComposerState } from "./chat-composer-state";
+import { pareceImagen } from "./Attachments";
+import type { FormaDeCaja } from "../model/attachmentSlots";
 import { archivosDelNavegador } from "./chat-model";
 import type { ChatProps } from "./chat-props";
 import { open } from "@tauri-apps/plugin-dialog";
 import { createMemo, createSignal, onCleanup, onMount, type Accessor } from "solid-js";
 
 /** Lo que el bloque usa del cuerpo de Chat. */
-export type ChatAttachmentsDeps = { ancla: HTMLSpanElement | undefined; copiando: ReturnType<typeof createChatComposerState>["copiando"]; entrada: Accessor<string>; entradaActiva: () => boolean; forkeando: ReturnType<typeof createChatComposerState>["forkeando"]; hilo: ReturnType<typeof createChatComposerState>["hilo"]; listo: ReturnType<typeof createChatComposerState>["listo"]; puedeAdjuntar: () => boolean; setAttachmentFailure: ReturnType<typeof createChatComposerState>["setAttachmentFailure"]; setCopiado: ReturnType<typeof createChatComposerState>["setCopiado"]; setCopiando: ReturnType<typeof createChatComposerState>["setCopiando"]; setForkeando: ReturnType<typeof createChatComposerState>["setForkeando"]; setPreparingAttachments: ReturnType<typeof createChatComposerState>["setPreparingAttachments"]; setSoltando: ReturnType<typeof createChatComposerState>["setSoltando"]; teclearAlComando: (texto: string) => Promise<void> };
+export type ChatAttachmentsDeps = { ancla: HTMLSpanElement | undefined; copiando: ReturnType<typeof createChatComposerState>["copiando"]; entrada: Accessor<string>; entradaActiva: () => boolean; forkeando: ReturnType<typeof createChatComposerState>["forkeando"]; hilo: ReturnType<typeof createChatComposerState>["hilo"]; listo: ReturnType<typeof createChatComposerState>["listo"]; puedeAdjuntar: () => boolean; setAttachmentFailure: ReturnType<typeof createChatComposerState>["setAttachmentFailure"]; setCopiado: ReturnType<typeof createChatComposerState>["setCopiado"]; setCopiando: ReturnType<typeof createChatComposerState>["setCopiando"]; setForkeando: ReturnType<typeof createChatComposerState>["setForkeando"]; reservarCajas: ReturnType<typeof createChatComposerState>["reservarCajas"]; setSoltando: ReturnType<typeof createChatComposerState>["setSoltando"]; teclearAlComando: (texto: string) => Promise<void> };
 
 /** Movido tal cual de Chat.tsx (el componente `Chat`, tarea 2.6). Lo que usa del cuerpo de Chat llega por `deps`. */
 export function createChatAttachments(props: ChatProps, deps: ChatAttachmentsDeps) {
-  const { copiando, forkeando, hilo, listo, setAttachmentFailure, setCopiado, setCopiando, setForkeando, setPreparingAttachments, setSoltando } = deps;
+  const { copiando, forkeando, hilo, listo, setAttachmentFailure, setCopiado, setCopiando, setForkeando, reservarCajas, setSoltando } = deps;
   const entrada: ChatAttachmentsDeps["entrada"] = (...a) => deps.entrada(...a);
   const entradaActiva: ChatAttachmentsDeps["entradaActiva"] = (...a) => deps.entradaActiva(...a);
   const puedeAdjuntar: ChatAttachmentsDeps["puedeAdjuntar"] = (...a) => deps.puedeAdjuntar(...a);
@@ -117,17 +119,31 @@ export function createChatAttachments(props: ChatProps, deps: ChatAttachmentsDep
     onCleanup(() => void quitar.then((f) => f()));
   });
 
-  async function agregar(rutas: string[]) {
-    setPreparingAttachments((n) => n + 1);
+  function descartar(ordenes: number[]) {
+    if (!ordenes.length) return;
+    const mal = new Set(ordenes);
+    props.onAdjuntos(props.adjuntos.filter((_, i) => !mal.has(i)));
+  }
+
+  const formaDe = (ruta: string): FormaDeCaja => (pareceImagen(ruta) ? "imagen" : "archivo");
+
+  async function agregar(rutas: string[], contar = true): Promise<boolean> {
+    const nuevas = rutas.filter((p) => !props.adjuntos.includes(p));
+    // Un pegado ya reservó su caja: contarlo otra vez pintaría dos skeletons.
+    const reserva = contar && nuevas.length ? reservarCajas(nuevas.map(formaDe), props.adjuntos.length) : null;
     setAttachmentFailure(null);
     const conversation = props.conversacion;
+    let ok = false;
     try {
-      await props.onAgregarAdjuntos(rutas.filter((p) => !props.adjuntos.includes(p)));
+      await props.onAgregarAdjuntos(nuevas);
+      ok = true;
+      if (reserva && conversation === props.conversacion) descartar(reserva.ordenesCanceladas());
     } catch (e) {
       if (conversation === props.conversacion) setAttachmentFailure(asFailure(e));
     } finally {
-      setPreparingAttachments((n) => n - 1);
+      if (reserva) reserva.cerrar(ok ? reserva.ordenesCanceladas().length : nuevas.length);
     }
+    return ok;
   }
 
   async function pegar(e: ClipboardEvent) {
@@ -137,15 +153,18 @@ export function createChatAttachments(props: ChatProps, deps: ChatAttachmentsDep
     e.preventDefault();
     const conversation = props.conversacion;
     setAttachmentFailure(null);
-    setPreparingAttachments((n) => n + 1);
+    // La caja cuadrada entra en el mismo gesto, antes de leer los bytes.
+    const reserva = reservarCajas(["imagen"], props.adjuntos.length);
+    let ok = false;
     try {
       const datos = await base64De(img);
       const ruta = await props.onPegarImagen(img.type, datos);
-      await agregar([ruta]);
+      ok = await agregar([ruta], false);
+      if (ok && conversation === props.conversacion) descartar(reserva.ordenesCanceladas());
     } catch (err) {
       if (conversation === props.conversacion) setAttachmentFailure(asFailure(err));
     } finally {
-      setPreparingAttachments((n) => n - 1);
+      reserva.cerrar(ok ? reserva.ordenesCanceladas().length : 1);
     }
   }
 
@@ -158,7 +177,8 @@ export function createChatAttachments(props: ChatProps, deps: ChatAttachmentsDep
     pegar: props.onPegarImagen,
     agregar,
     fallo: setAttachmentFailure,
-    ocupado: (d) => setPreparingAttachments((n) => n + d),
+    reservar: (formas) => reservarCajas(formas, props.adjuntos.length),
+    descartar,
   });
 
 
