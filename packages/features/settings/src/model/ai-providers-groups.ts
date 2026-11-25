@@ -7,6 +7,7 @@
  */
 // Con extensión: este módulo se carga también desde `node --test`.
 import { isFreeRouterAgent } from "../../../../ui/src/lib/tasks/agents.ts";
+import { isDanilCreditsSurface } from "../../../../ui/src/lib/tasks/danil-services.ts";
 import type { Superficie } from "../../../../ui/src/lib/surfaces.ts";
 import type { Prosa } from "../../../../ui/src/lib/prose.ts";
 import { SUPPORTED_AGENTS } from "./ai-providers-view.ts";
@@ -36,7 +37,7 @@ export type EstadosPorProveedor = Readonly<Record<string, EstadoDeProveedor | un
 /** Las superficies del mismo proveedor comparten grupo; gratuitos, Danil Credits y Free Router quedan fuera. Orden de `list_surfaces`. */
 export function grupos(superficies: readonly Superficie[]): Superficie[][] {
   const vistos = new Map<string, Superficie[]>();
-  for (const s of superficies.filter((x) => x.catalogo !== "gratuitos" && x.id !== "danil-credits" && !isFreeRouterAgent(x.provider))) {
+  for (const s of superficies.filter((x) => x.catalogo !== "gratuitos" && !isDanilCreditsSurface(x.id) && !isFreeRouterAgent(x.provider))) {
     const grupo = vistos.get(s.provider);
     if (grupo) grupo.push(s);
     else vistos.set(s.provider, [s]);

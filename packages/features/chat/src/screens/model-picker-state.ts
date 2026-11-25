@@ -6,7 +6,7 @@ import { listAccounts, getAccountLimits } from "../queries";
 import type { Query } from "../../../../ui/src/lib/limits";
 import { modelPresentation, effortOptions, effortValue, esFavorito, favoritosDeModelos, seccionDeModelo, type GrupoDeModelos, type OpcionDeModelo } from "../../../../ui/src/lib/models";
 import { createPref } from "../../../../session/src/prefs";
-import { danilCreditsTierLabel } from "../../../../ui/src/lib/tasks/index.ts";
+import { DANIL_CREDITS_CLAUDE_SURFACE, danilCreditsTierLabel } from "../../../../ui/src/lib/tasks/index.ts";
 import { DANIL_CREDITS, isDanilCreditsModel } from "../model/danil-credits";
 import { esServicio, nombreDeServicio, gruposDeModelos, nombreDeNivel, type SelectorDeModeloProps } from "../components/model-picker-types";
 
@@ -35,14 +35,35 @@ export function createSelectorDeModelo(props: SelectorDeModeloProps, deps: { cam
   const disponible = (opcion: OpcionDeModelo) => opcion.usable && !bloqueado(opcion);
   const creditsModels = () =>
     props.models.filter((option) => isDanilCreditsModel(option.model.id));
+  const preferCredits = (a: OpcionDeModelo, b: OpcionDeModelo) => {
+    const aAvail = disponible(a);
+    const bAvail = disponible(b);
+    if (aAvail !== bAvail) return aAvail ? a : b;
+    const currentSurface = elegido()?.superficie;
+    if (currentSurface && a.superficie !== b.superficie) {
+      if (a.superficie === currentSurface) return a;
+      if (b.superficie === currentSurface) return b;
+    }
+    if (a.superficie === DANIL_CREDITS_CLAUDE_SURFACE) return a;
+    if (b.superficie === DANIL_CREDITS_CLAUDE_SURFACE) return b;
+    return a;
+  };
+  const creditsByTier = () => {
+    const byId = new Map<string, OpcionDeModelo>();
+    for (const option of creditsModels()) {
+      const prev = byId.get(option.model.id);
+      byId.set(option.model.id, prev ? preferCredits(prev, option) : option);
+    }
+    return byId;
+  };
   const creditsModel = () => {
-    const credits = creditsModels();
     const current = elegido();
     if (current && isDanilCreditsModel(current.model.id)) return current;
+    const preferred = [...creditsByTier().values()];
     return (
-      credits.find((option) => option.model.id === DANIL_CREDITS.modelId && disponible(option)) ??
-      credits.find(disponible) ??
-      credits[0]
+      preferred.find((option) => option.model.id === DANIL_CREDITS.modelId && disponible(option)) ??
+      preferred.find(disponible) ??
+      preferred[0]
     );
   };
   const routerModel = () => {
@@ -55,7 +76,7 @@ export function createSelectorDeModelo(props: SelectorDeModeloProps, deps: { cam
     onUse: () => { if (opcion) elegir(opcion.key); },
   });
   const creditsTiers = () => {
-    const byId = new Map(creditsModels().map((option) => [option.model.id, option]));
+    const byId = creditsByTier();
     return DANIL_CREDITS.tiers
       .map((tierId) => byId.get(tierId))
       .filter((option): option is OpcionDeModelo => !!option)

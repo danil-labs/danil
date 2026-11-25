@@ -1,7 +1,7 @@
 import { modelPresentation, providerMark } from "./tasks/model-presentation.ts";
 export { modelPresentation, providerMark };
 import { canonicalAgentId, isFreeRouterAgent, OPENCODE } from "./tasks/agents.ts";
-import { isDanilCreditsModel } from "./tasks/danil-services.ts";
+import { isDanilCreditsModel, isDanilCreditsSurface } from "./tasks/danil-services.ts";
 import { t } from "./i18n.ts";
 import type { AgentModels, ModelOption } from "./model";
 import { esDe, marcaDeSuperficie, type Superficie } from "./surfaces.ts";
@@ -51,11 +51,11 @@ export function proveedorDe(
   if (isFreeRouterAgent(superficie.provider) || superficie.catalogo === "gratuitos") {
     return { id: "opencode-free", label: t("surfaces.label.free"), logo: marcaDeSuperficie(superficie) };
   }
+  if (isDanilCreditsSurface(superficie.id) || (canonicalAgentId(superficie.provider) === OPENCODE && isDanilCreditsModel(model.id))) {
+    return { id: "danil-credits", label: t("chat.credits.label"), logo: "danil" };
+  }
   // Una máquina con un motor anterior todavía publica `opencode-zen`.
   if (canonicalAgentId(superficie.provider) === OPENCODE) {
-    if (isDanilCreditsModel(model.id)) {
-      return { id: "danil-credits", label: t("chat.credits.label"), logo: "danil" };
-    }
     if (model.id.startsWith("opencode-go/")) {
       return { id: "opencode-go", label: "OpenCode Go", logo: "opencode" };
     }
