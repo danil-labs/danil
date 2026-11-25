@@ -11,7 +11,6 @@ import { createWorkspaces } from "../../../features/settings/src/queries/workspa
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions";
 import { type SearchFilter } from "../shell/GlobalSearch";
 import type { Frase } from "../../../ui/src/lib/prose";
-import type { SidebarFilterProps } from "../shell/SidebarFilter";
 
 export type SpacesStateDeps = { bloqueo: Accessor<Frase | null>; pestanas: ReturnType<typeof createTabs>; projectCatalog: { fromCache: (projects: Project[]) => void }; projectList: Accessor<Project[]>; proyectoAbierto: Accessor<string | null>; sesiones: Accessor<Record<string, SessionRow[]>>; setError: (msg: string) => void; setSesiones: Setter<Record<string, SessionRow[]>>; workspaceActivo: Accessor<string | null>; onCatalogSync?: () => void; };
 
@@ -33,7 +32,6 @@ export function createSpacesState(deps: SpacesStateDeps) {
   const spaces = createMemo(() => spaceCatalog.arrange(rawSpaces(), localOrder));
   const sesiones = createMemo(() => spaceCatalog.projectSessions(rawSesiones()));
   const [escritorio, setEscritorio] = createSignal<string | null>(null);
-  const [sidebarFilter, setSidebarFilter] = createSignal<SidebarFilterProps | null>(null);
   // El nombre del workspace abierto rotula el menú de espacios de la franja.
   const workspacesDeLaFranja = createWorkspaces();
   const workspaceActual = () => workspacesDeLaFranja.actual();
@@ -111,5 +109,5 @@ export function createSpacesState(deps: SpacesStateDeps) {
     pestanas.open().filter(isContentTab).map((p) => p.id),
   );
 
-  return { activeSpace, bordeDeLaBarra, buscando, enCache, escritorio, guardarCache, idsDeContenido, medirBordeDeLaBarra, multipleSpaces, pestanaActiva, rawSpaces, sesiones, setBuscando, setEnCache, setEscritorio, setSidebarFilter, setSpaces, shellCache, sidebarFilter, spaceCatalog, spaceOrder, spaces, workspaceActual, workspacesDeLaFranja };
+  return { activeSpace, bordeDeLaBarra, buscando, enCache, escritorio, guardarCache, idsDeContenido, medirBordeDeLaBarra, multipleSpaces, pestanaActiva, rawSpaces, sesiones, setBuscando, setEnCache, setEscritorio, setSpaces, shellCache, spaceCatalog, spaceOrder, spaces, workspaceActual, workspacesDeLaFranja };
 }

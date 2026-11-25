@@ -173,6 +173,7 @@ const steps = [
   ["The agents dock sorts by state and fits in one row", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/agent-dock.test.ts")], root],
   ["The sidebar joins tasks from all folders without repeating them", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/sidebar-tasks.test.ts")], root],
   ["The sidebar filters by folder and agent and splits into sections or groups", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/sidebar-view.test.ts")], root],
+  ["The left rail layout orders, toggles, collapses and adopts plugin sections without losing user preferences", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/rail-layout.test.ts")], root],
   ["The viewer keeps navigation and rejects retired channels", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/artifact-viewer.test.ts"), join(root, "tests/unit/artifact-download.test.ts")], root],
   ["The window lets no material out", process.execPath, [join(root, "scripts/guards/csp.mjs")], root],
   ["The terminal theme does not repaint the chrome", process.execPath, [join(root, "scripts/guards/terminal-themes.mjs")], root],

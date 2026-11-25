@@ -593,5 +593,17 @@
   "shell.agent_dock.page": "Página {current} de {total}",
   "shell.agent_dock.filter": "Filtrar agentes por origen",
   "shell.agent_dock.filter_empty": "Sin agentes de este origen.",
-  "shell.agent_dock.level_working": "{level} · {count} trabajando: {names}"
+  "shell.agent_dock.level_working": "{level} · {count} trabajando: {names}",
+  "shell.sidebar.rail.collapse_section": "Plegar «{name}»",
+  "shell.sidebar.rail.expand_section": "Desplegar «{name}»",
+  "shell.rail_organizer.title": "Organizar barra lateral",
+  "shell.rail_organizer.sections": "Secciones de la barra lateral",
+  "shell.rail_organizer.reset": "Restablecer",
+  "shell.rail_organizer.show": "Mostrar «{name}»",
+  "shell.rail_organizer.hide": "Ocultar «{name}»",
+  "shell.rail_organizer.move_up": "Subir «{name}»",
+  "shell.rail_organizer.move_down": "Bajar «{name}»",
+  "shell.rail_organizer.plugin_badge": "Plugin",
+  "shell.rail_organizer.all_hidden": "Todas las secciones están ocultas.",
+  "shell.rail_organizer.show_all": "Mostrar secciones"
 }
