@@ -64,7 +64,7 @@ export default function TaskLocation(props: TaskLocationProps) {
       data-task-location=""
       data-task-location-on={props.on ? "true" : "false"}
       aria-label={t("chat.location.label")}
-      class="relative z-10 flex h-full min-w-0 flex-1 items-center gap-px px-2.5 text-ui text-neutral-500"
+      class="relative z-10 flex min-w-0 shrink-0 items-center gap-px px-3.5 pt-2 text-ui text-neutral-500"
     >
       <Pista
         class={cn("max-w-[40%] shrink", !props.on && "opacity-65", !nombre() && "hidden")}

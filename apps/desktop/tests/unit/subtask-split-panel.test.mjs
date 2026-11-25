@@ -33,25 +33,25 @@ test("subtask split panel renders side-by-side live thread with two aligned comp
     assert.ok(await until(() => doc.querySelector('[data-add-project]')));
     assert.ok(doc.querySelector('[data-add-project]').textContent.includes("Nuevo proyecto"), "el botón de proyecto dice Nuevo proyecto");
 
-    // 2. Open parent task and verify unified 38px top bar containing both location and toolbar buttons
+    // 2. Open parent task and verify fixed Danil top bar (location + floating toolbar buttons)
     assert.ok(await until(() => doc.querySelector('[data-sesion="parent"]')));
     await openTask(app, "parent");
     assert.ok(await until(() => doc.querySelector('[data-task-bar]')));
     const taskBar = doc.querySelector('[data-task-bar]');
-    assert.ok(taskBar.className.includes("h-[38px]"), "la barra superior usa 38 px");
+    assert.ok(taskBar.className.includes("h-[38px]"), "la barra superior conserva 38 px");
     assert.ok(taskBar.querySelector('[data-task-location]'), "TaskLocation vive dentro de data-task-bar");
-    assert.ok(await until(() => taskBar.querySelector('[data-delegated-trigger="toolbar"]')));
-    const delegatedBtn = taskBar.querySelector('[data-delegated-trigger="toolbar"]');
-    assert.ok(delegatedBtn, "el botón de subtareas vive en la misma barra superior que la ubicación");
+    assert.ok(await until(() => doc.querySelector('[data-delegated-trigger="toolbar"]')));
+    const delegatedBtn = doc.querySelector('[data-delegated-trigger="toolbar"]');
+    assert.ok(delegatedBtn, "los botones superiores siguen fijos en su barra original");
 
-    // 3. Open dedicated Subtasks panel and verify full-height split border
+    // 3. Open Subtasks panel -> floating Danil card (pb-3 aligned with composer), NOT splitting yet
     delegatedBtn.click();
     assert.ok(await until(() => doc.querySelector('[data-task-panel="subtasks"]')));
     const subtasksPanel = doc.querySelector('[data-task-panel="subtasks"]');
-    assert.ok(subtasksPanel.className.includes("border-l"), "el panel de subtareas usa división vertical");
-    assert.ok(!subtasksPanel.className.includes("rounded-lg"), "el panel no es tarjeta flotante desalineada");
+    assert.equal(subtasksPanel.getAttribute("data-task-layout"), "floating", "la lista de subtareas abre como panel flotante");
+    assert.ok(subtasksPanel.className.includes("rounded-lg"), "el panel flotante conserva la tarjeta nativa de Danil");
 
-    // 4. Switch to "Todas" and click the subtask -> opens live split thread beside main chat
+    // 4. Switch to "Todas" and click the subtask -> ONLY NOW splits with vertical line below the untouched top bar
     assert.ok(await until(() => [...subtasksPanel.querySelectorAll("button")].find((b) => b.textContent === "Todas")));
     [...subtasksPanel.querySelectorAll("button")].find((b) => b.textContent === "Todas").click();
     assert.ok(await until(() => subtasksPanel.querySelector('[data-delegated-list] [data-sesion="sub-1"]')));
@@ -59,8 +59,8 @@ test("subtask split panel renders side-by-side live thread with two aligned comp
 
     assert.ok(await until(() => doc.querySelector('[data-subtask-thread="sub-1"]')));
     const splitThread = doc.querySelector('[data-subtask-thread="sub-1"]');
-    const subtaskBar = splitThread.querySelector('[data-subtask-bar]');
-    assert.ok(subtaskBar?.className.includes("h-[38px]"), "la cabecera de la subtarea mide exactamente 38 px igual que la barra principal");
+    assert.equal(doc.querySelector('[data-task-panel="subtasks"]')?.getAttribute("data-task-layout"), "split-thread", "al picar una subtarea se divide en dos columnas");
+    assert.ok(doc.querySelector('[data-task-panel="subtasks"]')?.className.includes("border-l"), "línea vertical separa ambas conversaciones");
     assert.ok(await until(() => splitThread.textContent.includes("El repo vive en danil-labs.")), "el hilo de la subtarea carga su conversación");
     assert.ok(doc.body.textContent.includes("Ya quede ubicado."), "el hilo principal sigue visible al lado");
 
@@ -85,16 +85,22 @@ test("subtask split panel renders side-by-side live thread with two aligned comp
       `enviar desde el composer derecho manda directamente a la subtarea (enviados=${JSON.stringify(sent)})`);
     assert.equal(mainTextarea.value, "mensaje principal", "el borrador principal no se toca al enviar en la subtarea");
 
-    // 6. Switching to Files panel hides Subtasks, and switching back restores the open subtask thread
-    const filesBtn = taskBar.querySelector('button[aria-label="Archivos de la tarea"]');
+    // 6. Opening Files replaces the conversation area ("replace"), Search opens as floating ("floating"), and returning to Subtasks restores the split thread
+    const filesBtn = doc.querySelector('button[aria-label="Archivos de la tarea"]');
     filesBtn.click();
-    assert.ok(await until(() => doc.querySelector('[data-task-panel="files-search"]')), "el panel de archivos/buscador es propio");
+    assert.ok(await until(() => doc.querySelector('[data-task-panel="files-search"]')?.getAttribute("data-task-layout") === "replace"),
+      "el panel de archivos se abre en lugar del hilo de la conversación");
+    const searchBtn = doc.querySelector('button[aria-label="Buscar en esta tarea"]');
+    searchBtn.click();
+    assert.ok(await until(() => doc.querySelector('[data-task-panel="files-search"]')?.getAttribute("data-task-layout") === "floating"),
+      "el buscador abre como panel flotante");
     delegatedBtn.click();
     assert.ok(await until(() => doc.querySelector('[data-subtask-thread="sub-1"]')), "volver a subtareas recuerda la subtarea abierta");
 
-    // 7. Clicking Overview returns to subtask list
+    // 7. Clicking Overview returns to floating subtask list
     doc.querySelector('[data-subtask-overview]').click();
-    assert.ok(await until(() => doc.querySelector('[data-delegated-list]')), "Overview regresa al listado de subtareas");
+    assert.ok(await until(() => doc.querySelector('[data-delegated-list]')), "Overview regresa al listado flotante de subtareas");
+    assert.equal(doc.querySelector('[data-task-panel="subtasks"]')?.getAttribute("data-task-layout"), "floating");
 
     assert.deepEqual(app.failures, []);
   } finally {

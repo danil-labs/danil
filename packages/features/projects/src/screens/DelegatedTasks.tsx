@@ -3,7 +3,7 @@ import GitBranch from "lucide-solid/icons/git-branch";
 import X from "lucide-solid/icons/x";
 import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
-import { LOCATION_BAR } from "../../../../host/src/window";
+import { HEADER_HEIGHT } from "../../../../host/src/window";
 import type { SenderTask } from "../../../../ui/src/lib/recipients";
 import { Button } from "../../../../ui/src/Button";
 import { asFailure, FailureNote } from "../../../../ui/src/Failure";
@@ -118,7 +118,7 @@ export function DelegatedPanel(props: {
   // «Activas» son solo las que te necesitan o siguen trabajando, sin sus madres de contexto.
   const shown = () => all() ? rows() : active();
   return <>
-    <div class={cn("flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-2.5", LOCATION_BAR)} aria-label={t("chat.delegation.heading")}>
+    <div class={cn("flex shrink-0 items-center justify-between gap-2 border-b border-border px-2", HEADER_HEIGHT)} aria-label={t("chat.delegation.heading")}>
       <span class="min-w-0 truncate text-xs font-medium">{t("chat.delegation.total", { count: rows().length })}</span>
       <div class="flex shrink-0 items-center gap-1" role="group" aria-label={t("chat.delegation.filter")}>
         <Button size="sm" variant="ghost" class="h-6 px-2 text-xs aria-pressed:bg-surface-muted aria-pressed:text-neutral-950" aria-pressed={!all()} onClick={() => setAll(false)}>{t("chat.delegation.activity")}</Button>
