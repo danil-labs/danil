@@ -22,11 +22,17 @@ import { For,  Show, Suspense, createEffect, createMemo, createSignal, type Acce
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type CeldasDeTareasDeps = { PanelDeChat: (pp: { sesion: string | null; proyecto?: string | null; soloLectura?: boolean; }) => JSX.Element; agent: Accessor<string>; anchoDeArchivos: Accessor<number>; anchoDelArbol: Accessor<number>; archivoBorrado: (session: string, arbol: string, ruta: string) => void; archivoMovido: (session: string, arbol: string, desde: string, hasta: string) => void; archivosDeTarea: { panel: (task: string) => TaskFilesPanel; setOpen: (task: string, open: boolean) => void; present: (task: string, mode: TaskSideMode) => void; toggle: (task: string) => void; setExpanded: (task: string, expanded: boolean) => void; setTree: (task: string, tree: boolean) => void; setSide: (task: string, side: TaskFilesSide) => void; open: (task: string, file: { tree: string; path: string; changes: boolean; changed?: boolean; pinned?: boolean; }) => void; pin: (task: string, id: string) => void; activate: (task: string, id: string) => void; setDirty: (task: string, id: string, dirty: boolean) => void; close: (task: string, ids: string[]) => string[]; renamed: (task: string, tree: string, from: string, to: string) => void; removed: (task: string, tree: string, path: string) => void; dirtyOf: (task: string) => string[]; forget: (task: string) => void; }; arrastrando: Accessor<string | null>; celdaDe: (id: string) => { "grid-column": string; "grid-row": string; } | undefined; compacta: Accessor<boolean>; consumo: ReturnType<typeof createUsage>; cursor: Accessor<DragPoint | null>; delegatedPanels: Accessor<Map<string, () => DelegatedPanelModel>>; donde: () => { folder: string | undefined; sitio: { col: number; fila: number; }; indice: number; zone?: undefined; } | { folder: string | undefined; sitio: { col: number; fila: number; }; zone: PanelSide | "center"; indice?: undefined; } | { sitio: SitioDePanel; indice: undefined; zone: undefined; folder: string; } | null; dropSide: () => PanelSide | null; editorDeletionLocked: (id: string) => boolean; estiloDeLaCelda: (sitio: SitioDePanel | null) => { "grid-column": string; "grid-row": string; } | undefined; exportarChat: (id: string, proyecto: string) => Promise<void>; filaDe: (id: string) => SessionRow | undefined; llevaTiraInterior: (sitio: SitioDePanel | null | undefined) => boolean; mandarVentana: (sitio: SitioDePanel) => void; montadas: Accessor<Set<string>>; paneles: { columns: Accessor<PanelGroup[][]>; widths: Accessor<number[]>; heights: Accessor<number[]>; rowCount: () => number; activeSite: Accessor<SitioDePanel>; sites: () => SitioDePanel[]; siteOf: (id: string) => SitioDePanel | null; groupAt: (site: SitioDePanel) => PanelGroup | null; groupCount: () => number; rowsPerColumn: () => number[]; isSplit: () => boolean; canSplit: () => boolean; tabsAt: (site: SitioDePanel) => string[]; activeTabAt: (site: SitioDePanel) => string | null; isVisible: (id: string) => boolean; focus(site: SitioDePanel): void; showDraft(): void; activate(id: string): void; renameTabs(pairs: [string, string][]): void; placeLikeStrip(ids: string[], strip: string[]): void; sync(ids: string[]): boolean; close(id: string): string | null; move: (id: string, a: SitioDePanel, index?: number) => boolean; split: (id: string) => boolean; canSplitAt: (id: string, reference: SitioDePanel, side: PanelSide, unplaced?: boolean) => boolean; splitAt: (id: string, reference: SitioDePanel, side: PanelSide) => boolean; join: () => boolean; resizeColumns(i: number, a: number, b: number): void; resizeRows(i: number, a: number, b: number): void; layout: () => Layout; restore(layout: Layout | null, live: readonly string[]): void; bindTo(workspace: string | null, space: string | null): void; reset(): void; }; proyectoDePestana: (id: string) => string; searchSurfaces: Accessor<Map<string, SearchSurface>>; setSettings: Setter<string | null>; tapadoPorElProyecto: (sitio: SitioDePanel | null | undefined) => boolean; tareasEnVentanas: Accessor<(Pick<TaskTab, "id" | "session"> & { workspace: string | null; })[]>; tituloDePestana: (id: string) => string; workspaceActivo: Accessor<string | null> };
+export type CeldasDeTareasDeps = { PanelDeChat: (pp: { sesion: string | null; proyecto?: string | null; soloLectura?: boolean; }) => JSX.Element; agent: Accessor<string>; anchoDeArchivos: Accessor<number>; anchoDelArbol: Accessor<number>; archivoBorrado: (session: string, arbol: string, ruta: string) => void; archivoMovido: (session: string, arbol: string, desde: string, hasta: string) => void; archivosDeTarea: { panel: (task: string) => TaskFilesPanel; setOpen: (task: string, open: boolean) => void; present: (task: string, mode: TaskSideMode) => void; toggle: (task: string) => void; setExpanded: (task: string, expanded: boolean) => void; setTree: (task: string, tree: boolean) => void; setSide: (task: string, side: TaskFilesSide) => void; open: (task: string, file: { tree: string; path: string; changes: boolean; changed?: boolean; pinned?: boolean; }) => void; pin: (task: string, id: string) => void; activate: (task: string, id: string) => void; setDirty: (task: string, id: string, dirty: boolean) => void; close: (task: string, ids: string[]) => string[]; renamed: (task: string, tree: string, from: string, to: string) => void; removed: (task: string, tree: string, path: string) => void; dirtyOf: (task: string) => string[]; forget: (task: string) => void; }; arrastrando: Accessor<string | null>; celdaDe: (id: string) => { "grid-column": string; "grid-row": string; } | undefined; compacta: Accessor<boolean>; consumo: ReturnType<typeof createUsage>; cursor: Accessor<DragPoint | null>; delegatedPanels: Accessor<Map<string, () => DelegatedPanelModel>>; donde: () => { folder: string | undefined; sitio: { col: number; fila: number; }; indice: number; zone?: undefined; } | { folder: string | undefined; sitio: { col: number; fila: number; }; zone: PanelSide | "center"; indice?: undefined; } | { sitio: SitioDePanel; indice: undefined; zone: undefined; folder: string; } | null; dropSide: () => PanelSide | null; editorDeletionLocked: (id: string) => boolean; estiloDeLaCelda: (sitio: SitioDePanel | null) => { "grid-column": string; "grid-row": string; } | undefined; exportarChat: (id: string, proyecto: string) => Promise<void>; filaDe: (id: string) => SessionRow | undefined; llevaTiraInterior: (sitio: SitioDePanel | null | undefined) => boolean; mandarVentana: (sitio: SitioDePanel) => void; montadas: Accessor<Set<string>>; paneles: { columns: Accessor<PanelGroup[][]>; widths: Accessor<number[]>; heights: Accessor<number[]>; rowCount: () => number; activeSite: Accessor<SitioDePanel>; sites: () => SitioDePanel[]; siteOf: (id: string) => SitioDePanel | null; groupAt: (site: SitioDePanel) => PanelGroup | null; groupCount: () => number; rowsPerColumn: () => number[]; isSplit: () => boolean; canSplit: () => boolean; tabsAt: (site: SitioDePanel) => string[]; activeTabAt: (site: SitioDePanel) => string | null; isVisible: (id: string) => boolean; focus(site: SitioDePanel): void; showDraft(): void; activate(id: string): void; renameTabs(pairs: [string, string][]): void; placeLikeStrip(ids: string[], strip: string[]): void; sync(ids: string[]): boolean; close(id: string): string | null; move: (id: string, a: SitioDePanel, index?: number) => boolean; split: (id: string) => boolean; canSplitAt: (id: string, reference: SitioDePanel, side: PanelSide, unplaced?: boolean) => boolean; splitAt: (id: string, reference: SitioDePanel, side: PanelSide) => boolean; join: () => boolean; resizeColumns(i: number, a: number, b: number): void; resizeRows(i: number, a: number, b: number): void; layout: () => Layout; restore(layout: Layout | null, live: readonly string[]): void; bindTo(workspace: string | null, space: string | null): void; reset(): void; }; proyectoDePestana: (id: string) => string; searchSurfaces: Accessor<Map<string, SearchSurface>>; setSettings: Setter<string | null>; tapadoPorElProyecto: (sitio: SitioDePanel | null | undefined) => boolean; tareasEnVentanas: Accessor<(Pick<TaskTab, "id" | "session" | "mountKey"> & { workspace: string | null; })[]>; tituloDePestana: (id: string) => string; workspaceActivo: Accessor<string | null> };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2292–2523, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createCeldasDeTareas(deps: CeldasDeTareasDeps) {
   const { PanelDeChat, agent, anchoDeArchivos, anchoDelArbol, archivoBorrado, archivoMovido, archivosDeTarea, arrastrando, celdaDe, compacta, consumo, cursor, delegatedPanels, donde, dropSide, editorDeletionLocked, estiloDeLaCelda, exportarChat, filaDe, llevaTiraInterior, mandarVentana, montadas, paneles, proyectoDePestana, searchSurfaces, setSettings, tapadoPorElProyecto, tareasEnVentanas, tituloDePestana, workspaceActivo } = deps;
+  const clavesDeTareas = createMemo(
+    () => tareasEnVentanas().map((p) => p.mountKey ?? p.id),
+    [],
+    { equals: (a, b) => a.length === b.length && a.every((k, i) => k === b[i]) },
+  );
+  const tareaPorClave = (clave: string) => tareasEnVentanas().find((p) => (p.mountKey ?? p.id) === clave);
   const CeldasDeTareas = () => (
     <>
 
@@ -45,20 +51,15 @@ export function createCeldasDeTareas(deps: CeldasDeTareasDeps) {
         side={dropSide()}
       />
 
-      {/* Una conversación por tarea abierta, no por ventana: la clave es la
-          tarea. Arrastrarla a otra ventana solo le cambia la celda —no se
-          desmonta, no se vuelve a pedir el hilo, no se pierde lo escrito sin
-          mandar. Con una por ventana, arrastrar costaría las tres cosas. */}
-
-      {/* Se lee y no se escribe salvo en la activa (`PanelDeChat` ·
-          `soloLectura`): la caja de escritura es una sola y vive donde está
-          el mando, evitando que dos cajas manden con el agente y el modelo
-          que eligió una (`lib/panels.ts`). */}
-      <For each={tareasEnVentanas()}>
-        {(p) => {
-          const sitio = () => paneles.siteOf(p.id);
+      {/* Una conversación por tarea abierta, con clave estable al promover de
+          provisional a id real: así no se desmonta el composer al nacer la tarea. */}
+      <For each={clavesDeTareas()}>
+        {(clave) => {
+          const id = () => tareaPorClave(clave)?.id ?? clave;
+          const session = () => tareaPorClave(clave)?.session ?? clave;
+          const sitio = () => paneles.siteOf(id());
           /** Se ve si su ventana la tiene delante y esa ventana se pinta. */
-          const celda = () => celdaDe(p.id);
+          const celda = () => celdaDe(id());
           const placement = createMemo<ReturnType<typeof celda>>(previous => celda() ?? previous);
           const manda = () => sameSite(sitio(), paneles.activeSite())
             && celda() !== undefined && !tapadoPorElProyecto(sitio());
@@ -78,10 +79,10 @@ export function createCeldasDeTareas(deps: CeldasDeTareasDeps) {
                 if (d) mandarVentana(d);
               }}
             >
-              <Show when={montadas().has(p.id)}>
+              <Show when={montadas().has(id())}>
                 <PanelDeChat
-                  sesion={p.session}
-                  proyecto={proyectoDePestana(p.id)}
+                  sesion={session()}
+                  proyecto={proyectoDePestana(id())}
                   soloLectura={!manda()}
                 />
               </Show>

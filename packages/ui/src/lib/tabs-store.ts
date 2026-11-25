@@ -47,7 +47,10 @@ export function createTabs(options: { transient?: boolean } = {}) {
     if (!workspace) return;
     // Los ids provisionales no existen en disco y no pueden restaurarse al arrancar.
     const activeTask = taskOf(active());
-    const abiertas = openTabs().filter(isTaskTab).filter((p) => !esProvisional(p.session));
+    const abiertas = openTabs()
+      .filter(isTaskTab)
+      .filter((p) => !esProvisional(p.session))
+      .map(({ clase, id, project, session, titulo }) => ({ clase, id, project, session, titulo }));
     const g: StoredTabs = {
       abiertas,
       activa: activeTask && !esProvisional(activeTask) ? activeTask : null,
@@ -169,7 +172,7 @@ export function createTabs(options: { transient?: boolean } = {}) {
       return g.activa;
     },
     ensure(p: { id: string; project: string; titulo: string }) {
-      const next: TaskTab = { ...p, clase: "tarea", session: p.id };
+      const next: TaskTab = { ...p, clase: "tarea", session: p.id, mountKey: p.id };
       setOpenTabs((list) => {
         const i = list.findIndex((x) => x.id === p.id);
         if (i < 0) return [...list, next];
@@ -181,7 +184,7 @@ export function createTabs(options: { transient?: boolean } = {}) {
         )
           return list;
         const copy = [...list];
-        copy[i] = { ...next, titulo: p.titulo || (current as TaskTab).titulo };
+        copy[i] = { ...next, mountKey: isTaskTab(current) ? (current.mountKey ?? current.id) : p.id, titulo: p.titulo || (current as TaskTab).titulo };
         return copy;
       });
       if (!options.transient || openTabs().some((x) => x.session === p.id && isPinned(x.id))) pin(p.id);
@@ -193,8 +196,10 @@ export function createTabs(options: { transient?: boolean } = {}) {
         setOpenTabs((list) => {
           const i = list.findIndex((x) => x.id === draft);
           if (i < 0) return list;
+          const current = list[i];
+          const mountKey = isTaskTab(current) ? (current.mountKey ?? draft) : draft;
           const copy = [...list];
-          copy[i] = { ...p, clase: "tarea", session: p.id };
+          copy[i] = { ...p, clase: "tarea", session: p.id, mountKey };
           return copy;
         });
         remapPinned([[draft, p.id]]);

@@ -8,6 +8,8 @@ export type TaskTab = CommonTab & {
   clase: "tarea";
   // El historial puede llegar después del primer render; mientras tanto se usa el título guardado.
   titulo: string;
+  /** Identidad estable de montaje en memoria: se conserva al promover de provisional a id real. */
+  mountKey?: string;
 };
 
 export type FileTab = CommonTab & {

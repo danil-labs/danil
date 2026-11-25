@@ -212,8 +212,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
     taskWritable: id => {
       revision();
       const context = scope.current()?.context;
-      const task = unwrap(id, fleet.remotes(context));
-      return !!task && remoteGuests.canContinue(fleet, task.machine, context);
+      const remotes = fleet.remotes(context);
+      const task = unwrap(id, remotes);
+      if (!task) return !settled() || remotes.size === 0;
+      return remoteGuests.canContinue(fleet, task.machine, context);
     },
     taskMachine: id => unwrap(id, fleet.remotes(scope.current()?.context))?.machine ?? null,
     windowMachine: () => { const id = active.createsOn(null)?.machine; return id ? { id, name: fleet.name(id, scope.current()?.context), local: false } : undefined; },

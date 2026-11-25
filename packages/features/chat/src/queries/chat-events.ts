@@ -36,8 +36,8 @@ export function createChatEvents(deps: ChatEventsDeps) {
         author: firmas[session] ?? firmas[""] ?? null,
         model: modelosEnVivo[session] ?? modelosEnVivo[""] ?? null,
       });
-      // Lo que no es texto se ordena detrás de los fragmentos que llegaron antes.
-      if (kind !== "delta") threads.flush();
+      // Lo que no es texto ni razonamiento se ordena detrás de los fragmentos que llegaron antes.
+      if (kind !== "delta" && kind !== "reasoning") threads.flush();
       // Que un turno terminó se apunta ANTES del filtro de abajo: es la mitad
       // que hace posible trabajar en dos tareas. El filtro descarta lo que no
       // se está mirando, correcto para pintar, pero el cierre no es pintura:
@@ -46,7 +46,7 @@ export function createChatEvents(deps: ChatEventsDeps) {
       // corriendo detrás.
       if (kind === "done") {
         turnClosed(session);
-        threads.finishActivity(session, workspace || workspaceActivo());
+        threads.finishActivity(session, workspace || workspaceActivo(), ok === false ? "failed" : "done");
         setEnFondo((ids) => ids.filter((id) => id !== session));
         if (!esDelWorkspaceAbierto(workspace)) {
           advanceTurn(session);

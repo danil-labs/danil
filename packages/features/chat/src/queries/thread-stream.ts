@@ -133,12 +133,12 @@ export function createThreadStream(deps: ThreadStreamDeps) {
       setDesdeDeTurno((d) => (id in d || desde === undefined ? d : { ...d, [id]: desde }));
       threads.beginActivity(id, desdeDeTurno()[id] ?? null, startConfirmed);
     });
-  const marcarQuieta = (id: string) =>
+  const marcarQuieta = (id: string, outcome: "done" | "failed" | "interrupted" = "done") =>
     batch(() => {
       const workspace = workspaceActivo();
       if (workspace) liveThreads.delete(liveThreadKey(workspace, id));
       enviarFiltro();
-      threads.finishActivity(id);
+      threads.finishActivity(id, undefined, outcome);
       setVivas((v) => v.filter((x) => x !== id));
       setDesdeDeTurno((d) => {
         if (!(id in d)) return d;

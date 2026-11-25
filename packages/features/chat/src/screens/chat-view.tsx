@@ -84,48 +84,34 @@ export default function Chat(props: ChatProps) {
         )}
       </Show>
 
-    {/* El esqueleto se pinta contra la caja (`justify-end`), donde va a
-        estar el final del hilo: lo que se sustituye ocupa el mismo sitio.
-        Sin barra de scroll (`overflow-hidden`) y sin rótulo: el esqueleto
-        ya trae su forma y su `aria-busy` (`ui/Skeleton.tsx`). */}
+    {/* El composer vive fuera del estado de carga del hilo para que nunca se
+        desmonte ni parpadee al abrir una tarea o adoptar una nueva. */}
+    <div class="relative flex min-h-0 flex-1 flex-col">
     <Show
       when={!props.cargando || props.msgs.length > 0 || Boolean(props.activities?.length)}
       fallback={
-        <>
-          <div class={cn("min-h-0 flex-1 overflow-hidden", margenDelHilo)}>
-            {/* El armazón está siempre —es lo que reserva el sitio de la caja y
-                del final del hilo—; lo que espera al umbral son las barras.
-                Ver `UMBRAL_DEL_ESQUELETO_MS`: por debajo, dibujarlas es meter
-                una forma que se va antes de que la veas. */}
-            <div
-              class={cn(
-                "mx-auto flex h-full w-full flex-col justify-end gap-6",
-                "max-w-[860px]",
-              )}
-            >
-              <Show when={esperaVisible()}>
-                <Skeleton class="ml-auto h-9 w-[40%] rounded-lg" />
-                <Skeleton filas={4} class="h-4 rounded-sm" />
-                <Skeleton class="ml-auto h-9 w-[28%] rounded-lg" />
-                <Skeleton filas={2} class="h-4 rounded-sm" />
-              </Show>
-            </div>
-          </div>
+        <div
+          class={cn("min-h-0 flex-1 overflow-hidden", margenDelHilo)}
+          style={{ "padding-bottom": `${altoDeLaCaja() + 12}px` }}
+        >
+          {/* El armazón está siempre —es lo que reserva el sitio de la caja y
+              del final del hilo—; lo que espera al umbral son las barras. */}
           <div
-            class="flex shrink-0 flex-col items-center px-4 pt-1 pb-3"
+            class={cn(
+              "mx-auto flex h-full w-full flex-col justify-end gap-6",
+              "max-w-[860px]",
+            )}
           >
-            <Show when={props.recovery} fallback={<Caja />}>{props.recovery}</Show>
+            <Show when={esperaVisible()}>
+              <Skeleton class="ml-auto h-9 w-[40%] rounded-lg" />
+              <Skeleton filas={4} class="h-4 rounded-sm" />
+              <Skeleton class="ml-auto h-9 w-[28%] rounded-lg" />
+              <Skeleton filas={2} class="h-4 rounded-sm" />
+            </Show>
           </div>
-        </>
+        </div>
       }
     >
-      {/* El overlay de soltar solo se pinta aquí — las rutas no salen de
-          él, el `drop` de HTML5 entrega un `File` sin ruta en disco y el
-          estado lo maneja `onDragDropEvent` (arriba). Tres niveles: el de
-          fuera es el marco del botón de bajar, el de en medio es el que
-          scrollea, el de dentro es lo único medible —tiene el alto de su
-          hueco y no cambia—. `lib/paste.ts`. */}
-      <div class="relative flex min-h-0 flex-1 flex-col">
       <Show when={props.masRecientes}><Pressable class="shrink-0 py-2 text-xs text-primary underline" onClick={volverAReciente}>{t("chat.history.latest")}</Pressable></Show>
       {props.coordinator}
       <CabeceraDelEncargado />
@@ -171,6 +157,7 @@ export default function Chat(props: ChatProps) {
           );
         })()}
       </Show>
+    </Show>
 
       {/* La caja flota sobre el hilo, no debajo: el hueco
           medido desde arriba es lo que mantiene legible la última línea,
@@ -179,8 +166,7 @@ export default function Chat(props: ChatProps) {
           puntero. Una pregunta pendiente no desaparece con otra ventana
           activa: la propia tarjeta activa su ventana al interactuar. */}
       <CapaDeLaCaja />
-      </div>
-    </Show>
+    </div>
     </WorkFace.Provider>
     </FileMachine.Provider>
   );
