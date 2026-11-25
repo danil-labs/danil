@@ -14,9 +14,16 @@ import { useTheme } from "./theme";
  */
 export function MachineNote({ hosts, fleet }: { hosts: Host[]; fleet: Fleet }) {
   const theme = useTheme();
-  const { reloadComputers, contextReady } = useMachines();
+  const { reloadComputers, contextReady, access } = useMachines();
   const { email } = useAccount();
   if (fleet === "license") return <LicenseNote />;
+  if (access === "organization" || access === "workspace") {
+    return (
+      <View style={[styles.note, { backgroundColor: theme.muted }]} testID="machine-note-access">
+        <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{t(access === "organization" ? "machines.organization" : "machines.no_workspace")}</Text>
+      </View>
+    );
+  }
   const empty = emptyFleet(fleet, contextReady, hosts.length, email);
   if (empty) return <EmptyNote empty={empty} retry={() => void reloadComputers()} />;
   const lines: string[] = [];
