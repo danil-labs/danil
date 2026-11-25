@@ -5,4 +5,5 @@ export { default as MoveWorkspaceDialog } from "./MoveWorkspaceDialog";
 export { SessionGate } from "./SessionGate";
 export { sessionRailState } from "./session-groups";
 export { noteWebAccountMode, usesGroupAccounts } from "./session-menu-mode";
+export { registerRailSection, type RailSectionDescriptor } from "./rail-layout";
 export { TitleBarSection } from "./TitleBarSection";

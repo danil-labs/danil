@@ -7,10 +7,11 @@ import { t } from "../../../ui/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";
 import { BotonConAtajo } from "../../../ui/src/Shortcut";
 import GitHubStar from "./GitHubStar";
-import type { SidebarFilterProps } from "./SidebarFilter";
 import TitleBar from "./TitleBar";
 
-const CustomizeMenu = lazy(() => import("./SidebarFilter").then((m) => ({ default: m.CustomizeMenu })));
+const RailOrganizerMenu = lazy(() =>
+  import("./RailOrganizerMenu").then((m) => ({ default: m.RailOrganizerMenu })),
+);
 
 export function TitleBarSection(props: {
   border: number | null;
@@ -21,7 +22,6 @@ export function TitleBarSection(props: {
   searchOpen: boolean;
   onSearch: () => void;
   onAddProject: () => void;
-  filter: SidebarFilterProps | null;
   tabs: JSX.Element;
 }) {
   return (
@@ -68,13 +68,9 @@ export function TitleBarSection(props: {
         >
           <FolderPlus size={15} aria-hidden="true" />
         </Button>
-        <Show when={props.filter}>
-          <Suspense>
-            <CustomizeMenu
-              filter={props.filter}
-            />
-          </Suspense>
-        </Show>
+        <Suspense>
+          <RailOrganizerMenu />
+        </Suspense>
       </>}
       centro={props.tabs}
       derecha={<GitHubStar />}

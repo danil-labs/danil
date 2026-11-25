@@ -147,8 +147,6 @@ export function createDockDelRiel(props: SidebarProps, tareas: TareasDelRiel) {
     get agents() { return agentesDelFiltro(); },
     get machines() { return variasMaquinas(); },
   };
-  props.filterRef?.(filtro);
-  onCleanup(() => props.filterRef?.(null, filtro));
 
-  return { carpetaActual, agentesDelDock, carpetasDelAgente, gruposDelDock, rosterListo, perfilDe };
+  return { carpetaActual, agentesDelDock, carpetasDelAgente, gruposDelDock, rosterListo, perfilDe, filtro };
 }

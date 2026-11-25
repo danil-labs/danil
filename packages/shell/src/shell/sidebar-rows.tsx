@@ -14,7 +14,6 @@ import type { CreateFreeRouterConsent } from "../../../ui/src/lib/freeRouterCons
 import Sessions, { type SessionRow } from "../../../features/projects/src/screens/Sessions";
 import type { Etapa } from "../../../features/projects/src/screens/TaskStage";
 import { groupLabel, type SidebarGroup } from "../../../ui/src/lib/sidebarView";
-import type { SidebarFilterProps } from "./SidebarFilter";
 import type { TareasDelRiel } from "./sidebar-groups";
 import { Spinner } from "../../../ui/src/Spinner";
 import { Pressable } from "../../../ui/src/Pressable";
@@ -82,11 +81,6 @@ export type SidebarProps = {
   onAgentProfile: (project: string, name: string) => void;
   /** Dónde se guarda la vista del riel: una por workspace y espacio (`sidebarViewKey`). */
   viewKey: string;
-  /**
-   * Entrega el filtro del riel al botón Personalizar de la franja; al desmontar,
-   * `null` con el que se suelta, para no borrar el de un riel que ya lo relevó.
-   */
-  filterRef?: (filter: SidebarFilterProps | null, released?: SidebarFilterProps) => void;
   /** El nombre del escritorio activo, para su riel vacío. */
   escritorio?: string | null;
   spaces?: { id: string; name: string }[];

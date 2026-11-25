@@ -142,7 +142,7 @@ viewItsTasks.dispatchEvent(new bubbleApp.w.KeyboardEvent("keydown", { key: "Ente
 await sleep(120);
 assert.ok(railRows().includes("s-task") && !railRows().includes("s-plain"), "ver sus tareas filtra por el agente");
 assert.equal(bubbleDocument.querySelector("button[data-personalize] span"), null, "Personalizar no lleva contador de filtros");
-bubbleDocument.querySelector("button[data-personalize]").click();
+bubbleDocument.querySelector("button[data-sidebar-filter]").click();
 await sleep(80);
 [...bubbleDocument.querySelectorAll('[role="menu"] [role="group"][aria-label="Agente"] [role="menuitemradio"]')].find((b) => b.textContent.trim() === "Todos").click();
 await sleep(80);

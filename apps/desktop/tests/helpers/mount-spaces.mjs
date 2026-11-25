@@ -196,9 +196,9 @@ export async function spaceScenarios({ boot, sleep, withTask: WITH_TASK }) {
       pref: (k) => JSON.parse(app.w.localStorage.getItem(`harness.layout.${k}`) ?? "null"),
       caja: () =>
         [...doc.querySelectorAll("[data-ventana]")].find((el) => !el.classList.contains("hidden") && el.querySelector("textarea"))?.querySelector("textarea"),
-      /** Elige un agente en «Filtrar y agrupar» de Personalizar; `null` es «Todos». */
+      /** Elige un agente en «Filtrar y agrupar» junto a Tareas; `null` es «Todos». */
       filtrarPorAgente: async (nameText) => {
-        doc.querySelector("button[data-personalize]").click();
+        doc.querySelector("button[data-sidebar-filter]").click();
         await sleep(80);
         const groupEl = doc.querySelector('[role="menu"] [role="group"][aria-label="Agente"]');
         assert.ok(groupEl, "el menú de filtro ofrece agentes");

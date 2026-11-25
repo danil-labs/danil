@@ -1,11 +1,14 @@
 import { SignalDot } from "../../../ui/src/SignalDot";
 import History from "lucide-solid/icons/history";
+import Plus from "lucide-solid/icons/plus";
 import SquarePen from "lucide-solid/icons/square-pen";
-import { createEffect, createSignal, lazy, on, onCleanup, Show, Suspense } from "solid-js";
+import { createEffect, createMemo, createSignal, lazy, Match, on, onCleanup, Show, Suspense, Switch } from "solid-js";
 import { puntoDelArrastre, tareaEnVuelo } from "../../../ui/src/lib/drag";
 import { t } from "../../../ui/src/lib/i18n";
 import { ariaDeAtajo } from "../../../ui/src/lib/shortcuts";
+import { cn } from "../../../ui/src/lib/utils";
 import { KeyedList } from "../../../ui/src/KeyedList";
+import { Pressable } from "../../../ui/src/Pressable";
 import { TeclaDeAtajo } from "../../../ui/src/Shortcut";
 import {
   SidebarContent,
@@ -16,6 +19,14 @@ import {
 } from "../../../ui/src/sidebar";
 import { groupKey } from "../../../ui/src/lib/sidebarView";
 import { LazyPart, retryableLazy } from "../../../ui/src/LazyPart";
+import {
+  CORE_RAIL_SECTION_IDS,
+  resetRailLayout,
+  resolvedRailSections,
+  toggleRailSectionCollapsed,
+} from "./rail-layout";
+import { RailSection } from "./RailSection";
+import { TasksFilterMenu } from "./SidebarFilter";
 import { createTareasDelRiel } from "./sidebar-groups";
 import { createDockDelRiel } from "./sidebar-dock";
 import { createFilas, type SidebarProps } from "./sidebar-rows";
@@ -80,8 +91,10 @@ export default function Sidebar(props: SidebarProps) {
 
   const tareas = createTareasDelRiel(props);
   const { vista, cambiarVista, todas, grupos, hayCarpetasVacias } = tareas;
-  const { carpetaActual, agentesDelDock, carpetasDelAgente, gruposDelDock, rosterListo, perfilDe } = createDockDelRiel(props, tareas);
+  const { carpetaActual, agentesDelDock, carpetasDelAgente, gruposDelDock, rosterListo, perfilDe, filtro } = createDockDelRiel(props, tareas);
   const { FilaDeClon, Grupo } = createFilas(props, tareas, { setDesplegado, setCreatingAgentIn });
+  const seccionesVisibles = createMemo(() => resolvedRailSections().filter((section) => section.visible));
+  const algunAgenteTrabajando = createMemo(() => agentesDelDock().some((a) => a.status === "working"));
 
   /** La misma lista, montada en dos sitios: expandida y en el desplegable. */
   const Lista = () => (
@@ -136,82 +149,153 @@ export default function Sidebar(props: SidebarProps) {
         class="h-full w-full min-w-0 grid-rows-[minmax(0,1fr)]"
         aria-label={t("shell.sidebar.label")}
       >
-        <SidebarContent class="gap-2 px-2 pt-2 pb-0">
-          <SidebarMenu class="gap-1.5">
-
-            <SidebarMenuItem>
-              {/* Nueva tarea es la acción principal, negra y sólida.
-                  `primary` queda reservado para las acciones del agente. */}
-              <SidebarMenuButton
-                class="bg-neutral-950 font-bold text-neutral-50 hover:bg-neutral-950"
-                aria-keyshortcuts={ariaDeAtajo("newTask")}
-                aria-label={t("shell.sidebar.new_task")}
-                onClick={() => {
-                  props.onNew();
-                  setDesplegado(false);
-                }}
-              >
-                <SquarePen size={14} aria-hidden="true" />
-                <Show when={!props.collapsed}>
-                  <span>{t("shell.sidebar.new_task")}</span>
-                  <TeclaDeAtajo accion="newTask" />
-                </Show>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <Show when={props.collapsed}>
+        <SidebarContent class="gap-0 p-0">
+          {/* Un solo scroll unificado para todo el riel izquierdo (estilo claude.ai):
+              «Nueva tarea», «Tus agentes», «Tareas» y cualquier plugin registrado se
+              desplazan juntos. `overflow-x-hidden overflow-y-auto` evita barras
+              horizontales; `data-arrastre-scroll` permite desplazar el riel al
+              arrastrar una tarea hacia sus bordes (`lib/drag.ts`). */}
+          <div
+            ref={listViewport}
+            class={cn(
+              "flex min-h-0 min-w-0 flex-1 flex-col gap-3 px-2 pt-2 pb-4",
+              !props.collapsed && "overflow-x-hidden overflow-y-auto",
+            )}
+            data-arrastre-scroll={!props.collapsed ? "" : undefined}
+          >
+            <SidebarMenu class="shrink-0 gap-1.5">
               <SidebarMenuItem>
+                {/* Nueva tarea es la acción principal, negra y sólida.
+                    `primary` queda reservado para las acciones del agente. */}
                 <SidebarMenuButton
-                  isActive={desplegado()}
-                  tooltip={t("shell.sidebar.tasks")}
-                  aria-label={t("shell.sidebar.tasks")}
-                  aria-expanded={desplegado()}
-                  onClick={() => setDesplegado((v) => !v)}
+                  class="bg-neutral-950 font-bold text-neutral-50 hover:bg-neutral-950"
+                  aria-keyshortcuts={ariaDeAtajo("newTask")}
+                  aria-label={t("shell.sidebar.new_task")}
+                  onClick={() => {
+                    props.onNew();
+                    setDesplegado(false);
+                  }}
                 >
-                  <History size={15} />
-                  {/* Con la lista escondida, el riel sigue diciendo que hay una
-                      sesión abierta: sin esto el estado se comunicaría solo al
-                      desplegar. */}
-                  <Show when={props.current}>
-                    <SignalDot tone="working" class="ui-sidebar-menu-badge absolute top-1 right-1" />
+                  <SquarePen size={14} aria-hidden="true" />
+                  <Show when={!props.collapsed}>
+                    <span>{t("shell.sidebar.new_task")}</span>
+                    <TeclaDeAtajo accion="newTask" />
                   </Show>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            </Show>
-          </SidebarMenu>
+              <Show when={props.collapsed}>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={desplegado()}
+                    tooltip={t("shell.sidebar.tasks")}
+                    aria-label={t("shell.sidebar.tasks")}
+                    aria-expanded={desplegado()}
+                    onClick={() => setDesplegado((v) => !v)}
+                  >
+                    <History size={15} />
+                    {/* Con la lista escondida, el riel sigue diciendo que hay una
+                        sesión abierta: sin esto el estado se comunicaría solo al
+                        desplegar. */}
+                    <Show when={props.current}>
+                      <SignalDot tone="working" class="ui-sidebar-menu-badge absolute top-1 right-1" />
+                    </Show>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </Show>
+            </SidebarMenu>
 
-          <Show when={!props.collapsed}>
-            <Suspense fallback={<div class="h-[132px] shrink-0" aria-busy="true" />}>
-              <AgentDock
-                agents={agentesDelDock()}
-                selected={vista().agent}
-                foldersOf={carpetasDelAgente}
-                currentFolder={carpetaActual()}
-                contextKey={props.viewKey}
-                groups={gruposDelDock()}
-                loading={!rosterListo()}
-                onTalk={props.onHablarCon}
-                onShowTasks={(agent) => cambiarVista({ ...vista(), agent })}
-                onProfile={props.onAgentProfile}
-                onSeeAll={() => props.onSettings("agentes")}
-                onNewAgent={() => setCreatingAgentIn({ id: carpetaActual() ?? "", name: "" })}
-                profileOf={perfilDe}
-              />
-            </Suspense>
-            <h2 class="m-0 px-1 text-caption font-medium text-neutral-700">{t("shell.sidebar.tasks")}</h2>
-            {/* **`overflow-y-auto` y NO `overflow-auto`.** Aquél es de los dos
-                ejes: los títulos llegaban al borde sin puntos suspensivos y lo
-                de la derecha quedaba fuera de la vista. */}
-            {/* `data-arrastre-scroll`: con la lista larga, arrastrar una tarea
-                hasta un grupo que está fuera de la vista exige que el panel
-                se desplace solo al llegar a sus bordes (`lib/drag.ts`). */}
-            <div
-              ref={listViewport}
-              class="-mr-2 min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto pr-2"
-              data-arrastre-scroll=""
-            >
-              <Lista />
-            </div>
-          </Show>
+            <Show when={!props.collapsed}>
+              <Show
+                when={seccionesVisibles().length > 0}
+                fallback={
+                  <div class="flex flex-col items-start gap-2 rounded-lg border border-border bg-surface px-3 py-3 text-caption text-neutral-500" data-rail-all-hidden="">
+                    <p class="m-0">{t("shell.rail_organizer.all_hidden")}</p>
+                    <Pressable
+                      class="rounded-md bg-neutral-200 px-2 py-1 text-caption font-medium text-neutral-950 hover:bg-neutral-300 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
+                      onClick={() => resetRailLayout()}
+                    >
+                      {t("shell.rail_organizer.show_all")}
+                    </Pressable>
+                  </div>
+                }
+              >
+                <KeyedList each={seccionesVisibles()} by={(section) => section.id}>
+                  {(section) => (
+                    <Switch>
+                      <Match when={section().id === CORE_RAIL_SECTION_IDS.AGENTS}>
+                        <RailSection
+                          id={section().id}
+                          title={section().descriptor.label()}
+                          collapsed={section().collapsed}
+                          onToggle={() => toggleRailSectionCollapsed(section().id)}
+                          badge={
+                            section().collapsed && algunAgenteTrabajando() ? (
+                              <SignalDot tone="working" pulse class="ml-0.5 motion-reduce:animate-none" />
+                            ) : undefined
+                          }
+                          actions={
+                            <Pressable
+                              class="relative grid size-6 shrink-0 place-items-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
+                              aria-label={t("projects.agents.new_open")}
+                              title={t("projects.agents.new_open")}
+                              onClick={() => setCreatingAgentIn({ id: carpetaActual() ?? "", name: "" })}
+                            >
+                              <Plus size={14} aria-hidden="true" />
+                            </Pressable>
+                          }
+                        >
+                          <Suspense fallback={<div class="h-24 rounded-lg border border-border bg-surface motion-safe:animate-pulse" aria-busy="true" />}>
+                            <AgentDock
+                              embedded
+                              agents={agentesDelDock()}
+                              selected={vista().agent}
+                              foldersOf={carpetasDelAgente}
+                              currentFolder={carpetaActual()}
+                              contextKey={props.viewKey}
+                              groups={gruposDelDock()}
+                              loading={!rosterListo()}
+                              onTalk={props.onHablarCon}
+                              onShowTasks={(agent) => cambiarVista({ ...vista(), agent })}
+                              onProfile={props.onAgentProfile}
+                              onSeeAll={() => props.onSettings("agentes")}
+                              onNewAgent={() => setCreatingAgentIn({ id: carpetaActual() ?? "", name: "" })}
+                              profileOf={perfilDe}
+                            />
+                          </Suspense>
+                        </RailSection>
+                      </Match>
+
+                      <Match when={section().id === CORE_RAIL_SECTION_IDS.TASKS}>
+                        <RailSection
+                          id={section().id}
+                          title={section().descriptor.label()}
+                          collapsed={section().collapsed}
+                          onToggle={() => toggleRailSectionCollapsed(section().id)}
+                          actions={<TasksFilterMenu {...filtro} />}
+                        >
+                          <Lista />
+                        </RailSection>
+                      </Match>
+
+                      <Match when={section().descriptor.render}>
+                        {(renderPlugin) => (
+                          <RailSection
+                            id={section().id}
+                            title={section().descriptor.label()}
+                            collapsed={section().collapsed}
+                            onToggle={() => toggleRailSectionCollapsed(section().id)}
+                            actions={section().descriptor.renderActions?.()}
+                          >
+                            {renderPlugin()()}
+                          </RailSection>
+                        )}
+                      </Match>
+                    </Switch>
+                  )}
+                </KeyedList>
+              </Show>
+            </Show>
+          </div>
         </SidebarContent>
 
       </SidebarShell>
