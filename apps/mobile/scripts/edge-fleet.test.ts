@@ -191,3 +191,65 @@ test("A sale y B en la misma máquina no recibe sus listas con el canal caído",
   } finally { b.close(); }
   await readAs("person-B", privateB);
 });
+
+test("el plano de control del borde manda el contexto, lee el catálogo y no enciende una máquina personal", async () => {
+  const calls: Request[] = [];
+  let required = 0;
+  const request: typeof fetch = async (input, init) => {
+    const r = new Request(input, init);
+    calls.push(r);
+    const path = new URL(r.url).pathname;
+    const echo = { "X-Danil-Session-Applied": "ctx_x", "X-Danil-Session-Applied-Org": "org_x" };
+    if (path === "/v1/identity/sessions") {
+      return Response.json({ default_context: "ctx_x", items: [{ contexts: [{ context_id: "ctx_x", org: "org_x" }] }] });
+    }
+    if (path === "/v1/machines") {
+      return Response.json(
+        { items: [{ machine_id: "mch_own", name: "Mac", state: "stopped", kind: "personal" }], next_cursor: null },
+        { headers: echo },
+      );
+    }
+    if (path === "/v1/workspaces") {
+      return Response.json(
+        {
+          items: [
+            { id: "12", name: "Equipo", engine_workspace_id: "ws_team", runs_on: ["cloud"] },
+            { id: "13", name: "Archivado", engine_workspace_id: "ws_old", archived: true },
+          ],
+          next_cursor: null,
+        },
+        { headers: echo },
+      );
+    }
+    return Response.json({ code: "not_found" }, { status: 404, headers: { "content-type": "application/problem+json" } });
+  };
+  const plane = edgeControlPlane(
+    { origin: "https://edge.example", timeoutMs: 1000 },
+    { fetch: request, context: () => "ctx_x", organization: () => "org_x", onSelectionRequired: () => required++ },
+  );
+  const set = await plane.sessions();
+  assert.equal(set?.defaultContext, "ctx_x");
+  const list = await plane.computers();
+  assert.equal(list.kind, "ok");
+  if (list.kind === "ok") assert.equal(list.value[0].wakeable, false, "una máquina personal no se enciende desde la nube");
+  const catalog = await plane.workspaces();
+  assert.equal(catalog?.kind, "ok");
+  if (catalog?.kind === "ok") assert.deepEqual(catalog.value.map((row) => row.id), ["ws_team"]);
+  for (const call of calls.filter((call) => new URL(call.url).pathname !== "/v1/identity/sessions")) {
+    assert.equal(call.headers.get("x-danil-session"), "ctx_x");
+  }
+  assert.equal(calls.find((call) => new URL(call.url).pathname === "/v1/identity/sessions")?.headers.get("x-danil-session"), null);
+
+  const mismatch: typeof fetch = async () => Response.json({ items: [], next_cursor: null }, { headers: { "X-Danil-Session-Applied": "otro", "X-Danil-Session-Applied-Org": "org_x" } });
+  const broken = edgeControlPlane({ origin: "https://edge.example", timeoutMs: 1000 }, { fetch: mismatch, context: () => "ctx_x", organization: () => "org_x" });
+  assert.equal(await broken.workspaces(), null, "un eco distinto no se usa como catálogo");
+  const otherOrg: typeof fetch = async () => Response.json({ items: [], next_cursor: null }, { headers: { "X-Danil-Session-Applied": "ctx_x", "X-Danil-Session-Applied-Org": "org_otra" } });
+  const foreign = edgeControlPlane({ origin: "https://edge.example", timeoutMs: 1000 }, { fetch: otherOrg, context: () => "ctx_x", organization: () => "org_x" });
+  assert.equal(await foreign.workspaces(), null, "un eco de otra organización no se usa como catálogo");
+
+  const choose: typeof fetch = async () => Response.json({ code: "organization_selection_required" }, { status: 403, headers: { "content-type": "application/problem+json" } });
+  const gated = edgeControlPlane({ origin: "https://edge.example", timeoutMs: 1000 }, { fetch: choose, onSelectionRequired: () => required++ });
+  assert.equal((await gated.computers()).kind, "error");
+  assert.deepEqual(await gated.workspaces(), { kind: "error", status: 403, code: "organization_selection_required" });
+  assert.equal(required, 2);
+});
