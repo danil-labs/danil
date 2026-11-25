@@ -80,6 +80,7 @@ export function RailButton(props: {
       <SidebarMenuItem>
         <SidebarMenuButton
           isActive={props.active}
+          selectionMark={false}
           aria-label={props.title}
           data-rail-button={props.id}
           class="font-medium text-neutral-700 hover:text-neutral-950"
@@ -104,6 +105,7 @@ export function CollapsedRailButtons(props: {
         <SidebarMenuItem>
           <SidebarMenuButton
             isActive={section.descriptor.isActive?.()}
+            selectionMark={false}
             tooltip={section.descriptor.label()}
             aria-label={section.descriptor.label()}
             data-rail-button={section.id}
