@@ -1,9 +1,9 @@
 import { type Tab } from "../../../../ui/src/lib/tabs";
 import { type SessionRow } from "./Sessions";
 
-// Lo que asoma de la pestaña vecina y el padding de la tira, en px.
+// Lo que asoma de la pestaña vecina y el padding de la tira (`pl-2.5`), en px.
 const PEEK = 56;
-const EDGE = 6;
+const EDGE = 10;
 
 // El For de App vuelve a montar la tira al activar una pestaña; su scroll sobrevive aquí.
 const scrollBySite = new Map<string, number>();
