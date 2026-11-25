@@ -81,9 +81,9 @@ export default function AgentDock(props: {
       </Pressable>}</For>
     </section></Show>;
   };
-  return <div role="group" aria-label={t("shell.agent_dock.title")} class="h-[100px] shrink-0" data-dock-expanded={expanded() ? "" : undefined}>
+  return <div role="group" aria-label={t("shell.agent_dock.title")} class="h-[112px] shrink-0" data-dock-expanded={expanded() ? "" : undefined}>
     <div inert={!expanded()} aria-hidden={!expanded()} data-dock-panel=""
-      class={cn("absolute inset-x-0 top-0 bottom-[100px] z-20 overflow-y-auto bg-surface px-2 motion-safe:transition-[transform,opacity,visibility] motion-safe:duration-[180ms] motion-safe:ease-out", expanded() ? "visible translate-y-0 opacity-100" : "invisible translate-y-full opacity-0")}>
+      class={cn("absolute inset-x-0 top-0 bottom-[112px] z-20 overflow-y-auto bg-surface px-2 motion-safe:transition-[transform,opacity,visibility] motion-safe:duration-[180ms] motion-safe:ease-out", expanded() ? "visible translate-y-0 opacity-100" : "invisible translate-y-full opacity-0")}>
       <Show when={opened()}>
         {group(t("shell.agent_dock.workspace"), props.groups?.workspace)}
         <Show when={props.currentFolder}>
@@ -93,7 +93,7 @@ export default function AgentDock(props: {
         <Pressable class="my-3 rounded-md border-0 bg-transparent px-2 py-1 text-caption text-neutral-500 hover:bg-neutral-100" onClick={() => { setExpanded(false); props.onSeeAll(); }}>{t("shell.agent_dock.see_all")}</Pressable>
       </Show>
     </div>
-    <div class="relative z-30 h-full border-t border-border bg-surface px-2" data-dock-header="">
+    <div class="relative z-30 h-full border-t border-border bg-surface px-2 pt-1 pb-2" data-dock-header="">
       <div class="flex h-10 items-center gap-1 px-1">
         <span class="text-caption text-neutral-500">{t("shell.agent_dock.team")}</span>
         <Show when={agents().length > 5}><span class="text-caption text-neutral-500">+{agents().length - 5}</span></Show>
