@@ -8,11 +8,12 @@ import { moviendoHueco } from "../../../ui/src/lib/sites";
 import { type Superficie } from "../../../ui/src/lib/surfaces.ts";
 import { fileTabId, type ArtifactTab, type FileTab, type PluginTab, type ScreenTab, type SiteTab } from "../../../ui/src/lib/tabs";
 import { type ContentTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
-import { taskSideLayout, type TaskFiles } from "../../../ui/src/lib/taskFiles.ts";
+import { taskSideLayout, taskSideUsesSplitWidth, type TaskFiles, type TaskPopoverMode } from "../../../ui/src/lib/taskFiles.ts";
 import { cn } from "../../../ui/src/lib/utils";
 import VisorDeArtefacto from "../../../features/artifacts/src/screens/ArtifactViewer";
 import { type PermissionRequest } from "../../../features/chat/src/screens/Chat.tsx";
-import { TaskSide, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
+import { taskFilesWidth } from "../../../features/code/src/screens/TaskFilesRow";
+import { TaskPopoverShell, TaskSide, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
 import { type createSessionMutations as T_createSessionMutations } from "../../../features/projects/src";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions.tsx";
 import Sitio from "../../../features/sites/src/screens/Site";
@@ -31,7 +32,7 @@ export type CeldasDeContenidoDeps = { PanelDeChat: (pp: { sesion: string | null;
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2001–2291, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createCeldasDeContenido(deps: CeldasDeContenidoDeps) {
-  const { PanelDeChat, abrirSesion, adjuntarAlProyecto, agent, agents, anchoDelArbol, archivosDeTarea, carpetaDelProyecto, carpetaEditable, celdaDe, cerrarPestanasYa, claveAbierta, compacta, consumo, deleteTask, draftBases, editorDeletionLocked, estiloDeLaCelda, etaparSesion, fijarSesion, hablarConEncargado, idsDeContenido, llaveDeBorrador, llevaTiraInterior, mandarVentana, materialPedido, modelosParaAgentes, moverSesion, nuevaSesion, paneles, permissions, pestanas, project, projectList, proyectoDeLaVista, quitarDelProyecto, renombrarSesion, sesionesConEstado, sessionId, setMaterialPedido, setSettings, sitiosEnBlanco, sources, tapadoPorElProyecto, vivas, workspaceActivo } = deps;
+  const { PanelDeChat, abrirSesion, adjuntarAlProyecto, agent, agents, anchoDeArchivos, anchoDelArbol, archivosDeTarea, carpetaDelProyecto, carpetaEditable, celdaDe, cerrarPestanasYa, claveAbierta, compacta, consumo, deleteTask, draftBases, editorDeletionLocked, estiloDeLaCelda, etaparSesion, fijarSesion, hablarConEncargado, idsDeContenido, llaveDeBorrador, llevaTiraInterior, mandarVentana, materialPedido, modelosParaAgentes, moverSesion, nuevaSesion, paneles, permissions, pestanas, project, projectList, proyectoDeLaVista, quitarDelProyecto, renombrarSesion, sesionesConEstado, sessionId, setMaterialPedido, setSettings, sitiosEnBlanco, sources, tapadoPorElProyecto, vivas, workspaceActivo } = deps;
   const CeldasDeContenido = () => (
     <>
       {/* Toda ventana enseña algo: su pestaña de delante, o la conversación
@@ -122,36 +123,55 @@ export function createCeldasDeContenido(deps: CeldasDeContenidoDeps) {
           const llave = () => (carpetaDelProyecto() ? llaveDeBorrador(project()) : "");
           const panel = () => archivosDeTarea.panel(llave());
           const [usado, setUsado] = createSignal(false);
-          createEffect(() => { if (llave() && panel().open) setUsado(true); });
-          const layout = () => (llave() ? taskSideLayout(panel(), paneles.isSplit() || compacta()) : "closed");
+          createEffect(() => { if (llave() && panel().dock !== "none") setUsado(true); });
+          const narrow = () => paneles.isSplit() || compacta();
+          const layout = () => (llave() ? taskSideLayout(panel(), narrow()) : "closed");
           const visible = () => layout() !== "closed" && !tapadoPorElProyecto(sitio());
-          const ancho = () => (layout() === "replace" ? undefined : `min(${anchoDelArbol()}px, calc(100% - 16px))`);
+          const isFullWidth = () => layout() === "files-expanded";
+          const ancho = () => (isFullWidth() ? undefined : taskFilesWidth(taskSideUsesSplitWidth(panel()), anchoDeArchivos(), anchoDelArbol()));
+          const popover = () => (llave() ? panel().popover : "none");
+          const popoverVisible = () => popover() !== "none" && !tapadoPorElProyecto(sitio());
           return (
-            <Show when={usado() && project()}>
-              {(proyecto) => (
-                <div class={cn(
-                  "pointer-events-none flex min-h-0 min-w-0 justify-self-end pb-3 *:pointer-events-auto",
-                  BELOW_LOCATION,
-                  layout() === "replace" ? "z-10 w-full px-2" : "z-20 pr-2",
+            <>
+              <Show when={usado() && project()}>
+                {(proyecto) => (
+                  <div class={cn(
+                    "pointer-events-none z-10 flex min-h-0 min-w-0 justify-self-end pb-3 *:pointer-events-auto",
+                    BELOW_LOCATION,
+                    isFullWidth() ? "w-full px-2" : "pr-2",
+                  )}
+                    classList={{ hidden: !visible(), "mt-[30px]": llevaTiraInterior(sitio()), "transition-[width] duration-200 ease-out": !moviendoHueco() }}
+                    style={{ ...estiloDeLaCelda(sitio()), width: ancho() }}
+                    onPointerDown={() => mandarVentana(sitio())}>
+                    <TaskSideShell dock={panel().dock} layout={layout()} subtaskSlot={null}>
+                      <Suspense fallback={null}>
+                        <TaskFilesCard visores={visoresDeCodigo} project={proyecto()} session="" panelKey={llave()} preview={{ baseRef: draftBases()[claveAbierta()] }}
+                          files={archivosDeTarea} visible={visible()}
+                          expandedOnly={narrow()}
+                          onSaved={() => {}} onExportChat={async () => {}}
+                          onMoved={() => {}} onRemoved={() => {}} />
+                      </Suspense>
+                    </TaskSideShell>
+                  </div>
                 )}
-                  classList={{ hidden: !visible(), "mt-[30px]": llevaTiraInterior(sitio()), "transition-[width] duration-200 ease-out": !moviendoHueco() }}
-                  style={{ ...estiloDeLaCelda(sitio()), width: ancho() }}
+              </Show>
+              <Show when={popoverVisible()}>
+                <div class={cn(
+                  "pointer-events-none z-30 flex max-h-[min(468px,calc(100%-16px))] min-h-0 min-w-0 self-start justify-self-end pr-2 *:pointer-events-auto",
+                  BELOW_LOCATION,
+                )}
+                  classList={{ "mt-[30px]": llevaTiraInterior(sitio()) }}
+                  style={{ ...estiloDeLaCelda(sitio()), width: `min(${Math.max(300, anchoDelArbol())}px, calc(100% - 16px))` }}
                   onPointerDown={() => mandarVentana(sitio())}>
-                  <TaskSideShell mode={panel().mode} layout={layout()} side={<TaskSide mode={panel().mode}
-                    searchSlot={undefined}
-                    usageSlot={<UsagePanel usage={consumo} agent={agent()} onManage={() => { archivosDeTarea.setOpen(llave(), false); setSettings("proveedores-ia"); }} onClose={() => archivosDeTarea.setOpen(llave(), false)} />}
-                    delegatedSlot={<p class="m-0 px-3 py-3 text-xs text-neutral-500">{t("chat.delegation.none")}</p>} />}>
-                    <Suspense fallback={null}>
-                      <TaskFilesCard visores={visoresDeCodigo} project={proyecto()} session="" panelKey={llave()} preview={{ baseRef: draftBases()[claveAbierta()] }}
-                        files={archivosDeTarea} visible={visible()}
-                        expandedOnly
-                        onSaved={() => {}} onExportChat={async () => {}}
-                        onMoved={() => {}} onRemoved={() => {}} />
-                    </Suspense>
-                  </TaskSideShell>
+                  <TaskPopoverShell popover={popover() as Exclude<TaskPopoverMode, "none">} onDismiss={() => archivosDeTarea.closePopover(llave())}>
+                    <TaskSide popover={popover()}
+                      searchSlot={undefined}
+                      usageSlot={<UsagePanel usage={consumo} agent={agent()} onManage={() => { archivosDeTarea.closePopover(llave()); setSettings("proveedores-ia"); }} onClose={() => archivosDeTarea.closePopover(llave())} />}
+                      delegatedSlot={<p class="m-0 px-3 py-3 text-xs text-neutral-500">{t("chat.delegation.none")}</p>} />
+                  </TaskPopoverShell>
                 </div>
-              )}
-            </Show>
+              </Show>
+            </>
           );
         }}
       </Index>

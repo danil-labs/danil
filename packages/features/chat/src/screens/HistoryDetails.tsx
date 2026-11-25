@@ -76,11 +76,11 @@ export function HistoryDetails(props: { refs: HistoryRef[]; turnId?: string; ren
   <Show when={textRef()}>{(ref) => <HistoryText reference={ref()} turnId={props.turnId} render={props.renderText} onText={props.onText} route={props.route} onUnavailable={() => setTextFailed(true)} />}</Show>
   <Show when={listed().length > 0}>
   <div class="my-2 text-xs text-neutral-500">
-    <For each={listed()}>{ref => <Pressable class="mr-2 underline" onClick={() => void read(ref, 0)}>
+    <For each={listed()}>{ref => <Pressable data-disclosure-toggle="open" class="mr-2 underline" onClick={() => void read(ref, 0)}>
       {t("chat.history.open")} ({ref.pointer === "/text" ? t("chat.history.text") : ref.pointer === "/pieces" ? t("chat.history.pieces") : t("chat.history.content")}, {Math.ceil(ref.bytes / 1024)} KiB)
     </Pressable>}</For>
     <Show when={selected()}>{ref => <div class="mt-2 rounded border border-border p-2">
-      <Pressable onClick={close}>{t("chat.history.close")}</Pressable>
+      <Pressable data-disclosure-toggle="close" onClick={close}>{t("chat.history.close")}</Pressable>
       <Show when={loading()}><p role="status">{t("chat.history.loading")}</p></Show>
       <Show when={failed()}><p role="alert">{t("chat.history.error")}</p></Show>
       <Show when={chunk()}>{page => <>

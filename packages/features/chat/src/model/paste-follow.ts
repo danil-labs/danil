@@ -60,6 +60,24 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   let escritoPorNosotros: number | undefined;
   let ultimoScrollTop: number | undefined;
   let ultimaRuedaArriba = 0;
+  let interaccionDesplegable: "abrir" | "cerrar" | null = null;
+  let limpiarInteraccion = 0;
+
+  const marcarInteraccion = (tipo: "abrir" | "cerrar") => {
+    interaccionDesplegable = tipo;
+    if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(limpiarInteraccion);
+    if (typeof requestAnimationFrame === "function") {
+      limpiarInteraccion = requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (interaccionDesplegable === tipo) interaccionDesplegable = null;
+        }, 1);
+      });
+    } else {
+      setTimeout(() => {
+        if (interaccionDesplegable === tipo) interaccionDesplegable = null;
+      }, 1);
+    }
+  };
 
   const scrollTop = () => caja?.scrollTop ?? 0;
 
@@ -152,10 +170,9 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
     ultimoScrollTop = ahora;
     escritoPorNosotros = undefined;
 
-    // Subir con la rueda mientras el muelle baja puede no dar dos eventos
-    // separados. Si el que sí llegó viene de nosotros, la referencia para
-    // decidir la dirección es ese valor, no el anterior.
-    if (ignorado !== undefined && ignorado > ahora) previo = ignorado;
+    // Si escribimos `scrollTop` y la persona se movió antes del evento asíncrono,
+    // la dirección real del gesto es respecto a nuestra última escritura, no al evento viejo.
+    if (ignorado !== undefined) previo = ignorado;
 
     ponCerca(estaCerca());
 
@@ -255,7 +272,26 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   // Más de un tercio de la caja en blanco se lee peor que el salto que evita.
   const topeDeRelleno = () => Math.round((caja?.clientHeight ?? 0) / 3);
 
-  const { observador, diferenciaActual, olvidarAlto, sumarAntepuesto } = crearObservador({ cajaActual: () => caja, sigue, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual: () => relleno, ponRelleno, topeDeRelleno, ruedaArribaActiva: () => performance.now() - ultimaRuedaArriba < 250 });
+  /**
+   * Abrir un desplegable (`Pensando…`, `Trabajó durante…`, pasos, razonamiento,
+   * preguntas, visuales o detalles de historial) es un gesto de lectura de la
+   * persona, nunca streaming nuevo al final: soltar aquí en fase de captura
+   * clava la cabecera donde se pulsó y evita saltar a mitad de la caja.
+   */
+  const alInteractuar = (e: Event) => {
+    const target = e.target as Element | null;
+    const control = target?.closest?.("[aria-expanded], [data-disclosure-toggle]");
+    if (!control) return;
+    const estado = control.getAttribute("aria-expanded") ?? control.getAttribute("data-disclosure-toggle");
+    if (estado === "false" || estado === "open") {
+      soltar();
+      marcarInteraccion("abrir");
+    } else if (estado === "true" || estado === "close") {
+      marcarInteraccion("cerrar");
+    }
+  };
+
+  const { observador, diferenciaActual, olvidarAlto, sumarAntepuesto } = crearObservador({ cajaActual: () => caja, sigue, escapado, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual: () => relleno, ponRelleno, topeDeRelleno, ruedaArribaActiva: () => performance.now() - ultimaRuedaArriba < 250, interaccionActual: () => interaccionDesplegable });
 
   /**
    * Los dos `ref` sueltan lo anterior antes de tomar lo nuevo: la caja de una
@@ -279,10 +315,12 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   };
 
   const contenido = (el: HTMLElement) => {
+    dentro?.removeEventListener?.("click", alInteractuar, true);
     observador?.disconnect();
     olvidarAlto();
     ponRelleno(0);
     dentro = el;
+    el.addEventListener?.("click", alInteractuar, true);
     olvidarAncla();
     observador?.observe(el);
   };
@@ -352,8 +390,10 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   );
 
   onCleanup(() => {
+    if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(limpiarInteraccion);
     caja?.removeEventListener("scroll", alScrollear);
     caja?.removeEventListener("wheel", alRodar);
+    dentro?.removeEventListener?.("click", alInteractuar, true);
     observador?.disconnect();
   });
 

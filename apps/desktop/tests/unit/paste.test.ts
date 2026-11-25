@@ -861,3 +861,78 @@ test("anteponer filas virtuales con alto real mayor al estimado conserva la lect
   assert.equal(el.scrollTop, 4450, "debe compensar los +4000 px reales exactos");
   assert.equal(anclaEl.getBoundingClientRect().top, -50, "el mensaje leído no debe saltar ni un píxel");
 });
+
+test("abrir el desplegable de pensando estando al final no salta a la mitad de la caja ni marca mensajes nuevos", async () => {
+  const { el } = contenedorFalso(500, 2000);
+  const p = createRoot(() => seguirElFondo());
+  const oyentes = new Map<string, Array<(e: unknown) => void>>();
+  const c = Object.assign(contenidoFalso(el, Array(10).fill(200)), {
+    style: {} as Record<string, string>,
+    addEventListener: (n: string, f: (e: unknown) => void) => void oyentes.set(n, [...(oyentes.get(n) ?? []), f]),
+    removeEventListener: () => {},
+  });
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 2000);
+  await cuadros(3);
+  enElFinal(el.scrollHeight - el.clientHeight - el.scrollTop);
+
+  const antes = el.scrollTop;
+  // Clic en fase de captura sobre `<button aria-expanded="false">` («Pensando… >»)
+  const boton = {
+    closest: (sel: string) => (sel.includes("aria-expanded") ? boton : null),
+    getAttribute: (name: string) => (name === "aria-expanded" ? "false" : null),
+  };
+  oyentes.get("click")?.forEach((fn) => fn({ target: boton }));
+
+  // El bloque de pensamiento se despliega +1000 px.
+  c.crecer(9, 1000);
+  el.scrollHeight += 1000;
+  disparar!(c, el.scrollHeight);
+  await cuadros(3);
+
+  assert.equal(el.scrollTop, antes, "abrir Pensando… debe dejar la cabecera exactamente donde se pulsó (0 px de salto)");
+  assert.equal(p.hayNuevos(), false, "abrir un desplegable propio no debe anunciar mensajes nuevos");
+
+  // Cerrar el desplegable (aria-expanded="true") durante un turno no mete relleno falso y vuelve a enganchar al fondo.
+  const botonAbierto = {
+    closest: (sel: string) => (sel.includes("aria-expanded") ? botonAbierto : null),
+    getAttribute: (name: string) => (name === "aria-expanded" ? "true" : null),
+  };
+  oyentes.get("click")?.forEach((fn) => fn({ target: botonAbierto }));
+  c.crecer(9, -1000);
+  el.scrollHeight -= 1000;
+  disparar!(c, el.scrollHeight);
+  await cuadros(3);
+
+  assert.equal(c.style.paddingBottom ?? "", "", "cerrar un desplegable no debe inyectar relleno vacío");
+  assert.equal(p.alFondo(), true, "al cerrarse y volver a verse el final, sigue enganchado");
+});
+
+test("subir pocos píxeles con barra/inercia cerca del final y un encogimiento pequeño no re-engancha al fondo", async () => {
+  const { el } = contenedorFalso(400, 2000);
+  const p = createRoot(() => seguirElFondo());
+  const c = contenidoFalso(el, Array(10).fill(200));
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 2000);
+  await cuadros(3);
+
+  // Sube 40 px sin evento `wheel` (p. ej. arrastrando barra o >250ms después de la rueda).
+  el.scrollTop = el.scrollTop - 40;
+  await cuadros(2);
+  const donde = el.scrollTop;
+
+  // Un encogimiento menor (-15 px) no debe volver a activar `sigue`.
+  c.crecer(9, -15);
+  el.scrollHeight -= 15;
+  disparar!(c, el.scrollHeight);
+  await cuadros(2);
+
+  // Al crecer después, debe quedarse suelto donde lo dejó la persona.
+  c.crecer(9, 400);
+  el.scrollHeight += 400;
+  disparar!(c, el.scrollHeight);
+  await cuadros(2);
+  assert.equal(el.scrollTop, donde, "no debe volver a arrastrar al fondo tras un encogimiento pequeño");
+});
