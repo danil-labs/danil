@@ -71,6 +71,7 @@ import { unconfirmedOpen } from "../../../features/machines/src/model/unconfirme
 import { createBatchDelivery, createServiceStream } from "../../../features/service-stream/src";
 import PantallaDeBloqueo from "../shell/LockScreen";
 import { createSidebar } from "../shell/Sidebar";
+import { registerBuiltInRailPlugins } from "../shell/rail-plugins";
 import { createUsage, type Usage } from "../shell/usage";
 import { type DelegatedPanelModel } from "../../../features/projects/src/screens/DelegatedTasks";
 import { createPanelDeChatState } from "./panel-de-chat-state.ts";
@@ -108,7 +109,14 @@ export default function App() {
 
   let lifecycleRevision = 0;
   const { advanceTurn, alMargen, almacenDePreguntas, arrancando, busy, carpetasDeTerminal, cerrarAlMargen, cola, colaDe, comandosDeLaCola, conversationScope, desdeDeTurno, detenidos, editando, enFondo, engineCanDispatch, esDeLaAbierta, esDelWorkspaceAbierto, esperaMaquinaEn, finishedTurns, folder, handoff, handoffAt, injecting, lanzados, liveThreadKey, liveThreads, marcarQuieta, marcarViva, mentionSources, nacenConComando, pasarAlHilo, pendingStarts, permissionError, permissions, placeCandidates, preguntarAlMargen, queueBusy, recipientCandidates, refreshTaskCandidates, reintento, releerCola, respondiendoPermiso, resumeQueue, retenidaPorElMotor, rosterDelProyecto, setArrancando, setCarpetasDeTerminal, setDesdeDeTurno, setEnFondo, setFolder, setInjecting, setMentionSources, setPermissionError, setPermissions, setPreguntasAMedias, setReintento, setRespondiendoPermiso, setSettlingTurns, setSinSteer, setTerminales, setVentana, setVivas, settlingTurns, sinSteer, soltarPreguntas, stopping, taskCandidates, taskQueues, terminales, turnClosed, turnRevisions, turnStarted, ventana, vivas } = createThreadStream({ apagadas, claveAbierta, createConversationHandoff, createEngineQueue, createTaskQueues, deLaTarea, filaDe, input, leerTarea, loadResult, machineName, machineOf, machineWaits, machineWakes, machines, opcionesDeLaTarea, pestanas, project, projectList, sesiones, sessionId, setInput, tareaDelRiel, threads, watchHandlerStatuses, watchProfiles, workspaceActivo, workspaceContext, get enviarFiltro() { return enviarFiltro; }, get lifecycleRevision() { return lifecycleRevision; }, set lifecycleRevision(v) { lifecycleRevision = v; }, get mandarElegido() { return mandarElegido; }, get reconcileActiveTurns() { return reconcileActiveTurns; } });
-  const { abrirPantalla, activarPestana, cerrarPestanasYa, irAPestanaDe, irAVentanaVecina, mandarVentana, partirLaActiva, partirVentana, puedeSepararseDe, reabrirPestana } = createWindows({ carpetaDelEscritorio, drafts, filaDe, paginaDeAgente, paneles, pestanaActiva, pestanas, project, sessionId, setProyectoAbierto, soltarHilo, vivas, get abrirSesion() { return abrirSesion; }, get irAlBlanco() { return irAlBlanco; }, get olvidarPestana() { return olvidarPestana; } });
+  const { abrirPantalla, abrirPlugin, activarPestana, cerrarPestanasYa, irAPestanaDe, irAVentanaVecina, mandarVentana, partirLaActiva, partirVentana, puedeSepararseDe, reabrirPestana } = createWindows({ carpetaDelEscritorio, drafts, filaDe, paginaDeAgente, paneles, pestanaActiva, pestanas, project, sessionId, setProyectoAbierto, soltarHilo, vivas, get abrirSesion() { return abrirSesion; }, get irAlBlanco() { return irAlBlanco; }, get olvidarPestana() { return olvidarPestana; } });
+  registerBuiltInRailPlugins({
+    openPlugin: (plugin) => {
+      setHablandoCon(null);
+      abrirPlugin(plugin);
+    },
+    activeTabId: pestanaActiva,
+  });
 
   const { activityNotice, anadiendoCarpeta, carpetaDelProyecto, inicioDeCarpeta, setActivityNotice, setAnadiendoCarpeta, setInicioDeCarpeta, setSettings, settings, sidebar } = createThreadSide({ createSidebar, alta, archivosDeTarea, closeActiveTab: () => closeActiveTab(), irAPestanaDe, irAVentanaVecina, juntarLaActiva, llaveDeBorrador, nuevaSesion: (enProyecto) => nuevaSesion(enProyecto), partirLaActiva, project, projectList, reabrirPestana, sessionId, setBuscando, workspaceActivo });
   const { clonEnCurso, setClonEnCurso, cuentasTocadas, setCuentasTocadas, firmas, modelosEnVivo, esperando, preguntadas, sesionesConEstado, sessionLists, refreshSessions, carpetasDeTarea, refreshSessionsOnEvent, releerTrasHueco, previewDeAdjunto, miniaturaDeAdjunto, documentosEn, opcionesDeAdjunto, } = createCloneFolder({ attention, avisarDeLosArboles, claveDelHilo, colaSuelta, deLaTarea: (id) => deLaTarea(id), draftOptions, esperandoFila, grupos, hiloAbierto, hilos, leerTarea, loadResult, machines, msgs, naciendo, pedidas, pestanas, project, remoteChildScope, retoques, sesiones, sesionesConPestana, sessionId, setSesiones, unconfirmedOpen, vivas: () => vivas(), workspaceActivo, workspaceContext, });

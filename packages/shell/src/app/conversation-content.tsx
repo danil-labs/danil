@@ -6,7 +6,7 @@ import { sameSite } from "../../../ui/src/lib/panels";
 import { type Layout, type PanelGroup, type PanelSite as SitioDePanel, type Side as PanelSide } from "../../../ui/src/lib/panels-types.ts";
 import { moviendoHueco } from "../../../ui/src/lib/sites";
 import { type Superficie } from "../../../ui/src/lib/surfaces.ts";
-import { fileTabId, type ArtifactTab, type FileTab, type ScreenTab, type SiteTab } from "../../../ui/src/lib/tabs";
+import { fileTabId, type ArtifactTab, type FileTab, type PluginTab, type ScreenTab, type SiteTab } from "../../../ui/src/lib/tabs";
 import { type ContentTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
 import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../ui/src/lib/taskFiles.ts";
 import { cn } from "../../../ui/src/lib/utils";
@@ -20,6 +20,7 @@ import Sitio from "../../../features/sites/src/screens/Site";
 import { openMachineScreen } from "../../../host/src/platform";
 import { BELOW_LOCATION } from "../../../host/src/window";
 import { materialDeProyecto, visoresDeCodigo } from "../featureSlots";
+import PluginFrame from "../shell/PluginFrame";
 import { UsagePanel } from "../shell/UsageTool";
 import { createFreeRouterConsent, renderImage, renderPdf, renderTable } from "./chatSlots";
 import { Screen, TaskFilesCard, VisorDeArchivo, VistaDeProyecto } from "./lazy-screens";
@@ -176,8 +177,10 @@ export function createCeldasDeContenido(deps: CeldasDeContenidoDeps) {
             <Show when={p()}>
               {(abierta) => (
                 <div
-                  class="min-h-0 min-w-0 overflow-y-auto"
+                  class="min-h-0 min-w-0"
                   classList={{
+                    "overflow-y-auto": abierta().clase !== "plugin",
+                    "overflow-hidden": abierta().clase === "plugin",
                     hidden: !visible() || tapadoPorElProyecto(paneles.siteOf(id)),
                     "pt-8": llevaTiraInterior(paneles.siteOf(id)),
                   }}
@@ -287,6 +290,21 @@ export function createCeldasDeContenido(deps: CeldasDeContenidoDeps) {
                             onGuardado={() => {}}
                           /></Suspense>
                         </Show>
+                      )}
+                    </Match>
+                    <Match
+                      when={
+                        abierta().clase === "plugin"
+                          ? (abierta() as PluginTab)
+                          : null
+                      }
+                    >
+                      {(pl) => (
+                        <PluginFrame
+                          pluginId={pl().pluginId}
+                          title={pl().titulo}
+                          url={pl().url}
+                        />
                       )}
                     </Match>
                   </Switch>

@@ -43,16 +43,26 @@ export type ScreenTab = CommonTab & {
   titulo: string;
 };
 
+// Pestaña de conector o app en `<iframe>`: una por plugin, independiente de tareas.
+export type PluginTab = CommonTab & {
+  clase: "plugin";
+  pluginId: string;
+  titulo: string;
+  url: string;
+};
+
 export type Tab =
   | TaskTab
   | FileTab
   | ArtifactTab
   | SiteTab
-  | ScreenTab;
+  | ScreenTab
+  | PluginTab;
 export type ContentTab =
   | FileTab
   | ArtifactTab
-  | SiteTab;
+  | SiteTab
+  | PluginTab;
 
 // La ruta no basta: tareas y árboles distintos pueden tener el mismo archivo.
 // El byte nulo separa campos sin colisionar con nombres de archivo.
@@ -78,6 +88,11 @@ export const browserTabId = () => `navegador\u0000${Date.now()}\u0000${browserSe
 
 export const screenTabId = (machine: string) => `pantalla\u0000${machine}`;
 
+export const pluginTabId = (pluginId: string) => `plugin\u0000${pluginId}`;
+
 export const isTaskTab = (p: Tab): p is TaskTab => p.clase === "tarea";
 export const isContentTab = (p: Tab): p is ContentTab =>
-  p.clase === "archivo" || p.clase === "artefacto" || p.clase === "sitio";
+  p.clase === "archivo" ||
+  p.clase === "artefacto" ||
+  p.clase === "sitio" ||
+  p.clase === "plugin";

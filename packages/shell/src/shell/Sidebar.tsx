@@ -26,7 +26,7 @@ import {
   resolvedRailSections,
   toggleRailSectionCollapsed,
 } from "./rail-layout";
-import { RailSection } from "./RailSection";
+import { CollapsedRailButtons, RailButton, RailSection } from "./RailSection";
 import { TasksFilterMenu } from "./SidebarFilter";
 import { createTareasDelRiel } from "./sidebar-groups";
 import { createDockDelRiel } from "./sidebar-dock";
@@ -216,6 +216,7 @@ export default function Sidebar(props: SidebarProps) {
                 )}
               </Show>
               <Show when={props.collapsed}>
+                <CollapsedRailButtons sections={seccionesVisibles()} onAfterActivate={() => setDesplegado(false)} />
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     isActive={desplegado()}
@@ -307,6 +308,21 @@ export default function Sidebar(props: SidebarProps) {
                         >
                           <Lista />
                         </RailSection>
+                      </Match>
+
+                      <Match when={section().descriptor.kind === "button" && section().descriptor.onActivate}>
+                        {(activate) => (
+                          <RailButton
+                            id={section().id}
+                            title={section().descriptor.label()}
+                            active={section().descriptor.isActive?.()}
+                            icon={section().descriptor.renderIcon?.()}
+                            onActivate={() => {
+                              activate()();
+                              setDesplegado(false);
+                            }}
+                          />
+                        )}
                       </Match>
 
                       <Match when={section().descriptor.render}>

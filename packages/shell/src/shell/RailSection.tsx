@@ -1,8 +1,10 @@
 import ChevronDown from "lucide-solid/icons/chevron-down";
-import { Show, type JSX } from "solid-js";
+import { For, Show, type JSX } from "solid-js";
 import { t } from "../../../ui/src/lib/i18n";
 import { cn } from "../../../ui/src/lib/utils";
 import { Pressable } from "../../../ui/src/Pressable";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../../../ui/src/sidebar";
+import type { ResolvedRailSection } from "./rail-layout";
 
 /**
  * Sección plegable estándar del riel izquierdo (estilo claude.ai).
@@ -57,5 +59,63 @@ export function RailSection(props: {
         <div class="mt-1 min-w-0">{props.children}</div>
       </Show>
     </section>
+  );
+}
+
+/**
+ * Acceso directo de una sola fila en el riel izquierdo (estilo claude.ai).
+ *
+ * Participa en el organizador del riel igual que una sección (orden y
+ * visibilidad), pero se pinta como un botón limpio con ícono y etiqueta.
+ */
+export function RailButton(props: {
+  id: string;
+  title: string;
+  active?: boolean;
+  icon?: JSX.Element;
+  onActivate: () => void;
+}) {
+  return (
+    <SidebarMenu class="shrink-0 gap-0.5" data-rail-section={props.id}>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          isActive={props.active}
+          aria-label={props.title}
+          data-rail-button={props.id}
+          class="font-medium text-neutral-700 hover:text-neutral-950"
+          onClick={() => props.onActivate()}
+        >
+          <Show when={props.icon}>{props.icon}</Show>
+          <span class="truncate">{props.title}</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  );
+}
+
+/** Versión colapsada (solo ícono con tooltip) de los botones del riel. */
+export function CollapsedRailButtons(props: {
+  sections: ResolvedRailSection[];
+  onAfterActivate?: () => void;
+}) {
+  return (
+    <For each={props.sections.filter((s) => s.descriptor.kind === "button" && s.descriptor.onActivate)}>
+      {(section) => (
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            isActive={section.descriptor.isActive?.()}
+            tooltip={section.descriptor.label()}
+            aria-label={section.descriptor.label()}
+            data-rail-button={section.id}
+            onClick={() => {
+              section.descriptor.onActivate?.();
+              props.onAfterActivate?.();
+            }}
+          >
+            <Show when={section.descriptor.renderIcon}>{(icon) => icon()()}</Show>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      )}
+    </For>
   );
 }
