@@ -301,6 +301,8 @@
   "chat.handoff.awaiting_start": "Waiting for the turn to start…",
   "chat.work.no_details": "No activity details are available for this turn.",
   "chat.work.title": "Work",
+  "chat.reasoning.row": "Reasoned",
+  "chat.reasoning.row_duration": "Reasoned · {duration}",
   "chat.reasoning.title": "Reasoning",
   "chat.reasoning.summary": "Reasoning · {duration}",
   "chat.reasoning.thinking": "Thinking…",

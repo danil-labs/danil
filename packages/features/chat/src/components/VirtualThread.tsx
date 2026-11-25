@@ -2,7 +2,7 @@ import { createVirtualizer, defaultRangeExtractor, observeElementRect, type Rang
 import { createEffect, createMemo, createSignal, mapArray, onCleanup, onMount, untrack, type Accessor, type JSX } from "solid-js";
 import { ThreadRowContext } from "../model/threadRow";
 
-const THREAD_GAP = 16;
+const THREAD_GAP = 6;
 const OVERSCAN = 6;
 const JUMP_FRAMES = 12;
 // Sin esto una conversación escondida conserva el alto de la anterior y abre por el principio.
