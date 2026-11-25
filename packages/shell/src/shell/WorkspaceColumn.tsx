@@ -203,7 +203,7 @@ function ColumnFoot(props: {
   // Leer `props.tools` dos veces montaría dos copias, y cada una consulta por su cuenta.
   const tools = children(() => props.tools);
   return (
-    <div class="flex shrink-0 flex-col items-center gap-1 pt-1 pb-2" data-workspace-column-foot="">
+    <div class="flex shrink-0 flex-col items-center gap-1 pt-1 pb-3" data-workspace-column-foot="">
       <Show when={tools.toArray().length > 0}>
         {tools()}
         <span aria-hidden="true" class="my-1 h-px w-6 shrink-0 bg-border-strong" />

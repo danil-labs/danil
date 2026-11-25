@@ -61,7 +61,7 @@ export default function TabStrip(props: TabStripProps) {
         {(label) => (
           <div
             data-borrador=""
-            class="tab-active ml-0.5 group flex h-[30px] w-[220px] shrink-0 items-center rounded-sm pr-1 text-ui font-semibold text-neutral-950 select-none"
+            class="tab-active ml-0.5 group flex h-[30px] w-[220px] shrink-0 items-center rounded-sm pr-1 text-ui font-semibold text-neutral-950 select-none [[data-title-bar]_&]:h-full [[data-title-bar]_&]:pb-1.5"
           >
             <div
               aria-current="page"
@@ -139,7 +139,7 @@ export function NewTabButton(props: {
       <DropdownMenuTrigger
         aria-label={t("projects.tabs.new")}
         title={t("projects.tabs.new")}
-        class="ml-0.5 grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary data-[expanded]:bg-surface-muted data-[expanded]:text-neutral-950"
+        class="ml-0.5 grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary data-[expanded]:bg-surface-muted data-[expanded]:text-neutral-950 [[data-title-bar]_&]:mb-1.5"
       >
         <Plus size={14} />
       </DropdownMenuTrigger>
