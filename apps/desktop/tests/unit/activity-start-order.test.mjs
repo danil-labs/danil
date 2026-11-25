@@ -18,7 +18,7 @@ test("output arriving before started joins a single activity and thinking resume
     assert.ok(await until(() => fixture.doc.querySelector("[data-turn-activity-anchor]")));
     assert.equal(fixture.doc.querySelectorAll("[data-chat-thread] .activity-caption-running").length, 1, "legacy output and the semantic turn must not animate as two turns");
     emit("tool_done", "Read", { id: "tool", ok: true });
-    assert.ok(await until(() => /^(Pensando|Cavilando|Dándole vueltas|Atando cabos|Rumiando|Destilando|Puliendo la idea|Maquinando|Hilando fino|Tramando algo|Cocinando|Amasando)…$/.test(fixture.doc.querySelector("[data-chat-thread] .activity-caption-running")?.textContent ?? "")));
+    assert.ok(await until(() => (fixture.doc.querySelector("[data-chat-thread] .activity-caption-running")?.textContent ?? "") === "Leyendo file.ts"));
     assert.deepEqual(fixture.app.failures, []);
   } finally { fixture.app.w.close(); }
 });

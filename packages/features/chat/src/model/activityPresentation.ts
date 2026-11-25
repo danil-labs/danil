@@ -37,6 +37,15 @@ export function observedActivityAction(message: Msg | null | undefined, observed
   }
 }
 
+export function isConcreteActivityLabel(label: string | null | undefined): boolean {
+  return Boolean(
+    label &&
+    label !== t("chat.reasoning.thinking") &&
+    label !== t("chat.activity.preparing") &&
+    label !== t("chat.activity.title"),
+  );
+}
+
 export function presentActivity(input: {
   active: boolean;
   outcome?: TurnOutcome;
@@ -48,6 +57,8 @@ export function presentActivity(input: {
   reasoning?: readonly Razonamiento[];
   runningSteps?: number;
   label?: string;
+  /** Última descripción concreta ya mostrada en este turno para no volver a «Hilando fino…». */
+  fallbackLabel?: string | null;
 }): { label: string; animate: boolean } {
   // Parar no cambia el rótulo: el loader sigue hasta que suelta `stopping`.
   // «Deteniendo…» y «Trabajó» saltan el alto que el hilo venía sosteniendo.
@@ -59,10 +70,12 @@ export function presentActivity(input: {
   const animate = !input.paused && (!input.blocked || Boolean(input.stopping));
   if (input.blocked && !input.stopping) return { label: t("chat.activity.title"), animate: false };
   const action = input.action;
-  if (!action) return { label: input.label ?? t("chat.activity.preparing"), animate };
+  if (!action) return { label: (input.stopping && input.fallbackLabel) || input.label || t("chat.activity.preparing"), animate };
   const thinkingLabel = (detail?: string) => {
     const headline = detail ?? reasoningHeadline(input.reasoning, { latest: true, allowSentence: true });
-    return headline ? withEllipsis(headline) : t("chat.reasoning.thinking");
+    if (headline) return withEllipsis(headline);
+    if (input.fallbackLabel) return input.fallbackLabel;
+    return t("chat.reasoning.thinking");
   };
   switch (action.kind) {
     case "step": {

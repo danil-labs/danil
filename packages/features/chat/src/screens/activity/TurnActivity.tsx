@@ -10,7 +10,7 @@ import { ActivityIndicator, ActivityCaption } from "../../components/activity/Ac
 import McpAppView from "../McpAppView";
 import type { Msg, Razonamiento } from "../../model/messageTypes";
 import LineaDeTiempo, { SUPERFICIE_DE_EJECUCION } from "../../components/Timeline";
-import { currentActivityAction, presentActivity, type ActivityAction } from "../../model/activityPresentation";
+import { currentActivityAction, isConcreteActivityLabel, presentActivity, type ActivityAction } from "../../model/activityPresentation";
 import { buildActivityTimeline } from "../../model/activityTimeline";
 import type { TurnOutcome } from "../../model/turnActivity";
 import { Pressable } from "../../../../../ui/src/Pressable";
@@ -50,7 +50,25 @@ export function RegistroDeTrabajo(props: {
   const todos = createMemo(() => [...avance().flatMap((a) => a.pasos), ...props.pasos]);
   const runningSteps = createMemo(() => todos().filter((step) => step.corriendo).length);
   const action = createMemo(() => currentActivityAction(props.latestAction, todos()));
-  const presentation = createMemo(() => presentActivity({ active: props.corriendo, outcome: props.outcome, stopping: props.stopping, blocked: props.blocked, paused: props.animando === false, duration: props.duracion, action: action(), reasoning: props.razonamiento, runningSteps: runningSteps(), label: props.label }));
+  const presentation = createMemo<{ label: string; animate: boolean }>((previous) => {
+    const fallbackLabel =
+      (props.corriendo || props.stopping) && previous && isConcreteActivityLabel(previous.label)
+        ? previous.label
+        : null;
+    return presentActivity({
+      active: props.corriendo,
+      outcome: props.outcome,
+      stopping: props.stopping,
+      blocked: props.blocked,
+      paused: props.animando === false,
+      duration: props.duracion,
+      action: action(),
+      reasoning: props.razonamiento,
+      runningSteps: runningSteps(),
+      label: props.label,
+      fallbackLabel,
+    });
+  });
   const rotulo = () => presentation().label;
   // Solo cicla palabras genéricas («Pensando…», «Cavilando…») cuando aún no llegó un título vivo.
   const genericThinking = () => action()?.kind === "thinking" && rotulo() === t("chat.reasoning.thinking");
@@ -109,7 +127,7 @@ export function RegistroDeTrabajo(props: {
               {(tramo, index) => (
                 <>
                   <Show when={tramo().pasos.length > 0}>
-                    <LineaDeTiempo pasos={tramo().pasos} active={presentation().animate} individual />
+                    <LineaDeTiempo pasos={tramo().pasos} active={presentation().animate && !props.stopping} individual />
                   </Show>
                   {/* La fila de siempre y no prosa suelta: dentro del pliegue
                       una ráfaga sin su rótulo se lee como algo que el agente dijo. */}
@@ -126,14 +144,14 @@ export function RegistroDeTrabajo(props: {
               {(item, index) => (
                 <Switch>
                   <Match when={item.kind === "steps" ? item : null}>
-                    {(entry) => <LineaDeTiempo pasos={entry().pasos} active={presentation().animate} individual />}
+                    {(entry) => <LineaDeTiempo pasos={entry().pasos} active={presentation().animate && !props.stopping} individual />}
                   </Match>
                   <Match when={item.kind === "reasoning" ? item : null}>
                     {(entry) => (
                       <Reasoning
                         bloques={entry().bloques}
                         slot={`timeline-${index()}`}
-                        active={presentation().animate && action()?.kind === "thinking" && index() === timeline().length - 1}
+                        active={presentation().animate && !props.stopping && action()?.kind === "thinking" && index() === timeline().length - 1}
                       />
                     )}
                   </Match>

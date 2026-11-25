@@ -178,7 +178,9 @@ export function createChatEvents(deps: ChatEventsDeps) {
 
       if (kind === "done") {
         void settleTurn(session, ok, text === "unsaved");
-        releerCola(session);
+        // Si este cliente tiene un mensaje encolado esperando el cierre (`handoff.pending`),
+        // releer `load_queue` en paralelo pisaría `cola()` antes de que `settleTurn` lo despache.
+        if (!handoff.view(conversationScope(session)).pending) releerCola(session);
         return;
       }
 

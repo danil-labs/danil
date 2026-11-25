@@ -129,8 +129,8 @@ export function createColumnasDePrincipal(deps: ColumnasDePrincipalDeps) {
             />
             </>}
           />
-          {/* La superficie: barra, ventana y panel derecho, una caja redondeada que flota sobre el marco. */}
-          <div class="relative mt-2 flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[10px] bg-surface" data-surface="">
+          {/* La superficie: barra, ventana y panel derecho, una caja redondeada pegada a la franja para fundirse con la pestaña activa. */}
+          <div class="relative flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-[10px] bg-surface" data-surface="">
           {/* Los topes los pone quien monta: el ancho por debajo del
               cual algo deja de caber solo lo sabe su contenido. Por
               debajo de 220 los títulos del historial dejan de caber; por

@@ -577,3 +577,15 @@ test("panel layouts for the same workspace are isolated by session context", asy
     setDisplayWorkspaceContext("bea"); assert.deepEqual(readLayout("same-context-workspace", "desk"), layout("bea-task"));
   } finally { setDisplayWorkspaceContext(null); }
 });
+
+test("showDraft keeps the blank in front when sync adds another tab", () => {
+  const p = con("a", "b");
+  p.showDraft();
+  assert.equal(p.activeTabAt(uno), null);
+  p.sync(["a", "b", "c"]);
+  assert.equal(p.activeTabAt(uno), null, "sync must not steal focus from an intentional blank draft");
+  assert.deepEqual(p.tabsAt(uno), ["a", "b", "c"]);
+  p.activate("c");
+  assert.equal(p.activeTabAt(uno), "c");
+  sano(p);
+});
