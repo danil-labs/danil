@@ -10,6 +10,8 @@ export const MAX_ROWS = 1;
 export type PanelGroup = {
   pestanas: string[];
   activa: string | null;
+  /** `true` cuando la persona abrió explícitamente un borrador de tarea nueva. */
+  blanco?: boolean;
 };
 
 export type PanelSite = { col: number; fila: number };

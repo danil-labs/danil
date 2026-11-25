@@ -46,7 +46,7 @@ export default function TitleBar(props: {
     <div
       data-title-bar=""
       class={cn(
-        "tab-veil window-frame flex min-h-[42px] shrink-0 items-center pt-1.5",
+        "tab-veil window-frame flex min-h-[42px] shrink-0 items-center pt-2",
         apartarSemaforo() ? TRAFFIC_LIGHT_PADDING : "pl-2",
       )}
       data-tauri-drag-region=""
@@ -57,8 +57,8 @@ export default function TitleBar(props: {
         <span class="min-w-0 flex-1" data-tauri-drag-region="" />
         {props.finDeIzquierda}
       </div>
-      {/* El margen vive aquí, fuera de la tira: si fuera su padding, el scroll horizontal se lo come y recorta la primera esquina. */}
-      <div class="flex min-w-0 flex-1 items-center self-stretch pl-2">{props.centro}</div>
+      {/* El respiro izquierdo vive dentro de la tira (`pl-2.5`) para que el pie cóncavo de la primera pestaña no se recorte por `overflow-x-auto`. */}
+      <div class="flex min-w-0 flex-1 items-center self-stretch">{props.centro}</div>
       <div class="flex shrink-0 items-center gap-1 pr-2 pb-1.5">
         {props.derecha}
         <WindowControls />

@@ -44,7 +44,7 @@ export default function TabStrip(props: TabStripProps) {
       // La pestaña activa toca el borde inferior para fundirse con su panel bajo el velo.
       // flex-1 separaría el botón de añadir de la última pestaña.
       // Con touchpad en Windows, el rebote elástico al tope desplaza el texto sin el fondo de la pestaña.
-      class="group/strip relative flex min-w-0 items-end gap-0.5 self-stretch overflow-x-auto overflow-y-hidden overscroll-x-none pl-0 pr-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      class="group/strip relative flex min-w-0 items-end gap-0.5 self-stretch overflow-x-auto overflow-y-hidden overscroll-x-none pl-2.5 pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <div role="tablist" aria-label={t("projects.tabs.label")} class="flex shrink-0 items-end gap-0.5 self-stretch">
         <For each={keptTabs()}>{renderTab}</For>

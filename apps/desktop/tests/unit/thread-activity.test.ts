@@ -96,6 +96,29 @@ test("a closed turn does not lose its tools when the re-read brings no ownership
   assert.ok(kept[0].messages.some(row => row.meta === "usó"));
 });
 
+test("preserving prior tools on re-read still keeps fresh duration and failure outcome", () => {
+  const model = createActivityProjection();
+  model.begin("A", "s", 1_000, []);
+  const tool1 = message("Read a.ts", { role: "system", meta: "usó" });
+  const tool2 = message("Edit b.ts", { role: "system", meta: "usó" });
+  model.observe("A", "s", [], [tool1, tool2]);
+  assert.equal(model.project("A", "s", [tool1, tool2])[0].messages.length, 2);
+
+  // Partial re-read with only 1 tool keeps both tools.
+  const partialTool = message("Read a.ts", { role: "system", meta: "usó", turno: "t1" });
+  model.observe("A", "s", [tool1, tool2], [partialTool]);
+  assert.equal(model.project("A", "s", [partialTool])[0].messages.filter(m => m.meta === "usó").length, 2);
+
+  // Closing with final answer + duration_ms (no tools in fresh) keeps tools AND duration_ms.
+  model.finish("A", "s", "done");
+  const finalAnswer = message("Listo", { role: "agent", turno: "t1", duration_ms: 4_200 });
+  model.reconcile("A", "s", [tool1, tool2], [finalAnswer], true);
+  const doneActivity = model.project("A", "s", [finalAnswer])[0];
+  assert.equal(doneActivity.durationMs, 4_200);
+  assert.equal(doneActivity.outcome, "done");
+  assert.equal(doneActivity.messages.filter(m => m.meta === "usó").length, 2);
+});
+
 test("done and persisted history preserve the observed activity key and answer order", () => {
   const model = createActivityProjection(); model.begin("A", "s", 1_000, []);
   const live = message("first"), last = message("last"); model.observe("A", "s", [], [live, last]);
