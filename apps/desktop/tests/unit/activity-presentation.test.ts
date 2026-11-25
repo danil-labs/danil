@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../helpers/catalog.ts";
 import { currentActivityAction, observedActivityAction, presentActivity } from "../../../../packages/features/chat/src/model/activityPresentation.ts";
+import { narrateStep, reasoningHeadline } from "../../../../packages/features/chat/src/model/activityNarration.ts";
 import { pasoDe } from "../../src/lib/steps.ts";
 
 test("stop request suppresses animation and shows stopping caption before authoritative completion", () => {
@@ -57,4 +58,50 @@ test("completed tools resume thinking unless another tool remains active", () =>
   assert.deepEqual(currentActivityAction({ kind: "step", step: finished }, [running, finished]), { kind: "step", step: running });
   assert.deepEqual(currentActivityAction({ kind: "responding" }, [running]), { kind: "responding" });
   assert.equal(currentActivityAction(null, []), null);
+});
+
+test("streaming reasoning headlines update live from headings, explicit summaries, or completed sentences", () => {
+  const streamed = [
+    { text: "**Revisando la configuración adecuada**\nPrimero veo wrangler.toml.\n\n**Verificando el despliegue en beta**\nAhora reviso los scripts." },
+  ];
+  // Live streaming picks the latest bold heading.
+  const action = observedActivityAction({ role: "agent", text: "", razonamiento: streamed }, "thinking");
+  assert.equal(presentActivity({ active: true, action }).label, "Verificando el despliegue en beta…");
+  // Collapsed row picks the first explicit heading and hides plain body-only reasoning.
+  assert.equal(reasoningHeadline(streamed, { latest: false, allowSentence: false }), "Revisando la configuración adecuada");
+  assert.equal(reasoningHeadline([{ text: "Razonamiento separado de los mensajes públicos." }], { latest: false, allowSentence: false }), null);
+  // Live streaming falls back to the first completed sentence when there are no headings.
+  assert.equal(
+    presentActivity({
+      active: true,
+      action: { kind: "thinking" },
+      reasoning: [{ text: "Voy a revisar la configuración de Cloudflare.\nLuego valido el build." }],
+    }).label,
+    "Voy a revisar la configuración de Cloudflare…",
+  );
+  // Explicit server/engine summary takes highest priority.
+  assert.equal(
+    reasoningHeadline([{ text: "raw", summary: "Analizando métricas de latencia" }], { latest: true, allowSentence: false }),
+    "Analizando métricas de latencia",
+  );
+});
+
+test("commands, web lookups, and explicit step summaries render as personalized phrases", () => {
+  assert.equal(
+    presentActivity({ active: true, action: { kind: "step", step: pasoDe("command_execution", "git status", { corriendo: true }) } }).label,
+    "Revisando cambios en git…",
+  );
+  assert.equal(
+    presentActivity({
+      active: true,
+      action: { kind: "step", step: pasoDe("Bash", "node --test apps/desktop/tests/unit/paste.test.ts", { corriendo: true }) },
+      runningSteps: 2,
+    }).label,
+    "Corriendo pruebas en paste.test.ts… (+1)",
+  );
+  assert.equal(narrateStep(pasoDe("Bash", "pnpm -C apps/desktop exec vite build"), { live: false }), "Compiló el proyecto");
+  assert.equal(narrateStep(pasoDe("Bash", 'rg "scrollTop" packages/features/chat'), { live: true }), "Buscando «scrollTop» en el código…");
+  assert.equal(narrateStep(pasoDe("WebFetch", "https://docs.cloudflare.com/workers/"), { live: true }), "Consultando docs.cloudflare.com…");
+  assert.equal(narrateStep(pasoDe("Bash", "custom-script", { summary: "Validando certificados TLS" }), { live: true }), "Validando certificados TLS…");
+  assert.equal(narrateStep(pasoDe("Bash", "custom-script", { summary: "Validando certificados TLS" }), { live: false }), "Validando certificados TLS");
 });
