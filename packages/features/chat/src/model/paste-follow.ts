@@ -60,13 +60,6 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   let escritoPorNosotros: number | undefined;
   let ultimoScrollTop: number | undefined;
   let ultimaRuedaArriba = 0;
-  let ruedaPendiente = false;
-  let finDeRueda: ReturnType<typeof setTimeout> | undefined;
-  const limpiarRueda = () => {
-    ruedaPendiente = false;
-    clearTimeout(finDeRueda);
-    finDeRueda = undefined;
-  };
 
   const scrollTop = () => caja?.scrollTop ?? 0;
 
@@ -151,10 +144,10 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
    */
   const alScrollear = (e: Event) => {
     if (e.target !== caja) return;
-    limpiarRueda();
 
     const ahora = scrollTop();
     const ignorado = escritoPorNosotros;
+    const esNuestro = ignorado !== undefined && Math.abs(ahora - ignorado) < 0.5;
     let previo = ultimoScrollTop ?? ahora;
     ultimoScrollTop = ahora;
     escritoPorNosotros = undefined;
@@ -170,7 +163,7 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
     // al encoger siempre deja la barra en `fondo()`); se suelta ya sin esperar un tic.
     if (
       ahora < previo &&
-      ahora !== ignorado &&
+      !esNuestro &&
       ahora < fondo() &&
       !animacionActual()?.ignorarEscapes
     ) {
@@ -180,7 +173,7 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
     // El ancla marca dónde está leyendo la persona. Sin retomarla aquí, el
     // siguiente cambio de alto la restaura contra una posición vieja y deshace
     // el gesto. El acotado del navegador queda fuera: deja la barra en el fondo.
-    if (!sigue() && ahora !== ignorado && !(ahora < previo && ahora >= fondo())) {
+    if (!sigue() && !esNuestro && !(ahora < previo && ahora >= fondo())) {
       tomarAncla();
     }
 
@@ -188,7 +181,7 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
     if (relleno && !sigue() && ahora <= fondo() - relleno) ponRelleno(0);
 
     setTimeout(() => {
-      if (ahora === ignorado) return;
+      if (esNuestro) return;
       // Al agrandar la ventana, el navegador acota la barra al nuevo fondo.
       // Ese ascenso no es un gesto de la persona y no debe soltar el hilo.
       if (ahora < previo && ahora >= fondo()) return;
@@ -240,17 +233,9 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
     }
     if (caja.scrollHeight <= caja.clientHeight) return;
     ultimaRuedaArriba = performance.now();
-    if (caja.scrollTop > 0) {
-      ruedaPendiente = true;
-      clearTimeout(finDeRueda);
-      finDeRueda = setTimeout(limpiarRueda, 80);
-    }
-    // Solo se suelta la primera vez y sin tomar el ancla antes de que el navegador
-    // mueva `scrollTop`; si no, `restaurarAncla` deshace la rueda hacia abajo.
     if (sigue() || !escapado()) {
       ponEscapado(true);
       ponSigue(false);
-      olvidarAncla();
     }
   };
 
@@ -270,7 +255,7 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   // Más de un tercio de la caja en blanco se lee peor que el salto que evita.
   const topeDeRelleno = () => Math.round((caja?.clientHeight ?? 0) / 3);
 
-  const { observador, diferenciaActual, olvidarAlto, sumarAntepuesto } = crearObservador({ cajaActual: () => caja, sigue, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual: () => relleno, ponRelleno, topeDeRelleno, ruedaArribaActiva: () => performance.now() - ultimaRuedaArriba < 250, ruedaPendiente: () => ruedaPendiente });
+  const { observador, diferenciaActual, olvidarAlto, sumarAntepuesto } = crearObservador({ cajaActual: () => caja, sigue, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual: () => relleno, ponRelleno, topeDeRelleno, ruedaArribaActiva: () => performance.now() - ultimaRuedaArriba < 250 });
 
   /**
    * Los dos `ref` sueltan lo anterior antes de tomar lo nuevo: la caja de una
@@ -286,7 +271,6 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   const contenedor = (el: HTMLElement) => {
     caja?.removeEventListener("scroll", alScrollear);
     caja?.removeEventListener("wheel", alRodar);
-    limpiarRueda();
     caja = el;
     ultimoScrollTop = undefined;
     escritoPorNosotros = undefined;
@@ -344,7 +328,11 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   };
 
   const sostener = () => {
-    if (sigue() || ruedaPendiente) return;
+    if (sigue()) {
+      pegar();
+      tomarAncla();
+      return;
+    }
     restaurarAncla();
     tomarAncla();
   };
@@ -366,7 +354,6 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   onCleanup(() => {
     caja?.removeEventListener("scroll", alScrollear);
     caja?.removeEventListener("wheel", alRodar);
-    limpiarRueda();
     observador?.disconnect();
   });
 

@@ -38,7 +38,9 @@ export function crearAncla({ cajaActual, dentroActual, scrollTop, ponScrollTop, 
       ancla = undefined;
       return;
     }
-    const arriba = caja.getBoundingClientRect().top;
+    const cajaRect = caja.getBoundingClientRect();
+    const arriba = cajaRect.top;
+    const abajo = cajaRect.bottom;
     const hijos = dentro.children;
     let i = Math.min(ancla?.i ?? 0, hijos.length - 1);
     // Hacia arriba mientras el de la mano empiece por debajo del borde.
@@ -46,7 +48,15 @@ export function crearAncla({ cajaActual, dentroActual, scrollTop, ponScrollTop, 
     // Y hacia abajo mientras acabe por encima: ese ya no se ve.
     while (i < hijos.length - 1 && hijos[i]!.getBoundingClientRect().bottom <= arriba) i++;
     const el = hijos[i]!;
-    const desfase = el.getBoundingClientRect().top - arriba;
+    const rect = el.getBoundingClientRect();
+    // Si incluso el primer hijo montado queda por debajo de la vista (p. ej. al
+    // scrollear rápido hacia arriba dentro del margen virtual aún sin montar),
+    // no anclar a un elemento fuera de pantalla.
+    if (abajo > arriba && rect.top >= abajo) {
+      ancla = undefined;
+      return;
+    }
+    const desfase = rect.top - arriba;
     ancla = { el, desfase, y: desfase + scrollTop(), i };
   };
 
@@ -58,16 +68,30 @@ export function crearAncla({ cajaActual, dentroActual, scrollTop, ponScrollTop, 
     return Math.max(0, ancla.y - y);
   };
 
-  /** Devuelve la vista a donde estaba, si el ancla se movió. */
-  const restaurarAncla = () => {
+  /**
+   * Devuelve la vista tras un cambio de layout.
+   *
+   * - `"contenido"` (lectura suelta): compensa únicamente el cambio de posición
+   *   del ancla en espacio de contenido (`yAhora - ancla.y`), que es invariante
+   *   ante el scroll de la persona (rueda, inercia, barra o teclado). Así nunca
+   *   deshace un gesto en vuelo ni deja sin compensar un cambio por encima.
+   * - `"vista"` (`cubierto` siguiendo el fondo): devuelve el desfase respecto al
+   *   borde superior cuando el navegador acotó `scrollTop` al encoger el hilo.
+   */
+  const restaurarAncla = (modo: "contenido" | "vista" = "contenido") => {
     const caja = cajaActual();
     if (!ancla || !caja || !ancla.el.isConnected) return;
     const arriba = caja.getBoundingClientRect().top;
     const desfase = ancla.el.getBoundingClientRect().top - arriba;
-    const movido = desfase - ancla.desfase;
+    const yAhora = desfase + scrollTop();
+    const movido = modo === "vista" ? desfase - ancla.desfase : yAhora - ancla.y;
     // El medio píxel es el redondeo de `scrollTop`: corregir por menos de eso
     // es escribir un valor que el navegador ya tiene.
     if (Math.abs(movido) >= 0.5) ponScrollTop(scrollTop() + movido);
+    if (modo === "contenido") {
+      const nuevoDesfase = ancla.el.getBoundingClientRect().top - arriba;
+      ancla = { ...ancla, desfase: nuevoDesfase, y: nuevoDesfase + scrollTop() };
+    }
   };
 
   const lectura = () => (sigue() || !ancla ? null : { hijo: ancla.i, desfase: ancla.desfase, el: ancla.el });
