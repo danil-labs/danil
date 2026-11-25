@@ -92,7 +92,7 @@ export function webWorkspacePicker(transport: EdgeTransport, options: { store: S
      * marca para reabrir el selector al volver y se manda el login con `organization_id`, para que
      * AuthKit no pregunte la organización otra vez.
      */
-    async admit(entry: PickerOrg, { resume = true } = {}) {
+    async admit(entry: PickerOrg, { resume = true } = {}): Promise<"admitted" | "redirected"> {
       // Desde el aviso «Vuelve a entrar» no se reabre el «+» al volver del login.
       if (resume) options.store.setItem(resumeKey, "1");
       try {
@@ -105,7 +105,7 @@ export function webWorkspacePicker(transport: EdgeTransport, options: { store: S
         const code = (error as { code?: unknown } | null)?.code;
         if (code === "organization_auth_required" && options.signIn) {
           options.signIn(entry.org);
-          return;
+          return "redirected";
         }
         options.store.removeItem(resumeKey);
         throw error;
@@ -113,6 +113,7 @@ export function webWorkspacePicker(transport: EdgeTransport, options: { store: S
       // Admisión sin salir de la página: no hay retorno que reabra el selector.
       options.store.removeItem(resumeKey);
       for (const fn of subscribers) fn();
+      return "admitted";
     },
     resume() {
       const resume = options.store.getItem(resumeKey) === "1";

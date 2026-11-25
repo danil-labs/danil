@@ -96,13 +96,14 @@ export function personOf(body: unknown): EdgePerson {
 export function edgeIdentity(transport: EdgeTransport, origin: string) {
   return {
     /** La entrada de identity (WorkOS); `returnTo` debe ser una de sus vueltas exactas (`WEB_RETURN_URLS`). */
-    loginUrl(returnTo: string, organizationId?: string, prompt?: "select_account") {
+    loginUrl(returnTo: string, organizationId?: string, prompt?: "select_account", mode?: "add") {
       const url = new URL(`${origin}/v1/identity/login`);
       url.searchParams.set("return_to", returnTo);
       // La última organización usada evita el selector de organización de AuthKit. Solo un id de
       // organización: la personal no vive en WorkOS y no se manda.
       if (organizationId) url.searchParams.set("organization_id", organizationId);
       if (prompt) url.searchParams.set("prompt", prompt);
+      if (mode === "add") url.searchParams.set("mode", "add");
       return url.href;
     },
     async me(): Promise<EdgePerson> {

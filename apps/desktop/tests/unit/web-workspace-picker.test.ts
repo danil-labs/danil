@@ -108,7 +108,7 @@ test("an organization without a context is listed once and admitted on its own",
     ["org_A", false, "listed"], ["org_B", true, "listed"], ["org_C", true, "empty"], ["org_D", false, "unavailable"],
   ]);
   // Solo esa organización, con la sesión que la enumeró.
-  await picker.admit(organizations[1]!);
+  assert.equal(await picker.admit(organizations[1]!), "admitted");
   assert.deepEqual(admitted, { organization: "org_B", session_id: "s1" });
   assert.deepEqual(events, ["admitted"]);
   assert.equal(
@@ -128,7 +128,10 @@ test("an organization that needs SSO or MFA sends the login with that organizati
     async mutation() { const error = Object.assign(new Error("denied"), { code: "organization_auth_required" }); throw error; },
   }, { store: { getItem: k => store.get(k) ?? null, setItem: (k, v) => void store.set(k, v), removeItem: k => void store.delete(k) } as Storage,
     signIn: organization => { signedIn = organization; } });
-  await picker.admit(org);
+  let notifications = 0;
+  picker.subscribe(() => notifications++);
+  assert.equal(await picker.admit(org), "redirected");
+  assert.equal(notifications, 0);
   assert.equal(signedIn, "org_B");
   assert.equal(picker.resume(), true, "la marca sobrevive para reabrir el selector al volver");
 });

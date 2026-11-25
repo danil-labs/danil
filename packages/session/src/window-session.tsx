@@ -61,6 +61,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [reauthFailed, setReauthFailed] = createSignal(false);
     const returnError = signInError(window.location.search);
     let windowApp: ReturnType<typeof mountWindow> | undefined;
+    let unsubscribePicker: (() => void) | undefined;
     let disposeGate: (() => void) | undefined;
     let cache: ReturnType<typeof workspaceCache> | undefined;
     let stopped = false;
@@ -104,6 +105,8 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const plain = { call: guarded(raw.call), mutation: guarded(invalidating(raw.mutation)) };
     const transport = active.scoped(plain);
     function gate() {
+      unsubscribePicker?.();
+      unsubscribePicker = undefined;
       windowApp?.close();
       windowApp = undefined;
       disposeGate?.();
@@ -185,7 +188,19 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       setShellCacheScope({ mine: () => false, prefer: null });
       disposeGate?.();
       disposeGate = undefined;
-      const picker = webWorkspacePicker(plain, { store: window.sessionStorage, takeHarnessWorkspace: () => { const link = harnessWorkspace; harnessWorkspace = null; return link; }, signIn: organization => window.location.assign(api.loginUrl(loginReturn.href, organization)) });
+      const picker = webWorkspacePicker(plain, {
+        store: window.sessionStorage,
+        takeHarnessWorkspace: () => { const link = harnessWorkspace; harnessWorkspace = null; return link; },
+        signIn: organization => window.location.assign(api.loginUrl(loginReturn.href, organization, undefined, "add")),
+        connect: () => {
+          window.location.assign(api.loginUrl(loginReturn.href, undefined, undefined, "add"));
+          return new Promise<void>(() => {});
+        },
+      });
+      unsubscribePicker = picker.subscribe(() => {
+        void sessionRailState()?.sessions.refresh();
+        void rail.refresh();
+      });
       const organizations = active.organizations(() => sessions.handle('danil_session_status'));
       setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
         identity: active.freeRouterIdentity(rail.accountOf) });
@@ -209,7 +224,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         // W4: una organización con la sesión vencida ofrece volver a entrar a esa organización.
         // Admite solo esa organización (como el «+»): un login completo reemplazaría todo el conjunto de la cookie. Solo
         // si identity exige SSO o MFA (409 organization_auth_required) el selector manda al login de esa organización.
-        reauth: { needed: () => !!expiredGroup(), failed: reauthFailed, signIn: () => { const g = expiredGroup(); setReauthFailed(false); if (g) void picker.admit({ session: g.family, sub: '', email: g.email ?? '', org: g.org, organization: g.org_name ?? '', context: null, admission_required: true, catalog_state: 'listed' }, { resume: false }).then(() => sessionRailState()?.sessions.refresh()).catch(() => setReauthFailed(true)); } },
+        reauth: { needed: () => !!expiredGroup(), failed: reauthFailed, signIn: () => { const g = expiredGroup(); setReauthFailed(false); if (g) void picker.admit({ session: g.family, sub: '', email: g.email ?? '', org: g.org, organization: g.org_name ?? '', context: null, admission_required: true, catalog_state: 'listed' }, { resume: false }).catch(() => setReauthFailed(true)); } },
         billing, groupAccount: { send: api.groupAccount.send, current, legacy: () => false, contexts: () => active.groups().map(g => g.context) },
       }, { storage: cache.storage, webAccounts: {
         current: { user_id: profile.id, name: profile.name, email: typeof profile.email === 'string' ? profile.email : null, extra: false },
@@ -218,7 +233,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       void refresh();
     }
     const expiredGroup = () => sessionRailState()?.groups()?.find(g => g.empty_reason === 'session_expired') ?? null;
-    function stopServices() { clearTimeout(timer); lifetime.abort(); }
+    function stopServices() { unsubscribePicker?.(); unsubscribePicker = undefined; clearTimeout(timer); lifetime.abort(); }
     const close = () => { stopped = true; stopServices(); setEdgeContext(null); windowApp?.close(); disposeGate?.(); dispose(); };
     window.addEventListener('pagehide', close, { once: true });
     gate();

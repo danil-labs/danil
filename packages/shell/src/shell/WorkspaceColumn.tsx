@@ -39,6 +39,7 @@ export default function WorkspaceColumn(props: {
 }) {
   const ws = createWorkspaces();
   const hidden = createHiddenWorkspaces();
+  const [addMenuOpen, setAddMenuOpen] = createSignal(false);
   const [removing, setRemoving] = createSignal<RailWorkspaceTarget | null>(null);
   const [revokeUnavailable, setRevokeUnavailable] = createSignal(false);
   const sessions = sessionRail(hidden.ids, (ids) => ids.forEach(hidden.show));
@@ -162,8 +163,9 @@ export default function WorkspaceColumn(props: {
         <Show when={accounts && others().length > 0}>
           <AccountHeader accounts={accounts} id={accounts!.current.user_id} email={accounts!.current.email} extra={accounts!.current.extra} signedIn />
         </Show>
-        <SessionWorkspaceRows sessions={sessions} rows={visibles()} active={ws.activo() && ws.activoContexto() ? { workspace: ws.activo()!, context: ws.activoContexto()! } : null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} staleOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.stale ?? false} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void ws.cambiarA(id, context)} onHide={hide} onRemove={setRemoving} hidden={isHidden} />
+        <SessionWorkspaceRows suppressTooltips={addMenuOpen()} sessions={sessions} rows={visibles()} active={ws.activo() && ws.activoContexto() ? { workspace: ws.activo()!, context: ws.activoContexto()! } : null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} staleOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.stale ?? false} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void ws.cambiarA(id, context)} onHide={hide} onRemove={setRemoving} hidden={isHidden} />
         <AddWorkspaceMenu
+          onOpenChange={setAddMenuOpen}
           sessions={sessions}
           hidden={hiddenRows()}
           open={ws.activo() ?? null}
