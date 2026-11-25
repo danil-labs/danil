@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { agentFolder, type DockAgent, dockCapacity, dockSources, orderDockAgents, planDock } from "../../../../packages/ui/src/lib/tasks/index.ts";
-import { pageDock } from "../../../../packages/shell/src/shell/dockPagination.ts";
+import { dockColumns, pageDock } from "../../../../packages/shell/src/shell/dockPagination.ts";
 
 const agente = (name: string, status?: DockAgent["status"]): DockAgent => ({ name, status, liveTasks: 0 });
 const nombres = (lista: { name: string }[]) => lista.map((a) => a.name);
@@ -21,6 +21,18 @@ test("si se borra la última página, la paginación vuelve a una página que ti
   assert.deepEqual(nombres(reduced.shown), nombres(roster.slice(0, 5)));
   assert.equal(pageDock([], 7).pages, 1);
   assert.deepEqual(pageDock([], 7).shown, []);
+});
+
+test("un sidebar más ancho mete más agentes en la fila y el hueco entre ellos no cambia", () => {
+  assert.equal(dockColumns(0), 5);
+  assert.equal(dockColumns(40), 1);
+  assert.equal(dockColumns(84), 2);
+  assert.equal(dockColumns(236), 5);
+  assert.equal(dockColumns(396), 9);
+  const roster = Array.from({ length: 14 }, (_, index) => agente(`agente-${index}`));
+  assert.equal(pageDock(roster, 0, dockColumns(396)).shown.length, 9);
+  assert.deepEqual(nombres(pageDock(roster, 1, 9).shown), nombres(roster.slice(9)));
+  assert.equal(pageDock(roster, 0).shown.length, 5);
 });
 
 test("la actividad fuera de página sigue señalada sin contar despiertos como trabajando", () => {
