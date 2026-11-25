@@ -160,9 +160,15 @@ export function createShellCommand(deps: ShellCommandDeps) {
     const spacePlan = taskSpaceCreate
       ? taskSpaceCreate(escritorio())
       : { engineSpace: escritorio(), record: () => {} };
+    let provisional = "";
+    batch(() => {
+      setArrancando(true);
+      ponerTerminal("", { id: "", command: command.trim(), cwd: null, output: "", truncated: false, desde: Date.now() });
+      provisional = pintarNaciendo(proyecto, titulo, lanzado, encargado);
+    });
     const nace: ComandoQueNace = {
       lanzado,
-      provisional: pintarNaciendo(proyecto, titulo, lanzado, encargado),
+      provisional,
       titulo,
       claveBorrador,
       generation: workspaceContext.generation(),
@@ -171,10 +177,6 @@ export function createShellCommand(deps: ShellCommandDeps) {
     };
     nacenConComando.set(runId, nace);
     deps.lifecycleRevision++;
-    batch(() => {
-      setArrancando(true);
-      ponerTerminal("", { id: "", command: command.trim(), cwd: null, output: "", truncated: false, desde: Date.now() });
-    });
     try {
       const enOtra = draftOptions();
       const corrida = await callEngine<Corrida>("run_shell_command", {

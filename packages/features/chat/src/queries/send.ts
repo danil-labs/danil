@@ -112,15 +112,19 @@ export function createSend(deps: SendDeps) {
     const selectedBase = draftBases()[claveBorrador] ?? null;
     const pendientes = destination ? drafts.peek(claveBorrador)?.sourceIds ?? [] : sourceIds();
     const excluidas = destination ? drafts.peek(claveBorrador)?.excludedSourceIds ?? [] : excludedSourceIds();
-    if (abierta) marcarViva(abierta, Date.now());
-    else { threads.beginActivity("", Date.now()); setArrancando(true); }
-    // Conversar es editar: la pestaña de la tarea deja de ser vista.
-    if (abierta) pestanas.pin(abierta);
-    // La tarea se pinta antes de que Rust la cree. Lo que la retrasaba no era
-    // su nombre —`mentions::titulo_desde` lo saca del encargo antes de lanzar
-    // nada— sino el evento `started`, que `chat::acp` emite cuando el proceso
-    // del agente ya contestó al saludo.
-    const provisional = abierta ? null : pintarNaciendo(proyecto, tituloProvisional(m.text), m, agenteDelBorrador);
+    const marcarArranque = () => {
+      if (abierta) {
+        marcarViva(abierta, Date.now());
+        // Conversar es editar: la pestaña de la tarea deja de ser vista.
+        pestanas.pin(abierta);
+      } else {
+        threads.beginActivity("", Date.now());
+        setArrancando(true);
+      }
+    };
+    // Con respuestas hay `await` antes del globo: marcar el turno antes impide
+    // que el despacho de la cola saque dos mensajes en el mismo respiro.
+    if (respuestas) marcarArranque();
     // Con qué se firma este turno. Se pregunta por el agente de ESTE mensaje y
     // no por el del selector: la cola guarda con qué se escribió cada uno, y
     // moverlo a mitad de un turno no puede reescribir hacia atrás quién
@@ -162,15 +166,26 @@ export function createSend(deps: SendDeps) {
       // Sin turno todavía: al releer, el del disco con este texto después de `tras` es él.
       inyectado: { tras: [...(threads.rows()[clave]?.base ?? [])].reverse().find((row) => row.turno)?.turno ?? null },
     };
-    threads.appendOptimistic(clave, [...entrando, turnoPropio]);
     // Mandar a una tarea de una máquina apagada la enciende: el proxy espera a que
     // conteste y entrega una sola vez.
     const dormida = abierta ? apagadas()[abierta] ?? null : null;
-    if (abierta && dormida) threads.markMachineWait(abierta, { machine: dormida, phase: "waking" });
     // Y crear en la elegida en «Ejecutar en» si está apagada: el aviso cuelga de la pestaña que nace.
     const destino = creationOptions?.headers["x-terminus-machine"] ?? null;
     const naceDormida = destino && machines().find((x) => x.id === destino)?.on === false ? destino : null;
-    if (provisional && naceDormida) threads.markMachineWait(provisional, { machine: naceDormida, phase: "waking" });
+    // Arranque, globo optimista y pestaña provisional en un único lote: la nueva
+    // pestaña ya nace con su primer mensaje y sin montar el selector de carpetas.
+    let provisional: string | null = null;
+    batch(() => {
+      if (!respuestas) marcarArranque();
+      threads.appendOptimistic(clave, [...entrando, turnoPropio]);
+      // La tarea se pinta antes de que Rust la cree. Lo que la retrasaba no era
+      // su nombre —`mentions::titulo_desde` lo saca del encargo antes de lanzar
+      // nada— sino el evento `started`, que `chat::acp` emite cuando el proceso
+      // del agente ya contestó al saludo.
+      if (!abierta) provisional = pintarNaciendo(proyecto, tituloProvisional(m.text), m, agenteDelBorrador);
+      if (abierta && dormida) threads.markMachineWait(abierta, { machine: dormida, phase: "waking" });
+      if (provisional && naceDormida) threads.markMachineWait(provisional, { machine: naceDormida, phase: "waking" });
+    });
     let enviado = false;
     try {
       const llevado = llevar ? await llevar(claveBorrador) : null;
@@ -293,13 +308,42 @@ export function createSend(deps: SendDeps) {
       // El turno ya tiene a qué colgarse: deja de ser «la ventana sin id».
       firmas[id] = firmas[id] ?? firmas[""] ?? null;
       modelosEnVivo[id] = modelosEnVivo[id] ?? modelosEnVivo[""] ?? null;
-      // Antes de adoptarla: su encabezado lee de dónde vino al pintarse.
-      if (llevado) carryModule()?.adoptOrigin(claveBorrador, id);
-      if (!abierta) adoptarNacida(id, { provisional, proyecto, titulo: tituloProvisional(m.text), claveBorrador });
+      // Adopción, estado vivo y sesión abierta en un solo lote: no parpadea `busy`
+      // ni vuelve a quedar vacío el hilo al mudar de la pestaña provisional al id real.
+      batch(() => {
+        // Antes de adoptarla: su encabezado lee de dónde vino al pintarse.
+        if (llevado) carryModule()?.adoptOrigin(claveBorrador, id);
+        if (!abierta) adoptarNacida(id, { provisional, proyecto, titulo: tituloProvisional(m.text), claveBorrador });
+        if (!finishedTurns.has(id)) marcarViva(id);
+        if (!abierta) { threads.finishActivity(""); setArrancando(false); }
+        // Las fuentes de este mensaje salen del borrador; las de otro
+        // que siga esperando, no. Va por id: da igual qué se esté mirando.
+        drafts.sentSources(id, pendientes);
+        // Lo que cuelga de la vista, solo si la vista sigue donde
+        // arrancó el turno: el primer mensaje crea la tarea en Rust
+        // mientras se puede mirar otra, y ponerla delante aquí dejaba
+        // `colaDe` nombrando la recién nacida con la cola de la que se
+        // mira en la mano —lo escrito para aquélla se guardaba en la
+        // carpeta de ésta. Lo de la tarea ya quedó hecho arriba, por id.
+        if (
+          abierta
+            ? sessionId() === abierta
+            : claveAbierta() === claveBorrador
+        ) {
+          setSessionId(id);
+          if (!abierta) setHablandoCon(null);
+          // Ya viajaron: dejan de ser pendientes y pasan a ser el contexto de la
+          // conversación, que se sigue viendo mientras esté abierta.
+          if (pendientes.length > 0)
+            drafts.acceptSources(pendientes);
+          // La cola escrita durante el primer turno es de la sesión que ese turno
+          // acaba de crear.
+          taskQueues.adopt(id);
+        }
+      });
       void leerTarea(proyecto, id)
         .then((s) => loadResult(id, s, false, generation))
         .catch((error) => { if (generation === workspaceContext.generation()) setError(prosaDe(error)); });
-      if (!finishedTurns.has(id)) marcarViva(id);
       void signatureReady.then((signature) => {
         if (generation !== workspaceContext.generation()) return;
         firmas[id] = signature?.agent ?? null;
@@ -307,31 +351,6 @@ export function createSend(deps: SendDeps) {
           threads.reviseOptimistic(id, turnoPropio, { author: signature?.person ?? null });
         }
       });
-      if (!abierta) { threads.finishActivity(""); setArrancando(false); }
-      // Las fuentes de este mensaje salen del borrador; las de otro
-      // que siga esperando, no. Va por id: da igual qué se esté mirando.
-      drafts.sentSources(id, pendientes);
-      // Lo que cuelga de la vista, solo si la vista sigue donde
-      // arrancó el turno: el primer mensaje crea la tarea en Rust
-      // mientras se puede mirar otra, y ponerla delante aquí dejaba
-      // `colaDe` nombrando la recién nacida con la cola de la que se
-      // mira en la mano —lo escrito para aquélla se guardaba en la
-      // carpeta de ésta. Lo de la tarea ya quedó hecho arriba, por id.
-      if (
-        abierta
-          ? sessionId() === abierta
-          : claveAbierta() === claveBorrador
-      ) {
-        setSessionId(id);
-        if (!abierta) setHablandoCon(null);
-        // Ya viajaron: dejan de ser pendientes y pasan a ser el contexto de la
-        // conversación, que se sigue viendo mientras esté abierta.
-        if (pendientes.length > 0)
-          drafts.acceptSources(pendientes);
-        // La cola escrita durante el primer turno es de la sesión que ese turno
-        // acaba de crear.
-        taskQueues.adopt(id);
-      }
       if (finishedTurns.has(id)) void settleTurn(id, finishedTurns.get(id));
       return true;
     } catch (e) {
@@ -339,55 +358,72 @@ export function createSend(deps: SendDeps) {
       if (provisional && naceDormida) threads.markMachineWait(provisional, null);
       // Sin esto queda una tarea que nadie creó: la fila y la pestaña se
       // pintaron contando con que Rust aceptara el turno.
-      if (provisional && !enviado) {
+      const retirarProvisional = () => {
+        if (!provisional || enviado) return;
         retirarNaciendo(provisional);
         // Cerrar la pestaña provisional con `close` deja delante a su vecina
         // (la tarea anterior) y la vista volvía a lo que se estaba mirando.
         // Se vuelve al blanco en el mismo lote: el fallo se pinta en la celda
         // vacía y el texto vuelve a la caja (`mandar` lo repone con `false`).
-        batch(() => {
-          pestanas.close(provisional);
-          pestanas.activate(null);
-          paneles.showDraft();
-        });
+        pestanas.close(provisional);
+        pestanas.activate(null);
+        paneles.showDraft();
         olvidarPestana(provisional);
-      }
+      };
       if (generation !== workspaceContext.generation()) {
-        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+        batch(() => {
+          retirarProvisional();
+          threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+        });
         return false;
       }
       if (abierta && !enviado) handoff.observe({ kind: "rejected", scope: conversationScope(abierta, proyecto), error: e });
       if (e === CARRY_STOPPED) {
-        // El texto vuelve a la caja: el globo se iría duplicado.
-        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
-        setArrancando(false);
+        // El texto vuelve a la caja: el globo se iría duplicado y el blanco recupera su selector.
+        batch(() => {
+          retirarProvisional();
+          threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+          if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
+        });
         return false;
       }
       if (destination && claveDe(e) === "history.error.busy") {
-        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
-        marcarQuieta(destination.session, "failed");
+        batch(() => {
+          retirarProvisional();
+          threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+          marcarQuieta(destination.session, "failed");
+        });
         throw e;
       }
       // Lo escrito para una tarea que otro turno ocupa espera en su cola, con la misma identidad.
       if (!respuestas && !deLaCola && claveDe(e) === "history.error.busy" && abierta === sessionId()) {
-        batch(() => { threads.rejectOptimistic(clave, [turnoPropio, ...entrando]); taskQueues.enqueue({ ...m, id: clientMessageId }, true); setArrancando(false); if (abierta) marcarQuieta(abierta); });
+        batch(() => {
+          retirarProvisional();
+          threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+          taskQueues.enqueue({ ...m, id: clientMessageId }, true);
+          if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
+          if (abierta) marcarQuieta(abierta);
+        });
         return true;
       }
       // Ya salió: un fallo posterior no es un envío fallido ni devuelve el texto a la caja.
       if (enviado) { threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]); return true; }
       // Error real de envío: el globo se queda con «Reintentar» y la caja no lo repone.
-      threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]);
-      if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
-      if (abierta) marcarQuieta(abierta, "failed");
-      threads.appendLive(clave, [{
-                  role: "system",
-                  // Una negativa de comando llega como clave: la frase nombra lo escrito.
-                  ...mensajeDeFallo(e, {
-                    command: comandoEscrito(m.text),
-                    agent: agents().find((a) => a.id === m.provider)?.label ?? m.provider,
-                  }),
-                  meta: "fallo",
-                }]);
+      batch(() => {
+        retirarProvisional();
+        threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]);
+        if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
+        if (abierta) marcarQuieta(abierta, "failed");
+        threads.appendLive(clave, [{
+                    role: "system",
+                    // Una negativa de comando llega como clave: la frase nombra lo escrito.
+                    ...mensajeDeFallo(e, {
+                      command: comandoEscrito(m.text),
+                      agent: agents().find((a) => a.id === m.provider)?.label ?? m.provider,
+                    }),
+                    meta: "fallo",
+                  }]);
+      });
       if (respuestas) throw e;
       return false;
     } finally {
