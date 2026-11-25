@@ -1,11 +1,12 @@
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { createMemo, createUniqueId, For, Index, type JSX, Match, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createUniqueId, For, Index, type JSX, Match, onCleanup, Show, Switch } from "solid-js";
 import { t } from "../../../../../ui/src/lib/i18n";
 import { sharedLazy } from "../../../../../ui/src/lib/sharedLazy";
 import { partesDelTramo, type Paso } from "../../../../../ui/src/lib/steps";
 import { cn } from "../../../../../ui/src/lib/utils";
 import { Markdown } from "../../../../../ui/src/Markdown";
 import type { ActivityChunk } from "../../model/activityBlocks";
+import { attachActivityBottomFollow } from "../../model/activityScroll";
 import { ActivityIndicator, ActivityCaption } from "../../components/activity/ActivityIndicator";
 import McpAppView from "../McpAppView";
 import type { Msg, Razonamiento } from "../../model/messageTypes";
@@ -122,7 +123,21 @@ export function RegistroDeTrabajo(props: {
         </div>
 
         <Show when={desplegado()}>
-          <div id={panelId} class={cn(SUPERFICIE_DE_EJECUCION, !props.observed && "mb-1")} data-turn-activity-content="">
+          {(() => {
+            let scroller: HTMLDivElement | undefined;
+            let content: HTMLDivElement | undefined;
+            createEffect(() => {
+              if (!scroller || !content) return;
+              onCleanup(attachActivityBottomFollow(scroller, content));
+            });
+            return (
+          <div
+            ref={scroller}
+            id={panelId}
+            class={cn(SUPERFICIE_DE_EJECUCION, "max-h-[min(42vh,360px)] overflow-y-auto overscroll-contain pr-1", !props.observed && "mb-1")}
+            data-turn-activity-content=""
+          >
+            <div ref={content} class="min-w-0">
             <Index each={avance()}>
               {(tramo, index) => (
                 <>
@@ -165,7 +180,10 @@ export function RegistroDeTrabajo(props: {
           </Show>
         )}
       </Index>
+            </div>
           </div>
+            );
+          })()}
         </Show>
       </Show>
 
