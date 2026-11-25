@@ -3,7 +3,10 @@ import { createEffect, createMemo, createSignal, mapArray, onCleanup, onMount, u
 import { ThreadRowContext } from "../model/threadRow";
 
 const THREAD_GAP = 6;
-const OVERSCAN = 6;
+// En hilos cortos/medios (<= 80 bloques) se montan todas las filas para que el scroll sea
+// 100 % nativo sin saltos de estimación ni reescrituras de `scrollTop` al subir.
+const VIRTUALIZE_ABOVE = 80;
+const OVERSCAN = 12;
 const JUMP_FRAMES = 12;
 // Sin esto una conversación escondida conserva el alto de la anterior y abre por el principio.
 const FROM_THE_END = 1e9;
@@ -70,6 +73,9 @@ export function VirtualThread(props: {
       const retained = [...props.retained(), ...held().keys()];
       const index = indexOf();
       return (range: Range) => {
+        if (range.count <= VIRTUALIZE_ABOVE) {
+          return Array.from({ length: range.count }, (_, at) => at);
+        }
         const rows = new Set(defaultRangeExtractor(range));
         for (const key of retained) {
           const at = index.get(key);
@@ -101,8 +107,11 @@ export function VirtualThread(props: {
   const byKey = createMemo(() => new Map(placed().map((row) => [row.key, row])));
 
   createMemo(() => {
-    const first = placed()[0];
-    if (first) props.onRange?.(first.index);
+    const list = placed();
+    if (!list.length) return;
+    // Reporta la primera fila realmente visible (`range.startIndex`), no `list[0]`:
+    // con todas las filas montadas (`<= VIRTUALIZE_ABOVE`), `list[0]` sería 0 al abrir.
+    props.onRange?.(virtualizer.range?.startIndex ?? list[0]!.index);
   });
 
   const rowOf = (key: string) => props.scroller.querySelector<HTMLElement>(`[data-thread-key="${CSS.escape(key)}"]`);
@@ -168,7 +177,6 @@ export function VirtualThread(props: {
             data-index={index()}
             class="grid min-w-0 grid-cols-[minmax(0,1fr)]"
             style={{ "margin-top": `${row()?.before ?? 0}px`, "margin-bottom": `${row()?.after ?? 0}px` }}
-            ref={(element) => queueMicrotask(() => element.isConnected && virtualizer.measureElement(element))}
           >
             {/* Sin rastreo: lo que lea al crearse no debe rehacer la fila, con su foco, selección e iframes. */}
             <ThreadRowContext.Provider value={scope}>{untrack(() => props.row(key, index))}</ThreadRowContext.Provider>
@@ -177,11 +185,15 @@ export function VirtualThread(props: {
   }) as unknown as Accessor<HTMLElement[]>;
 
   // Conserva los nodos y solo mueve los que cambiaron de lugar al reconciliar sus claves.
-  // Corre ANTES de `settled()` para que el ancla mida contra el DOM ya reconciliado.
+  // Mide las filas recién montadas de forma síncrona ANTES de `settled()`: `measureElement`
+  // omite medir mientras `isScrolling` es true y, con la estimación vieja, `restaurarAncla`
+  // movía `scrollTop` haciendo que TanStack desmontara y remontara la fila en bucle al subir.
   const end = document.createComment("");
   let mounted = new Set<HTMLElement>();
+  let prevBefore = 0;
+  let prevAfter = 0;
   createEffect(() => {
-    placed();
+    const list = placed();
     const next = rows();
     const kept = new Set(next);
     let removed = false;
@@ -191,10 +203,12 @@ export function VirtualThread(props: {
         removed = true;
       }
     }
+    const added: HTMLElement[] = [];
     let after: Node = end;
     const parent = end.parentNode as (Node & { moveBefore?: (node: Node, child: Node | null) => void }) | null;
     for (let at = next.length - 1; at >= 0; at--) {
       const row = next[at];
+      if (!mounted.has(row)) added.push(row);
       if (parent && row.nextSibling !== after) {
         if (row.isConnected && typeof parent.moveBefore === "function") parent.moveBefore(row, after);
         else parent.insertBefore(row, after);
@@ -203,12 +217,30 @@ export function VirtualThread(props: {
     }
     mounted = kept;
     if (removed) virtualizer.measureElement(null);
+    for (const row of added) {
+      if (!row.isConnected) continue;
+      const index = Number(row.dataset.index);
+      const key = row.dataset.threadKey;
+      const height = row.getBoundingClientRect().height;
+      virtualizer.measureElement(row);
+      if (height > 0 && Number.isInteger(index) && key !== undefined) {
+        const known = virtualizer.itemSizeCache.get(key) ?? virtualizer.measurementsCache[index]?.size;
+        if (known === undefined || Math.abs(height - known) >= 0.5) {
+          virtualizer.resizeItem(index, height);
+        }
+      }
+    }
+    const nextBefore = list[0]?.before ?? 0;
+    const nextAfter = list.at(-1)?.after ?? 0;
+    const layoutChanged = added.length > 0 || removed || nextBefore !== prevBefore || nextAfter !== prevAfter;
+    prevBefore = nextBefore;
+    prevAfter = nextAfter;
     if (wanted !== null) {
       const target = wanted;
       wanted = null;
       if (Math.abs(props.scroller.scrollTop - target) >= 1) props.write(target);
-      else props.settled();
-    } else {
+      else if (layoutChanged) props.settled();
+    } else if (layoutChanged) {
       props.settled();
     }
   });
