@@ -18,7 +18,7 @@ type Avance = ActivityChunk<Msg>;
 const SIN_AVANCE: Avance[] = [];
 /** La cabecera de un tramo, entera o partida (ver `RegistroDeTrabajo`). */
 const FILA_DEL_TRAMO =
-  "inline-flex min-w-0 max-w-full items-center gap-2 rounded-sm py-1.5 text-left text-ui font-normal text-neutral-500 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary";
+  "inline-flex min-w-0 max-w-full items-center gap-2 rounded-sm py-0.5 text-left text-ui font-normal text-neutral-500 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary";
 // Chunk aparte: el bloque de razonamiento solo lo carga un turno que lo trae.
 const Reasoning = sharedLazy(() => import("../../components/Reasoning"));
 export function RegistroDeTrabajo(props: {
@@ -85,9 +85,9 @@ export function RegistroDeTrabajo(props: {
       <span role="status" aria-live="polite" aria-atomic="true" class="sr-only">{props.corriendo && props.stopping ? t("chat.turn.stopping") : presentation().animate ? t("chat.turn.working_aria") : ""}</span>
       <Show
         when={showHeader()}
-        fallback={<Show when={duracion()}>{(text) => <p class="m-0 mb-2 py-1.5 text-ui font-normal text-neutral-500" data-activity-label="">{text()}</p>}</Show>}
+        fallback={<Show when={duracion()}>{(text) => <p class={cn("m-0 py-0.5 text-ui font-normal text-neutral-500", !props.observed && "mb-1")} data-activity-label="">{text()}</p>}</Show>}
       >
-        <div class={cn("flex flex-wrap items-center gap-2", !desplegado() && "mb-2")}>
+        <div class={cn("flex flex-wrap items-center gap-2", !desplegado() && !props.observed && "mb-1")}>
           <Show when={!inspectable()}><span class={FILA_DEL_TRAMO}><span class="activity-label inline-flex min-w-0 items-center">{girando()}{caption()}</span><Show when={props.corriendo && !props.stopping && !props.blocked}>{props.status?.()}</Show></span></Show>
           <Show when={inspectable()}>
             <Pressable aria-expanded={desplegado()} aria-controls={panelId} onClick={() => props.onAlternar(!desplegado())} class={FILA_DEL_TRAMO}>
@@ -100,9 +100,9 @@ export function RegistroDeTrabajo(props: {
         </div>
 
         <Show when={desplegado()}>
-          <div id={panelId} class={cn(SUPERFICIE_DE_EJECUCION, "mb-2")} data-turn-activity-content="">
+          <div id={panelId} class={cn(SUPERFICIE_DE_EJECUCION, !props.observed && "mb-1")} data-turn-activity-content="">
             <Index each={avance()}>
-              {(tramo) => (
+              {(tramo, index) => (
                 <>
                   <Show when={tramo().pasos.length > 0}>
                     <LineaDeTiempo pasos={tramo().pasos} active={presentation().animate} individual />
@@ -111,7 +111,7 @@ export function RegistroDeTrabajo(props: {
                       una ráfaga sin su rótulo se lee como algo que el agente dijo. */}
                   <Show when={tramo().msg.razonamiento?.length ? tramo().msg.razonamiento : null}>
                     {(bloques) => (
-                      <Reasoning bloques={bloques()} />
+                      <Reasoning bloques={bloques()} slot={`avance-${index}`} />
                     )}
                   </Show>
                   <Show when={!tramo().outside}><div class="px-1 py-1 text-sm text-neutral-500"><Markdown>{tramo().msg.text}</Markdown></div></Show>
@@ -119,13 +119,19 @@ export function RegistroDeTrabajo(props: {
               )}
             </Index>
             <For each={timeline()}>
-              {(item) => (
+              {(item, index) => (
                 <Switch>
                   <Match when={item.kind === "steps" ? item : null}>
                     {(entry) => <LineaDeTiempo pasos={entry().pasos} active={presentation().animate} individual />}
                   </Match>
                   <Match when={item.kind === "reasoning" ? item : null}>
-                    {(entry) => <Reasoning bloques={entry().bloques} />}
+                    {(entry) => (
+                      <Reasoning
+                        bloques={entry().bloques}
+                        slot={`timeline-${index()}`}
+                        active={presentation().animate && action()?.kind === "thinking" && index() === timeline().length - 1}
+                      />
+                    )}
                   </Match>
                 </Switch>
               )}

@@ -301,6 +301,8 @@
   "chat.handoff.awaiting_start": "Esperando el inicio del turno…",
   "chat.work.no_details": "No hay detalles de actividad disponibles para este turno.",
   "chat.work.title": "Trabajo",
+  "chat.reasoning.row": "Razonó",
+  "chat.reasoning.row_duration": "Razonó · {duration}",
   "chat.reasoning.title": "Razonamiento",
   "chat.reasoning.summary": "Razonamiento · {duration}",
   "chat.reasoning.thinking": "Pensando…",

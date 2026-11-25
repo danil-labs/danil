@@ -55,8 +55,14 @@ for (const streaming of [false, true]) test(`public messages remain outside acti
     assert.equal(disclosure.getAttribute("aria-expanded"), "false"); disclosure.click();
     assert.ok(await until(() => fixture.doc.querySelector("[data-turn-activity-content] [data-reasoning-content]")));
     const panel = fixture.doc.querySelector("[data-turn-activity-content]");
-    assert.ok(panel.textContent.includes(REASONING));
-    assert.equal(panel.querySelector("[data-reasoning-content] h4")?.textContent, "Razonamiento");
+    const reasoningToggle = panel.querySelector("[data-reasoning-content] button[data-fila]");
+    assert.ok(reasoningToggle, "reasoning renders as a collapsible row like tools");
+    assert.equal(reasoningToggle.textContent?.trim(), "Razonó");
+    assert.equal(reasoningToggle.getAttribute("aria-expanded"), "false");
+    assert.equal(panel.textContent.includes(REASONING), false, "reasoning body stays collapsed until clicked");
+    reasoningToggle.click();
+    assert.ok(await until(() => panel.querySelector("[data-reasoning-body]")?.textContent.includes(REASONING)));
+    assert.equal(reasoningToggle.getAttribute("aria-expanded"), "true");
     assert.ok(panel.textContent.includes("first.ts")); assert.ok(panel.textContent.includes("second.ts"));
     for (const text of [FIRST, SECOND, FINAL]) assert.equal(panel.textContent.includes(text), false);
     publicMessages(fixture.doc);

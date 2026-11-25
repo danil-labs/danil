@@ -110,7 +110,7 @@ export function createChatViewParts(props: ChatProps, deps: ChatViewPartsDeps) {
         <div
           data-chat-thread
           class={cn(
-            "mx-auto grid w-full gap-y-4",
+            "mx-auto grid w-full gap-y-1.5",
             "max-w-[964px] px-[52px] grid-cols-[minmax(0,1fr)]",
           )}
           ref={(el) => {

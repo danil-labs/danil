@@ -152,7 +152,7 @@ const HILO_POR_TRAMOS = "terminus.chat.thread-chunks";
 const FILAS_ANTES_DE_PEDIR = 8;
 
 const FILA_DEL_MENSAJE =
-  "flex items-center gap-0.5 pt-1 opacity-0 transition-opacity group-hover/mensaje:opacity-100 group-focus-within/mensaje:opacity-100";
+  "flex items-center gap-0.5 pt-0.5 opacity-0 transition-opacity group-hover/mensaje:opacity-100 group-focus-within/mensaje:opacity-100";
 /** Cuántas fuentes se llegan a ofrecer de una vez. */
 const TOPE_MENU = 60;
 
