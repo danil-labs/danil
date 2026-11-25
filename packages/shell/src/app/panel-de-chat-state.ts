@@ -3,7 +3,7 @@ import { type HandlerList } from "../../../ui/src/lib/model";
 import { type AgentProfile, type HandlerStatus } from "../../../ui/src/lib/model.ts";
 import { type SenderTask } from "../../../ui/src/lib/recipients";
 import { esProvisional } from "../../../ui/src/lib/taskDraft";
-import { type TaskFilesPanel, type TaskFilesSide, type TaskSideMode } from "../../../ui/src/lib/taskFiles.ts";
+import { type TaskFiles } from "../../../ui/src/lib/taskFiles.ts";
 import { callShellEngine } from "../../../session/src/shell-queries.ts";
 import { conservar } from "../../../session/src/sessionRefresh";
 import { type Encolado } from "../../../ui/src/lib/queue.ts";
@@ -25,7 +25,7 @@ import { createEffect, createMemo, createResource, createSignal, onCleanup, type
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type PanelDeChatStateDeps = { DEFAULT_PROFILE: AgentProfile; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; almacenDePreguntas: (session: () => string | null) => AlmacenDePreguntas; archivosDeTarea: { panel: (task: string) => TaskFilesPanel; setOpen: (task: string, open: boolean) => void; present: (task: string, mode: TaskSideMode) => void; toggle: (task: string) => void; setExpanded: (task: string, expanded: boolean) => void; setTree: (task: string, tree: boolean) => void; setSide: (task: string, side: TaskFilesSide) => void; open: (task: string, file: { tree: string; path: string; changes: boolean; changed?: boolean; pinned?: boolean; }) => void; pin: (task: string, id: string) => void; activate: (task: string, id: string) => void; setDirty: (task: string, id: string, dirty: boolean) => void; close: (task: string, ids: string[]) => string[]; renamed: (task: string, tree: string, from: string, to: string) => void; removed: (task: string, tree: string, path: string) => void; dirtyOf: (task: string) => string[]; forget: (task: string) => void; }; attention: ReturnType<typeof createWorkspaceSession>["attention"]; carpetaDelProyecto: () => string | null; cola: Accessor<Encolado[]>; colaDe: Accessor<string | null>; composerProjects: ReturnType<typeof createWorkspaceSession>["composerProjects"]; createTaskWork: typeof createTaskWork; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; deleteTask: (project: string, id: string, members?: number) => void; esChatDeAgente: (s: { chat_de_agente?: boolean; }) => boolean; esperando: ReturnType<typeof createCloneFolder>["esperando"]; etaparSesion: ReturnType<typeof createSessionMutations>["etaparSesion"]; fijarSesion: (proyecto: string, id: string, pinned: boolean) => Promise<void>; filaDe: (id: string) => SessionRow | undefined; fondoDelAgente: ReturnType<typeof createWorkspaceSession>["fondoDelAgente"]; hablandoCon: ReturnType<typeof createWorkspaceSession>["hablandoCon"]; hablarConEncargado: (enProyecto: string, name: string) => void; hilos: ReturnType<typeof createDeskStrip>["hilos"]; lecturas: Map<string, Lectura>; llaveDeBorrador: (proyecto: string | undefined) => string; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; moverSesion: (de: string, id: string, a: string) => Promise<void>; opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; origenes: ReturnType<typeof createDeskStrip>["origenes"]; permissions: Accessor<PermissionRequest[]>; preguntadas: ReturnType<typeof createCloneFolder>["preguntadas"]; project: ReturnType<typeof createWorkspaceSession>["project"]; projectList: ReturnType<typeof createWorkspaceSession>["projectList"]; renombrarSesion: (proyecto: string, id: string, title: string) => Promise<boolean>; requestedProfile: ReturnType<typeof createNewTask>["requestedProfile"]; senderTaskId: (machine: string, task: string) => string; sesiones: ReturnType<typeof createWorkspaceSession>["sesiones"]; sesionesConEstado: () => { [k: string]: SessionRow[]; }; sessionId: ReturnType<typeof createWorkspaceSession>["sessionId"]; setDelegatedPanels: Setter<Map<string, () => DelegatedPanelModel>>; setFondoDelAgente: ReturnType<typeof createWorkspaceSession>["setFondoDelAgente"]; setRequestedProfile: ReturnType<typeof createNewTask>["setRequestedProfile"]; situacionDeTraspaso: (id: string) => { session: string | null; running: boolean; announced: boolean | null; state: HandoverState; }; tareaDelRiel: (id: string) => SenderTask | null; vistaDe: (session: string) => VistaDeLaConversacion; vivas: Accessor<string[]>; watchHandlerStatus: (selectedHandler: () => { project: string; name: string; } | null) => () => HandlerStatus; watchProfiles: (project: string) => () => Record<string, AgentProfile>; workspaceActivo: ReturnType<typeof createWorkspaceSession>["workspaceActivo"] };
+export type PanelDeChatStateDeps = { DEFAULT_PROFILE: AgentProfile; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; almacenDePreguntas: (session: () => string | null) => AlmacenDePreguntas; archivosDeTarea: TaskFiles; attention: ReturnType<typeof createWorkspaceSession>["attention"]; carpetaDelProyecto: () => string | null; cola: Accessor<Encolado[]>; colaDe: Accessor<string | null>; composerProjects: ReturnType<typeof createWorkspaceSession>["composerProjects"]; createTaskWork: typeof createTaskWork; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; deleteTask: (project: string, id: string, members?: number) => void; esChatDeAgente: (s: { chat_de_agente?: boolean; }) => boolean; esperando: ReturnType<typeof createCloneFolder>["esperando"]; etaparSesion: ReturnType<typeof createSessionMutations>["etaparSesion"]; fijarSesion: (proyecto: string, id: string, pinned: boolean) => Promise<void>; filaDe: (id: string) => SessionRow | undefined; fondoDelAgente: ReturnType<typeof createWorkspaceSession>["fondoDelAgente"]; hablandoCon: ReturnType<typeof createWorkspaceSession>["hablandoCon"]; hablarConEncargado: (enProyecto: string, name: string) => void; hilos: ReturnType<typeof createDeskStrip>["hilos"]; lecturas: Map<string, Lectura>; llaveDeBorrador: (proyecto: string | undefined) => string; machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; moverSesion: (de: string, id: string, a: string) => Promise<void>; opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; origenes: ReturnType<typeof createDeskStrip>["origenes"]; permissions: Accessor<PermissionRequest[]>; preguntadas: ReturnType<typeof createCloneFolder>["preguntadas"]; project: ReturnType<typeof createWorkspaceSession>["project"]; projectList: ReturnType<typeof createWorkspaceSession>["projectList"]; renombrarSesion: (proyecto: string, id: string, title: string) => Promise<boolean>; requestedProfile: ReturnType<typeof createNewTask>["requestedProfile"]; senderTaskId: (machine: string, task: string) => string; sesiones: ReturnType<typeof createWorkspaceSession>["sesiones"]; sesionesConEstado: () => { [k: string]: SessionRow[]; }; sessionId: ReturnType<typeof createWorkspaceSession>["sessionId"]; setDelegatedPanels: Setter<Map<string, () => DelegatedPanelModel>>; setFondoDelAgente: ReturnType<typeof createWorkspaceSession>["setFondoDelAgente"]; setRequestedProfile: ReturnType<typeof createNewTask>["setRequestedProfile"]; situacionDeTraspaso: (id: string) => { session: string | null; running: boolean; announced: boolean | null; state: HandoverState; }; tareaDelRiel: (id: string) => SenderTask | null; vistaDe: (session: string) => VistaDeLaConversacion; vivas: Accessor<string[]>; watchHandlerStatus: (selectedHandler: () => { project: string; name: string; } | null) => () => HandlerStatus; watchProfiles: (project: string) => () => Record<string, AgentProfile>; workspaceActivo: ReturnType<typeof createWorkspaceSession>["workspaceActivo"] };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 191–466, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
@@ -35,6 +35,7 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
     /** El proyecto de esa tarea. `null` en la ventana en blanco, que no tiene. */
     proyecto?: string | null;
     soloLectura?: boolean;
+    inline?: boolean;
   }) => {
     const visualWorkspace = workspaceActivo() ?? "";
     // La pestaña de una tarea que nace no tiene hilo hasta `adoptarNacida`: su primer
@@ -99,7 +100,13 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
       de: folder, current: pp.sesion ?? null, vivas: vivas(), aprobando: permissions().map(item => item.session),
       carpetaDe: () => projectList().find(item => item.id === folder)?.name,
       destinos: projectList().filter(item => item.id !== folder).map(item => ({ id: item.id, name: item.name })),
-      onPick: id => { void abrirSesion(folder, id); },
+      onPick: id => {
+        if (!pp.inline && pp.sesion) {
+          archivosDeTarea.openSubtask(pp.sesion, { project: folder, session: id });
+          return;
+        }
+        void abrirSesion(folder, id);
+      },
       onDelete: (id, members) => void deleteTask(folder, id, members),
       onMove: (id, destination) => void moverSesion(folder, id, destination),
       onEtapa: (id, stage) => void etaparSesion(folder, id, stage),
@@ -125,7 +132,7 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
       onDismiss: () => { if (pp.sesion) archivosDeTarea.setOpen(pp.sesion, false); },
     });
     createEffect(() => {
-      if (!pp.sesion || !hasDelegation()) return;
+      if (pp.inline || !pp.sesion || !hasDelegation()) return;
       const key = `${workspaceActivo()}/${pp.sesion}`;
       setDelegatedPanels(previous => new Map(previous).set(key, delegatedModel));
       onCleanup(() => setDelegatedPanels(previous => {
@@ -234,7 +241,7 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
        celdas de una división lo siguen pintando dentro de su chat. */
     const celdaActiva = () => (pp.sesion ?? null) === (sessionId() ?? null);
     createEffect(() => {
-      if (!celdaActiva()) return;
+      if (pp.inline || !celdaActiva()) return;
       const url = chatBackground();
       const propio = url ? { url, veil: cellProfile().veil } : null;
       setFondoDelAgente(propio);

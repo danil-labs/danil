@@ -1,10 +1,11 @@
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
+import X from "lucide-solid/icons/x";
 import { createEffect, For, Show } from "solid-js";
 import { df } from "../../../../ui/src/lib/format";
 import { t } from "../../../../ui/src/lib/i18n";
 import { cn } from "../../../../ui/src/lib/utils";
-import { HEADER_HEIGHT } from "../../../../host/src/window";
+import { LOCATION_BAR } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
 import { groupSearchHits, type SearchHit } from "../model/searchCards";
@@ -26,7 +27,7 @@ export default function SearchPanel(props: { surface: SearchSurface }) {
   const groups = () => groupSearchHits(props.surface.cards());
   return (
     <>
-      <div class={cn("flex shrink-0 items-center gap-1 border-b border-border px-1.5", HEADER_HEIGHT)} role="search" aria-label={t("chat.search.label")}>
+      <div class={cn("flex shrink-0 items-center gap-1 border-b border-border/60 px-2", LOCATION_BAR)} role="search" aria-label={t("chat.search.label")}>
         <Input ref={(el) => props.surface.bindInput(el)} class="h-7 min-h-0 flex-1 py-0 text-xs focus-visible:border-border-strong focus-visible:outline-none" value={props.surface.query()}
           placeholder={t("chat.search.placeholder")} aria-label={t("chat.search.label")}
           onInput={(event) => props.surface.setQuery(event.currentTarget.value)}
@@ -37,8 +38,9 @@ export default function SearchPanel(props: { surface: SearchSurface }) {
         <span class="shrink-0 text-xs text-neutral-500" role="status" aria-live="polite">{props.surface.status()}</span>
         <Button variant="chrome" size="iconCompact" class="size-6" disabled={!props.surface.cards().length} title={t("chat.search.previous")} aria-label={t("chat.search.previous")} onClick={() => props.surface.move(-1)}><ArrowUp size={14} /></Button>
         <Button variant="chrome" size="iconCompact" class="size-6" disabled={!props.surface.cards().length} title={t("chat.search.next")} aria-label={t("chat.search.next")} onClick={() => props.surface.move(1)}><ArrowDown size={14} /></Button>
+        <Button variant="ghost" size="iconCompact" class="size-6 text-neutral-500" title={t("chat.delegation.close_panel")} aria-label={t("chat.delegation.close_panel")} onClick={() => props.surface.close()}><X size={14} /></Button>
       </div>
-      <div ref={list} class="min-h-0 flex-1 overflow-y-auto p-2">
+      <div ref={list} class="min-h-0 flex-1 overflow-y-auto p-2 pb-3">
         <Show when={props.surface.query() && props.surface.cards().length === 0}>
           <p class="m-0 px-2 py-3 text-xs text-neutral-500">{t("chat.search.empty")}</p>
         </Show>

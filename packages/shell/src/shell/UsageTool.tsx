@@ -1,4 +1,5 @@
 import AlertTriangle from "lucide-solid/icons/triangle-alert";
+import X from "lucide-solid/icons/x";
 import { For, Show } from "solid-js";
 import { immediateWindow } from "../../../ui/src/lib/account-usage.ts";
 import { t } from "../../../ui/src/lib/i18n";
@@ -6,7 +7,7 @@ import { left, legible, tono } from "../../../ui/src/lib/limits";
 import { sharedLazy } from "../../../ui/src/lib/sharedLazy";
 import { cn } from "../../../ui/src/lib/utils";
 import { capabilities } from "../../../host/src/platform";
-import { HEADER_HEIGHT } from "../../../host/src/window";
+import { LOCATION_BAR } from "../../../host/src/window";
 import { Button } from "../../../ui/src/Button";
 import { MarcaAgente } from "../../../ui/src/icons";
 import { ProgressBar } from "../../../ui/src/ProgressBar";
@@ -133,12 +134,19 @@ export default function UsageTool(props: {
 }
 
 /** Cuentas, barras, refrescar e ir a proveedores, en la ventana de la tarea. */
-export function UsagePanel(props: { usage: Usage; agent: string; onManage: () => void }) {
+export function UsagePanel(props: { usage: Usage; agent: string; onManage: () => void; onClose?: () => void }) {
   const cards = () => orderedCards(props.usage, props.agent);
   return (
     <>
-      <div class={cn("flex shrink-0 items-center border-b border-border px-3", HEADER_HEIGHT)}>
+      <div class={cn("flex shrink-0 items-center justify-between gap-2 border-b border-border/60 px-3", LOCATION_BAR)}>
         <span class="text-xs font-semibold text-neutral-950">{t("usage.heading")}</span>
+        <Show when={props.onClose}>
+          {(close) => (
+            <Button variant="ghost" size="iconCompact" class="size-6 text-neutral-500" title={t("chat.delegation.close_panel")} aria-label={t("chat.delegation.close_panel")} onClick={() => close()()}>
+              <X size={14} />
+            </Button>
+          )}
+        </Show>
       </div>
       <div class="min-h-0 flex-1 overflow-y-auto">
         <Show when={hasDanilCreditsCapability()}>
@@ -168,7 +176,7 @@ export function UsagePanel(props: { usage: Usage; agent: string; onManage: () =>
           )}
         </For>
       </div>
-      <div class="flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 py-2">
+      <div class="flex shrink-0 items-center justify-between gap-2 border-t border-border px-3 pt-2 pb-3">
         <Button variant="ghost" size="compact" class="gap-1.5" title={t("usage.refresh")} disabled={props.usage.updating()} onClick={props.usage.refreshAll}>
           <RefreshSpinner size={12} spinning={props.usage.updating()} />
           {t("usage.refresh_all")}

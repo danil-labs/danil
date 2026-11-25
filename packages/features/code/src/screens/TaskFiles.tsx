@@ -21,7 +21,7 @@ import {
 } from "../queries";
 import { copyText } from "../../../../host/src/clipboard";
 import { cn } from "../../../../ui/src/lib/utils";
-import { HEADER_HEIGHT } from "../../../../host/src/window";
+import { LOCATION_BAR } from "../../../../host/src/window";
 import type { TaskFiles } from "../../../../ui/src/lib/taskFiles";
 import { machineOf } from "../../../../host/src/machine";
 import type { Cambios } from "../components/Changes";
@@ -179,6 +179,10 @@ export default function TaskFilesCard(props: {
         <Button variant="ghost" size="iconCompact" class={tool} title={t("code.panel.collapse")} aria-label={t("code.panel.collapse")}
           onClick={() => props.files.setOpen(key(), false)}><MessageSquare size={15} /></Button>
       </Show>
+      <Show when={!props.expandedOnly}>
+        <Button variant="ghost" size="iconCompact" class={tool} title={t("chat.delegation.close_panel")} aria-label={t("chat.delegation.close_panel")}
+          onClick={() => props.files.setOpen(key(), false)}><X size={15} /></Button>
+      </Show>
     </div>
   );
 
@@ -186,7 +190,7 @@ export default function TaskFilesCard(props: {
     <div ref={root} class="relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <Show when={hasTabs()}>
         <div class="flex min-w-0 flex-1 flex-col" classList={{ hidden: !showViewer() }}>
-          <div class={cn("relative flex shrink-0 items-end bg-surface-muted", HEADER_HEIGHT)}>
+          <div class={cn("relative flex shrink-0 items-end bg-surface-muted", LOCATION_BAR)}>
             <span aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-px bg-border" />
             <div class="flex h-full min-w-0 items-end gap-0.5 overflow-x-auto overflow-y-hidden px-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist">
               <For each={panel().tabs}>{(tab) => {
@@ -246,7 +250,7 @@ export default function TaskFilesCard(props: {
 
         <aside class="flex min-h-0 flex-col"
           classList={{ hidden: !showTree(), "w-56 shrink-0 border-l border-border": showViewer(), "@4xl:w-64": showViewer(), "flex-1": !showViewer() }}>
-          <div class={cn("relative flex shrink-0 items-end gap-0.5 bg-surface-muted pl-1.5", HEADER_HEIGHT)}>
+          <div class={cn("relative flex shrink-0 items-end gap-0.5 bg-surface-muted pl-1.5", LOCATION_BAR)}>
             <span aria-hidden="true" class="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-px bg-border" />
             <For each={(props.preview ? ["files"] : ["files", "changes"]) as ("files" | "changes")[]}>{(side) => (
               <Pressable onClick={() => props.files.setSide(key(), side)}

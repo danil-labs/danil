@@ -80,12 +80,15 @@ export function createSendGates(deps: SendGatesDeps) {
    * Cierra una pregunta sin contestarla. Al agente se le dice que no hay
    * respuesta: mientras espere, no vuelve la caja de escribir.
    */
-  async function cancelarPregunta(turno: string): Promise<void> {
-    const sid = sessionId();
+  async function cancelarPregunta(
+    turno: string,
+    target?: { project: string; session: string },
+  ): Promise<void> {
+    const sid = target?.session ?? sessionId();
     if (!sid) throw new Error(t("shell.answer.no_session"));
     try {
       const guardado = await callEngine<Turn>("cancel_question", {
-        project: project(),
+        project: target?.project ?? project(),
         session: sid,
         turn: turno,
       }, deLaTarea(sid));
@@ -112,16 +115,18 @@ export function createSendGates(deps: SendGatesDeps) {
   async function responder(
     turno: string,
     manda: RespuestaEnviada[],
+    target?: { project: string; session: string; msgs: Msg[] },
   ): Promise<boolean> {
-    const questionSession = sessionId();
+    const questionSession = target?.session ?? sessionId();
     const questionWorkspace = workspaceActivo();
-    const mensaje = msgs().find((m) => m.turno === turno);
+    const mensaje = (target?.msgs ?? msgs()).find((m) => m.turno === turno);
     if (!mensaje)
       throw new Error(t("shell.answer.question_missing"));
     // Las preguntas por archivo llegan después de que el proceso cerró, pero
     // `done` puede tardar un instante más en apagar `busy`. No se debe exigir
     // `questionRequestId`: ese campo solo existe para el canal vivo de Claude.
-    if (busy() && !(mensaje.preguntas && mensaje.preguntas.length > 0))
+    const isBusy = target ? vivas().includes(target.session) : busy();
+    if (isBusy && !(mensaje.preguntas && mensaje.preguntas.length > 0))
       throw new Error(t("shell.answer.turn_busy"));
     const preguntas = mensaje?.preguntas ?? [];
     // Sin atadura en esta ventana, la tiene Rust: su registro dura lo que el
@@ -180,7 +185,7 @@ export function createSendGates(deps: SendGatesDeps) {
     });
     if (pinta.length === 0)
       throw new Error(t("shell.answer.options_missing"));
-    const sesion = sessionId();
+    const sesion = target?.session ?? sessionId();
     const salio = await enviar(
       {
         text: "",
@@ -191,6 +196,7 @@ export function createSendGates(deps: SendGatesDeps) {
         attachments: [],
       },
       { manda, pinta },
+      target ? { project: target.project, session: target.session } : undefined,
     );
     if (salio && sesion) soltarPreguntas(sesion, turno);
     return salio;
