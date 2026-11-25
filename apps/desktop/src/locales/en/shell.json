@@ -586,5 +586,12 @@
   "shell.workspaces.admission_failed": "Could not admit the organization. Try again.",
   "shell.workspaces.pinned_other_account": "It belongs to another account ({email}). To open it, sign out and sign in with that account.",
   "shell.workspaces.pinned_switch_failed": "Could not switch organization. Try again.",
-  "shell.workspaces.pinned_switching": "Switching organization"
+  "shell.workspaces.pinned_switching": "Switching organization",
+  "shell.agent_dock.pagination": "Agent pages",
+  "shell.agent_dock.previous": "Previous agent page",
+  "shell.agent_dock.next": "Next agent page",
+  "shell.agent_dock.page": "Page {current} of {total}",
+  "shell.agent_dock.filter": "Filter agents by source",
+  "shell.agent_dock.filter_empty": "No agents from this source.",
+  "shell.agent_dock.level_working": "{level} · {count} working: {names}"
 }
