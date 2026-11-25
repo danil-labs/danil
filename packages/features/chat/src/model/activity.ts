@@ -95,14 +95,16 @@ export function createActivityProjection() {
   function project(workspace: string | null, session: string, visible: readonly Msg[]): TurnActivity<Msg>[] {
     return list(workspace, session).flatMap(record => {
       const fresh = visible.filter(message => { const owner = owners.get(message); return (owner?.alias ?? owner) === record; });
-      // **Un turno conserva lo que ya mostró.** Releer el disco, sellar lo vivo o
-      // adoptar un borrador sustituye los objetos del hilo: el dueño se resuelve
-      // por identidad y por los ids guardados, y mientras ese enlace falta la
-      // lista quedaría vacía. La cabecera caía entonces en «Pensando…» y las
-      // herramientas ya vistas desaparecían en mitad del turno. Lo que el turno
-      // ya mostró es un hecho de presentación: no se pierde.
-      if (fresh.some(isRealWork)) record.shown = fresh;
-      const messages = fresh.some(isRealWork) || record.shown.length === 0 ? fresh : record.shown;
+      // **Un turno conserva lo que ya mostró sin perder el cierre fresco.**
+      // Releer el disco, sellar lo vivo o adoptar un borrador sustituye los
+      // objetos del hilo y puede llegar sin enlazar todas las tools ya vistas.
+      // Conservamos el trabajo más rico observado y lo combinamos con las filas
+      // no-tool de `fresh` (respuesta, `duration_ms`, fallo o interrupción).
+      const freshWork = fresh.filter(isRealWork);
+      if (freshWork.length > 0 && freshWork.length >= record.shown.length) record.shown = freshWork;
+      const messages = freshWork.length >= record.shown.length
+        ? fresh
+        : [...record.shown, ...fresh.filter(message => !isRealWork(message))];
       const hasWork = messages.some(isRealWork);
       const hasResponse = messages.some(isAgentOutput);
       const outcome: TurnOutcome = record.active
@@ -138,6 +140,7 @@ export function createActivityProjection() {
       draft.startConfirmed ||= running.startConfirmed;
       draft.anchor.inherit(running.anchor);
       if (running.lastObserved) { draft.lastObserved = running.lastObserved; draft.lastObservedKind = running.lastObservedKind; }
+      if (running.shown.length > draft.shown.length) draft.shown = running.shown;
       for (const id of running.saved) draft.saved.add(id);
       records.set(scopeKey(workspace, to), [...existing.filter(record => record !== running), ...previous]);
     } else records.set(scopeKey(workspace, to), draft?.active || !running?.active ? [...existing, ...previous] : [...previous, ...existing]);

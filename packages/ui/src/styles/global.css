@@ -899,18 +899,11 @@
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-/* La franja y la superficie no se tocan: los pies de unión quedarían colgando
-   en el hueco del marco, así que la pestaña activa es una pastilla con las dos
-   esquinas de arriba redondeadas y el pie recto. El fondo viaja con ella; fijo
-   al viewport, el texto se desplaza y la pastilla se queda. */
+/* La primera pestaña nace desplazada dentro de la tira (`pl-2.5`), así que su pie
+   cóncavo izquierdo (::before) entra entero y se funde con la superficie igual que el derecho. */
 [data-title-bar] .tab-active {
   --tab-foot: 8px;
   border-radius: var(--tab-foot) var(--tab-foot) 0 0;
-  background-attachment: scroll;
-}
-[data-title-bar] .tab-active::before,
-[data-title-bar] .tab-active::after {
-  display: none;
 }
 
 /* La tarjeta fijada del riel: el borde lo dibuja ::after para abrirle arriba

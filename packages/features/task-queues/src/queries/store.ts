@@ -71,7 +71,7 @@ export function createTaskQueues(deps: Dependencies) {
   }
   function remove(id: string, session = currentScope().session) {
     if (session) { const queue = saved.get(session); if (queue) saved.set(session, { ...queue, items: queue.items.filter(item => item.id !== id) }); }
-    if (session === currentScope().session) setItems(queued => queued.filter(item => item.id !== id));
+    if (session === currentScope().session || session === untrack(owner)) setItems(queued => queued.filter(item => item.id !== id));
   }
 
   return {

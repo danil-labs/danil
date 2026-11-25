@@ -9,20 +9,29 @@ export function classify(name: string): StepKind {
   switch (name) {
     case "Read":
     case "NotebookRead":
+    case "Lectura":
+    case "Leer":
       return "read";
     case "Write":
     case "Edit":
     case "MultiEdit":
     case "NotebookEdit":
     case "file_change":
+    case "Edición":
+    case "Edicion":
+    case "Escritura":
       return "edit";
     case "Bash":
     case "BashOutput":
     case "KillShell":
     case "command_execution":
+    case "Comando":
+    case "Ejecutar":
       return "run";
     case "Glob":
     case "Grep":
+    case "Búsqueda":
+    case "Busqueda":
       return "search";
     case "WebFetch":
     case "WebSearch":

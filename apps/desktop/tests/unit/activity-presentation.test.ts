@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../helpers/catalog.ts";
-import { currentActivityAction, observedActivityAction, presentActivity } from "../../../../packages/features/chat/src/model/activityPresentation.ts";
+import { currentActivityAction, isConcreteActivityLabel, observedActivityAction, presentActivity } from "../../../../packages/features/chat/src/model/activityPresentation.ts";
 import { narrateStep, reasoningHeadline } from "../../../../packages/features/chat/src/model/activityNarration.ts";
 import { pasoDe } from "../../src/lib/steps.ts";
 
@@ -106,4 +106,43 @@ test("commands, web lookups, and explicit step summaries render as personalized 
   assert.equal(narrateStep(pasoDe("WebFetch", "https://docs.cloudflare.com/workers/"), { live: true }), "Consultando docs.cloudflare.com…");
   assert.equal(narrateStep(pasoDe("Bash", "custom-script", { summary: "Validando certificados TLS" }), { live: true }), "Validando certificados TLS…");
   assert.equal(narrateStep(pasoDe("Bash", "custom-script", { summary: "Validando certificados TLS" }), { live: false }), "Validando certificados TLS");
+});
+
+test("once a concrete placeholder appears, returning to thinking keeps it instead of cycling generic words", () => {
+  const stepLabel = presentActivity({
+    active: true,
+    action: { kind: "step", step: pasoDe("command_execution", "git status", { corriendo: true }) },
+  }).label;
+  assert.equal(stepLabel, "Revisando cambios en git…");
+  assert.equal(isConcreteActivityLabel(stepLabel), true);
+  assert.equal(isConcreteActivityLabel("Pensando…"), false);
+  assert.equal(isConcreteActivityLabel("Preparando…"), false);
+
+  // When the tool finishes and returns to thinking without a new reasoning headline, keep the last concrete label.
+  assert.deepEqual(
+    presentActivity({ active: true, action: { kind: "thinking" }, fallbackLabel: stepLabel }),
+    { label: "Revisando cambios en git…", animate: true },
+  );
+  // A new concrete reasoning headline replaces the previous fallback.
+  assert.deepEqual(
+    presentActivity({
+      active: true,
+      action: { kind: "thinking", detail: "Validando despliegue en beta" },
+      fallbackLabel: stepLabel,
+    }),
+    { label: "Validando despliegue en beta…", animate: true },
+  );
+  // Blocked or finished states take precedence over the sticky fallback.
+  assert.deepEqual(
+    presentActivity({ active: true, blocked: true, action: { kind: "thinking" }, fallbackLabel: stepLabel }),
+    { label: "Actividad", animate: false },
+  );
+  assert.deepEqual(
+    presentActivity({ active: false, duration: "6s", action: { kind: "thinking" }, fallbackLabel: stepLabel }),
+    { label: "Trabajó durante 6s", animate: false },
+  );
+  // Localized tool names like «Lectura» classify as read instead of raw «Usó Lectura».
+  const spanishRead = pasoDe("Lectura", "/repo/src/TitleBar.tsx", { corriendo: true });
+  assert.equal(spanishRead.clase, "leer");
+  assert.equal(presentActivity({ active: true, action: { kind: "step", step: spanishRead } }).label, "Leyendo TitleBar.tsx");
 });

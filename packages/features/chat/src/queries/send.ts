@@ -328,17 +328,19 @@ export function createSend(deps: SendDeps) {
         if (
           abierta
             ? sessionId() === abierta
-            : claveAbierta() === claveBorrador
+            : claveAbierta() === claveBorrador || (provisional !== null && pestanas.active() === id)
         ) {
-          setSessionId(id);
-          if (!abierta) setHablandoCon(null);
+          if (!abierta) {
+            setSessionId(id);
+            setHablandoCon(null);
+            // La cola escrita durante el primer turno es de la sesión que ese turno
+            // acaba de crear.
+            taskQueues.adopt(id);
+          }
           // Ya viajaron: dejan de ser pendientes y pasan a ser el contexto de la
           // conversación, que se sigue viendo mientras esté abierta.
           if (pendientes.length > 0)
             drafts.acceptSources(pendientes);
-          // La cola escrita durante el primer turno es de la sesión que ese turno
-          // acaba de crear.
-          taskQueues.adopt(id);
         }
       });
       void leerTarea(proyecto, id)

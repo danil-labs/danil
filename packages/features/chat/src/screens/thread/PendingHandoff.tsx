@@ -2,6 +2,7 @@ import { type Component, type ComponentProps, type JSX, type ParentProps, Show }
 import { Dynamic } from "solid-js/web";
 import type { HandoffPresentation } from "../../../../../ui/src/lib/handoff.ts";
 import { t } from "../../../../../ui/src/lib/i18n";
+import { ActivityCaption, ActivityIndicator } from "../../components/activity/ActivityIndicator";
 import Adjuntos from "../Attachments";
 
 export function handoffStatus(handoff: NonNullable<HandoffPresentation>): string {
@@ -31,6 +32,13 @@ export function PendingHandoff(props: {
         <p class="m-0 leading-[1.5] break-words whitespace-pre-wrap">{message().text}</p>
       </Dynamic>
     </div>}</Show>
-    <Show when={props.showStatus !== false}><p class="m-0 mt-2 text-caption text-neutral-500" role="status">{handoffStatus(handoff())}</p></Show>
+    <Show when={props.showStatus !== false}>
+      <div class="mt-1.5 inline-flex min-w-0 max-w-full items-center gap-2 py-0.5 text-ui font-normal text-neutral-500" role="status">
+        <span class="activity-label inline-flex min-w-0 items-center">
+          <ActivityIndicator mode="running" />
+          <ActivityCaption active thinking={false} text={handoffStatus(handoff())} />
+        </span>
+      </div>
+    </Show>
   </section>}</Show>;
 }

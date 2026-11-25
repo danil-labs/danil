@@ -1,5 +1,5 @@
 import Check from "lucide-solid/icons/check";
-import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
+import ListFilter from "lucide-solid/icons/list-filter";
 import { For, type JSX, Show } from "solid-js";
 import { t } from "../../../ui/src/lib/i18n";
 import {
@@ -8,11 +8,11 @@ import {
   DEFAULT_SIDEBAR_VIEW,
   SORTS,
   groupingLabel,
+  nonDefaultCount,
   sameAgent,
   sortLabel,
 } from "../../../ui/src/lib/sidebarView";
 import { cn } from "../../../ui/src/lib/utils";
-import { Button } from "../../../ui/src/Button";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import { FolderSquare } from "../../../features/projects/src/screens/FolderChip";
@@ -176,40 +176,44 @@ function SidebarFilterSections(props: SidebarFilterProps) {
 }
 
 /**
- * El botón Personalizar de la franja abre los filtros y la agrupación del riel.
+ * Botón «Filtrar y agrupar» junto a la cabecera «Tareas» en el riel izquierdo.
  */
-export function CustomizeMenu(props: { filter: SidebarFilterProps | null }) {
+export function TasksFilterMenu(props: SidebarFilterProps) {
+  const activeCount = () => nonDefaultCount(props.view);
+
   return (
     <Popover placement="bottom-end" gutter={4}>
       <PopoverTrigger
         as={(p: object) => (
-          <Button
+          <Pressable
             {...p}
-            variant="ghost"
-            size="icon"
-            class="relative size-7 shrink-0 text-neutral-500"
+            class={cn(
+              "relative grid size-6 shrink-0 place-items-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary data-[expanded]:bg-neutral-200 data-[expanded]:text-neutral-950",
+              activeCount() > 0 && "bg-neutral-200 text-neutral-950",
+            )}
             aria-haspopup="dialog"
-            aria-label={t("shell.customize.trigger")}
-            title={t("shell.customize.trigger")}
-            data-personalize=""
+            aria-label={t("shell.sidebar.view.trigger")}
+            title={t("shell.sidebar.view.trigger")}
+            data-sidebar-filter=""
+            data-filter-active={activeCount() > 0 ? "true" : undefined}
           >
-            <SlidersHorizontal size={15} />
-          </Button>
+            <ListFilter size={13} aria-hidden="true" />
+            <Show when={activeCount() > 0}>
+              <span
+                aria-hidden="true"
+                class="pointer-events-none absolute top-0.5 right-0.5 size-1.5 rounded-full bg-primary"
+              />
+            </Show>
+          </Pressable>
         )}
       />
       <PopoverContent
-        aria-label={t("shell.customize.trigger")}
+        aria-label={t("shell.sidebar.view.trigger")}
         class="grid max-h-[var(--kb-popper-content-available-height)] w-72 gap-0.5 overflow-y-auto p-1.5"
         onOpenAutoFocus={(e: Event) => e.preventDefault()}
       >
-        <Show when={props.filter}>
-          {(filter) => (
-            <>
-              <div class={seccion}>{t("shell.sidebar.view.trigger")}</div>
-              <SidebarFilterSections {...filter()} />
-            </>
-          )}
-        </Show>
+        <div class={seccion}>{t("shell.sidebar.view.trigger")}</div>
+        <SidebarFilterSections {...props} />
       </PopoverContent>
     </Popover>
   );

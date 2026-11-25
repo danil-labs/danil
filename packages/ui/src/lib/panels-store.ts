@@ -184,15 +184,17 @@ export function createPanels(restorable?: () => readonly string[]) {
       persist();
     },
     // Conservar la activa pintaría su conversación debajo del borrador de tarea nueva.
+    // `blanco: true` distingue el borrador intencional de una ventana vacía para que
+    // un `sync` posterior no robe el frente.
     showDraft() {
-      updateGroup(activeSite(), (g) => ({ ...g, activa: null }));
+      updateGroup(activeSite(), (g) => ({ ...g, activa: null, blanco: true }));
       persist();
     },
     activate(id: string) {
       const site = siteOf(id);
-      if (!site || (sameSite(site, activeSite()) && groupAt(site)?.activa === id)) return;
+      if (!site || (sameSite(site, activeSite()) && groupAt(site)?.activa === id && !groupAt(site)?.blanco)) return;
       batch(() => {
-        updateGroup(site, (g) => ({ ...g, activa: id }));
+        updateGroup(site, (g) => ({ ...g, activa: id, blanco: false }));
         setActiveSite(site);
       });
       persist();
@@ -207,6 +209,7 @@ export function createPanels(restorable?: () => readonly string[]) {
           c.map((g) => ({
             pestanas: g.pestanas.map(changed),
             activa: g.activa === null ? null : changed(g.activa),
+            ...(g.blanco ? { blanco: true } : {}),
           })),
         ),
       );
@@ -251,13 +254,14 @@ export function createPanels(restorable?: () => readonly string[]) {
           const site = siteOf(id);
           const replacing = missing.length > 0 && site && sameSite(site, position);
           if (replacing && groupAt(site!)?.activa === id) {
-            updateGroup(site!, (g) => ({ pestanas: g.pestanas.filter((x) => x !== id), activa: null }));
+            updateGroup(site!, (g) => ({ pestanas: g.pestanas.filter((x) => x !== id), activa: null, blanco: false }));
           } else removeTab(id);
         }
         if (missing.length > 0) {
           updateGroup(position, (g) => ({
             pestanas: [...g.pestanas, ...missing],
-            activa: g.activa ?? missing[missing.length - 1],
+            activa: g.blanco ? null : (g.activa ?? missing[missing.length - 1]),
+            ...(g.blanco ? { blanco: true } : {}),
           }));
         }
       });
