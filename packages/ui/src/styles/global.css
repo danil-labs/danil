@@ -899,9 +899,15 @@
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
 }
-/* En la franja de la ventana la primera pestaña nace en el borde de la barra lateral:
-   su pie izquierdo cortaría esa esquina, así que solo ese queda recto. */
-[data-title-bar] [data-envoltorio="0"].tab-active::before {
+/* La franja y la superficie ya no se tocan: los pies de unión quedarían colgando
+   en el hueco del marco. El fondo de la pestaña viaja con ella; fijo al viewport,
+   el texto se desplaza y la pastilla se queda. */
+[data-title-bar] .tab-active {
+  border-radius: var(--tab-foot);
+  background-attachment: scroll;
+}
+[data-title-bar] .tab-active::before,
+[data-title-bar] .tab-active::after {
   display: none;
 }
 

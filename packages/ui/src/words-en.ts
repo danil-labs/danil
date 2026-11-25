@@ -91,6 +91,7 @@ export const en: Record<WordKey, Word> = {
   "projects.threads.command": "Terminal command",
   "chat.attachments.add": "Attach a file",
   "chat.attachments.remove": "Remove «{name}» from this message",
+  "chat.attachments.remove_pending": "Remove this file from the message",
   "chat.attachments.file_type_unknown": "file",
   "chat.composer.placeholder.ask": "Ask something · @ handlers, tasks, projects, files · / commands",
   "chat.composer.placeholder.next": "Write what comes next",

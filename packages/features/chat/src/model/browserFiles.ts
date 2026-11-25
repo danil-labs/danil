@@ -12,6 +12,7 @@ import {
 import { base64De } from "../../../../host/src/clipboard";
 import { t } from "../../../../ui/src/lib/i18n";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
+import type { FormaDeCaja } from "./attachmentSlots";
 
 type Conversacion = {
   puede: () => boolean;
@@ -20,9 +21,10 @@ type Conversacion = {
   marcar: (caja: DOMRect | null) => void;
   conversacion: Accessor<unknown>;
   pegar: (mime: string, datos: string, nombre?: string) => Promise<string>;
-  agregar: (rutas: string[]) => Promise<void>;
+  agregar: (rutas: string[], contar?: boolean) => Promise<boolean>;
   fallo: (f: Failure | null) => void;
-  ocupado: (delta: number) => void;
+  reservar: (formas: FormaDeCaja[]) => { ordenesCanceladas: () => number[]; cerrar: (noLlegaron: number) => void };
+  descartar: (ordenes: number[]) => void;
 };
 
 export function adjuntador(c: Conversacion) {
@@ -40,14 +42,19 @@ export function adjuntador(c: Conversacion) {
       else admitidos.push(f);
     }
     c.fallo(null);
-    c.ocupado(1);
+    // Una caja por archivo desde el primer byte: `agregar` no vuelve a contarlas.
+    const reserva = admitidos.length
+      ? c.reservar(admitidos.map((f) => (isImageMime(mimeOfAttachment(f.type, f.name)!) ? "imagen" : "archivo")))
+      : null;
+    let ok = false;
     try {
       const rutas: string[] = [];
       for (const f of admitidos) {
         const mime = mimeOfAttachment(f.type, f.name)!;
         rutas.push(await c.pegar(mime, await base64De(f), f.name));
       }
-      if (rutas.length) await c.agregar(rutas);
+      ok = rutas.length ? await c.agregar(rutas, false) : true;
+      if (ok && reserva && conversation === c.conversacion()) c.descartar(reserva.ordenesCanceladas());
       if ((sinDocumentos.length || noAdmitidos.length) && conversation === c.conversacion()) {
         if (noAdmitidos.length) {
           c.fallo({
@@ -64,7 +71,7 @@ export function adjuntador(c: Conversacion) {
     } catch (err) {
       if (conversation === c.conversacion()) c.fallo(asFailure(err));
     } finally {
-      c.ocupado(-1);
+      if (reserva) reserva.cerrar(ok ? reserva.ordenesCanceladas().length : admitidos.length);
     }
   }
 

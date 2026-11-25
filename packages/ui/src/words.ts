@@ -102,6 +102,7 @@ const es = {
   "projects.threads.command": "Comando en terminal",
   "chat.attachments.add": "Adjuntar un archivo",
   "chat.attachments.remove": "Quitar «{name}» de este mensaje",
+  "chat.attachments.remove_pending": "Quitar este archivo del mensaje",
   "chat.attachments.file_type_unknown": "archivo",
   "chat.composer.placeholder.ask": "Pregunta algo · @ encargados, tareas, proyectos, archivos · / comandos",
   "chat.composer.placeholder.next": "Escribe lo siguiente",

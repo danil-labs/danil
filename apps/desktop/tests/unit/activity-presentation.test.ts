@@ -5,9 +5,10 @@ import { currentActivityAction, observedActivityAction, presentActivity } from "
 import { narrateStep, reasoningHeadline } from "../../../../packages/features/chat/src/model/activityNarration.ts";
 import { pasoDe } from "../../src/lib/steps.ts";
 
-test("stop request suppresses animation and shows stopping caption before authoritative completion", () => {
+test("a stop keeps the live action and its loader until the turn actually releases", () => {
   const action = { kind: "step" as const, step: pasoDe("command_execution", "pnpm test:unit") };
-  assert.deepEqual(presentActivity({ active: true, stopping: true, action }), { label: "Deteniendo…", animate: false });
+  assert.deepEqual(presentActivity({ active: true, stopping: true, action }), presentActivity({ active: true, action }));
+  assert.equal(presentActivity({ active: true, stopping: true, action }).animate, true);
   assert.deepEqual(presentActivity({ active: false, action }), { label: "Trabajo", animate: false });
 });
 
@@ -30,7 +31,7 @@ for (const corriendo of [false, undefined]) test(`a completed command is not the
   const action = { kind: "step" as const, step: { ...pasoDe("command_execution", "pwd"), corriendo } };
   assert.deepEqual(presentActivity({ active: true, action }), { label: "Pensando…", animate: true });
   assert.deepEqual(presentActivity({ active: false, action }), { label: "Trabajo", animate: false });
-  assert.deepEqual(presentActivity({ active: true, stopping: true, action }), { label: "Deteniendo…", animate: false });
+  assert.deepEqual(presentActivity({ active: true, stopping: true, action }), presentActivity({ active: true, action }));
   assert.deepEqual(presentActivity({ active: true, blocked: true, action }), { label: "Actividad", animate: false });
   assert.equal(presentActivity({ active: true, action: { kind: "thinking" } }).label, "Pensando…");
 });
@@ -39,13 +40,14 @@ for (const corriendo of [false, undefined]) test(`a completed command is not the
 test("finished activity uses duration on success and activity-before-error on failure", () => {
   assert.deepEqual(presentActivity({ active: false, duration: "1m 4s" }), { label: "Trabajó durante 1m 4s", animate: false });
   assert.deepEqual(presentActivity({ active: false, duration: null }), { label: "Trabajo", animate: false });
-  assert.equal(presentActivity({ active: false, stopping: true, duration: "1m 4s" }).label, "Trabajó durante 1m 4s");
+  assert.deepEqual(presentActivity({ active: false, stopping: true, duration: "1m 4s" }), presentActivity({ active: true }));
   assert.deepEqual(presentActivity({ active: false, outcome: "failed", duration: "1m 4s" }), { label: "Actividad antes del error", animate: false });
 });
 
-test("a stop quiets current work without claiming execution finished or fabricating duration", () => {
+test("a stop keeps the current action instead of a stopping caption or a finished claim", () => {
   const action = { kind: "step" as const, step: { ...pasoDe("command_execution", "pwd"), corriendo: true } };
-  assert.deepEqual(presentActivity({ active: true, stopping: true, blocked: true, action }), { label: "Deteniendo…", animate: false });
+  assert.deepEqual(presentActivity({ active: true, stopping: true, blocked: true, action }), presentActivity({ active: true, action }));
+  assert.equal(presentActivity({ active: true, stopping: true, paused: true, action }).animate, false);
   assert.equal(action.step.corriendo, true);
   assert.deepEqual(presentActivity({ active: true }), { label: "Preparando…", animate: true });
 });
