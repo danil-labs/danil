@@ -218,7 +218,6 @@ export function createChatViewParts(props: ChatProps, deps: ChatViewPartsDeps) {
             class={cn(
               "pointer-events-auto relative flex max-h-full min-h-0 w-full flex-col items-center overflow-hidden",
               presentation().composerBar,
-              props.besideFiles && "pr-0",
             )}
           >
             <Show when={props.recovery} fallback={<Caja />}>{props.recovery}</Show>

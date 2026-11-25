@@ -14,8 +14,22 @@ type TaskFileTab = {
 
 export type TaskFilesSide = "files" | "changes";
 
-/** What the one task window shows. `open` still means the window is open. */
+/** What the side pane shows. Only one is visible at a time, while each panel keeps its own state. */
 export type TaskSideMode = "files" | "search" | "usage" | "delegated";
+
+/** Logical ownership group of the right-hand panel: files & search vs subtasks vs usage. */
+export type TaskSidePanelKind = "files-search" | "subtasks" | "usage";
+
+export type SubtaskTarget = {
+  project: string;
+  session: string;
+};
+
+export function taskSidePanelKind(mode: TaskSideMode): TaskSidePanelKind {
+  if (mode === "delegated") return "subtasks";
+  if (mode === "usage") return "usage";
+  return "files-search";
+}
 
 export type TaskFilesPanel = {
   open: boolean;
@@ -26,16 +40,22 @@ export type TaskFilesPanel = {
   tabs: TaskFileTab[];
   active: string | null;
   dirty: string[];
+  /** Independent state of the dedicated Subtasks panel: null shows the list, a target opens its live split thread. */
+  subtask: SubtaskTarget | null;
 };
 
 export const taskFileTabId = (tree: string, path: string, changes: boolean) =>
   `${changes ? "cambios" : "archivo"}\u0000${tree}\u0000${path}`;
 
+/** True when the right pane should occupy a proportional split width (file viewer tabs or live subtask thread). */
+export const taskSideUsesSplitWidth = (panel: Pick<TaskFilesPanel, "mode" | "tabs" | "subtask">) =>
+  (panel.mode === "files" && panel.tabs.length > 0) || (panel.mode === "delegated" && panel.subtask !== null);
+
 const emptyPanel = (): TaskFilesPanel => ({
-  open: false, expanded: false, tree: true, side: "files", mode: "files", tabs: [], active: null, dirty: [],
+  open: false, expanded: false, tree: true, side: "files", mode: "files", tabs: [], active: null, dirty: [], subtask: null,
 });
 
-/** Per-task state of the files panel, in memory; only the widths persist (`lib/prefs.ts`). */
+/** Per-task state of the right-side panels, in memory; only the widths persist (`lib/prefs.ts`). */
 export function createTaskFiles() {
   const [panels, setPanels] = createStore<Record<string, TaskFilesPanel>>({});
   const panel = (task: string): TaskFilesPanel => panels[task] ?? emptyPanel();
@@ -45,7 +65,7 @@ export function createTaskFiles() {
       change(all[task]);
     }));
 
-  /** Opens `mode`, or closes the window when that mode is already showing. */
+  /** Opens `mode`, or closes the side pane when that mode is already showing. Independent panel states are preserved. */
   const present = (task: string, mode: TaskSideMode) => edit(task, (p) => {
     if (p.open && p.mode === mode) {
       p.open = false;
@@ -54,6 +74,7 @@ export function createTaskFiles() {
     }
     p.open = true;
     p.mode = mode;
+    if (mode !== "files") p.expanded = false;
   });
 
   return {
@@ -65,7 +86,25 @@ export function createTaskFiles() {
     }),
     present,
     toggle: (task: string) => present(task, "files"),
-    setExpanded: (task: string, expanded: boolean) => edit(task, (p) => { p.expanded = expanded && p.tabs.length > 0; }),
+    openSubtask: (task: string, target: SubtaskTarget) => edit(task, (p) => {
+      p.open = true;
+      p.mode = "delegated";
+      p.expanded = false;
+      p.subtask = { project: target.project, session: target.session };
+    }),
+    showSubtaskList: (task: string) => edit(task, (p) => {
+      p.open = true;
+      p.mode = "delegated";
+      p.expanded = false;
+      p.subtask = null;
+    }),
+    clearSubtask: (task: string) => edit(task, (p) => {
+      p.subtask = null;
+    }),
+    activeSubtasks: () => Object.values(panels)
+      .filter((p) => p.open && p.mode === "delegated" && p.subtask !== null)
+      .map((p) => p.subtask!.session),
+    setExpanded: (task: string, expanded: boolean) => edit(task, (p) => { p.expanded = expanded && p.mode === "files" && p.tabs.length > 0; }),
     setTree: (task: string, tree: boolean) => edit(task, (p) => { p.tree = tree || p.tabs.length === 0; }),
     setSide: (task: string, side: TaskFilesSide) => edit(task, (p) => { p.side = side; p.tree = true; }),
     open: (task: string, file: { tree: string; path: string; changes: boolean; changed?: boolean; pinned?: boolean }) => edit(task, (p) => {

@@ -190,7 +190,7 @@
   "shell.sidebar.mcp.manage": "Administrar herramientas",
   "shell.sidebar.mcp.trigger": "Herramientas MCP",
   "shell.sidebar.new_task": "Nueva tarea",
-  "shell.sidebar.new_folder": "Nueva carpeta",
+  "shell.sidebar.new_folder": "Nuevo proyecto",
   "shell.sidebar.new_task_in": "Nueva tarea en {name}",
   "shell.sidebar.collapse_group": "Plegar «{name}»",
   "shell.sidebar.expand_group": "Desplegar «{name}»",
