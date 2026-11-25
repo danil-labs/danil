@@ -274,35 +274,37 @@ export function createHandover(deps: HandoverDeps) {
     // ventana no lleva máquina, igual que sus filas.
     const destino = draftMachine() ?? capabilities().remoteCreate?.(workspaceActivo())?.machine ?? null;
     const machine = destino && !isOwnMachine(machines().find((m) => m.id === destino)) ? destino : undefined;
-    setNaciendo((ns) => [
-      ...ns,
-      {
-        project: proyecto,
-        row: {
-          id: provisional,
-          title: titulo,
-          provider: con.provider,
-          model: con.model,
-          refs: [],
-          created_at: ahora,
-          updated_at: ahora,
-          turns: 1,
-          parent: null,
-          subagent: null,
-          esperando: false,
-          stage: null,
-          agent: encargado,
-          parent_agent: null,
-          chat_de_agente: false,
-          ...(machine ? { machine } : {}),
-        },
-      },
-    ]);
-    // Y delante, en el mismo gesto: el efecto que reparte las pestañas vuelve
-    // a activar la que ya estaba. Nacer sin activarse devuelve la vista a la
-    // tarea anterior hasta que Rust contesta. Y conservada: como vista
-    // sustituiría a la pestaña de delante, y el siguiente clic, a ella.
+    // Fila y pestaña en el mismo lote: al montarse la celda provisional ya
+    // encuentra su fila (`turns: 1`) y nunca entra como tarea sin empezar.
     batch(() => {
+      setNaciendo((ns) => [
+        ...ns,
+        {
+          project: proyecto,
+          row: {
+            id: provisional,
+            title: titulo,
+            provider: con.provider,
+            model: con.model,
+            refs: [],
+            created_at: ahora,
+            updated_at: ahora,
+            turns: 1,
+            parent: null,
+            subagent: null,
+            esperando: false,
+            stage: null,
+            agent: encargado,
+            parent_agent: null,
+            chat_de_agente: false,
+            ...(machine ? { machine } : {}),
+          },
+        },
+      ]);
+      // Y delante, en el mismo gesto: el efecto que reparte las pestañas vuelve
+      // a activar la que ya estaba. Nacer sin activarse devuelve la vista a la
+      // tarea anterior hasta que Rust contesta. Y conservada: como vista
+      // sustituiría a la pestaña de delante, y el siguiente clic, a ella.
       pestanas.ensure({ id: provisional, project: proyecto, titulo });
       pestanas.pin(provisional);
       pestanas.activate(provisional);
@@ -313,20 +315,22 @@ export function createHandover(deps: HandoverDeps) {
   /** La tarea que nació toma lo que la ventana sin id tenía suyo: hilo, borrador, fila y pestaña. */
   function adoptarNacida(id: string, nacida: { provisional: string | null; proyecto: string; titulo: string; claveBorrador: string }) {
     const { provisional, proyecto, claveBorrador } = nacida;
-    setDraftBases((bases) => {
-      const next = { ...bases };
-      delete next[claveBorrador];
-      return next;
-    });
-    // La conversación que nació: su hilo se muda de `""` a su id. Los
-    // eventos del turno pueden haber llegado ANTES que el id —Rust crea la
-    // sesión y emite con ella mientras el `invoke` vuelve— y ya están en
-    // `hilos[id]`; se conservan detrás de lo propio.
-    threads.adoptDraft(id);
-    // Y su borrador: lo que quedó sin mandar sigue con ella.
-    drafts.promote(claveBorrador, id);
-    if (provisional) {
-      batch(() => {
+    // Todo en el mismo lote: mover el hilo de `""` a `id` antes de cambiar la
+    // pestaña provisional dejaba el hilo vacío por un instante y remontaba el selector.
+    batch(() => {
+      setDraftBases((bases) => {
+        const next = { ...bases };
+        delete next[claveBorrador];
+        return next;
+      });
+      // La conversación que nació: su hilo se muda de `""` a su id. Los
+      // eventos del turno pueden haber llegado ANTES que el id —Rust crea la
+      // sesión y emite con ella mientras el `invoke` vuelve— y ya están en
+      // `hilos[id]`; se conservan detrás de lo propio.
+      threads.adoptDraft(id);
+      // Y su borrador: lo que quedó sin mandar sigue con ella.
+      drafts.promote(claveBorrador, id);
+      if (provisional) {
         // La fila antes que la pestaña: una pestaña sin fila pide la lista.
         setNaciendo((ns) =>
           ns.map((n) => (n.row.id === provisional ? { ...n, row: { ...n.row, id } } : n)),
@@ -335,8 +339,8 @@ export function createHandover(deps: HandoverDeps) {
         pestanas.commitDraft(provisional, { id, project: proyecto, titulo: nacida.titulo });
         paneles.renameTabs([[provisional, id]]);
         olvidarPestana(provisional);
-      });
-    } else pestanas.ensure({ id, project: proyecto, titulo: "" });
+      } else pestanas.ensure({ id, project: proyecto, titulo: "" });
+    });
     void reatarVistaPrevia(proyecto, id);
   }
   return { adoptarNacida, chooseEffort, configDeLaSesion, confirmarTraspaso, effortDelTurno, elegirModelo, elegirModo, pintarNaciendo, restoreDraftConfiguration, restoreSessionConfiguration, saveDraftConfiguration, situacionDeTraspaso };

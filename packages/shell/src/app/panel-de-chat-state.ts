@@ -304,7 +304,7 @@ export function createPanelDeChatState(deps: PanelDeChatStateDeps) {
       const proyecto = proyectoDeLaCelda()?.id;
       if (name) hablarConEncargado(proyecto ?? "", name);
     };
-    return { visualWorkspace, esperandoAqui, proyectoDeLaCelda, clavePanel, estadoDelTrabajo, refreshWork, delegation, delegationData, delegatedRows, delegatedList, coordinatingTask, recuperable, origenArchivada, esRepositorio, encargadoDeLaCelda, bloqueoDeTraspaso, motivoDeTraspaso, identidadVisualDeLaCelda, estadoDelEncargado, profiles, cellProfile, chatBackground, declared, viewingProfile, setViewingProfile, handlerPolicy, lecturaDeLaCelda, preguntasDeLaCelda, vistaDeLaCelda, mensajes, historialAnteriorEnReposo, soloPorSerAnterior, seguirConElAgente };
+    return { visualWorkspace, claveDelHilo, esperandoAqui, proyectoDeLaCelda, clavePanel, estadoDelTrabajo, refreshWork, delegation, delegationData, delegatedRows, delegatedList, coordinatingTask, recuperable, origenArchivada, esRepositorio, encargadoDeLaCelda, bloqueoDeTraspaso, motivoDeTraspaso, identidadVisualDeLaCelda, estadoDelEncargado, profiles, cellProfile, chatBackground, declared, viewingProfile, setViewingProfile, handlerPolicy, lecturaDeLaCelda, preguntasDeLaCelda, vistaDeLaCelda, mensajes, historialAnteriorEnReposo, soloPorSerAnterior, seguirConElAgente };
   };
   return { estadoDePanelDeChat };
 }
