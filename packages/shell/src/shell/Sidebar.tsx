@@ -24,7 +24,7 @@ export { createSidebar } from "./sidebar-state";
 
 const NewAgent = retryableLazy(() => import("../../../features/projects/src/screens/NewAgent"));
 
-// Fuera de la carga inicial: el botón y el dock llegan un instante después de la lista.
+// El catálogo conserva su carga perezosa al situarse sobre las tareas.
 const AgentDock = lazy(() => import("./AgentDock"));
 
 
@@ -79,7 +79,7 @@ export default function Sidebar(props: SidebarProps) {
   );
 
   const tareas = createTareasDelRiel(props);
-  const { vista, cambiarVista, nombreDe, todas, grupos, hayCarpetasVacias } = tareas;
+  const { vista, cambiarVista, todas, grupos, hayCarpetasVacias } = tareas;
   const { carpetaActual, agentesDelDock, carpetasDelAgente, gruposDelDock, rosterListo, perfilDe } = createDockDelRiel(props, tareas);
   const { FilaDeClon, Grupo } = createFilas(props, tareas, { setDesplegado, setCreatingAgentIn });
 
@@ -133,14 +133,9 @@ export default function Sidebar(props: SidebarProps) {
       /></LazyPart>}</Show>
       <SidebarShell
         state={props.collapsed ? "collapsed" : "expanded"}
-        // Sin cabecera ni pie: la lista se estira y Agentes queda pegado al fondo.
-        class="h-full w-full min-w-0 grid-rows-[minmax(0,1fr)_auto]"
+        class="h-full w-full min-w-0 grid-rows-[minmax(0,1fr)]"
         aria-label={t("shell.sidebar.label")}
       >
-        {/* Sin cabecera, el pie cae en la fila `1fr` de las tres que reparte
-            `ui/sidebar.tsx`: se pega debajo de la lista y se va con lo que ésta
-            crezca. */}
-
         <SidebarContent class="gap-2 px-2 pt-2 pb-0">
           <SidebarMenu class="gap-1.5">
 
@@ -185,6 +180,24 @@ export default function Sidebar(props: SidebarProps) {
           </SidebarMenu>
 
           <Show when={!props.collapsed}>
+            <Suspense fallback={<div class="h-[132px] shrink-0" aria-busy="true" />}>
+              <AgentDock
+                agents={agentesDelDock()}
+                selected={vista().agent}
+                foldersOf={carpetasDelAgente}
+                currentFolder={carpetaActual()}
+                contextKey={props.viewKey}
+                groups={gruposDelDock()}
+                loading={!rosterListo()}
+                onTalk={props.onHablarCon}
+                onShowTasks={(agent) => cambiarVista({ ...vista(), agent })}
+                onProfile={props.onAgentProfile}
+                onSeeAll={() => props.onSettings("agentes")}
+                onNewAgent={() => setCreatingAgentIn({ id: carpetaActual() ?? "", name: "" })}
+                profileOf={perfilDe}
+              />
+            </Suspense>
+            <h2 class="m-0 px-1 text-caption font-medium text-neutral-700">{t("shell.sidebar.tasks")}</h2>
             {/* **`overflow-y-auto` y NO `overflow-auto`.** Aquél es de los dos
                 ejes: los títulos llegaban al borde sin puntos suspensivos y lo
                 de la derecha quedaba fuera de la vista. */}
@@ -201,28 +214,6 @@ export default function Sidebar(props: SidebarProps) {
           </Show>
         </SidebarContent>
 
-        {/* La banda de agentes se queda siempre: con o sin agentes. Antes
-            desaparecía al quedar sin roster, y quien miraba perdía el sitio
-            donde estaban. Vacía enseña el rótulo y el alta. */}
-        <Show when={!props.collapsed}>
-          <Suspense>
-            <AgentDock
-              agents={agentesDelDock()}
-              selected={vista().agent}
-              foldersOf={carpetasDelAgente}
-              currentFolder={carpetaActual()}
-              currentFolderName={carpetaActual() ? nombreDe(carpetaActual()!) ?? null : null}
-              groups={gruposDelDock()}
-              loading={!rosterListo()}
-              onTalk={props.onHablarCon}
-              onShowTasks={(agent) => cambiarVista({ ...vista(), agent })}
-              onProfile={props.onAgentProfile}
-              onSeeAll={() => props.onSettings("agentes")}
-              onNewAgent={() => setCreatingAgentIn({ id: carpetaActual() ?? "", name: "" })}
-              profileOf={perfilDe}
-            />
-          </Suspense>
-        </Show>
       </SidebarShell>
 
       {/* El historial colapsado no desaparece: se abre al lado del riel. Este SÍ
