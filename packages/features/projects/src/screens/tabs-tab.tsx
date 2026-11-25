@@ -78,7 +78,7 @@ export function createRenderTab(props: TabStripProps, deps: { gitRows: Accessor<
         <Show when={startsGroup()}>
           <span
             aria-hidden="true"
-            class="mx-1 h-4 w-px shrink-0 self-center bg-border"
+            class="mx-1 h-4 w-px shrink-0 self-center bg-border [[data-title-bar]_&]:mb-1.5"
           />
         </Show>
         <Show when={props.dropIndex === i()}>
@@ -99,8 +99,8 @@ export function createRenderTab(props: TabStripProps, deps: { gitRows: Accessor<
             "group flex h-[30px] shrink-0 touch-none items-center rounded-sm pr-1 select-none",
             task() ? "w-[220px] text-ui" : "w-[180px] text-label",
             active()
-              ? "tab-active font-semibold text-neutral-950"
-              : "font-medium text-neutral-500 hover:bg-neutral-950/5 hover:text-neutral-950",
+              ? "tab-active font-semibold text-neutral-950 [[data-title-bar]_&]:h-full [[data-title-bar]_&]:pb-1.5"
+              : "font-medium text-neutral-500 hover:bg-neutral-950/5 hover:text-neutral-950 [[data-title-bar]_&]:mb-1.5",
           )}
         >
           <div
