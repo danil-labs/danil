@@ -1,6 +1,6 @@
-import { invoke } from "../../engine-client/src/client";
+import { readHostFilePreview } from "../../host/src/file-preview.ts";
 import { createResource, Show } from "solid-js";
-import { imagenInerte } from "../../../apps/desktop/src/lib/links";
+import { imagenInerte } from "./lib/chat/links";
 import { EnlargeableImage } from "./EnlargeableImage";
 import { FilePreview } from "./FilePreview";
 import { useFileMachine } from "./fileMachine";
@@ -11,7 +11,7 @@ export default function RemoteImage(props: { path: string; alt?: string }) {
   const [fuente] = createResource(
     () => props.path,
     (ruta) =>
-      invoke<{ data_url?: string | null }>("preview_file", { path: ruta, rel: ruta }, enSuMaquina())
+      readHostFilePreview<{ data_url?: string | null }>(ruta, ruta, enSuMaquina())
         .then((p) => imagenInerte(p.data_url))
         .catch(() => null),
   );

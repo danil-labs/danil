@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { WSL_INSTALL, WSL_INSTALL_UBUNTU, wslFailureCode, wslState } from "../../src/features/machines/wsl.ts";
+import { WSL_INSTALL, WSL_INSTALL_UBUNTU, wslFailureCode, wslState } from "../../../../packages/features/machines/src/model/wsl.ts";
 
 test("wslState reads English and Spanish states", () => {
   assert.deepEqual(wslState("Running"), { state: "running", tone: "success" });

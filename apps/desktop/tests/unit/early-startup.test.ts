@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { listaBasta, reconciliar } from "../../src/features/settings/early-startup.ts";
+import { listaBasta, reconciliar } from "../../../../packages/features/settings/src/model/early-startup.ts";
 import { mountAfterLanguagePacks } from "../../src/locales/startup.ts";
-import { untilConnected } from "../../src/lib/invoke.ts";
+import { untilConnected } from "../../../../packages/engine-client/src/client.ts";
 import "../helpers/catalog.ts";
 import { aplicarLenguaDeWorkspace, elegirLengua, lengua, refreshLanguage } from "../../src/lib/i18n.ts";
 

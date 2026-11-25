@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { delimiterFor, parseTable } from "../../src/features/viewers/csv.ts";
+import { delimiterFor, parseTable } from "../../../../packages/ui/src/lib/csv.ts";
 
 test("solo un archivo tabular tiene separador", () => {
   assert.equal(delimiterFor("datos.csv"), ",");

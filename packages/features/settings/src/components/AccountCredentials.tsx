@@ -5,19 +5,19 @@
  *
  * Trozo perezoso: lo cargan Cuentas, MCP y Referencias al abrirse.
  */
-import "../../../../../apps/desktop/src/locales/danilPhrases";
-import { type Credential, type CredentialKind, type CredentialMachine, credentialMachines } from "@terminus/computers";
+import "../../../../ui/src/locales/danilPhrases";
+import type { Credential, CredentialKind, CredentialMachine } from "../../../../platform-client/src/account-credentials.ts";
 import { createMemo, createSignal, For, onMount, Show } from "solid-js";
-import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n";
+import { manifiesto, t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
-import { prosa } from "../../../../../apps/desktop/src/lib/prose";
+import { prosa } from "../../../../ui/src/lib/prose";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import { SettingsBlock } from "../../../../ui/src/SettingsLayout";
-import { act, credentialsView, failureOf, reloadCredentials } from "../queries/credentials-store";
+import { act, credentialMachines, credentialsView, failureOf, reloadCredentials, whereName } from "../queries/credentials-store";
 
 const nameOf = (m: Pick<CredentialMachine, "computer_id" | "name">) => m.name?.trim() || capabilities().machineName?.(m.computer_id) || m.computer_id;
 const PROVIDERS: Record<string, string> = { opencode: "OpenCode", zotero: "Zotero", github: "GitHub" };
@@ -30,7 +30,7 @@ function providerName(c: Pick<Credential, "kind" | "provider" | "config">): stri
 const list = (names: string[]) => new Intl.ListFormat(manifiesto().formato).format(names);
 
 /** «En uso en: Mac y vm-alberto · pendiente en vm-x»: de un vistazo, sin abrir nada. */
-export function usageSummary(credential: Pick<Credential, "machines">): string {
+function usageSummary(credential: Pick<Credential, "machines">): string {
   const ms = credentialMachines(credential);
   const using = ms.filter((m) => m.state === "active" || m.state === "signed_in").map(nameOf);
   const pending = ms.filter((m) => m.state === "pending").map(nameOf);
@@ -260,12 +260,6 @@ export function CredentialsInUse(props: { kinds?: CredentialKind[]; match?: (c: 
 }
 
 const [dismissed, setDismissed] = createSignal<ReadonlySet<string>>(new Set());
-
-/** Dónde corre el motor que contesta: esta máquina, salvo que el workspace viva en otra. */
-function whereName({ machines, machineName }: MaquinasDeAjustes): string | null {
-  const lead = machines().find((m) => m.active);
-  return lead && !lead.local ? machineName(lead.id, false) : null;
-}
 
 /**
  * «Tienes N claves solo en esta máquina. ¿Subirlas a tu cuenta?». La persona

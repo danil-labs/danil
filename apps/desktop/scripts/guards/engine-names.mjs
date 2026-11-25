@@ -60,12 +60,17 @@ for (const [file, pattern] of Object.entries(lists)) {
 const lock = JSON.parse(read("seldon-runtime.lock"));
 const binaries = join(DESKTOP, "src-tauri/binaries");
 const sha256 = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+const COMPANIONS = [
+  { key: "cli", name: "danil" },
+  { key: "kn", name: "kn" },
+];
 const placed = existsSync(binaries) ? readdirSync(binaries) : [];
 const triples = new Set(
   placed.flatMap((file) => names.filter((name) => file.startsWith(`${name}-`)).map((name) => file.slice(name.length + 1).replace(/\.exe$/, ""))),
 );
 for (const triple of triples) {
-  const files = names.map((name) => `${name}-${triple}${triple.includes("windows") ? ".exe" : ""}`);
+  const suffix = triple.includes("windows") ? ".exe" : "";
+  const files = names.map((name) => `${name}-${triple}${suffix}`);
   const missing = files.filter((file) => !placed.includes(file));
   if (missing.length) {
     violations.push(`src-tauri/binaries  falta ${missing.join(", ")}: corre node scripts/engine.mjs sidecar`);
@@ -73,9 +78,23 @@ for (const triple of triples) {
   }
   const hashes = files.map((file) => sha256(join(binaries, file)));
   if (new Set(hashes).size > 1) violations.push(`src-tauri/binaries  ${files.join(" y ")} no tienen los mismos bytes`);
-  const pinned = lock.platforms?.[triple]?.sha256;
+  const platformPin = lock.platforms?.[triple];
+  const pinned = platformPin?.sha256;
   if (pinned && hashes.some((hash) => hash !== pinned)) {
     violations.push(`src-tauri/binaries  ${triple} no tiene el SHA-256 de seldon-runtime.lock (${pinned}): corre node scripts/engine.mjs sidecar`);
+  }
+  for (const { key, name } of COMPANIONS) {
+    const companion = platformPin?.[key];
+    if (!companion) continue;
+    const file = `${name}-${triple}${suffix}`;
+    if (!placed.includes(file)) {
+      violations.push(`src-tauri/binaries  falta ${file}: corre node scripts/engine.mjs sidecar`);
+      continue;
+    }
+    const hash = sha256(join(binaries, file));
+    if (companion.sha256 && hash !== companion.sha256) {
+      violations.push(`src-tauri/binaries  ${file} no tiene el SHA-256 de seldon-runtime.lock (${companion.sha256}): corre node scripts/engine.mjs sidecar`);
+    }
   }
 }
 

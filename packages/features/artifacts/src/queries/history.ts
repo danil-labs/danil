@@ -1,7 +1,6 @@
-import { machineOf } from "../../../machines/src/queries/store";
-import type { InvokeOptions } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
-import { manifiesto, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { machineOf } from "../../../../host/src/machine";
+import { callEngine, type InvokeOptions } from "../../../../engine-client/src/client.ts";
+import { manifiesto, t } from "../../../../ui/src/lib/i18n.ts";
 
 /**
  * **La única forma de nombrar una versión.** El número solo no identifica nada:
@@ -33,13 +32,13 @@ export type History = {
 };
 
 /** `en`: la máquina donde está el archivo, si no es la de la ventana (`ui/fileMachine.ts`). */
-export const historiaDe = (path: string, en?: InvokeOptions) => invoke<History>("artifact_history", { path }, en);
+export const historiaDe = (path: string, en?: InvokeOptions) => callEngine<History>("artifact_history", { path }, en);
 
 export const leerVersion = (referencia: VersionRef, en?: InvokeOptions) =>
-  invoke<string>("read_version", { referencia }, en);
+  callEngine<string>("read_version", { referencia }, en);
 
 export const restaurarVersion = (referencia: VersionRef, en?: InvokeOptions) =>
-  invoke<History>("restore_version", { referencia }, en);
+  callEngine<History>("restore_version", { referencia }, en);
 
 export function mismaVersion(
   a: VersionRef | null | undefined,
@@ -132,7 +131,7 @@ export const NOMBRE_VIA: Record<string, string> = {
 };
 
 export const publicacionesDe = (project: string, session: string) =>
-  invoke<Publicacion[]>("publications_of", { project, session }, machineOf(session));
+  callEngine<Publicacion[]>("publications_of", { project, session }, machineOf(session));
 
 export const registrarSalida = (
   referencia: VersionRef,
@@ -140,14 +139,14 @@ export const registrarSalida = (
   destino: string,
   bytes: number,
   en?: InvokeOptions,
-) => invoke<void>("record_export", { referencia, via, destino, bytes }, en);
+) => callEngine<void>("record_export", { referencia, via, destino, bytes }, en);
 
 export const descargarArtefacto = (
   path: string,
   version: number | null,
   destino: string,
 ) =>
-  invoke<{ bytes: number; historia: History }>("download_artifact", {
+  callEngine<{ bytes: number; historia: History }>("download_artifact", {
     path,
     version,
     destino,

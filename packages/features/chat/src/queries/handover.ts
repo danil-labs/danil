@@ -1,18 +1,19 @@
 
-import { type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
-import { idProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { type OpcionDeModelo } from "../../../../ui/src/lib/models";
+import { idProvisional } from "../../../../ui/src/lib/taskDraft";
+import { callEngine } from "../../../../engine-client/src/client.ts";
+import { isOwnMachine } from "../../../../host/src/machine.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { canHandOverTask, handoverMatches, shellCli, type HandoverPending } from "../model/handover";
 import { type HandoverState } from "../model/handover.ts";
 import { MODO_AUTOMATICO } from "../model/modes";
 import { type Session } from "../model/transcript";
-import { PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "@terminus/protocol";
+import { PROVIDER_HANDOFF_FEATURE, SESSION_MODEL_FEATURE } from "../../../../engine-client/src/index.ts";
 import { batch, type Accessor, type Setter } from "solid-js";
-import type { Draft, SessionRow, createComposerStore, createDraftsStore, createThreadsStore, machines } from "./types.js";
-import type { createPanels } from "../../../../../apps/desktop/src/lib/panels.ts";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { ComposerPort, Draft, DraftsPort, MachinesPort, SessionRow, createThreadsStore } from "./types.ts";
+import type { createPanels } from "../../../../ui/src/lib/panels.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createPanelDeChat } from "../screens/PanelDeChat.tsx";
 import type { createDraftSend } from "./draft-send.ts";
 import type { createResyncCommands } from "./resync-commands.ts";
@@ -21,9 +22,9 @@ import type { createThreadStream } from "./thread-stream.ts";
 
 /** Lo que el bloque usaba del cuerpo de App. */
 export type HandoverDeps = { agent: Accessor<string>; avisar: (sesion: string) => (e: unknown) => void; borrador: () => Draft; busy: ReturnType<typeof createThreadStream>["busy"];
-  claveAbierta: () => string; composer: ReturnType<typeof createComposerStore>; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
-  draftMachine: () => string | null; drafts: ReturnType<typeof createDraftsStore>; esChatDeAgente: (s: { chat_de_agente?: boolean; }) => boolean; filaDe: (id: string) => SessionRow | undefined;
-  machines: typeof machines; model: Accessor<string>; modo: Accessor<string>; mudarPestana: ReturnType<typeof createPanelDeChat>["mudarPestana"]; notifyProfiles: () => void;
+  claveAbierta: () => string; composer: ComposerPort; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
+  draftMachine: () => string | null; drafts: DraftsPort; esChatDeAgente: (s: { chat_de_agente?: boolean; }) => boolean; filaDe: (id: string) => SessionRow | undefined;
+  machines: MachinesPort; model: Accessor<string>; modo: Accessor<string>; mudarPestana: ReturnType<typeof createPanelDeChat>["mudarPestana"]; notifyProfiles: () => void;
   olvidarPestana: ReturnType<typeof createPanelDeChat>["olvidarPestana"];
   opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; paneles: ReturnType<typeof createPanels>;
   permissions: ReturnType<typeof createThreadStream>["permissions"]; pestanas: ReturnType<typeof createTabs>; project: Accessor<string>;
@@ -56,8 +57,8 @@ export function createHandover(deps: HandoverDeps) {
    * El agente no entra, salvo el traspaso pendiente: si otro cliente cambió el
    * CLI, el pendiente ya no parte del que la sesión tiene y no se aplica.
    */
-  function restoreSessionConfiguration(session?: Session) {
-    composer.restoreSessionDraft(borrador(), session);
+  function restoreSessionConfiguration(current?: Session) {
+    composer.restoreSessionDraft(borrador(), current);
   }
 
   function restoreDraftConfiguration() {
@@ -72,7 +73,7 @@ export function createHandover(deps: HandoverDeps) {
     // entonces y no lo relee.
     const sesion = sessionId();
     if (sesion && busy()) {
-      void invoke("set_effort", {
+      void callEngine("set_effort", {
         project: project(),
         session: sesion,
         effort: effortDelTurno(),
@@ -84,7 +85,7 @@ export function createHandover(deps: HandoverDeps) {
     // Como el modelo en `elegirModelo`: es lo que heredan sus temas nuevos.
     const fila = sessionId() ? filaDe(sessionId()!) : undefined;
     if (fila && esChatDeAgente(fila) && fila.agent) {
-      void invoke("set_agent_model", {
+      void callEngine("set_agent_model", {
         project: project(),
         name: fila.agent,
         provider: agent(),
@@ -188,6 +189,7 @@ export function createHandover(deps: HandoverDeps) {
         clave: claveAbierta(),
         sesion: abierta,
         desde: actual ?? agent(),
+        desdeModelo: traspasos()[abierta]?.model ?? filaDe(abierta)?.model ?? model() ?? null,
         opcion,
       });
       return;
@@ -195,7 +197,7 @@ export function createHandover(deps: HandoverDeps) {
     const nivel = aplicarOpcionDeModelo(opcion, claveAbierta());
     if (abierta) guardarModeloEnLaTarea(abierta, opcion.agent, opcion.model.id, nivel || null);
     if (chatDeAgente && fila.agent) {
-      void invoke("set_agent_model", {
+      void callEngine("set_agent_model", {
         project: project(),
         name: fila.agent,
         provider: opcion.agent,
@@ -238,7 +240,7 @@ export function createHandover(deps: HandoverDeps) {
     if (!sesion || !busy()) return;
     // El turno vivo arrancó con el modo de entonces y no lo relee: sin
     // pedírselo al proceso, la caja diría una cosa y el agente haría otra.
-    void invoke("set_permission_mode", {
+    void callEngine("set_permission_mode", {
       project: project(),
       session: sesion,
       mode: id,
@@ -271,7 +273,7 @@ export function createHandover(deps: HandoverDeps) {
     // «Esta máquina» aparte hasta que llegaba su fila del disco. La de la
     // ventana no lleva máquina, igual que sus filas.
     const destino = draftMachine() ?? capabilities().remoteCreate?.(workspaceActivo())?.machine ?? null;
-    const machine = destino && !machines().find((m) => m.id === destino)?.local ? destino : undefined;
+    const machine = destino && !isOwnMachine(machines().find((m) => m.id === destino)) ? destino : undefined;
     setNaciendo((ns) => [
       ...ns,
       {

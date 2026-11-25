@@ -8,7 +8,7 @@ import {
   tramosCambiados,
   type Linea,
   type Tramo,
-} from "../../src/features/code/diff.ts";
+} from "../../../../packages/features/code/src/model/diff.ts";
 
 const trozos = (texto: string, tramos: Tramo[]) => tramos.map(([a, b]) => texto.slice(a, b));
 

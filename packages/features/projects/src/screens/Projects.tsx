@@ -3,23 +3,23 @@ import { For, Show, createSignal, type JSX } from "solid-js";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Plus from "lucide-solid/icons/plus";
 import Search from "lucide-solid/icons/search";
-import SettingsIcon from "lucide-solid/icons/settings";
 import {
   ITEM_DE_MENU,
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "../../../../ui/src/Popover";
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import { type Project, type Source } from "../../../../../apps/desktop/src/lib/model";
-import { lineaDeProcedencia, procedencia } from "../../../../../apps/desktop/src/lib/sourceOrigin";
+import { enfocar } from "../../../../ui/src/lib/focus";
+import { t } from "../../../../ui/src/lib/i18n";
+import { type Project, type Source } from "../../../../ui/src/lib/model";
+import { cn } from "../../../../ui/src/lib/utils";
+import { lineaDeProcedencia, procedencia } from "../../../../ui/src/lib/sourceOrigin";
 import { Badge } from "../../../../ui/src/Badge";
 import WorkdirIcon, { workdirKindLabel } from "../../../../ui/src/WorkdirIcon";
 import PickerRow from "../components/PickerRow";
 import { byRecent, type PickedAt, pickerSections, taskCountOf } from "../model/recent";
 import { Pressable } from "../../../../ui/src/Pressable";
+import { Input } from "../../../../ui/src/Input";
 
 /**
  * Con qué proyecto se trabaja, debajo de la caja y no en la cabecera: es una
@@ -36,8 +36,6 @@ export function ProjectPicker(props: {
   onPick: (id: string) => void;
   /** Abre el diálogo «Añadir un proyecto». */
   onNuevoProyecto: () => void;
-  /** Abre Ajustes → Proyectos, donde se renombra, se quita y se borra. */
-  onAdministrar?: () => void;
   /** Dónde corre la tarea: va antes del proyecto, que es de esa máquina. */
   machine?: JSX.Element;
   /** Última actividad de las tareas vivas de cada proyecto, en ms. */
@@ -115,9 +113,9 @@ export function ProjectPicker(props: {
               class="pointer-events-none absolute top-1/2 left-2 -translate-y-1/2"
               aria-hidden="true"
             />
-            <input
+            <Input
               ref={enfocar}
-              class="w-full bg-transparent py-1 pr-2 pl-6 text-caption outline-none"
+              variant="picker"
               placeholder={t("projects.picker.search")}
               value={busca()}
               onInput={(e) => setBusca(e.currentTarget.value)}
@@ -165,23 +163,6 @@ export function ProjectPicker(props: {
               <Plus size={13} aria-hidden="true" />
               {t("projects.picker.add")}
             </Pressable>
-            <Show when={props.onAdministrar}>
-              {(administrar) => (
-                <Pressable
-                  class={cn(ITEM_DE_MENU, "grid grid-cols-[14px_minmax(0,1fr)_auto] items-center gap-2 text-neutral-700")}
-                  onClick={() => {
-                    setAbierto(false);
-                    administrar()();
-                  }}
-                >
-                  <SettingsIcon size={13} aria-hidden="true" />
-                  <span class="truncate">{t("projects.picker.manage")}</span>
-                  <span class="text-caption text-neutral-500">
-                    {t("projects.picker.manage_where")}
-                  </span>
-                </Pressable>
-              )}
-            </Show>
           </div>
         </PopoverContent>
       </Popover>

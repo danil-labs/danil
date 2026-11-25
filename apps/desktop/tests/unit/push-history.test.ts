@@ -4,8 +4,8 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { prependHistory, refreshHistory } from "../../src/features/chat/history.ts";
-import { conservarPorElFinal } from "../../src/lib/sessionRefresh.ts";
+import { prependHistory, refreshHistory } from "../../../../packages/features/chat/src/model/history.ts";
+import { conservarPorElFinal } from "../../../../packages/session/src/sessionRefresh.ts";
 
 const turns = (from: number, to: number) => Array.from({ length: to - from }, (_, i) => `t${from + i}`);
 const page = (start: number, end: number, total: number) => ({ start, end, total, limit: 150, has_more: start > 0 });

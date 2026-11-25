@@ -1,30 +1,27 @@
 import { Match, Show, Switch, type JSX } from "solid-js";
-import { toolMarkId, toolMonogram } from "@terminus/design";
-import type { ToolSource } from "@terminus/chat/tools";
+import { toolMarkId, toolMonogram } from "./toolMarkNames";
+import type { ToolSource } from "./lib/chat/tools.ts";
 import { MarcaServicio } from "./marcas";
 
 /**
  * Marcas de las herramientas que se integran y de los plugins. Los trazos viven
- * en `@terminus/design` (`TOOL_MARKS`), que el teléfono pinta igual; aquí solo
+ * en `packages/ui` (`TOOL_MARKS`), que el teléfono pinta igual; aquí solo
  * se elige cuál.
- *
- * AgentsView no está ahí: su marca es una baldosa con sus iniciales, no un
- * trazo, y no la presta ningún servidor.
  */
 
 export function GoogleDriveMark(props: { size?: number }) {
   return <MarcaServicio id="drive" size={props.size} />;
 }
 
-export function DrawioMark(props: { size?: number }) {
+function DrawioMark(props: { size?: number }) {
   return <MarcaServicio id="drawio" size={props.size} />;
 }
 
-export function TypstMark(props: { size?: number }) {
+function TypstMark(props: { size?: number }) {
   return <MarcaServicio id="typst" size={props.size} />;
 }
 
-export function LibreOfficeMark(props: { size?: number }) {
+function LibreOfficeMark(props: { size?: number }) {
   return <MarcaServicio id="libreoffice" size={props.size} />;
 }
 
@@ -32,17 +29,7 @@ export function ZoteroMark(props: { size?: number }) {
   return <MarcaServicio id="zotero" size={props.size} />;
 }
 
-export function AgentsViewMark(props: { size?: number }) {
-  return (
-    <svg class="block shrink-0" width={props.size ?? 14} height={props.size ?? 14} viewBox="0 0 64 64" aria-hidden="true">
-      <rect width="64" height="64" rx="12" fill="#070b12" />
-      <rect x="1.5" y="1.5" width="61" height="61" rx="10.5" fill="none" stroke="#23324a" stroke-width="3" />
-      <text x="32" y="43" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="28" font-weight="700" fill="#5b9bf5">AV</text>
-    </svg>
-  );
-}
-
-export function CuaMark(props: { size?: number }) {
+function CuaMark(props: { size?: number }) {
   return <MarcaServicio id="cua" size={props.size} />;
 }
 
@@ -96,7 +83,6 @@ export function MarcaPlugin(props: { id: string; size?: number }) {
       <Match when={props.id === "drawio"}><DrawioMark size={props.size} /></Match>
       <Match when={props.id === "typst"}><TypstMark size={props.size} /></Match>
       <Match when={props.id === "libreoffice"}><LibreOfficeMark size={props.size} /></Match>
-      <Match when={props.id === "agentsview"}><AgentsViewMark size={props.size} /></Match>
       <Match when={props.id === "computer-use"}><CuaMark size={props.size} /></Match>
     </Switch>
   );

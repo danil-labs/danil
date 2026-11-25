@@ -1,7 +1,7 @@
 import { machineOf } from "../../../../host/src/machine";
 import { createMemo, createResource, createSignal } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
-import { pooled, TASK_HISTORY_AT_ONCE } from "../../../../../apps/desktop/src/lib/pool";
+import { callEngine } from "../../../../engine-client/src/client.ts";
+import { pooled, TASK_HISTORY_AT_ONCE } from "../model/pool";
 
 type Row = { id: string; updated_at: unknown };
 const shared = new Map<string, Promise<unknown>>();
@@ -28,7 +28,7 @@ export function createTaskHistories<T>(project: () => string, sessions: () => re
     const missing = current.filter((key) => !known.has(key) && !shared.has(key));
     const asked = pooled(missing, TASK_HISTORY_AT_ONCE, (key) => {
       const [, p, id] = JSON.parse(key) as [number, string, string, string];
-      return invoke<T>("task_history", { project: p, id }, machineOf(id));
+      return callEngine<T>("task_history", { project: p, id }, machineOf(id));
     });
     const next = new Map<string, Promise<T | undefined>>();
     for (const key of current) {

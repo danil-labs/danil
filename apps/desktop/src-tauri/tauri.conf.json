@@ -7,7 +7,8 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5174",
     "beforeDevCommand": "pnpm engine:sidecar && pnpm dev",
-    "beforeBuildCommand": "pnpm build && pnpm engine:sidecar"
+    "beforeBuildCommand": "pnpm build && pnpm engine:sidecar",
+    "beforeBundleCommand": "node scripts/guards/contract.mjs --require-pinned"
   },
   "app": {
     "windows": [
@@ -26,15 +27,12 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; script-src-elem 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: terminus-image: http://terminus-image.localhost; font-src 'self' data:; media-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://machines.danil.ai https://computers.danil.ai wss://*.danil.ai; frame-src 'self' terminus-page: http://terminus-page.localhost; object-src 'none'; base-uri 'none'; form-action 'none'"
+      "csp": "default-src 'self'; script-src 'self'; script-src-elem 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: terminus-image: http://terminus-image.localhost; font-src 'self' data:; media-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost wss://*.danil.ai; frame-src 'self' terminus-page: http://terminus-page.localhost; object-src 'none'; base-uri 'none'; form-action 'none'"
     }
   },
   "bundle": {
     "active": true,
     "targets": "all",
-    "resources": {
-      "../plugins/languages": "lenguas"
-    },
     "externalBin": [
       "binaries/danil-engine",
       "binaries/seldon-runtime"
@@ -61,10 +59,11 @@
     "createUpdaterArtifacts": true
   },
   "plugins": {
+    "deep-link": { "desktop": { "schemes": ["danil"] } },
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5ODEzRDE1M0QwQ0RFQjgKUldTNDNndzlGVDJCT1hPSnp4ZzBIbkowOW9kVGFYb0YyRkZKZjNTT2N3eERXOXhuRi9UblY5d3EK",
       "endpoints": [
-        "https://github.com/danil-labs/danil/releases/latest/download/latest.json"
+        "https://github.com/danil-labs/danil/releases/download/updater-stable/latest-{{target}}.json"
       ],
       "windows": {
         "installMode": "passive"

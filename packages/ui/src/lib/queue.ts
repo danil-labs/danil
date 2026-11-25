@@ -1,5 +1,5 @@
-import type { Recipient, ReplyTo, SenderTask } from "../../../../apps/desktop/src/lib/recipients.ts";
-import type { TaskMention } from "../../../../apps/desktop/src/lib/taskMentions.ts";
+import type { Recipient, ReplyTo, SenderTask } from "./recipients.ts";
+import type { TaskMention } from "./taskMentions.ts";
 
 // Conserva la configuración al encolar; el lote adopta la del último mensaje.
 export type Encolado = {
@@ -75,7 +75,7 @@ export type RazonDeRetencion = "pregunta" | "motor" | "manual" | "terminal";
  * lo que se escribió durante su primer turno, que aún no tiene id porque lo
  * reparte Rust al crear la sesión. `enviar` le pone dueño en cuanto vuelve.
  */
-export function esDeLaTareaAbierta(de: string | null, mirando: string | null): boolean {
+function esDeLaTareaAbierta(de: string | null, mirando: string | null): boolean {
   return de === mirando;
 }
 
@@ -145,3 +145,12 @@ export function seMandaSinSuperficie(texto: string): boolean {
  * `chat.steer.unconfirmed`; OpenCode 2.x cae aquí (rechaza el segundo prompt).
  */
 export const ENTREGA_SIN_CONFIRMAR = "executor_acceptance_unknown";
+
+export type QueueScope = { workspace: string | null; generation: number; session: string | null; project: string };
+export type Saved = { project: string; items: Encolado[] };
+export type TaskQueuesDeps = {
+  scope: () => QueueScope;
+  readQueue: (scope: QueueScope & { session: string }) => Promise<Encolado[]>;
+  writeQueue: (scope: QueueScope & { session: string }, items: Encolado[]) => Promise<unknown>;
+  onSaveFailure: (error: unknown, scope: QueueScope & { session: string }) => void;
+};

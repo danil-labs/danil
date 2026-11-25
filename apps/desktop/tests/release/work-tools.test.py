@@ -255,7 +255,7 @@ class WorkToolsTests(unittest.TestCase):
             (mounted / "lenguas" / "es.json").write_text("[]")
             with self.assertRaisesRegex(ValueError, "differs from its inventory"):
                 tools.verify_resources_inventory(mounted)
-            for targets, key in [(["aarch64-apple-darwin", "x86_64-apple-darwin"], "macOS"), (["x86_64-pc-windows-msvc"], "resources")]:
+            for targets, key in [(["aarch64-apple-darwin"], "macOS"), (["x86_64-pc-windows-msvc"], "resources")]:
                 tools.write_tauri_config(out.parent, targets, config)
                 self.assertIn(key, json.loads(config.read_text())["bundle"])
 

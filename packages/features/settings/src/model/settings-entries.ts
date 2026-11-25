@@ -1,29 +1,39 @@
 /**
- * Las nueve entradas de Configuración y sus pestañas. Los ids de destinos que
+ * Las diez entradas de Configuración y sus pestañas. Los ids de destinos que
  * ya no son pestaña siguen en `MOVED`: `setSettings("plugins")` y los enlaces
- * guardados abren la pestaña que ahora los contiene.
+ * guardados abren la entrada o pestaña que ahora los contiene.
  */
 export const SETTINGS_ENTRIES = [
-  { id: "account", group: "you", tabs: ["cuenta-danil", "emails", "usage", "plan", "security"] },
-  { id: "preferences", group: "you", tabs: ["general", "appearance", "notify", "languages", "workspaces", "download"] },
-  { id: "ai-accounts", group: "you", tabs: ["proveedores-ia"] },
-  { id: "source-control", group: "you", tabs: ["fuentes"] },
-  { id: "machines", group: "you", tabs: ["machines", "entorno", "activity"] },
-  { id: "projects", group: "workspace", tabs: ["proyectos", "secrets"] },
-  { id: "agents-skills", group: "workspace", tabs: ["agentes", "skills"] },
-  { id: "connections", group: "workspace", tabs: ["operation", "plugins", "memory", "external"] },
-  { id: "billing", group: "workspace", tabs: ["business", "fiscal"] },
+  { id: "general", tabs: ["general"] },
+  { id: "appearance", tabs: ["appearance"] },
+  { id: "account", tabs: ["cuenta-danil"] },
+  { id: "security", tabs: ["security"] },
+  { id: "ai-accounts", tabs: ["proveedores-ia"] },
+  { id: "source-control", tabs: ["fuentes"] },
+  { id: "agents-skills", tabs: ["agentes", "skills"] },
+  { id: "connections", tabs: ["operation", "plugins"] },
+  { id: "personal-ai-agent", tabs: ["external"] },
+  { id: "maintenance", footer: true, tabs: ["maintenance"] },
 ] as const;
 
 const MOVED: Record<string, string> = {
-  secretos: "secrets",
   mcp: "operation",
+  memory: "operation",
   conexiones: "external",
   radiant: "operation",
+  download: "maintenance",
+  notify: "general",
+  notifications: "general",
+  languages: "general",
+  emails: "cuenta-danil",
+  usage: "cuenta-danil",
+  plan: "cuenta-danil",
+  billing: "cuenta-danil",
+  business: "cuenta-danil",
+  fiscal: "cuenta-danil",
 };
 
 export type SettingsEntryId = (typeof SETTINGS_ENTRIES)[number]["id"];
-export type SettingsGroup = (typeof SETTINGS_ENTRIES)[number]["group"];
 
 /** La entrada y la pestaña que abre un id de entrada o de destino viejo; `null` si no es ninguno. */
 export function settingsTarget(id: string | undefined): { entry: SettingsEntryId; tab: string | null } | null {

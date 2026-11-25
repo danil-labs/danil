@@ -1,4 +1,4 @@
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createEffect, createSignal, onCleanup, onMount } from "solid-js";
 import { mcpLogin } from "../queries/engine-mcp";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";

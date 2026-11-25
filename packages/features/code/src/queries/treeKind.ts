@@ -1,6 +1,6 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { machineOf } from "../../../../host/src/machine";
-import type { ArbolEnTarea } from "../../../../../apps/desktop/src/lib/model";
+import type { ArbolEnTarea } from "../../../../ui/src/lib/model";
 import { esDeCodigo } from "../../../../ui/src/lib/workdirKind";
 
 /**
@@ -16,7 +16,7 @@ export function recordarArboles(session: string, arboles: readonly Pick<ArbolEnT
 }
 
 export async function arbolesDe(project: string, session: string): Promise<ArbolEnTarea[]> {
-  const arboles = await invoke<ArbolEnTarea[]>("list_task_trees", { project, session }, machineOf(session));
+  const arboles = await callEngine<ArbolEnTarea[]>("list_task_trees", { project, session }, machineOf(session));
   recordarArboles(session, arboles);
   return arboles;
 }

@@ -1,9 +1,9 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative } from "../../../host/src/native.ts";
 import { Show, createSignal, onCleanup, onMount } from "solid-js";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke as routedInvoke } from "../../../engine-client/src/client.ts";
+import { t } from "../../../ui/src/lib/i18n";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { quietFinished } from "./TaskNotifier";
 import {
   setWaitRows,
@@ -18,14 +18,14 @@ import {
 } from "./liveTurns";
 
 /** «A, B, C y 2 más»; la que espera una respuesta lo dice: no termina sola. */
-export function namesOf(rows: ShownTurn[], max = 3): string {
+function namesOf(rows: ShownTurn[], max = 3): string {
   const names = rows.map((row) => (row.waiting ? `${row.title} (${t("shell.close.waiting")})` : row.title));
   const shown = names.slice(0, max).join(", ");
   return names.length > max ? t("shell.wait.more", { list: shown, count: names.length - max }) : shown;
 }
 
 /** Mientras se espera, mirar los turnos es local y barato. */
-export const WAIT_POLL = 2000;
+const WAIT_POLL = 2000;
 let poll: ReturnType<typeof setInterval> | undefined;
 let checking = false;
 
@@ -33,13 +33,13 @@ async function check() {
   if (checking || !waitingThen()) return;
   checking = true;
   try {
-    const turns = await invoke<LiveTurn[]>("list_live_turns");
+    const turns = await invokeNative<LiveTurn[]>("list_live_turns");
     const then = waitingThen();
     if (!then) return;
     if (turns.length === 0) {
       cancelWait();
-      if (then === "restart") await invoke("restart_app");
-      else await invoke("quit_completely");
+      if (then === "restart") await invokeNative("restart_app");
+      else await invokeNative("quit_completely");
       return;
     }
     setWaitRows(await titled(turns));
@@ -58,7 +58,7 @@ export function waitThen(then: AfterWait, rows: ShownTurn[] = []) {
   void check();
 }
 
-export function cancelWait() {
+function cancelWait() {
   if (poll !== undefined) clearInterval(poll);
   poll = undefined;
   setWaitingThen(null);
@@ -76,7 +76,7 @@ export function Aplicar(props: { onLater: () => void }) {
   const [deteniendo, setDeteniendo] = createSignal(false);
   const [fallo, setFallo] = createSignal(false);
   async function mirar() {
-    const turnos = (await routedInvoke("list_live_turns").catch(() => [])) as LiveTurn[];
+    const turnos = (await callShellViewEngine("list_live_turns").catch(() => [])) as LiveTurn[];
     setVivas(turnos);
     return turnos;
   }
@@ -87,7 +87,7 @@ export function Aplicar(props: { onLater: () => void }) {
   });
   async function reiniciar() {
     // Una tarea pudo arrancar desde la última mirada: entonces se ofrece esperar.
-    if ((await mirar()).length === 0) void routedInvoke("restart_app");
+    if ((await mirar()).length === 0) void callShellViewEngine("restart_app");
   }
   async function esperar() {
     waitThen("restart", await titled(vivas()));
@@ -106,7 +106,7 @@ export function Aplicar(props: { onLater: () => void }) {
       setFallo(true);
       return;
     }
-    void routedInvoke("restart_app");
+    void callShellViewEngine("restart_app");
   }
   return (
     <Show

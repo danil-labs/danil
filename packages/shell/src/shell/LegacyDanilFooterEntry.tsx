@@ -1,8 +1,8 @@
 import CircleUserRound from "lucide-solid/icons/circle-user-round";
 import { createEffect, createSignal, type JSX, on, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { SignalDot } from "../../../ui/src/SignalDot";
 import { machines } from "../../../features/machines/src/queries/store";
 import { AccountAvatar, type AccountProfile, type AccountProfileSource, createAccountIdentity, createDanilAccounts, createDanilSession, type DanilAccounts, engineAccountProfile, PROFILE_CHANGED, profileFromStatus, sessionForWorkspace, statusOf } from "../../../features/settings/src";

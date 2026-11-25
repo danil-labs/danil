@@ -1,5 +1,5 @@
-import type { ObservedTurnActivity as TurnActivity } from "../../../../../apps/desktop/src/lib/activityObservation.ts";
-import type { Paso } from "../../../../../apps/desktop/src/lib/steps.ts";
+import type { ObservedTurnActivity as TurnActivity } from "./activityObservation.ts";
+import type { Paso } from "../../../../ui/src/lib/steps.ts";
 
 type LiveMessage = { nativeMessageId?: string; turno?: string; duration_ms?: number; preguntas?: unknown[] };
 export type ActivityChunk<M> = { pasos: Paso[]; msg: M; outside?: true };
@@ -29,7 +29,7 @@ export function visibleActivityMessages<M>(block: ActivityBlock<M>): M[] {
   return [...(block.tipo === "msg" ? [] : block.avance?.filter(chunk => chunk.outside).map(chunk => chunk.msg) ?? []), ...(block.tipo === "pasos" ? [] : [block.msg])];
 }
 
-export type PresentedActivityBlock<M> = ActivityBlock<M> & { activity?: TurnActivity<M>; responseOnly?: boolean };
+export type PresentedActivityBlock<M> = ActivityBlock<M> & { activity?: TurnActivity<M>; responseOnly?: boolean; failedBeforeError?: boolean };
 /** Interleave a semantic activity anchor; response objects and their order never change. */
 export function placeActivities<M>(blocks: PresentedActivityBlock<M>[], activities: readonly TurnActivity<M>[]): PresentedActivityBlock<M>[] {
   const pending = [...activities].sort((a, b) => a.anchorIndex - b.anchorIndex);

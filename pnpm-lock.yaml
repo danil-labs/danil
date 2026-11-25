@@ -19,96 +19,18 @@ importers:
 
   apps/desktop:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
       '@excalidraw/excalidraw':
         specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
+        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../packages/carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../packages/chat
       '@terminus/computers':
         specifier: workspace:*
         version: link:../../packages/computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../packages/design
       '@terminus/fleet':
         specifier: workspace:*
         version: link:../../packages/fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../packages/protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../packages/tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
       katex:
         specifier: ^0.18.10
         version: 0.18.10
@@ -118,24 +40,6 @@ importers:
       mdast-util-from-markdown:
         specifier: 2.0.3
         version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
       remark-gfm:
         specifier: ^4.0.1
         version: 4.0.1(supports-color@7.2.0)
@@ -145,9 +49,6 @@ importers:
       solid-markdown:
         specifier: ^2.1.1
         version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -167,12 +68,6 @@ importers:
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260707.2
         version: 7.0.0-dev.20260707.2
@@ -194,9 +89,6 @@ importers:
       material-icon-theme:
         specifier: ^5.37.0
         version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -215,553 +107,82 @@ importers:
 
   packages/attention: {}
 
-  packages/carry: {}
-
-  packages/chat: {}
-
   packages/computers: {}
-
-  packages/design: {}
 
   packages/engine-client:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/artifacts:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
       '@tauri-apps/plugin-dialog':
         specifier: ^2.8.4
         version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/chat:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
       '@excalidraw/excalidraw':
         specifier: 0.18.1
         version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
       '@modelcontextprotocol/client':
         specifier: ^2.3.1
         version: 2.3.1
       '@modelcontextprotocol/ext-apps':
         specifier: ^2.0.3
         version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
       '@tanstack/solid-virtual':
         specifier: 3.13.51
         version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
       '@tauri-apps/plugin-dialog':
         specifier: ^2.8.4
         version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
       lucide-solid:
         specifier: ^1.31.0
         version: 1.31.0(solid-js@1.9.17)
       mdast-util-from-markdown:
         specifier: 2.0.3
         version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
       react:
         specifier: 19.0.0
         version: 19.0.0
       react-dom:
         specifier: 19.0.0
         version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
       zod:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
@@ -771,45 +192,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.3.0
         version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/code:
     dependencies:
@@ -837,3311 +222,251 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.13
         version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
       '@lezer/highlight':
         specifier: ^1.2.3
         version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
       lucide-solid:
         specifier: ^1.31.0
         version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/composer:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/conversation-handoff:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/drafts:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/machines:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
       lucide-solid:
         specifier: ^1.31.0
         version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-
-  packages/features/observability:
-    dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
-      solid-js:
-        specifier: ^1.9.17
-        version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
-    devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
-      '@types/node':
-        specifier: ^26.4.0
-        version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/onboarding:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
       lucide-solid:
         specifier: ^1.31.0
         version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/projects:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
       '@tauri-apps/plugin-dialog':
         specifier: ^2.8.4
         version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
       lucide-solid:
         specifier: ^1.31.0
         version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/screen:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
       '@novnc/novnc':
         specifier: 1.7.0
         version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/service-stream:
-    dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
-      solid-js:
-        specifier: ^1.9.17
-        version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/settings:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
       '@tauri-apps/plugin-dialog':
         specifier: ^2.8.4
         version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
       lucide-solid:
         specifier: ^1.31.0
         version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/sites:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/tabs:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/task-queues:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/threads:
-    dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
-      solid-js:
-        specifier: ^1.9.17
-        version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/viewers:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
       lucide-solid:
         specifier: ^1.31.0
         version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
       pdfjs-dist:
         specifier: ^6.3.289
         version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/workspace:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/features/workspaces:
     dependencies:
@@ -4153,875 +478,88 @@ importers:
 
   packages/host:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
       '@tauri-apps/plugin-clipboard-manager':
         specifier: ^2.5.0
         version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/platform-client:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
-      '@tauri-apps/api':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
-      solid-js:
-        specifier: ^1.9.17
-        version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
       zod:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-
-  packages/protocol: {}
 
   packages/session:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
-      lucide-solid:
-        specifier: ^1.31.0
-        version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
       zod:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/shell:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kobalte/core':
-        specifier: ^0.13.13
-        version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
       '@tauri-apps/plugin-dialog':
         specifier: ^2.8.4
         version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
       '@tauri-apps/plugin-updater':
         specifier: ^2.14.1
         version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../tasks
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      embla-carousel-solid:
-        specifier: ^8.6.0
-        version: 8.6.0(solid-js@1.9.17)
-      katex:
-        specifier: ^0.18.10
-        version: 0.18.10
       lucide-solid:
         specifier: ^1.31.0
         version: 1.31.0(solid-js@1.9.17)
-      mdast-util-from-markdown:
-        specifier: 2.0.3
-        version: 2.0.3(supports-color@7.2.0)
-      mdast-util-math:
-        specifier: ^3.0.0
-        version: 3.0.0(supports-color@7.2.0)
-      mermaid:
-        specifier: ^12.1.0
-        version: 12.1.0
-      micromark-extension-math:
-        specifier: ^3.1.0
-        version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1(supports-color@7.2.0)
       solid-js:
         specifier: ^1.9.17
         version: 1.9.17
-      solid-markdown:
-        specifier: ^2.1.1
-        version: 2.1.1(solid-js@1.9.17)(supports-color@7.2.0)
-      tailwind-merge:
-        specifier: ^3.6.0
-        version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
-      micromark-util-types:
-        specifier: ^2.0.2
-        version: 2.0.2
-      tailwindcss:
-        specifier: ^4.3.3
-        version: 4.3.3
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-
-  packages/tasks: {}
 
   packages/ui:
     dependencies:
-      '@codemirror/autocomplete':
-        specifier: ^6.20.3
-        version: 6.20.3
-      '@codemirror/commands':
-        specifier: ^6.11.1
-        version: 6.11.1
-      '@codemirror/language':
-        specifier: ^6.12.4
-        version: 6.12.4
-      '@codemirror/language-data':
-        specifier: ^6.5.2
-        version: 6.5.2
-      '@codemirror/lint':
-        specifier: ^6.9.7
-        version: 6.9.7
-      '@codemirror/search':
-        specifier: ^6.7.2
-        version: 6.7.2
-      '@codemirror/state':
-        specifier: ^6.7.6
-        version: 6.7.6
-      '@codemirror/view':
-        specifier: ^6.43.13
-        version: 6.43.13
-      '@excalidraw/excalidraw':
-        specifier: 0.18.1
-        version: 0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@kobalte/core':
         specifier: ^0.13.13
         version: 0.13.13(solid-js@1.9.17)
-      '@lezer/highlight':
-        specifier: ^1.2.3
-        version: 1.2.3
-      '@modelcontextprotocol/client':
-        specifier: ^2.3.1
-        version: 2.3.1
-      '@modelcontextprotocol/ext-apps':
-        specifier: ^2.0.3
-        version: 2.0.3(@modelcontextprotocol/client@2.3.1)(@modelcontextprotocol/core@2.3.1)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)(zod@4.6.5)
-      '@novnc/novnc':
-        specifier: 1.7.0
-        version: 1.7.0
-      '@tanstack/solid-virtual':
-        specifier: 3.13.51
-        version: 3.13.51(solid-js@1.9.17)
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
-      '@tauri-apps/plugin-clipboard-manager':
-        specifier: ^2.5.0
-        version: 2.5.0
-      '@tauri-apps/plugin-dialog':
-        specifier: ^2.8.4
-        version: 2.8.4
-      '@tauri-apps/plugin-process':
-        specifier: ^2.4.0
-        version: 2.4.0
-      '@tauri-apps/plugin-updater':
-        specifier: ^2.14.1
-        version: 2.14.1
-      '@terminus/carry':
-        specifier: workspace:*
-        version: link:../carry
-      '@terminus/chat':
-        specifier: workspace:*
-        version: link:../chat
-      '@terminus/computers':
-        specifier: workspace:*
-        version: link:../computers
-      '@terminus/design':
-        specifier: workspace:*
-        version: link:../design
-      '@terminus/fleet':
-        specifier: workspace:*
-        version: link:../fleet
-      '@terminus/protocol':
-        specifier: workspace:*
-        version: link:../protocol
-      '@terminus/tasks':
-        specifier: workspace:*
-        version: link:../tasks
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -5049,15 +587,6 @@ importers:
       micromark-extension-math:
         specifier: ^3.1.0
         version: 3.1.0
-      pdfjs-dist:
-        specifier: ^6.3.289
-        version: 6.3.289
-      react:
-        specifier: 19.0.0
-        version: 19.0.0
-      react-dom:
-        specifier: 19.0.0
-        version: 19.0.0(react@19.0.0)
       remark-gfm:
         specifier: ^4.0.1
         version: 4.0.1(supports-color@7.2.0)
@@ -5070,52 +599,10 @@ importers:
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
     devDependencies:
-      '@biomejs/biome':
-        specifier: ^2.5.11
-        version: 2.5.11
-      '@tailwindcss/vite':
-        specifier: ^4.3.3
-        version: 4.3.3(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
-      '@tauri-apps/cli':
-        specifier: ^2.12.4
-        version: 2.12.4
-      '@types/jsdom':
-        specifier: ^30.0.0
-        version: 30.0.0
       '@types/node':
         specifier: ^26.4.0
         version: 26.4.0
-      '@types/react':
-        specifier: ^19.3.0
-        version: 19.3.0
-      '@types/react-dom':
-        specifier: ^19.3.0
-        version: 19.3.0(@types/react@19.3.0)
-      '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260707.2
-        version: 7.0.0-dev.20260707.2
-      debug:
-        specifier: 4.4.3
-        version: 4.4.3(supports-color@7.2.0)
-      dependency-cruiser:
-        specifier: 18.7.2
-        version: 18.7.2
-      eslint:
-        specifier: 10.15.0
-        version: 10.15.0(jiti@2.7.0)(supports-color@7.2.0)
-      eslint-plugin-solid:
-        specifier: 0.19.0
-        version: 0.19.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
-      jsdom:
-        specifier: ^30.1.2
-        version: 30.1.2
-      material-icon-theme:
-        specifier: ^5.37.0
-        version: 5.37.0
       micromark-util-types:
         specifier: ^2.0.2
         version: 2.0.2
@@ -5125,15 +612,6 @@ importers:
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
-      typescript-eslint:
-        specifier: ^8.73.0
-        version: 8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      vite:
-        specifier: ^6.0.5
-        version: 6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0)
-      vite-plugin-solid:
-        specifier: ^2.11.14
-        version: 2.11.14(solid-js@1.9.17)(supports-color@7.2.0)(vite@6.4.4(@types/node@26.4.0)(jiti@2.7.0)(lightningcss@1.32.0))
 
 packages:
 
@@ -6609,9 +2087,6 @@ packages:
   '@tauri-apps/plugin-dialog@2.8.4':
     resolution: {integrity: sha512-+6ZOiXenOaxXwb8qCbBPdT2jX2cFPaVVHGIskrpmJLpmWj+qKRTD6X/z9x7hTdSQn7NedcoXCkWGej4a7dC4lw==}
 
-  '@tauri-apps/plugin-process@2.4.0':
-    resolution: {integrity: sha512-GddrmsSLAYrLa/yTXlXK/YRDzUgYeeOnUXTbiyvJWkmI424RmDPD3FVLeqcon7rv6O6ZfhBilcrHWnSo7o6hIQ==}
-
   '@tauri-apps/plugin-updater@2.14.1':
     resolution: {integrity: sha512-Hr7nlBm1wT6xbwzjZ/S36YULazu8MNlj5vvOwMl47fXI7HTa5Bjl1PbDEwVHaZTAKzE1VZsUy35UqnbrQxmYQw==}
 
@@ -7753,6 +3228,10 @@ packages:
   longest-streak@3.1.0:
     resolution: {integrity: sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g==}
 
+  loose-envify@1.4.0:
+    resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
+    hasBin: true
+
   lru-cache@11.5.3:
     resolution: {integrity: sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg==}
     engines: {node: 20 || >=22}
@@ -8060,6 +3539,11 @@ packages:
     resolution: {integrity: sha512-+Owyggi9IxT1ePKGafcI87ubSmxol6smwJ+RAHDQlx9+9cPwFWDiKFFCPuWhr9ignlGpZ9vDQLw67N4dcTVFEA==}
     engines: {node: '>=20'}
 
+  react-dom@18.3.1:
+    resolution: {integrity: sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==}
+    peerDependencies:
+      react: ^18.3.1
+
   react-dom@19.0.0:
     resolution: {integrity: sha512-4GV5sHFG0e/0AD4X+ySy6UJd3jVl1iNsNHdpad0qhABJ11twS3TTBnseqsKurKcsNqCEFeGL3uLpVChpIO3QfQ==}
     peerDependencies:
@@ -8094,6 +3578,10 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  react@18.3.1:
+    resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
+    engines: {node: '>=0.10.0'}
 
   react@19.0.0:
     resolution: {integrity: sha512-V8AVnmPIICiWpGfm6GLzCR/W5FXLchHop40W4nXBmdlEceh16rCN8O8LNWm5bh5XUX91fh7KpA+W0TgMKmgTpQ==}
@@ -8154,6 +3642,9 @@ packages:
   saxes@6.0.0:
     resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
     engines: {node: '>=v12.22.7'}
+
+  scheduler@0.23.2:
+    resolution: {integrity: sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ==}
 
   scheduler@0.25.0:
     resolution: {integrity: sha512-xFVuu11jh+xcO7JOAGJNOXld8/TcEHK/4CituBUeUb5hqxJLj9YuemAEuvm9gQ/+pgXYfbQuqAkiYu+u7YEsNA==}
@@ -9174,6 +4665,45 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
+  '@excalidraw/excalidraw@0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@braintree/sanitize-url': 6.0.2
+      '@excalidraw/laser-pointer': 1.3.1
+      '@excalidraw/mermaid-to-excalidraw': 2.2.2
+      '@excalidraw/random-username': 1.1.0
+      '@radix-ui/react-popover': 1.1.6(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-tabs': 1.0.2(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      browser-fs-access: 0.29.1
+      canvas-roundrect-polyfill: 0.0.1
+      clsx: 1.1.1
+      cross-env: 7.0.3
+      es6-promise-pool: 2.5.0
+      fractional-indexing: 3.2.0
+      fuzzy: 0.1.3
+      image-blob-reduce: 3.0.1
+      jotai: 2.11.0(@types/react@19.3.0)(react@19.0.0)
+      jotai-scope: 0.7.2(jotai@2.11.0(@types/react@19.3.0)(react@19.0.0))(react@19.0.0)
+      lodash.debounce: 4.0.8
+      lodash.throttle: 4.1.1
+      nanoid: 3.3.20
+      open-color: 1.9.1
+      pako: 2.0.3
+      perfect-freehand: 1.2.0
+      pica: 7.1.1
+      png-chunk-text: 1.0.0
+      png-chunks-encode: 1.0.0
+      png-chunks-extract: 1.0.0
+      points-on-curve: 1.0.1
+      pwacompat: 2.0.17
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+      roughjs: 4.6.4
+      tunnel-rat: 0.1.2(@types/react@19.3.0)(react@19.0.0)
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - immer
+
   '@excalidraw/excalidraw@0.18.1(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@braintree/sanitize-url': 6.0.2
@@ -9236,6 +4766,12 @@ snapshots:
     dependencies:
       '@floating-ui/core': 1.8.0
       '@floating-ui/utils': 0.2.12
+
+  '@floating-ui/react-dom@2.1.9(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@floating-ui/dom': 1.8.0
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
 
   '@floating-ui/react-dom@2.1.9(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
@@ -9514,6 +5050,15 @@ snapshots:
 
   '@radix-ui/primitive@1.1.1': {}
 
+  '@radix-ui/react-arrow@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+    optionalDependencies:
+      '@types/react': 19.3.0
+      '@types/react-dom': 19.3.0(@types/react@19.3.0)
+
   '@radix-ui/react-arrow@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -9522,6 +5067,16 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
+
+  '@radix-ui/react-collection@1.0.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@babel/runtime': 7.29.7
+      '@radix-ui/react-compose-refs': 1.0.0(react@19.0.0)
+      '@radix-ui/react-context': 1.0.0(react@19.0.0)
+      '@radix-ui/react-primitive': 1.0.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-slot': 1.0.1(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
 
   '@radix-ui/react-collection@1.0.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
@@ -9560,6 +5115,19 @@ snapshots:
       '@babel/runtime': 7.29.7
       react: 19.0.0
 
+  '@radix-ui/react-dismissable-layer@1.1.5(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@radix-ui/primitive': 1.1.1
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-use-escape-keydown': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+    optionalDependencies:
+      '@types/react': 19.3.0
+      '@types/react-dom': 19.3.0(@types/react@19.3.0)
+
   '@radix-ui/react-dismissable-layer@1.1.5(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@radix-ui/primitive': 1.1.1
@@ -9578,6 +5146,17 @@ snapshots:
       react: 19.0.0
     optionalDependencies:
       '@types/react': 19.3.0
+
+  '@radix-ui/react-focus-scope@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+    optionalDependencies:
+      '@types/react': 19.3.0
+      '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
   '@radix-ui/react-focus-scope@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
@@ -9603,6 +5182,29 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
+  '@radix-ui/react-popover@1.1.6(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@radix-ui/primitive': 1.1.1
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-context': 1.1.1(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-dismissable-layer': 1.1.5(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-focus-guards': 1.1.1(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-focus-scope': 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-id': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-popper': 1.2.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-portal': 1.1.4(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-presence': 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-slot': 1.1.2(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-use-controllable-state': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      aria-hidden: 1.2.6
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+      react-remove-scroll: 2.7.2(@types/react@19.3.0)(react@19.0.0)
+    optionalDependencies:
+      '@types/react': 19.3.0
+      '@types/react-dom': 19.3.0(@types/react@19.3.0)
+
   '@radix-ui/react-popover@1.1.6(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@radix-ui/primitive': 1.1.1
@@ -9626,6 +5228,24 @@ snapshots:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
+  '@radix-ui/react-popper@1.2.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@floating-ui/react-dom': 2.1.9(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-arrow': 1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-context': 1.1.1(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-use-rect': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-use-size': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/rect': 1.1.0
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+    optionalDependencies:
+      '@types/react': 19.3.0
+      '@types/react-dom': 19.3.0(@types/react@19.3.0)
+
   '@radix-ui/react-popper@1.2.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@floating-ui/react-dom': 2.1.9(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -9644,6 +5264,16 @@ snapshots:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
+  '@radix-ui/react-portal@1.1.4(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+    optionalDependencies:
+      '@types/react': 19.3.0
+      '@types/react-dom': 19.3.0(@types/react@19.3.0)
+
   '@radix-ui/react-portal@1.1.4(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@radix-ui/react-primitive': 2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -9654,6 +5284,14 @@ snapshots:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
+  '@radix-ui/react-presence@1.0.0(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@babel/runtime': 7.29.7
+      '@radix-ui/react-compose-refs': 1.0.0(react@19.0.0)
+      '@radix-ui/react-use-layout-effect': 1.0.0(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+
   '@radix-ui/react-presence@1.0.0(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@babel/runtime': 7.29.7
@@ -9661,6 +5299,16 @@ snapshots:
       '@radix-ui/react-use-layout-effect': 1.0.0(react@19.0.0)
       react: 19.0.0
       react-dom: 19.0.0(react@19.0.0)
+
+  '@radix-ui/react-presence@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@radix-ui/react-compose-refs': 1.1.1(@types/react@19.3.0)(react@19.0.0)
+      '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@19.3.0)(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+    optionalDependencies:
+      '@types/react': 19.3.0
+      '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
   '@radix-ui/react-presence@1.1.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
@@ -9672,12 +5320,28 @@ snapshots:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
+  '@radix-ui/react-primitive@1.0.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@babel/runtime': 7.29.7
+      '@radix-ui/react-slot': 1.0.1(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+
   '@radix-ui/react-primitive@1.0.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@babel/runtime': 7.29.7
       '@radix-ui/react-slot': 1.0.1(react@19.0.0)
       react: 19.0.0
       react-dom: 19.0.0(react@19.0.0)
+
+  '@radix-ui/react-primitive@2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@radix-ui/react-slot': 1.1.2(@types/react@19.3.0)(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
+    optionalDependencies:
+      '@types/react': 19.3.0
+      '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
   '@radix-ui/react-primitive@2.0.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
@@ -9687,6 +5351,21 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
+
+  '@radix-ui/react-roving-focus@1.0.2(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@babel/runtime': 7.29.7
+      '@radix-ui/primitive': 1.0.0
+      '@radix-ui/react-collection': 1.0.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-compose-refs': 1.0.0(react@19.0.0)
+      '@radix-ui/react-context': 1.0.0(react@19.0.0)
+      '@radix-ui/react-direction': 1.0.0(react@19.0.0)
+      '@radix-ui/react-id': 1.0.0(react@19.0.0)
+      '@radix-ui/react-primitive': 1.0.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-use-callback-ref': 1.0.0(react@19.0.0)
+      '@radix-ui/react-use-controllable-state': 1.0.0(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
 
   '@radix-ui/react-roving-focus@1.0.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
@@ -9715,6 +5394,20 @@ snapshots:
       react: 19.0.0
     optionalDependencies:
       '@types/react': 19.3.0
+
+  '@radix-ui/react-tabs@1.0.2(react-dom@18.3.1(react@18.3.1))(react@19.0.0)':
+    dependencies:
+      '@babel/runtime': 7.29.7
+      '@radix-ui/primitive': 1.0.0
+      '@radix-ui/react-context': 1.0.0(react@19.0.0)
+      '@radix-ui/react-direction': 1.0.0(react@19.0.0)
+      '@radix-ui/react-id': 1.0.0(react@19.0.0)
+      '@radix-ui/react-presence': 1.0.0(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-primitive': 1.0.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-roving-focus': 1.0.2(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@radix-ui/react-use-controllable-state': 1.0.0(react@19.0.0)
+      react: 19.0.0
+      react-dom: 18.3.1(react@18.3.1)
 
   '@radix-ui/react-tabs@1.0.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
@@ -10057,10 +5750,6 @@ snapshots:
       '@tauri-apps/api': 2.12.4
 
   '@tauri-apps/plugin-dialog@2.8.4':
-    dependencies:
-      '@tauri-apps/api': 2.12.4
-
-  '@tauri-apps/plugin-process@2.4.0':
     dependencies:
       '@tauri-apps/api': 2.12.4
 
@@ -11243,6 +6932,10 @@ snapshots:
 
   longest-streak@3.1.0: {}
 
+  loose-envify@1.4.0:
+    dependencies:
+      js-tokens: 4.0.0
+
   lru-cache@11.5.3: {}
 
   lru-cache@5.1.1:
@@ -11776,6 +7469,12 @@ snapshots:
     dependencies:
       hookified: 2.2.0
 
+  react-dom@18.3.1(react@18.3.1):
+    dependencies:
+      loose-envify: 1.4.0
+      react: 18.3.1
+      scheduler: 0.23.2
+
   react-dom@19.0.0(react@19.0.0):
     dependencies:
       react: 19.0.0
@@ -11807,6 +7506,10 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 19.3.0
+
+  react@18.3.1:
+    dependencies:
+      loose-envify: 1.4.0
 
   react@19.0.0: {}
 
@@ -11918,6 +7621,10 @@ snapshots:
   saxes@6.0.0:
     dependencies:
       xmlchars: 2.2.0
+
+  scheduler@0.23.2:
+    dependencies:
+      loose-envify: 1.4.0
 
   scheduler@0.25.0: {}
 

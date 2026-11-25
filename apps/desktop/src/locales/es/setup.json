@@ -8,7 +8,7 @@
   "setup.tips.context.title": "Contexto que potencia su trabajo",
   "setup.tips.context.body": "Las fuentes de contexto gobernadas ayudan a tus agentes a encontrar lo que necesitan y a enfocar su trabajo.",
   "setup.tips.workspaces.title": "Un espacio para cada contexto",
-  "setup.tips.workspaces.body": "Crea los espacios de trabajo que necesites. Cada uno conserva su propia configuración, cuentas y fuentes.",
+  "setup.tips.workspaces.body": "Crea los espacios de trabajo que necesites. Cada uno conserva su propia configuración y cuentas.",
   "setup.tips.memory.title": "Aprendizajes que se comparten",
   "setup.tips.memory.body": "Los agentes comparten memoria dentro del workspace, como un equipo que construye conocimiento en conjunto.",
   "setup.tips.go": "Consejo {number}",
@@ -21,7 +21,6 @@
   "setup.next.app": "Abrir Danil",
   "setup.repair.running": "Comprobando {name} en segundo plano. Puedes seguir trabajando.",
   "setup.repair.failed": "{name} necesita reparación. Algunas funciones pueden fallar hasta que se repare.",
-  "setup.repair.open": "Ver estado del entorno",
   "setup.done_title": "Todo listo.",
   "setup.progress": "Avance de la preparación",
   "setup.simple.done": "Todo listo",
@@ -49,6 +48,5 @@
   "setup.functions.restart": "Reiniciar Danil",
   "setup.functions.repair_failed": "No se pudo reparar el entorno de Danil.",
   "setup.bundled.description": "Las herramientas vienen incluidas con Danil. Comprobamos que funcionen.",
-  "setup.unsupported_detail": "Esta Mac tiene macOS {version}. Danil necesita macOS {minimum} o posterior.",
-  "setup.row.ready": "Listo"
+  "setup.unsupported_detail": "Esta Mac tiene macOS {version}. Danil necesita macOS {minimum} o posterior."
 }

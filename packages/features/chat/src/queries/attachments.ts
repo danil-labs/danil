@@ -1,22 +1,22 @@
 
-import { lista } from "../../../../../apps/desktop/src/lib/format";
-import { aplicarLenguaDeWorkspace, t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type Source } from "../../../../../apps/desktop/src/lib/model";
-import { readLayout } from "../../../../../apps/desktop/src/lib/panels";
-import { type Frase } from "../../../../../apps/desktop/src/lib/prose.ts";
-import { NotMovable, attachmentsOn } from "../../../../../apps/desktop/src/lib/remoteAttachments";
-import { shellCacheMatches } from "../../../../../apps/desktop/src/lib/shellCache";
-import { type ShellSnapshot } from "../../../../../apps/desktop/src/lib/shellCache.ts";
-import { type Space } from "../../../../../apps/desktop/src/lib/spaces";
-import { isTaskTab } from "../../../../../apps/desktop/src/lib/tabs";
-import { aplicarTemaDeTerminal } from "../../../../../apps/desktop/src/lib/terminal-themes";
-import { displayWorkspaceSnapshot, invoke, requestedWorkspaceSnapshot } from "../../../../engine-client/src/client.ts";
-import { capabilities } from "../../../../host/src/platform";
+import { lista } from "../../../../ui/src/lib/format";
+import { aplicarLenguaDeWorkspace, t } from "../../../../ui/src/lib/i18n";
+import { type Source } from "../../../../ui/src/lib/model";
+import { readLayout } from "../../../../ui/src/lib/panels";
+import { type Frase } from "../../../../ui/src/lib/prose.ts";
+import { NotMovable, attachmentsOn } from "./remoteAttachments";
+import { shellCacheMatches } from "../../../../session/src/shellCache";
+import { type ShellSnapshot } from "../../../../session/src/shellCache.ts";
+import { type Space } from "../../../../ui/src/lib/spaces";
+import { isTaskTab } from "../../../../ui/src/lib/tabs";
+import { aplicarTemaDeTerminal } from "../model/terminal-themes";
+import { displayWorkspaceSnapshot, callEngine, requestedWorkspaceSnapshot } from "../../../../engine-client/src/client.ts";
+import { capabilities, isNoMachines } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { batch, type Accessor, type Setter } from "solid-js";
-import type { Hilo, SessionRow, Startup, createComposerStore, createContextSource, createDraftsStore, createProjectsStore, createThreadsStore, createWorkspaceStore, machines } from "./types.js";
-import type { createPanels } from "../../../../../apps/desktop/src/lib/panels.ts";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { ComposerPort, ContextSourcePort, DraftsPort, Hilo, MachinesPort, ProjectsPort, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
+import type { createPanels } from "../../../../ui/src/lib/panels.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { sessionRefresh } from "../../../../session/src/sessionRefresh.ts";
 import type { createResync } from "./resync.ts";
 import type { createThreadStream } from "./thread-stream.ts";
@@ -24,16 +24,16 @@ import type { Preview } from "../../../../ui/src/lib/preview.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type AttachmentsDeps = { abrirSesion: ReturnType<typeof createContextSource>["abrirSesion"]; adjuntosEn: Map<string, string>;
-  asentarEscritorio: (ws: string, lista: Space[] | null) => string | null; asleep: (error: unknown) => boolean; composer: ReturnType<typeof createComposerStore>;
-  confirmContext: (token: Parameters<ReturnType<typeof createWorkspaceStore>["confirmContext"]>[0], root: string | null, listed: Source[]) => void;
+export type AttachmentsDeps = { abrirSesion: ContextSourcePort["abrirSesion"]; adjuntosEn: Map<string, string>;
+  asentarEscritorio: (ws: string, lista: Space[] | null) => string | null; asleep: (error: unknown) => boolean; composer: ComposerPort;
+  confirmContext: (token: Parameters<WorkspaceContextPort["confirmContext"]>[0], root: string | null, listed: Source[]) => void;
   deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; documentosEn: (options: { headers: Record<string, string>; } | undefined) => boolean;
-  draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: ReturnType<typeof createDraftsStore>; enCache: Accessor<boolean>;
+  draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: DraftsPort; enCache: Accessor<boolean>;
   enMaquina: (machine: string | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; finishedTurns: ReturnType<typeof createThreadStream>["finishedTurns"];
   grupos: Accessor<string[]>; guardarCache: { save(snapshot: ShellSnapshot): void; flush: () => void; cancel(): void; }; handoff: ReturnType<typeof createThreadStream>["handoff"];
-  hilos: Accessor<Record<string, Hilo>>; lifecycleRevision: number; loadThread: ReturnType<typeof createContextSource>["loadThread"];
-  loadWindowThreads: ReturnType<typeof createContextSource>["loadWindowThreads"]; machineName: (id: string, local?: boolean) => string; machines: typeof machines;
-  paneles: ReturnType<typeof createPanels>; pegadasEn: Map<string, string>; pestanas: ReturnType<typeof createTabs>; projectCatalog: ReturnType<typeof createProjectsStore>;
+  hilos: Accessor<Record<string, Hilo>>; lifecycleRevision: number; loadThread: ContextSourcePort["loadThread"];
+  loadWindowThreads: ContextSourcePort["loadWindowThreads"]; machineName: (id: string, local?: boolean) => string; machines: MachinesPort;
+  paneles: ReturnType<typeof createPanels>; pegadasEn: Map<string, string>; pestanas: ReturnType<typeof createTabs>; projectCatalog: ProjectsPort;
   reconcileActiveTurns: ReturnType<typeof createResync>["reconcileActiveTurns"]; refetchMachines: () => Promise<void | never[]>; refreshSessions: (proyectos: string[]) => Promise<void>;
   sessionId: Accessor<string | null>; sessionLists: ReturnType<typeof sessionRefresh>; setAlta: Setter<boolean>; setAviso: Setter<{ texto: string; boton?: string; ir?: () => void; } | null>;
   setBloqueo: Setter<Frase | null>; setCuentasTocadas: Setter<number>; setDesdeDeTurno: ReturnType<typeof createThreadStream>["setDesdeDeTurno"]; setDraftBases: Setter<Record<string, string>>;
@@ -41,9 +41,9 @@ export type AttachmentsDeps = { abrirSesion: ReturnType<typeof createContextSour
   setMaterialError: Setter<string | null>; setProject: Setter<string>; setProjectReadError: Setter<string | null>; setProyectoAbierto: Setter<string | null>;
   setSesiones: Setter<Record<string, SessionRow[]>>; setSessionId: Setter<string | null>; setSettlingTurns: ReturnType<typeof createThreadStream>["setSettlingTurns"]; setSources: Setter<Source[]>;
   setSpaces: Setter<Space[]>; setStartupReadError: Setter<string | null>; setTaskSourcesError: Setter<string | null>; setVentana: ReturnType<typeof createThreadStream>["setVentana"];
-  setVivas: ReturnType<typeof createThreadStream>["setVivas"]; shellCache: ShellSnapshot | null; soltarCola: ReturnType<typeof createContextSource>["soltarCola"];
+  setVivas: ReturnType<typeof createThreadStream>["setVivas"]; shellCache: ShellSnapshot | null; soltarCola: ContextSourcePort["soltarCola"];
   taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; threads: ReturnType<typeof createThreadsStore>; workspaceActivo: Accessor<string | null>;
-  workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 1724–2004, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createAttachments(deps: AttachmentsDeps) {
@@ -67,12 +67,12 @@ export function createAttachments(deps: AttachmentsDeps) {
     try {
       const listas = await attachmentsOn(paths, alla, {
         documentos,
-        read: (path) => invoke<Preview>("preview_file", { path, rel: path }, enMaquina(adjuntosEn.get(path))),
+        read: (path) => callEngine<Preview>("preview_file", { path, rel: path }, enMaquina(adjuntosEn.get(path))),
         save: (mime, datos, nombre) => {
-          if (documentos) return invoke<string>("guardar_adjunto", { mime, nombre: nombre ?? null, datos }, options);
-          return invoke<string>("guardar_imagen_pegada", { mime, datos }, options);
+          if (documentos) return callEngine<string>("guardar_adjunto", { mime, nombre: nombre ?? null, datos }, options);
+          return callEngine<string>("guardar_imagen_pegada", { mime, datos }, options);
         },
-        prepare: (saved) => invoke<string[]>("prepare_attachments", { project: proyecto, paths: saved }, options),
+        prepare: (saved) => callEngine<string[]>("prepare_attachments", { project: proyecto, paths: saved }, options),
       });
       if (machine) for (const path of listas) adjuntosEn.set(path, machine);
       return listas;
@@ -87,8 +87,8 @@ export function createAttachments(deps: AttachmentsDeps) {
     const abierta = sessionId();
     const opciones = abierta ? deLaTarea(abierta) : draftOptions();
     const ruta = documentosEn(opciones)
-      ? await invoke<string>("guardar_adjunto", { mime, nombre: nombre ?? null, datos }, opciones)
-      : await invoke<string>("guardar_imagen_pegada", { mime, datos }, opciones);
+      ? await callEngine<string>("guardar_adjunto", { mime, nombre: nombre ?? null, datos }, opciones)
+      : await callEngine<string>("guardar_imagen_pegada", { mime, datos }, opciones);
     const machine = opciones?.headers["x-terminus-machine"];
     if (machine) pegadasEn.set(ruta, machine);
     return ruta;
@@ -99,7 +99,7 @@ export function createAttachments(deps: AttachmentsDeps) {
   // (`abrirPorRel`).
   async function refreshFolder(p: string, id: string) {
     try {
-      setFolder(await invoke<string>("session_folder", { project: p, id }, deLaTarea(id)));
+      setFolder(await callEngine<string>("session_folder", { project: p, id }, deLaTarea(id)));
     } catch {
       setFolder(null);
     }
@@ -117,13 +117,13 @@ export function createAttachments(deps: AttachmentsDeps) {
     const request = ++startupRetryRequest;
     const current = () => request === startupRetryRequest && generation === workspaceContext.generation() && workspace === workspaceActivo();
     try {
-      const startup = await invoke<Startup>("workspaces_startup");
+      const startup = await callEngine<Startup>("workspaces_startup");
       if (!current()) return;
       if (startup.bloqueo) { setBloqueo(startup.bloqueo); return; }
       if (workspace === null) await aplicar(startup);
       else if (startup.active === workspace) setStartupReadError(null);
     } catch (cause) {
-      if (current() && !asleep(cause)) setStartupReadError(prosaDe(cause));
+      if (current() && !asleep(cause) && !isNoMachines()) setStartupReadError(prosaDe(cause));
     }
   }
 
@@ -132,8 +132,13 @@ export function createAttachments(deps: AttachmentsDeps) {
     const workspace = workspaceActivo();
     if (!workspace) return;
     setMaterialError(null);
+    if (isNoMachines()) {
+      setProjectReadError(null);
+      setSources([]);
+      return;
+    }
     try {
-      const arranque = await invoke<Startup>("list_workspaces");
+      const arranque = await callEngine<Startup>("list_workspaces");
       if (!workspaceContext.currentMaterial(request)) return;
       const current = arranque.workspaces.find((w: { id: string }) => w.id === workspace);
       if (!current) throw { what: t("projects.context.unavailable"), detail: "context_unavailable" };
@@ -143,14 +148,14 @@ export function createAttachments(deps: AttachmentsDeps) {
           if (workspaceContext.currentMaterial(request)) setProjectReadError(null);
           return rows;
         }),
-        invoke<Source[]>("list_sources"),
+        callEngine<Source[]>("list_sources"),
       ]);
       if (!workspaceContext.currentMaterial(request)) return;
 
       setSources(fuentes);
       confirmContext(request, root, fuentes);
     } catch (e) {
-      if (!workspaceContext.currentMaterial(request) || asleep(e)) return;
+      if (!workspaceContext.currentMaterial(request) || asleep(e) || isNoMachines()) return;
       setMaterialError(prosaDe(e));
     }
   }
@@ -182,14 +187,17 @@ export function createAttachments(deps: AttachmentsDeps) {
   // conversación y deja la anterior abandonada, sin error y sin aviso. Para
   // eso está `recargarMaterial`.
 
+  let altaMostrada = false;
   async function aplicar(a: Startup) {
     if (!requestedWorkspaceSnapshot(a)) return;
     guardarCache.flush();
     const activo = a.workspaces.find((w: { id: string }) => w.id === a.active);
-  // Sin workspace se abre el alta. Si ya estaba abierta no se toca: el paso 1
-  // acaba de crear uno, y volver a mirar aquí la cerraría a mitad.
-  // En la web el workspace lo crea la plataforma al darse de alta: la ventana espera sin pedirlo.
-    if (a.active === null && capabilities().localSetup) setAlta(true);
+    // El alta se ofrece una vez. Con una sesión válida puede terminar sin
+    // seleccionar un workspace, y el siguiente repaso deja abierto el riel.
+    if (a.active === null && capabilities().localSetup && !altaMostrada) {
+      altaMostrada = true;
+      setAlta(true);
+    }
     const transition = workspaceContext.beginTransition(a);
   // La lengua es del workspace, y cambia al cambiar de cliente: eso es lo que
   // se pidió, no un efecto secundario. `null` hereda la de la máquina.
@@ -269,42 +277,48 @@ export function createAttachments(deps: AttachmentsDeps) {
       setSources([]);
       return;
     }
-    const pedidas = invoke<Space[]>("list_spaces").catch(() => null);
-    // Con las carpetas de la caché, sus tareas se leen a la vez que la lista de carpetas.
-    const primeras = desdeCache ? refreshSessions(grupos()) : null;
-    try {
-      // A la vez, no una detrás de otra: no dependen entre sí, y
-      // encadenadas sumaban sus latencias en el arranque. `list_sources`
-      // esperaba a que volviera `list_projects` para preguntar algo que
-      // no usa su respuesta.
-      // Las fuentes que no llegan (su máquina apagada, sin copia) dejan las de antes y no tumban las carpetas.
-      const [, fuentes] = await Promise.all([
-        projectCatalog.refresh(),
-        invoke<Source[]>("list_sources").catch(() => null),
-      ]);
-      if (generation !== workspaceContext.generation()) return;
+    const pedidas = callEngine<Space[]>("list_spaces").catch(() => null);
+    if (isNoMachines()) {
+      setSources([]);
+      setMaterialError(null);
+      setProjectReadError(null);
+    } else {
+      // Con las carpetas de la caché, sus tareas se leen a la vez que la lista de carpetas.
+      const primeras = desdeCache ? refreshSessions(grupos()) : null;
+      try {
+        // A la vez, no una detrás de otra: no dependen entre sí, y
+        // encadenadas sumaban sus latencias en el arranque. `list_sources`
+        // esperaba a que volviera `list_projects` para preguntar algo que
+        // no usa su respuesta.
+        // Las fuentes que no llegan (su máquina apagada, sin copia) dejan las de antes y no tumban las carpetas.
+        const [, fuentes] = await Promise.all([
+          projectCatalog.refresh(),
+          callEngine<Source[]>("list_sources").catch(() => null),
+        ]);
+        if (generation !== workspaceContext.generation()) return;
 
-      if (workspaceContext.currentMaterial(transition)) {
-        if (fuentes) {
-          setSources(fuentes);
-          confirmContext(transition, activo?.context_root ?? null, fuentes);
-        } else setMaterialError(t("projects.context.unavailable"));
+        if (workspaceContext.currentMaterial(transition)) {
+          if (fuentes) {
+            setSources(fuentes);
+            confirmContext(transition, activo?.context_root ?? null, fuentes);
+          } else if (!isNoMachines()) setMaterialError(t("projects.context.unavailable"));
+        }
+      } catch (e) {
+        if (generation !== workspaceContext.generation() || !workspaceContext.currentMaterial(transition)) return;
+        // Una máquina dormida no es un fallo, pero el arranque sigue: sin salir
+        // de la caché, la ventana se queda inerte con la foto de la vez anterior
+        // y no restaura pestañas ni se entera de cuando la máquina enciende.
+        if (!asleep(e) && !isNoMachines()) {
+          setSources([]);
+          setMaterialError(prosaDe(e));
+        }
       }
-    } catch (e) {
-      if (generation !== workspaceContext.generation() || !workspaceContext.currentMaterial(transition)) return;
-      // Una máquina dormida no es un fallo, pero el arranque sigue: sin salir
-      // de la caché, la ventana se queda inerte con la foto de la vez anterior
-      // y no restaura pestañas ni se entera de cuando la máquina enciende.
-      if (!asleep(e)) {
-        setSources([]);
-        setMaterialError(prosaDe(e));
+      if (primeras) {
+        // Si cambiaron las carpetas, `grupos` relee también las nuevas; esta lectura ya vale para las de siempre.
+        await primeras;
+        if (generation !== workspaceContext.generation()) return;
+        setEnCache(false);
       }
-    }
-    if (primeras) {
-      // Si cambiaron las carpetas, `grupos` relee también las nuevas; esta lectura ya vale para las de siempre.
-      await primeras;
-      if (generation !== workspaceContext.generation()) return;
-      setEnCache(false);
     }
     // La tarea que estaba abierta en este workspace vuelve a estarlo, que es lo
     // que hace un navegador al arrancar. Si su pestaña apunta a una tarea que
@@ -334,7 +348,7 @@ export function createAttachments(deps: AttachmentsDeps) {
         threads.finishLoading(delante.session));
     }
     const enFrente = paneles.activeTabAt(paneles.activeSite());
-    await reconcileActiveTurns();
+    if (!isNoMachines()) await reconcileActiveTurns();
     if (generation !== workspaceContext.generation()) return;
     // Lo que la persona abrió mientras se conciliaba gana: abrir la restaurada ahora le quitaría la ventana.
     if (sessionId() !== null || pestanas.active() !== null || paneles.activeTabAt(paneles.activeSite()) !== enFrente) return;

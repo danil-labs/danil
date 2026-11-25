@@ -1,6 +1,5 @@
 export { accountReturn } from "./account-return-state";
 export { sealFirstFreeWorkspace } from "./first-free-workspace";
-export { noteFirstLoginSignedIn } from "./first-login";
 export { default as Lanzador } from "./Launcher";
 export { default as MoveWorkspaceDialog } from "./MoveWorkspaceDialog";
 export { SessionGate } from "./SessionGate";

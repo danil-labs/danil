@@ -3,6 +3,7 @@
  * Un paso fuera de orden, una respuesta de antes de un logout o un valor desconocido dejan el Router cerrado.
  */
 import type { EdgeMethod } from "../../../../platform-client/src/client.ts";
+import { isNotAvailableStatus } from "../../../../platform-client/src/index.ts";
 import { workspaceFreeRouterPath } from "../../../../platform-client/src/workspaces.ts";
 
 export type FreeRouterScope = {
@@ -15,7 +16,7 @@ export type FreeRouterScope = {
   workspace: string;
 };
 
-export type EdgeAnswer = { status: number; body?: unknown; retryAfterMs?: number };
+type EdgeAnswer = { status: number; body?: unknown; retryAfterMs?: number };
 /** Una llamada al borde con su método real; las escrituras llevan `key` (Idempotency-Key). */
 export type EdgeSend = (method: EdgeMethod, path: string, body?: unknown, key?: string) => Promise<EdgeAnswer>;
 /** Una orden RPC1 al motor del workspace; los errores llegan como códigos cerrados. */
@@ -39,7 +40,7 @@ const PROBLEMS = new Set([
   "temporarily_unavailable", "assignment_conflict",
 ]);
 const UNAVAILABLE = "free_router_unavailable";
-export const PLATFORM_FEATURE = "free_router_platform_v1";
+const PLATFORM_FEATURE = "free_router_platform_v1";
 
 /** El motor anuncia el Router de plataforma; sin el rasgo, lo que no es personal queda cerrado. */
 export function supportsPlatformFreeRouter(status: unknown): boolean {
@@ -152,7 +153,7 @@ export function createFreeRouterPlatform(deps: FreeRouterDeps) {
         if (answer.status >= 200 && answer.status < 300) return answer.body ?? null;
         const code = str(record(answer.body)?.code);
         const known = code && PROBLEMS.has(code) ? code : undefined;
-        if ((answer.status === 404 || answer.status === 501) && (!code || code === "route_not_found")) last = refusal("not_yet", answer.status);
+        if (isNotAvailableStatus(answer.status) && (!code || code === "route_not_found")) last = refusal("not_yet", answer.status);
         else if (answer.status === 429 || answer.status >= 500) last = refusal(known ?? "temporarily_unavailable", answer.status);
         else throw refusal(known ?? UNAVAILABLE, answer.status);
         wait = answer.retryAfterMs ?? 0;

@@ -1,11 +1,12 @@
 import { type InvokeArgs, type InvokeOptions, invoke as tauri } from "@tauri-apps/api/core";
-import { connected, whenConnected } from "../../../apps/desktop/src/lib/engineConnection.ts";
-import { withoutAbout } from "../../../apps/desktop/src/lib/taskMentions.ts";
-import { captureWorkspaceContext } from "../../../apps/desktop/src/lib/workspace-context.ts";
+export { Channel, type InvokeArgs, type InvokeOptions } from "@tauri-apps/api/core";
+import { connected, whenConnected } from "../../session/src/engineConnection.ts";
+import { withoutAbout } from "../../ui/src/lib/taskMentions.ts";
+import { captureWorkspaceContext } from "../../session/src/workspace-context.ts";
 
-export { captureWorkspaceContext, displayWorkspaceSnapshot, requestedWorkspaceSnapshot } from "../../../apps/desktop/src/lib/workspace-context.ts";
+export { captureWorkspaceContext, displayWorkspaceSnapshot, requestedWorkspaceSnapshot } from "../../session/src/workspace-context.ts";
 
-import { errorCode } from "../../../apps/desktop/src/lib/errorCode.ts";
+import { errorCode } from "../../ui/src/lib/errorCode.ts";
 
 /**
  * El único `invoke` de la ventana: el de Tauri, que espera al servicio en vez
@@ -54,7 +55,9 @@ export function setMachineRoute(next: Route | null) {
 const call = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> =>
   (route ? route(command, args, options) : tauri<T>(command, withoutAbout(args as Record<string, unknown> | undefined) as InvokeArgs | undefined, options)) as Promise<T>;
 
-export const invoke = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> => {
+export const callEngine = <T>(command: string, args?: InvokeArgs, options?: InvokeOptions): Promise<T> => {
   const captured = route && !GLOBAL_READS.has(command) ? captureWorkspaceContext(options) : options;
   return untilConnected(() => retrying(() => call<T>(command, args, captured), sleep, (e) => canRepeat(command, e)));
 };
+
+export const invoke = callEngine;

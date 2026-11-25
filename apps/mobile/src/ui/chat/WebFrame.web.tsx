@@ -1,4 +1,4 @@
-import { SANDBOX_ARTEFACTO } from "@terminus/chat/sandbox";
+import { SANDBOX_ARTEFACTO } from "@terminus/chat";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useTheme } from "../theme";

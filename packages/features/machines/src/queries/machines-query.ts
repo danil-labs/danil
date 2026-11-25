@@ -7,7 +7,8 @@
  * - Encender (`start`, `wake`) invalida la lista antes y después: la siguiente lectura ve el estado nuevo.
  * - `admission` y `get` pasan tal cual: un ticket es de un solo uso y nunca se comparte.
  */
-import type { MachinesAnswer, Machine, machinesClient } from "../../../../platform-client/src/machines.ts";
+import type { Machine, machinesClient } from "../../../../platform-client/src/machines.ts";
+import type { MachinesAnswer } from "../../../../platform-client/src/machines-config.ts";
 import { sharedRead } from "../../../../platform-client/src/shared-read.ts";
 
 type Client = ReturnType<typeof machinesClient>;

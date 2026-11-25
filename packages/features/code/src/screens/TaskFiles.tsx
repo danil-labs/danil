@@ -11,7 +11,7 @@ import { capabilities } from "../../../../host/src/platform";
 import { arbolesDe } from "../queries/treeKind";
 import { Button } from "../../../../ui/src/Button";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import {
   listTaskTrees,
   openExternal,
@@ -20,18 +20,18 @@ import {
   treeChanges,
 } from "../queries";
 import { copyText } from "../../../../host/src/clipboard";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
-import type { TaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles";
+import type { TaskFiles } from "../../../../ui/src/lib/taskFiles";
 import { machineOf } from "../../../../host/src/machine";
 import type { Cambios } from "../components/Changes";
-import Codigo from "../components/Code";
-import KnIntegrate from "../components/KnIntegrate";
-import VistaPreviaDeTarea from "../components/TaskPreview";
+import Codigo from "./Code";
+import KnIntegrate from "./KnIntegrate";
+import VistaPreviaDeTarea from "./TaskPreview";
 import VisorDeArchivo, { type Visores } from "./FileViewer";
 import { IconoDeArchivo } from "../../../../ui/src/FileIcon";
 import { alMoverseElArbol } from "../queries/refresh";
-import type { TreePart } from "@terminus/protocol";
+import type { TreePart } from "../../../../engine-client/src/index.ts";
 import { Pressable } from "../../../../ui/src/Pressable";
 
 const nameOf = (path: string) => path.split("/").pop() ?? path;

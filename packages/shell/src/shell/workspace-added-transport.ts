@@ -2,7 +2,7 @@
  * Las piezas sin estado de los agregados (`workspace-added-sync.ts`): el transporte de Desk,
  * el de la web y el registro guardado en `lib/prefs`. Ninguno decide qué es de Danil.
  */
-import { EdgeError } from "@terminus/computers";
+import { EdgeError } from "../../../platform-client/src/edge.ts";
 import type { AddedRecord, AddedStore, AddedTransport, PendingOp, PreferencesReply } from "./workspace-added-sync.ts";
 import { edgePath } from "../../../platform-client/src/client.ts";
 

@@ -1,15 +1,16 @@
 
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type Frase } from "../../../../../apps/desktop/src/lib/prose.ts";
-import { type SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import { deliver, listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { t } from "../../../../ui/src/lib/i18n";
+import { type Frase } from "../../../../ui/src/lib/prose.ts";
+import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
+import { deliver, listen } from "../../../../host/src/serviceEvents.ts";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { claveDe, prosaDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
 import { TRANSPORTE } from "./sleepSession.ts";
 import { batch, createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
-import type { Hilo, SessionRow, Startup, createBatchDelivery, createComposerStore, createContextSource, createProjectsStore, createThreadsStore, createWorkspaceStore, listaBasta, reconciliar } from "./types.js";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { ComposerPort, ContextSourcePort, CreateBatchDelivery, Hilo, ListaBastaPort, ProjectsPort, ReconciliarPort, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createAttachments } from "./attachments.ts";
 import type { createResyncCommands } from "./resync-commands.ts";
 import type { createResync } from "./resync.ts";
@@ -20,20 +21,20 @@ import type { createThreadStream } from "./thread-stream.ts";
 
 /** Lo que el bloque usaba del cuerpo de App. */
 export type AttachmentsMountDeps = { advanceTurn: ReturnType<typeof createThreadStream>["advanceTurn"]; agent: Accessor<string>; aplicar: ReturnType<typeof createAttachments>["aplicar"];
-  asleep: (error: unknown) => boolean; bloqueo: Accessor<Frase | null>; closeActiveTab: () => void; composer: ReturnType<typeof createComposerStore>;
-  conversationScope: ReturnType<typeof createThreadStream>["conversationScope"]; createBatchDelivery: typeof createBatchDelivery; enCache: Accessor<boolean>;
+  asleep: (error: unknown) => boolean; bloqueo: Accessor<Frase | null>; closeActiveTab: () => void; composer: ComposerPort;
+  conversationScope: ReturnType<typeof createThreadStream>["conversationScope"]; createBatchDelivery: CreateBatchDelivery; enCache: Accessor<boolean>;
   finishedTurns: ReturnType<typeof createThreadStream>["finishedTurns"]; grupos: Accessor<string[]>; handoff: ReturnType<typeof createThreadStream>["handoff"]; hilos: Accessor<Record<string, Hilo>>;
-  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; listaBasta: typeof listaBasta;
+  leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; listaBasta: ListaBastaPort;
   loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; mandarElegido: ReturnType<typeof createShellCommand>["mandarElegido"];
-  marcarQuieta: ReturnType<typeof createThreadStream>["marcarQuieta"]; pestanas: ReturnType<typeof createTabs>; project: Accessor<string>; projectCatalog: ReturnType<typeof createProjectsStore>;
-  recargarMaterial: ReturnType<typeof createAttachments>["recargarMaterial"]; reconciliar: typeof reconciliar; refreshSessions: (proyectos: string[]) => Promise<void>;
-  releerProyectos: ReturnType<typeof createContextSource>["releerProyectos"]; releerUna: ReturnType<typeof createResync>["releerUna"]; sessionId: Accessor<string | null>;
+  marcarQuieta: ReturnType<typeof createThreadStream>["marcarQuieta"]; pestanas: ReturnType<typeof createTabs>; project: Accessor<string>; projectCatalog: ProjectsPort;
+  recargarMaterial: ReturnType<typeof createAttachments>["recargarMaterial"]; reconciliar: ReconciliarPort; refreshSessions: (proyectos: string[]) => Promise<void>;
+  releerProyectos: ContextSourcePort["releerProyectos"]; releerUna: ReturnType<typeof createResync>["releerUna"]; sessionId: Accessor<string | null>;
   setBloqueo: Setter<Frase | null>; setEnCache: Setter<boolean>; setEnFondo: ReturnType<typeof createThreadStream>["setEnFondo"];
   setPermissions: ReturnType<typeof createThreadStream>["setPermissions"]; setSesiones: Setter<Record<string, SessionRow[]>>; setSettings: ReturnType<typeof createThreadSide>["setSettings"];
   setSettlingTurns: ReturnType<typeof createThreadStream>["setSettlingTurns"]; setStartupReadError: Setter<string | null>; soltarHilo: (session: string) => void;
   soltarTerminal: ReturnType<typeof createResyncCommands>["soltarTerminal"]; tareaDelRiel: (id: string) => SenderTask | null; taskQueues: ReturnType<typeof createThreadStream>["taskQueues"];
   threads: ReturnType<typeof createThreadsStore>; turnRevisions: ReturnType<typeof createThreadStream>["turnRevisions"]; vivas: ReturnType<typeof createThreadStream>["vivas"];
-  workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2006–2194, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createAttachmentsMount(deps: AttachmentsMountDeps) {
@@ -46,14 +47,14 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     // Aquí es cuando deja de verse la ventana en blanco: `Setup` no monta esto
     // hasta que su comprobación vuelve. Sin esta línea el arranque no se mide
     // en ningún sitio y cualquier mejora suya es una opinión.
-    void invoke("window_ready", { at: Math.round(performance.now()) });
+    void callEngine("window_ready", { at: Math.round(performance.now()) });
     // El webview es la mayor parte de la memoria de la app y nadie sabe de qué.
     // Nodos, heap y lo que la ventana retiene separan las causas posibles, que
     // piden arreglos distintos. `memory` no existe en todos los motores: cero dice «no se sabe».
     const vitales = () => {
       const memoria = (performance as { memory?: { usedJSHeapSize: number } }).memory;
       const retenidos = Object.values(hilos());
-      void invoke("window_vitals", {
+      void callEngine("window_vitals", {
         nodes: document.getElementsByTagName("*").length,
         heapMb: Math.round((memoria?.usedJSHeapSize ?? 0) / 1048576),
         tabs: pestanas.open().length,
@@ -79,7 +80,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     // `list_workspaces` y el arranque la confirma al llegar (`early-startup.ts`).
     let arranqueLlego = false;
     let aplicadaDeLista: Startup | null = null;
-    void invoke<Startup>("list_workspaces").then((lista) => {
+    void callEngine<Startup>("list_workspaces").then((lista) => {
       if (arranqueLlego || workspaceRequest !== 0 || bloqueo()) return;
       if (!listaBasta(lista)) return;
       aplicadaDeLista = lista;
@@ -93,7 +94,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     // la app abría a medias y no se recuperaba sola.
     const arrancar = async (quedan: number) => {
       try {
-        const a = await invoke<Startup>("workspaces_startup");
+        const a = await callEngine<Startup>("workspaces_startup");
         arranqueLlego = true;
         // `bloqueo` no pasa por `aplicar`: es lo que lo hace seguro. Viene
         // con `workspaces` y `active` vacíos, que para `aplicar` significan
@@ -118,7 +119,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
           return;
         }
         // Una máquina apagada tiene su indicador; al conectarse trae sus workspaces.
-        if (!asleep(e)) setStartupReadError(prosaDe(e));
+        if (!asleep(e) && !isNoMachines()) setStartupReadError(prosaDe(e));
         // La lista ya abrió la ventana: se dice el error y no se vacía lo que se está usando.
         if (aplicadaDeLista) return;
         if (enCache()) {
@@ -141,12 +142,24 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     // pie del sidebar— sin tocar a nadie.
     const alMudar = () => {
       const request = ++workspaceRequest;
-      void invoke<Startup>("list_workspaces")
+      void callEngine<Startup>("list_workspaces")
         .then((startup) => request === workspaceRequest ? aplicar(startup) : undefined)
-        .catch((e) => { if (request === workspaceRequest && !asleep(e)) setStartupReadError(prosaDe(e)); });
+        .catch((e) => { if (request === workspaceRequest && !asleep(e) && !isNoMachines()) setStartupReadError(prosaDe(e)); });
     };
     window.addEventListener("harness:workspace", alMudar);
     onCleanup(() => window.removeEventListener("harness:workspace", alMudar));
+
+    let lastAvailability = machineAvailability().kind;
+    createEffect(on(() => machineAvailability().kind, (kind) => {
+      const prev = lastAvailability;
+      lastAvailability = kind;
+      if (kind === prev) return;
+      if (kind === "no_machines") {
+        setStartupReadError(null);
+        return;
+      }
+      if (prev === "no_machines" && (kind === "ready" || kind === "offline")) alMudar();
+    }, { defer: true }));
 
     // Y el otro aviso, que se parece y no es el mismo: cambió el material
     // de este workspace, no el workspace. Son dos eventos: dos
@@ -192,7 +205,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     finishedTurns.set(session, ok);
     batch(() => {
       setSettlingTurns((ids) => [...new Set([...ids, session])]);
-      marcarQuieta(session);
+      marcarQuieta(session, ok === false || unsaved ? "failed" : "done");
       threads.finishSteps(session);
       // Igual que en el `done`: el turno se acabó, y con él la espera de sus
       // hijas. Este camino es el del turno que cerró sin que su evento llegara.

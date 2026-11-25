@@ -1,11 +1,13 @@
-import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Show, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform";
 import { listLanguagePacks, setWorkspaceOutputLanguage } from "../queries/engine-language";
 import { listWorkspaces } from "../queries/engine-workspaces";
 import { Select } from "../../../../ui/src/Select";
-import { t, type Manifiesto } from "../../../../../apps/desktop/src/lib/i18n";
-import { instalarDelBundle, lenguasDelBundle, type Paquete } from "../../../../../apps/desktop/src/locales/packs";
+import { t, type Manifiesto } from "../../../../ui/src/lib/i18n";
+import type { Paquete } from "../../../../session/src/packs";
 import type { Startup } from "../queries/workspaces-store";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
+import { Input } from "../../../../ui/src/Input";
 
 /**
  * El perfil que pide en qué lengua contesta el agente. Solo se ofrece la
@@ -21,35 +23,17 @@ export function SalidaDelAgente() {
   /** La lengua de la interfaz de este workspace: la única que se puede ofrecer. */
   const [lenguaDelEspacio, setLenguaDelEspacio] = createSignal<string | null>(null);
   const [instalados, setInstalados] = createSignal<Manifiesto[]>([]);
-  /** Paquetes incluidos que ya están en disco, pero todavía no traen perfil. */
-  const [porActualizar, setPorActualizar] = createSignal<Set<string>>(new Set());
 
   function cargarInstalados() {
-    void Promise.all([
-      listLanguagePacks<Paquete[]>(),
-      lenguasDelBundle(),
-    ]).then(([paquetes, disponibles]) => {
-      const perfilesIncluidos = new Map(
-        disponibles.filter((m) => m.salida).map((m) => [m.codigo, m]),
-      );
-      const actualizar = new Set<string>();
+    void listLanguagePacks<Paquete[]>().then((paquetes) => {
       const opciones = paquetes.flatMap((p) => {
         const manifiesto = p.manifiesto;
-        if (!manifiesto) return [];
-        // La regla, en el único sitio donde se decide qué se ofrece.
+        if (!manifiesto?.salida) return [];
         if (manifiesto.codigo !== lenguaDelEspacio()) return [];
-        if (manifiesto.salida) return [manifiesto];
-        const nuevo = perfilesIncluidos.get(manifiesto.codigo);
-        if (!nuevo) return [];
-        // Es el mismo paquete que ya se instaló, pero una versión anterior: no
-        // se finge que el perfil existe. El checkbox lo actualiza con el
-        // paquete incluido que ya está dentro de Terminus, sin red.
-        actualizar.add(manifiesto.codigo);
-        return [nuevo];
+        return [manifiesto];
       });
       setInstalados(opciones);
-      setPorActualizar(actualizar);
-    });
+    }).catch(() => {});
   }
 
   /**
@@ -59,6 +43,10 @@ export function SalidaDelAgente() {
    * preguntar.
    */
   function cargarTodo() {
+    if (isNoMachines()) {
+      setInstalados([]);
+      return;
+    }
     void listWorkspaces<Startup>().then((s) => {
       const activo = s.workspaces.find((w) => w.id === s.active);
       if (!activo) {
@@ -74,26 +62,28 @@ export function SalidaDelAgente() {
 
   onMount(() => {
     cargarTodo();
-    // El mismo evento cubre lo que cambia lo ofrecible: instalar un paquete y
-    // cambiar la lengua de la interfaz. La segunda además apaga la salida en el
-    // backend: sin releer, se enseñaría una casilla marcada sobre un ajuste que
-    // ya no existe.
+    // El mismo evento cubre lo que cambia lo ofrecible al cambiar la lengua de
+    // la interfaz, que además apaga la salida en el backend.
     window.addEventListener("harness:language-pack", cargarTodo);
     onCleanup(() => window.removeEventListener("harness:language-pack", cargarTodo));
   });
+
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (kind === prev) return;
+    if (kind === "no_machines") {
+      setInstalados([]);
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline")) cargarTodo();
+  }, { defer: true }));
 
   async function elegir(codigo: string, control?: HTMLInputElement | HTMLSelectElement) {
     const id = workspace();
     if (!id) return;
     try {
-      if (codigo && porActualizar().has(codigo)) {
-        await instalarDelBundle(codigo);
-        setPorActualizar((pendientes) => {
-          const siguiente = new Set(pendientes);
-          siguiente.delete(codigo);
-          return siguiente;
-        });
-      }
       await setWorkspaceOutputLanguage({ id, lengua: codigo || null });
       setValor(codigo);
     } catch {
@@ -126,7 +116,8 @@ export function SalidaDelAgente() {
         >
           {(unico) => (
             <label class="flex w-fit items-center gap-2 text-sm">
-              <input
+              <Input
+                variant="plain"
                 type="checkbox"
                 checked={valor() === unico().codigo}
                 onChange={(e) => void elegir(e.currentTarget.checked ? unico().codigo : "", e.currentTarget)}

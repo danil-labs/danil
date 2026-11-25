@@ -1,9 +1,20 @@
 import { Show } from "solid-js";
-import { usesGroupAccounts } from "../../../../shell/src/shell";
-import DanilAccount, { type DanilAccountPart } from "./DanilAccount";
+import type { SesionesDeAjustes } from "../model/sessions-port";
+import DanilAccount from "./DanilAccount";
 import SessionAccounts from "./SessionAccounts";
-import type { MaquinasDeAjustes } from "../model/machines-port";
 
-export default function DanilAccountsEntry(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
-  return <Show when={(!props.part || props.part === "profile") && usesGroupAccounts()} fallback={<DanilAccount {...props} />}><SessionAccounts /></Show>;
+export default function DanilAccountsEntry(props: {
+  workspace: string | null;
+  context?: string | null;
+  sesiones: SesionesDeAjustes;
+}) {
+  const { usesGroupAccounts } = props.sesiones;
+  return (
+    <Show
+      when={usesGroupAccounts()}
+      fallback={<DanilAccount workspace={props.workspace} context={props.context} sesiones={props.sesiones} />}
+    >
+      <SessionAccounts workspace={props.workspace} context={props.context} sesiones={props.sesiones} />
+    </Show>
+  );
 }

@@ -9,7 +9,9 @@ for (const labels of [{ free: "Router IA gratis" }, { free: "Free AI Router" }])
     // Un motor anterior todavía publica `opencode-zen`, partido en dos superficies.
     const legacyPaid = { provider: "opencode-zen", catalogo: "de_pago", label: "Go" };
     const legacyFree = { ...legacyPaid, catalogo: "gratuitos", label: "Router IA gratis" };
+    const credits = { id: "danil-credits", provider: "opencode", catalogo: "todo", label: "Danil Credits" };
     assert.deepEqual(surfacePresentation(paid, labels), { label: "OpenCode", mark: "opencode" });
+    assert.deepEqual(surfacePresentation(credits, { ...labels, credits: "Danil Credits" }), { label: "Danil Credits", mark: "danil" });
     assert.deepEqual(surfacePresentation(router, labels), { label: labels.free, mark: "danil" });
     assert.deepEqual(surfacePresentation(legacyPaid, labels), { label: "OpenCode", mark: "opencode" });
     assert.deepEqual(surfacePresentation(legacyFree, labels), { label: labels.free, mark: "danil" });
@@ -29,10 +31,17 @@ test("selected Free belongs to Danil while paid Go keeps OpenCode and retired lo
   assert.equal(selectedModelMark("claude", "opus"), "claude");
 });
 
-test("Danil services are named by service, never by their model", () => {
-  const labels = { credits: "Danil Credits", router: "Router IA gratis" };
+test("Danil services are named by service and tier, never by their underlying model", () => {
+  const labels = { credits: "Danil", router: "Router IA gratis" };
   assert.equal(modelLabel("danil-free/reflection/beam-free", labels), "Router IA gratis");
-  assert.equal(modelLabel("danil-credits/deepseek/deepseek-v4.1-flash", labels), "Danil Credits");
+  for (const [tier, expected] of [
+    ["danil-credits/danil/ligero", "Danil · Ligero"],
+    ["danil-credits/danil/equilibrado", "Danil · Equilibrado"],
+    ["danil-credits/danil/avanzado", "Danil · Avanzado"],
+  ] as const) {
+    assert.equal(modelLabel(tier, labels), expected);
+    assert.equal(selectedModelMark("opencode", tier), "danil");
+  }
   assert.equal(modelLabel("claude-opus-4-1[1m]", labels), "Claude Opus 4.1");
   assert.equal(modelLabel("opencode-go/kimi", labels, { models: [{ id: "opencode-go/kimi", label: "Kimi" }] }), "Kimi");
 });

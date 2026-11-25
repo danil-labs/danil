@@ -5,9 +5,14 @@
  * alcance a ver el paso intermedio.
  */
 
+import type { Author } from "./messageTypes.ts";
 import type { Delta } from "./transcript.ts";
 
-type Lote = { session: string; workspace: string | undefined; deltas: Delta[] };
+export type StreamChunk =
+  | ({ kind: "delta" } & Delta)
+  | { kind: "reasoning"; text: string; messageId?: string; segmentId?: string; author: Author | null };
+
+type Lote = { session: string; workspace: string | undefined; chunks: StreamChunk[] };
 
 /** Pide `run` para el próximo cuadro y devuelve con qué cancelarlo. */
 export type Programar = (run: () => void) => () => void;
@@ -17,7 +22,7 @@ export type Programar = (run: () => void) => () => void;
  * no corre con la ventana oculta, y el reloj de respaldo cubre la que se oculta
  * con el cuadro ya pedido.
  */
-export const porCuadro: Programar = (run) => {
+const porCuadro: Programar = (run) => {
   const visible = typeof requestAnimationFrame === "function" && document.visibilityState !== "hidden";
   const cuadro = visible ? requestAnimationFrame(run) : null;
   const reloj = setTimeout(run, visible ? 1000 : 50);
@@ -28,11 +33,11 @@ export const porCuadro: Programar = (run) => {
 };
 
 /**
- * `meter` guarda un delta; `vaciar` aplica lo guardado ya. Quien vaya a tocar
- * un hilo por otro camino vacía antes, o el orden de lo que se pinta cambia.
+ * `meter` guarda un fragmento (`delta` o `reasoning`); `vaciar` aplica lo guardado ya.
+ * Quien vaya a tocar un hilo por otro camino vacía antes, o el orden de lo que se pinta cambia.
  */
 export function lotesDeDeltas(
-  aplicar: (session: string, workspace: string | undefined, deltas: Delta[]) => void,
+  aplicar: (session: string, workspace: string | undefined, chunks: StreamChunk[]) => void,
   programar: Programar = porCuadro,
 ) {
   const pendientes = new Map<string, Lote>();
@@ -43,14 +48,15 @@ export function lotesDeDeltas(
     if (pendientes.size === 0) return;
     const lotes = [...pendientes.values()];
     pendientes.clear();
-    for (const l of lotes) aplicar(l.session, l.workspace, l.deltas);
+    for (const l of lotes) aplicar(l.session, l.workspace, l.chunks);
   };
   return {
-    meter(session: string, workspace: string | undefined, delta: Delta) {
+    meter(session: string, workspace: string | undefined, chunk: StreamChunk | Delta) {
+      const normalized: StreamChunk = "kind" in chunk ? chunk : { kind: "delta", ...chunk };
       const clave = `${workspace ?? ""}\u0000${session}`;
       const lote = pendientes.get(clave);
-      if (lote) lote.deltas.push(delta);
-      else pendientes.set(clave, { session, workspace, deltas: [delta] });
+      if (lote) lote.chunks.push(normalized);
+      else pendientes.set(clave, { session, workspace, chunks: [normalized] });
       cancelar ??= programar(vaciar);
     },
     vaciar,

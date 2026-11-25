@@ -41,9 +41,7 @@ import type {
   WorkspaceAttention,
   LiveTurn,
 } from "@terminus/protocol";
-import { type HistoryRead } from "@terminus/chat/history";
-import { readDetailText } from "@terminus/chat/historyDetail";
-import { readVisualHtml, type VisualPart, type VisualWhole, VISUAL_FILE, VISUAL_TREE } from "@terminus/chat/visual";
+import { type HistoryRead, readDetailText, readVisualHtml, type VisualPart, type VisualWhole, VISUAL_FILE, VISUAL_TREE } from "@terminus/chat";
 import { readTreeFile, sessionModelArgs, type TreePart } from "@terminus/protocol";
 import { arrangeSpaces, spaceOrder, type AccountWorkspace, groupWorkspaces, linkedAttention, onlyLinked, registryProjects, withRegistry } from "@terminus/computers";
 import {

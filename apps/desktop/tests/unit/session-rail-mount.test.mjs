@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { boot, sleep } from "../helpers/jsdom-app.mjs";
+import { boot, cause, sleep } from "../helpers/jsdom-app.mjs";
 import { RESPONSES } from "../helpers/mount-guard.mjs";
 
 const context = (id, org, extra = {}) => ({ context_id: id, org, org_name: org, plan: "paid", ...extra });
@@ -9,7 +9,7 @@ const until = async (read) => {
   return false;
 };
 
-test("organization rail omits empty groups and headers, opens later for one organization and preserves add-account failures", async () => {
+test("organization rail omits empty groups and headers, opens the chooser after login and the root menu performs no IPC", async () => {
   let status = { state: "connected", sessions: [
     { family: "family-one", email: "one@example.com", available_contexts: 2, contexts: [context("a", "Org A"), context("b", "Org B", { workspaces: "later" })] },
     { family: "family-one-new", email: "one@example.com", contexts: [context("c", "Org C")] },
@@ -27,24 +27,32 @@ test("organization rail omits empty groups and headers, opens later for one orga
   });
   const doc = app.w.document;
   assert.equal(doc.querySelectorAll("[data-account-header]").length, 0);
-  assert.ok(doc.querySelector('[data-workspace-tile="w"]'), "local workspace stays visible");
+  assert.equal(doc.querySelector('[data-workspace-tile="w"]'), null, "a workspace only a machine lists is not a rail tile");
   assert.ok(await until(() => doc.querySelector('[data-session-context="b"]')));
   assert.equal(doc.querySelectorAll("[data-session-context]").length, 1, "later opens the chosen organization");
   assert.ok(!doc.body.textContent.includes("Tu workspace Free"), "no Free row without E1/W1a data");
   doc.activeElement?.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   await sleep(100);
-  doc.querySelector("[data-add-workspace]").click();
-  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Agregar cuenta u organización")));
-  assert.ok(doc.body.textContent.includes("Hay workspaces nuevos para agregar"));
-  [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Agregar cuenta u organización").click();
+  await cause.run("open-rail-plus", async () => {
+    doc.querySelector("[data-add-workspace]").click();
+    assert.ok(await until(() => doc.querySelector("[data-add-danil-step]")));
+  });
+  assert.deepEqual(app.commandsForCause("open-rail-plus"), []);
+  assert.match(doc.querySelector("[data-add-danil-step]").textContent, /Agregar workspace.*Inicia sesión y elige uno/);
+  assert.doesNotMatch(doc.querySelector("[role=menu]").textContent, /Hay workspaces nuevos|Agregar cuenta u organización/);
+  doc.querySelector("[data-add-danil-step]").click();
+  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Conectar otra cuenta")));
+  [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Conectar otra cuenta").click();
   assert.ok(await until(() => logins.length === 1));
   assert.equal(logins[0].mode, "add");
   assert.ok(await until(() => [...doc.querySelectorAll('[role="alert"] p')].some((p) => p.textContent === "Llegaste al máximo de 20 organizaciones conectadas. Cierra una para agregar otra.")), "the cause stays visible in the error Toast after the menu closes");
   assert.equal(doc.querySelectorAll("[data-account-header]").length, 0);
   rejectLogin = false;
   doc.querySelector("[data-add-workspace]").click();
-  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Agregar cuenta u organización")));
-  [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Agregar cuenta u organización").click();
+  assert.ok(await until(() => doc.querySelector("[data-add-danil-step]")));
+  doc.querySelector("[data-add-danil-step]").click();
+  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === "Conectar otra cuenta")));
+  [...doc.querySelectorAll('[role="menuitem"]')].find((b) => b.textContent === "Conectar otra cuenta").click();
   assert.ok(await until(() => logins.length === 2));
   status.sessions[0].contexts = status.sessions[0].contexts.filter((c) => c.context_id !== "a");
   app.emit("danil-connect", structuredClone(status));
@@ -53,15 +61,14 @@ test("organization rail omits empty groups and headers, opens later for one orga
   status.removed = [{ context_id: "c", org: "Org C", reason: "organization_access_denied" }];
   app.emit("danil-connect", structuredClone(status));
   await sleep(100);
-  assert.ok(await until(() => doc.querySelector('[data-removed-context="c"]')?.textContent.includes("Se quitó Org C. No tienes acceso a los workspaces de esta organización")), "D1's removal cause stays visible in the add menu");
   doc.activeElement?.dispatchEvent(new app.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
   await sleep(100);
   assert.equal(doc.querySelectorAll("[data-account-header]").length, 0);
-  assert.ok(doc.querySelector('[data-workspace-tile="w"]'));
+  assert.equal(doc.querySelector('[data-workspace-tile="w"]'), null);
   assert.equal(doc.querySelector("[data-organization-menu]"), null);
 });
 
-test("Free is offered only with E1 and a server engine id, creates locally and stays in its organization group", async () => {
+test("a Free workspace selected after login materializes from its existing server ID", async () => {
   let created = false;
   const creations = [];
   let active = "w";
@@ -77,8 +84,8 @@ test("Free is offered only with E1 and a server engine id, creates locally and s
   });
   const doc = app.w.document;
   app.w.addEventListener("harness:workspace", () => workspaceEvents.push(active));
-  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((row) => row.textContent === "Tu workspace Free")));
-  [...doc.querySelectorAll('[role="menuitem"]')].find((row) => row.textContent === "Tu workspace Free").click();
+  assert.ok(await until(() => [...doc.querySelectorAll('[role="menuitem"]')].some((row) => row.dataset.addDanil === "engine-free")));
+  [...doc.querySelectorAll('[role="menuitem"]')].find((row) => row.dataset.addDanil === "engine-free").click();
   assert.ok(await until(() => creations.length === 1));
   assert.equal(doc.querySelector('[data-workspace-tile="sealed-paid-local"]'), null, "a local paid seal cannot become a group destination");
   assert.ok(await until(() => workspaceEvents.includes("engine-free")), "switching into the Free group invalidates the composer balance with the existing workspace event");

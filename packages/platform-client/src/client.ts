@@ -4,6 +4,7 @@
  * rutas. `edgeUntil` reintenta 404, 429, 501 y 503 con backoff e idempotencia.
  */
 import { invoke } from "../../engine-client/src/client.ts";
+import { newIdempotencyKey } from "./idempotency.ts";
 
 
 export type Patience = {
@@ -33,7 +34,7 @@ export function nextDelay(attempt: number, hintMs: number | undefined, minDelayM
 }
 
 /** Los métodos que `danil_edge_fetch` envía tal cual; todo lo que no es GET es una escritura. */
-export type EdgeMethod = "GET" | "POST" | "PUT" | "DELETE";
+export type EdgeMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /** La respuesta del borde, sin tocar: el status, el cuerpo y `Location` si la hay. */
 export type EdgeReply<T = unknown> = { status: number; body: T; location?: string; idempotency_key?: string; retry_after_ms?: number };
@@ -76,11 +77,25 @@ const sleep = (ms: number, signal?: AbortSignal) =>
     signal?.addEventListener("abort", abort, { once: true });
   });
 
+/** Estado resumido de la sesión de Desk para resolver el contexto de una organización. */
+export type DeskSessionStatus = {
+  state?: string;
+  sessions?: Array<{
+    contexts?: Array<{ context_id?: string; org?: string }>;
+  }>;
+};
+
+/** Lee el estado de contextos de Desk (`danil_session_status`); `null` si no existe sesión. */
+export function readDeskSessionStatus(): Promise<DeskSessionStatus | null> {
+  return invoke<DeskSessionStatus>("danil_session_status").catch(() => null);
+}
+
 /** Una llamada, sin reintentos: el status del borde tal cual. */
-export function edgeFetch<T = unknown>(method: EdgeMethod, path: string, body?: unknown, idempotencyKey?: string): Promise<EdgeReply<T>> {
+export function edgeFetch<T = unknown>(method: EdgeMethod, path: string, body?: unknown, idempotencyKey?: string, context?: string): Promise<EdgeReply<T>> {
   const args: Record<string, unknown> = { method, path };
   if (body !== undefined) args.body = body;
   if (idempotencyKey) args.idempotencyKey = idempotencyKey;
+  if (context) args.context = context;
   return invoke<EdgeReply<T>>("danil_edge_fetch", args);
 }
 
@@ -91,7 +106,7 @@ export function edgeFetch<T = unknown>(method: EdgeMethod, path: string, body?: 
 export async function edgeUntil<T = unknown>(method: EdgeMethod, path: string, body?: unknown, patience: Patience = {}, transport: { send: typeof edgeFetch; onProblem?: (e: EdgeRefusal) => void } = { send: edgeFetch, onProblem: e => problemListener?.(e) }): Promise<EdgeReply<T>> {
   const write = method !== "GET";
   const signal = write ? AbortSignal.any([context.signal, ...(patience.signal ? [patience.signal] : [])]) : patience.signal;
-  const key = write ? patience.idempotencyKey ?? crypto.randomUUID() : undefined;
+  const key = write ? patience.idempotencyKey ?? newIdempotencyKey() : undefined;
   const deadline = Date.now() + (patience.retryBudgetMs ?? Infinity);
   let last: unknown;
   for (let attempt = 0; ; attempt++) {

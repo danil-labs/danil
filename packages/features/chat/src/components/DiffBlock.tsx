@@ -1,7 +1,7 @@
 import { For, Match, Show, Switch, createMemo } from "solid-js";
 import { comparado, doblar, type Linea, type Salto } from "../model/diff";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { t } from "../../../../ui/src/lib/i18n";
+import { cn } from "../../../../ui/src/lib/utils";
 
 /**
  * Un diff, pintado. Vive aparte porque lo usan dos sitios que tienen que verse

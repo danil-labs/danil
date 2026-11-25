@@ -1,4 +1,5 @@
-import { canHandOver as engineAllows } from "@terminus/protocol";
+import { canHandOver as engineAllows } from "../../../../engine-client/src/index.ts";
+import { isDanilCreditsModel } from "../../../../ui/src/lib/tasks/index.ts";
 
 /**
  * Cambiar de CLI en una tarea abierta (`provider_handoff_v1`). La autoridad es
@@ -99,4 +100,19 @@ export function handoverMatches(
  */
 export function shellCli(sessionProvider: string | null | undefined, draftProvider: string): string {
   return sessionProvider || draftProvider;
+}
+
+/**
+ * Nombre visible del proveedor en la confirmación de traspaso: Danil Credits
+ * corre sobre OpenCode ACP, pero a la persona siempre se le muestra como
+ * Danil Credits (nunca como OpenCode).
+ */
+export function handoverProviderLabel(
+  agentId: string,
+  modelId: string | null | undefined,
+  agents: readonly { id: string; label: string }[],
+  creditsLabel: string,
+): string {
+  if (isDanilCreditsModel(modelId)) return creditsLabel;
+  return agents.find((a) => a.id === agentId)?.label ?? agentId;
 }

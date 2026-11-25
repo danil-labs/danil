@@ -353,20 +353,6 @@
       "async": false,
       "channel": null,
       "kind": "invoke",
-      "name": "agentsview_status",
-      "output": "-> Result < IntegrationStatus , String >",
-      "parameters": [],
-      "path": "integrations::agentsview_status",
-      "scope": "workspace",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server"
-    },
-    {
-      "async": false,
-      "channel": null,
-      "kind": "invoke",
       "name": "answer_question",
       "output": "-> Result < Wire < Turn > , String >",
       "parameters": [
@@ -3494,26 +3480,6 @@
     {
       "async": false,
       "channel": null,
-      "kind": "invoke",
-      "name": "list_dependencies",
-      "output": "-> Vec < Dependency >",
-      "parameters": [
-        {
-          "key": "force",
-          "name": "force",
-          "type": "Option < bool >"
-        }
-      ],
-      "path": "deps::list_dependencies",
-      "scope": "workspace",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server"
-    },
-    {
-      "async": false,
-      "channel": null,
       "ids": {
         "workspace": [
           "scope"
@@ -4397,34 +4363,6 @@
       ],
       "path": "spaces::move_task_to_space",
       "scope": "workspace",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server"
-    },
-    {
-      "async": false,
-      "channel": null,
-      "kind": "invoke",
-      "name": "observability_connect",
-      "output": "-> Result < Conexion , String >",
-      "parameters": [],
-      "path": "observability::observability_connect",
-      "scope": "machine",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server"
-    },
-    {
-      "async": false,
-      "channel": null,
-      "kind": "invoke",
-      "name": "observability_disconnect",
-      "output": "-> Result < () , String >",
-      "parameters": [],
-      "path": "observability::observability_disconnect",
-      "scope": "machine",
       "audience": "window",
       "authority": "admin",
       "durable": false,
@@ -6333,19 +6271,6 @@
     {
       "async": false,
       "channel": null,
-      "kind": "desktop",
-      "name": "service_cancel_update",
-      "output": "-> std :: result :: Result < () , String >",
-      "parameters": [],
-      "path": "cli::service::service_cancel_update",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server"
-    },
-    {
-      "async": false,
-      "channel": null,
       "ids": {
         "workspace": [
           "workspace"
@@ -6382,19 +6307,6 @@
         }
       ],
       "path": "cli::service::service_poll",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server"
-    },
-    {
-      "async": false,
-      "channel": null,
-      "kind": "desktop",
-      "name": "service_prepare_update",
-      "output": "-> std :: result :: Result < () , Value >",
-      "parameters": [],
-      "path": "cli::service::service_prepare_update",
       "audience": "window",
       "authority": "admin",
       "durable": false,
@@ -12172,7 +12084,6 @@
     "account",
     "account-rejected",
     "activity",
-    "agentsview-changed",
     "attention",
     "bootstrap",
     "bootstrap-run",

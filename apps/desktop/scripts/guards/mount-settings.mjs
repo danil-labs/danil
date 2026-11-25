@@ -63,6 +63,25 @@ const clickArea = (key, text) => [...(areaButton(key) ?? [])]
 const selectedKeys = (scope) => (selections.get(scope) ?? []).map(({ key }) => key);
 providers.w.document.querySelector('button[aria-label="Configuración"]')?.click();
 await sleep(100);
+const navTabs = [...providers.w.document.querySelectorAll('[id^="cfg-tab-"]')].map((el) => el.id);
+assert.equal(navTabs[0], "cfg-tab-general", "General debe ser la primera entrada de Configuración");
+assert.equal(navTabs[1], "cfg-tab-appearance", "Apariencia va justo debajo de General");
+assert.equal(providers.w.document.querySelector("#cfg-tab-general")?.textContent?.trim(), "General");
+assert.equal(providers.w.document.querySelector("#cfg-tab-appearance")?.textContent?.trim(), "Apariencia");
+assert.ok(providers.w.document.querySelector('[data-setting="notify-behavior"]'), "Notificaciones vive dentro de General");
+assert.ok(navTabs.includes("cfg-tab-security"), "Login y seguridad debe aparecer como entrada propia en Configuración");
+if (navTabs.includes("cfg-tab-account")) {
+  assert.equal(navTabs.indexOf("cfg-tab-security"), navTabs.indexOf("cfg-tab-account") + 1, "Login y seguridad va justo después de Cuenta");
+  providers.w.document.querySelector("#cfg-tab-account")?.click();
+  await sleep(50);
+  assert.equal(providers.w.document.querySelector("#cfg-sub-security"), null, "Seguridad ya no es pestaña dentro de Cuenta");
+}
+const securityTab = providers.w.document.querySelector("#cfg-tab-security");
+assert.equal(securityTab?.textContent?.trim(), "Login y seguridad");
+securityTab?.click();
+await sleep(50);
+assert.ok(providers.w.document.querySelector("[data-settings-security]"), "Login y seguridad monta su panel real");
+assert.equal(providers.w.document.querySelector("#cfg-panel h2")?.textContent?.trim(), "Login y seguridad");
 providers.w.document.querySelector("#cfg-tab-source-control")?.click();
 await sleep(50);
 providers.w.document.querySelector("#cfg-sub-fuentes")?.click();
@@ -117,45 +136,12 @@ assert.deepEqual(selectedKeys("ws-a"), ["other"]);
 assert.equal(authentications, 0);
 assert.ok(providerCalls.includes("ws-a") && providerCalls.includes("ws-b"));
 assert.deepEqual(providers.failures, []);
-let integrationStatus = { installed: true, enabled: false };
-let pendingIntegration = null;
-const integration = await boot("listo", 9, {
-  ...RESPONSES,
-  agentsview_status: () => pendingIntegration ?? integrationStatus,
-});
-const integrationButton = () => integration.w.document.querySelector('button[aria-label="Analytics"]');
-const workspaceChanged = () => integration.w.dispatchEvent(new integration.w.CustomEvent("harness:workspace"));
-assert.equal(integrationButton(), null);
-integrationStatus = { installed: true, enabled: true };
-workspaceChanged();
-await sleep(30);
-assert.ok(integrationButton(), "switching to an enabled workspace reveals AgentsView");
-let finishIntegration;
-pendingIntegration = new Promise(resolve => { finishIntegration = resolve; });
-workspaceChanged();
-assert.equal(integrationButton(), null);
-pendingIntegration = null;
-integrationStatus = { installed: true, enabled: false };
-workspaceChanged();
-await sleep(30);
-finishIntegration({ installed: true, enabled: true });
-await sleep(30);
-assert.equal(integrationButton(), null, "a late response cannot enable AgentsView in another workspace");
-integration.emit("agentsview-changed", true);
-await sleep(30);
-assert.equal(integrationButton(), null, "integration events must read the active workspace");
-integrationStatus = { installed: true, enabled: true };
-integration.emit("agentsview-changed", true);
-await sleep(30);
-assert.ok(integrationButton());
-assert.deepEqual(integration.failures, []);
 let pluginWorkspace = "w";
 let officeInstalled = false;
 let officeEnabled = false;
 let pendingCatalog = null;
 const pluginCalls = [];
 const catalog = () => ({ workspace: pluginWorkspace, plugins: [
-  { id: "agentsview", installed: true, enabled: true, version: "0.39.0", bytes: 1000, supported: true },
   { id: "libreoffice", installed: officeInstalled, enabled: officeEnabled, version: officeInstalled ? "26.2.6" : null, bytes: officeInstalled ? 800000000 : null, supported: true },
 ] });
 const plugins = await boot("listo", "plugins", {
@@ -177,7 +163,7 @@ await sleep(100);
 const officeCard = () => [...plugins.w.document.querySelectorAll("div")].find(d => d.textContent === "LibreOffice")?.parentElement?.parentElement?.parentElement;
 const officeButton = (text) => [...officeCard().querySelectorAll("button")].find(b => b.textContent?.trim() === text);
 const officeSwitch = () => officeCard().querySelector('button[role="switch"][aria-label="Activar en este espacio"]');
-assert.ok(officeCard(), "Connections offers LibreOffice alongside AgentsView");
+assert.ok(officeCard(), "Connections offers LibreOffice");
 officeButton("Instalar").click();
 await sleep(50);
 assert.deepEqual(pluginCalls, [["install", "libreoffice"]]);
@@ -608,7 +594,7 @@ const languageApp = await boot("listo", "language-select", {
 const languageDoc = languageApp.w.document;
 languageDoc.querySelector('button[aria-label="Configuración"]')?.click();
 await sleep(100);
-languageDoc.querySelector("#cfg-tab-preferences")?.click();
+languageDoc.querySelector("#cfg-tab-general")?.click();
 await sleep(50);
 const languageSelect = () =>
   [...languageDoc.querySelectorAll("select")].find((s) => s.querySelector('option[value="en"]') && s.querySelector('option[value=""]'));
@@ -618,7 +604,14 @@ const pickLanguage = async (code) => {
   select.dispatchEvent(new languageApp.w.Event("change", { bubbles: true }));
   await sleep(80);
 };
+assert.equal(languageDoc.querySelector("#cfg-sub-languages"), null, "Languages tab was removed from Preferences");
 assert.ok(languageSelect(), "General shows the language select");
+assert.equal(languageSelect().querySelector("optgroup"), null, "no uninstalled language pack optgroup");
+assert.equal(languageSelect().querySelector('option[value="yua"]')?.textContent, "Maayatʼaan", "Maayatʼaan is available out of the box");
+await pickLanguage("yua");
+assert.equal(languageDoc.documentElement.lang, "yua");
+assert.equal(languageSelect().value, "yua", "the select names Maayatʼaan right after switching");
+assert.equal(languageSelect().getAttribute("aria-label"), "Tʼaan", "UI switches to Maayatʼaan");
 await pickLanguage("en");
 assert.equal(languageDoc.documentElement.lang, "en");
 assert.equal(languageSelect().value, "en", "the select names the language just applied");
@@ -702,68 +695,106 @@ assert.equal(ownItem("revisor"), undefined);
 assert.ok(ownItem("ventas"));
 assert.deepEqual(agentsApp.failures, []);
 /**
- * Renombrar un workspace es un gesto con nombre, vale para el que no está
- * activo, y cancelar cancela: Escape cierra el campo sin guardar y sin
- * llevarse por delante el diálogo de Configuración.
+ * El selector de workspace en Configuración muestra el workspace activo, quita
+ * la división «Tú» / «Este workspace» y la pestaña retirada «Barra de workspaces»,
+ * cierra su menú con Escape sin cerrar Configuración, y cambiar de workspace
+ * recarga los datos de la sección activa manteniendo abierto el diálogo.
  */
-let spaces = {
+let selectorSpaces = {
   workspaces: [
-    { id: "w", name: "Acme", context_root: null, sessions: 0 },
-    { id: "w2", name: "Beta", context_root: null, sessions: 0 },
+    { id: "w", name: "Acme", context_root: null, sessions: 0, account: { org: "org-w", account_id: "ctx-w" } },
+    { id: "w2", name: "Beta", context_root: null, sessions: 0, account: { org: "org-w2", account_id: "ctx-w2" } },
   ],
   active: "w",
 };
-const renames = [];
 const workspaceChanges = [];
-const renameApp = await boot("listo", "workspace-rename", {
+const agentsReads = [];
+const selectorContexts = [
+  { context_id: "ctx-w", org: "org-w", org_name: "Acme", plan: "pro", workspaces: "all", role: "owner" },
+  { context_id: "ctx-w2", org: "org-w2", org_name: "Beta", plan: "pro", workspaces: "all", role: "owner" },
+];
+const selectorApp = await boot("listo", "settings-workspace-selector", {
   ...RESPONSES,
-  list_workspaces: () => spaces,
-  workspaces_startup: () => spaces,
+  machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true }],
+  list_workspaces: () => selectorSpaces,
+  workspaces_startup: () => selectorSpaces,
   list_language_packs: [], list_bundled_language_packs: [],
-  set_active_workspace: ({ id }) => { workspaceChanges.push(id); },
-  rename_workspace: ({ id, name }) => {
-    renames.push([id, name]);
-    spaces = { ...spaces, workspaces: spaces.workspaces.map((w) => (w.id === id ? { ...w, name } : w)) };
-    return spaces.workspaces.find((w) => w.id === id);
+  danil_session_status: () => ({
+    state: "connected",
+    default_context: "ctx-w",
+    sessions: [{ family: "fam-1", email: "user@example.com", contexts: selectorContexts }],
+  }),
+  danil_edge_fetch: (args) => {
+    if (args.path === "/v1/identity/me") return { status: 200, body: { id: "person" } };
+    if (args.path === "/v1/workspaces") {
+      return {
+        status: 200,
+        body: {
+          items: [
+            { id: "acc-w", org: "org-w", name: "Acme", engine_workspace_id: "w" },
+            { id: "acc-w2", org: "org-w2", name: "Beta", engine_workspace_id: "w2" },
+          ],
+        },
+      };
+    }
+    return { status: 404, body: {} };
+  },
+  set_active_workspace: ({ id }) => {
+    workspaceChanges.push(id);
+    selectorSpaces = { ...selectorSpaces, active: id };
+  },
+  list_machine_agents: () => {
+    agentsReads.push(selectorSpaces.active);
+    return {
+      workspace: selectorSpaces.active,
+      own: [{
+        agent: {
+          name: selectorSpaces.active === "w2" ? "beta-agent" : "acme-agent",
+          description: "Agente del workspace",
+          package: null,
+          managed: selectorSpaces.active === "w2",
+          own_scope: { kind: "workspace" },
+        },
+        profile: { display_name: null, body: null, avatar: null },
+      }],
+    };
   },
 });
-await sleep(300);
-renameApp.w.document.querySelector('[data-workspace-column] [data-workspace-tile="w"]')
-  ?.dispatchEvent(new renameApp.w.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+for (let i = 0; i < 80 && !selectorApp.w.document.querySelector('[data-workspace-context="ctx-w2"]'); i++) await sleep(25);
+const sDoc = selectorApp.w.document;
+sDoc.querySelector('button[aria-label="Configuración"]')?.click();
+await sleep(120);
+const railText = sDoc.querySelector('aside[aria-label="Secciones de configuración"]')?.textContent ?? "";
+assert.ok(!railText.includes("Este workspace"), "el riel ya no separa «Este workspace»");
+assert.ok(![...sDoc.querySelectorAll('aside p')].some((p) => p.textContent?.trim() === "Tú"), "el riel ya no muestra el encabezado «Tú»");
+assert.equal(sDoc.querySelector("#cfg-tab-preferences"), null, "la entrada «Preferencias» quedó vacía y fue retirada");
+assert.equal(sDoc.querySelector("#cfg-sub-workspaces"), null, "la pestaña «Barra de workspaces» fue retirada");
+sDoc.querySelector("#cfg-tab-agents-skills")?.click();
+for (let i = 0; i < 60 && !sDoc.querySelector("#cfg-panel")?.textContent?.includes("acme-agent"); i++) await sleep(25);
+assert.ok(sDoc.querySelector("#cfg-panel")?.textContent?.includes("acme-agent"), "Agentes muestra los del workspace inicial");
+const selectorTrigger = () => sDoc.querySelector("aside [data-settings-workspace-trigger]");
+assert.ok(selectorTrigger(), "el selector de workspace vive en el encabezado del riel");
+assert.ok(selectorTrigger().textContent.includes("Acme"), "el selector muestra el workspace activo");
+selectorTrigger().click();
 await sleep(80);
-[...renameApp.w.document.querySelectorAll('[role="menuitem"]')]
-  .find((b) => b.textContent?.trim() === "Administrar workspaces")?.click();
-await sleep(100);
-const pencil = (name) =>
-  renameApp.w.document.querySelector(`button[aria-label="Cambiarle el nombre a «${name}»"]`);
-const nameField = (name) =>
-  renameApp.w.document.querySelector(`input[aria-label="Nuevo nombre de «${name}»"]`);
-assert.ok(pencil("Beta"), "renombrar el workspace que no es el activo tiene que ser un gesto visible");
-assert.ok(![...renameApp.w.document.querySelectorAll("button")].some((b) => b.textContent?.trim() === "Crear workspace"),
-  "Configuración ya no crea un workspace local (F1.3)");
-assert.ok(pencil("Acme"), "y el activo también");
-pencil("Beta").click();
-await sleep(50);
-assert.deepEqual(workspaceChanges, [], "pedir renombrar no cambia de cliente");
-const wasCancelled = nameField("Beta");
-assert.ok(wasCancelled, "el gesto abre el campo del nombre");
-wasCancelled.value = "Gamma";
-wasCancelled.dispatchEvent(new renameApp.w.InputEvent("input", { bubbles: true }));
-wasCancelled.dispatchEvent(new renameApp.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-await sleep(50);
-assert.deepEqual(renames, [], "Escape cancela sin guardar");
-assert.ok(pencil("Beta"), "y Escape no se lleva por delante Configuración");
-pencil("Beta").click();
-await sleep(50);
-const typed = nameField("Beta");
-typed.value = "Gamma";
-typed.dispatchEvent(new renameApp.w.InputEvent("input", { bubbles: true }));
-typed.dispatchEvent(new renameApp.w.KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-await sleep(150);
-assert.deepEqual(renames, [["w2", "Gamma"]], "Enter guarda el que no es el activo");
-assert.deepEqual(workspaceChanges, [], "renombrar no cambia de cliente");
-assert.ok(pencil("Gamma"), "la lista se relee con el nombre nuevo");
-assert.deepEqual(renameApp.failures, []);
+assert.ok(sDoc.querySelector("[data-settings-workspace-menu]"), "el clic despliega el menú de workspaces");
+sDoc.dispatchEvent(new selectorApp.w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+await sleep(80);
+assert.equal(sDoc.querySelector("[data-settings-workspace-menu]"), null, "Escape cierra el menú del selector");
+assert.ok(sDoc.querySelector("#cfg-panel"), "Escape sobre el selector no cierra Configuración");
+selectorTrigger().click();
+await sleep(80);
+const betaOption = sDoc.querySelector('[data-settings-workspace-option="w2"]');
+assert.ok(betaOption, "el menú lista el otro workspace");
+betaOption.click();
+for (let i = 0; i < 80 && !sDoc.querySelector("#cfg-panel")?.textContent?.includes("beta-agent"); i++) await sleep(25);
+assert.deepEqual(workspaceChanges, ["w2"], "elegir otro workspace cambia el activo");
+assert.ok(sDoc.querySelector("#cfg-panel"), "cambiar de workspace mantiene Configuración abierta");
+assert.ok(selectorTrigger().textContent.includes("Beta"), "el selector refleja el workspace nuevo");
+assert.ok(sDoc.querySelector("#cfg-panel").textContent.includes("beta-agent"), "la sección activa recarga los datos del nuevo workspace");
+assert.ok(sDoc.querySelector("#cfg-panel").textContent.includes("Organización"), "un elemento gestionado muestra insignia discreta de organización");
+assert.ok(agentsReads.includes("w") && agentsReads.includes("w2"), "se consultaron los datos de ambos workspaces");
+assert.deepEqual(selectorApp.failures, []);
 
 // Los árboles montados conservan sus relojes: el proceso no termina solo.
 process.exit(0);

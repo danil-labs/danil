@@ -1,11 +1,11 @@
 import { Show, createContext, createSignal, onMount, useContext, type JSX } from "solid-js";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure } from "../../../../ui/src/Failure";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { t } from "../../../../ui/src/lib/i18n";
+import { cn } from "../../../../ui/src/lib/utils";
 
 /** Saltar el resto del alta y entrar a la app; solo lo provee el primer arranque. */
-export const SaltarAlta = createContext<(() => Promise<void>) | undefined>();
+const SaltarAlta = createContext<(() => Promise<void>) | undefined>();
 
 /** Una pantalla del alta: título, contenido desplazable y el pie con Atrás y la acción. */
 export function Pantalla(props: {

@@ -1,5 +1,6 @@
 import { ALPHA_DEMO, demoDenied } from "./alpha-mode";
 import type { AccountWorkspace, Answer, Computer } from "@terminus/computers";
+import { placeWorkspaces, type EdgeWorkspace } from "./edge-workspaces";
 import { type EngineEvent, type WorkspaceAttention, mergeAttention } from "@terminus/protocol";
 import { store } from "./store";
 import { sliceStorage } from "./sliceStorage";
@@ -32,6 +33,8 @@ type Machines = {
   hostOf: (id: string) => Host | undefined;
   /** Los workspaces de la cuenta (`GET /v1/workspaces`), con sus máquinas apagadas o no; `null` si el plano de control no los dice. */
   registry: AccountWorkspace[] | null;
+  /** Un límite de la sesión: hay que elegir organización, o esa organización no dio acceso a un espacio. */
+  access: "organization" | "workspace" | null;
   /** La máquina por omisión para tareas nuevas: la última usada, la VM administrada o la primera. */
   preferred: (eligible: Host[]) => Host | null;
   rememberMachine: (id: string) => void;
@@ -104,8 +107,9 @@ const demoHost: Host = {
 };
 
 export function MachinesProvider({ children, active = true }: { children: ReactNode; active?: boolean }) {
-  if (ALPHA_DEMO) return <Context.Provider value={{ ready: true, contextReady: true, fleet: "ok", hosts: [demoHost], hostOf: id => id === demoHost.id ? demoHost : undefined, registry: null, preferred: () => demoHost, rememberMachine: () => {}, pairing: null, pair: async () => { throw demoDenied(); }, reloadComputers: async () => {}, retryLicense: () => {}, attention: {}, activity: [], reasonOf: () => undefined, titleOf: () => undefined, rememberTitles: () => {}, setOpenTask: () => {}, subscribe: () => () => {}, tick: 0 }}>{children}</Context.Provider>;
-  return <LiveMachinesProvider active={active}>{children}</LiveMachinesProvider>;
+  const account = useAccount();
+  if (ALPHA_DEMO) return <Context.Provider value={{ ready: true, contextReady: true, fleet: "ok", hosts: [demoHost], hostOf: id => id === demoHost.id ? demoHost : undefined, registry: null, access: null, preferred: () => demoHost, rememberMachine: () => {}, pairing: null, pair: async () => { throw demoDenied(); }, reloadComputers: async () => {}, retryLicense: () => {}, attention: {}, activity: [], reasonOf: () => undefined, titleOf: () => undefined, rememberTitles: () => {}, setOpenTask: () => {}, subscribe: () => () => {}, tick: 0 }}>{children}</Context.Provider>;
+  return <LiveMachinesProvider key={account.session?.user.id ?? "signed-out"} active={active}>{children}</LiveMachinesProvider>;
 }
 
 function LiveMachinesProvider({ children, active }: { children: ReactNode; active: boolean }) {
@@ -113,6 +117,7 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
   const signedIn = active && Boolean(account.session);
   const [computers, setComputers] = useState<Computer[]>([]);
   const [registry, setRegistry] = useState<AccountWorkspace[] | null>(null);
+  const [access, setAccess] = useState<"organization" | "workspace" | null>(null);
   const [fleet, setFleet] = useState<Fleet>("loading");
   const [pairing, setPairing] = useState<Pairing | null>(null);
   const [pairingLoaded, setPairingLoaded] = useState(false);
@@ -151,7 +156,14 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
 
   // La lista se relee sola mientras el plano de control no la tenga (404/501) o no conteste (`reload.ts`).
   const reader = useMemo(() => {
-    type Read = { answer: Answer<Computer[]>; workspaces: Answer<AccountWorkspace[]> | null };
+    type Read = { answer: Answer<Computer[]>; workspaces: Answer<EdgeWorkspace[]> | null; access: "organization" | "workspace" | null };
+    const sameComputers = (old: Computer[], next: Computer[]) => {
+      const linked = (computer: Computer) => JSON.stringify(computer.workspaces ?? null);
+      return (
+        old.length === next.length &&
+        old.every((computer, index) => computer.computer_id === next[index].computer_id && computer.provider === next[index].provider && computer.name === next[index].name && linked(computer) === linked(next[index]))
+      );
+    };
     return retryingRead<Read | null>(
       async () => {
         if (!signedIn) return null;
@@ -159,32 +171,60 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
           plane.computers().catch((): Answer<Computer[]> => ({ kind: "error", status: null })),
           plane.workspaces().catch(() => null),
         ]);
-        return { answer, workspaces };
+        const blocked = (code: string | undefined) => code === "organization_selection_required";
+        const access =
+          (answer.kind === "error" && blocked(answer.code)) || (workspaces?.kind === "error" && blocked(workspaces.code))
+            ? "organization"
+            : workspaces?.kind === "error" && workspaces.code === "no_workspace_access"
+              ? "workspace"
+              : null;
+        return { answer, workspaces, access };
       },
       (read) => {
         if (!read) {
           setComputers([]);
           setRegistry(null);
+          setAccess(null);
           setFleet("signed_out");
           return;
         }
-        const { answer, workspaces } = read;
-        // Un plano de control sin el registro, o un fallo de red, deja la lista de antes.
-        if (workspaces?.kind === "ok") setRegistry((old) => (JSON.stringify(old) === JSON.stringify(workspaces.value) ? old : workspaces.value));
-        if (answer.kind === "ok") {
+        const { answer, workspaces, access } = read;
+        setAccess(access);
+        if (access === "organization") {
+          setRegistry([]);
+          setComputers([]);
           setFleet("ok");
-          // Solo cambia la lista si cambian las máquinas o sus workspaces vinculados: cada cambio vuelve a abrir sus sesiones.
-          setComputers((old) => {
-            const linked = (c: Computer) => JSON.stringify(c.workspaces ?? null);
-            const same =
-              old.length === answer.value.length &&
-              old.every((c, i) => c.computer_id === answer.value[i].computer_id && c.provider === answer.value[i].provider && c.name === answer.value[i].name && linked(c) === linked(answer.value[i]));
-            return same ? old : answer.value;
-          });
-        } else if (answer.kind === "license" || answer.kind === "no_account") setFleet(answer.kind);
-        else if (answer.kind !== "unauthorized") setFleet("error");
+          return;
+        }
+        const listed = answer.kind === "ok" ? answer.value : [];
+        if (access === "workspace") {
+          setRegistry([]);
+          if (answer.kind === "ok") {
+            setFleet("ok");
+            const next = placeWorkspaces([], listed).machines;
+            setComputers((old) => (sameComputers(old, next) ? old : next));
+          } else if (answer.kind === "license" || answer.kind === "no_account") setFleet(answer.kind);
+          else if (answer.kind !== "unauthorized") setFleet("error");
+          return;
+        }
+        // Un plano de control sin el registro, o un fallo de red, deja la lista de antes.
+        if (workspaces?.kind === "ok") {
+          const placed = plane.limitToRegistry ? placeWorkspaces(workspaces.value, listed) : null;
+          const registryValue = placed ? placed.registry : workspaces.value;
+          setRegistry((old) => (JSON.stringify(old) === JSON.stringify(registryValue) ? old : registryValue));
+          if (answer.kind === "ok") {
+            setFleet("ok");
+            const next = placed ? placed.machines : answer.value;
+            setComputers((old) => (sameComputers(old, next) ? old : next));
+          }
+        } else if (answer.kind === "ok") {
+          setFleet("ok");
+          setComputers((old) => (sameComputers(old, answer.value) ? old : answer.value));
+        }
+        if (answer.kind === "license" || answer.kind === "no_account") setFleet(answer.kind);
+        else if (answer.kind === "error") setFleet("error");
       },
-      { retry: (read) => read?.answer.kind === "error", first: RETRY_FIRST_MS, max: RETRY_MAX_MS },
+      { retry: (read) => read?.answer.kind === "error" && read.access === null, first: RETRY_FIRST_MS, max: RETRY_MAX_MS },
     );
   }, [signedIn, plane]);
   const reloadComputers = reader.run;
@@ -354,6 +394,7 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
       hosts,
       hostOf,
       registry,
+      access,
       preferred,
       rememberMachine,
       pairing,
@@ -369,7 +410,7 @@ function LiveMachinesProvider({ children, active }: { children: ReactNode; activ
       subscribe,
       tick,
     }),
-    [account.ready, pairingLoaded, signedIn, fleet, computers, fleetState, retryLicense, hosts, hostOf, registry, preferred, rememberMachine, pairing, pair, reloadComputers, attention, activity, reasonOf, titleOf, rememberTitles, setOpenTask, subscribe, tick],
+    [account.ready, pairingLoaded, signedIn, fleet, computers, fleetState, retryLicense, hosts, hostOf, registry, access, preferred, rememberMachine, pairing, pair, reloadComputers, attention, activity, reasonOf, titleOf, rememberTitles, setOpenTask, subscribe, tick],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

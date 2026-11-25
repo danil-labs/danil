@@ -1,24 +1,24 @@
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import Coffee from "lucide-solid/icons/coffee";
 import { createSignal, For, onCleanup, Show } from "solid-js";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
+import { t } from "../../../ui/src/lib/i18n";
+import { cn } from "../../../ui/src/lib/utils";
 import type { SignalTone } from "../../../ui/src/SignalDot";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
 import { Pressable } from "../../../ui/src/Pressable";
 
 export type Mode = "on" | "agent" | "off";
 
-export interface Status {
+interface Status {
   mode: Mode;
   active: boolean;
   supported: boolean;
 }
 
-export const MODES: Mode[] = ["on", "agent", "off"];
+const MODES: Mode[] = ["on", "agent", "off"];
 
-export function nameOf(mode: Mode): string {
+function nameOf(mode: Mode): string {
   switch (mode) {
     case "on":
       return t("shell.keep_awake.on");
@@ -29,7 +29,7 @@ export function nameOf(mode: Mode): string {
   }
 }
 
-export function descriptionOf(mode: Mode): string {
+function descriptionOf(mode: Mode): string {
   switch (mode) {
     case "on":
       return t("shell.keep_awake.on.description");
@@ -45,15 +45,15 @@ export function descriptionOf(mode: Mode): string {
  * un agente en el riel: el servicio avisa a todos con `keep-awake-changed`, así
  * que cambiarlo en uno se ve en el otro.
  */
-export function watchKeepAwake() {
+function watchKeepAwake() {
   const [status, setStatus] = createSignal<Status | null>(null);
 
-  void invoke<Status>("keep_awake_status").then(setStatus).catch(() => {});
+  void callShellViewEngine<Status>("keep_awake_status").then(setStatus).catch(() => {});
   const unlisten = listen<Status>("keep-awake-changed", (e) => setStatus(e.payload));
   onCleanup(() => void unlisten.then((u) => u()));
 
   const choose = (mode: Mode) => {
-    void invoke<Status>("set_keep_awake", { mode }).then(setStatus).catch(() => {});
+    void callShellViewEngine<Status>("set_keep_awake", { mode }).then(setStatus).catch(() => {});
   };
   return { status, choose };
 }

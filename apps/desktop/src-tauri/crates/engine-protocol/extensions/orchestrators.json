@@ -1,11 +1,10 @@
 {
   "version": 1,
   "name": "orchestrators",
-  "description": "Orquestadores externos: MCP local y remoto, resultado de tarea, conexiones por el relay y orquestadores de esta máquina. Fuera del hash de compatibilidad (status.contract).",
+  "description": "Orquestadores externos: MCP local y remoto, resultado de tarea y conexiones por el relay. Fuera del hash de compatibilidad (status.contract).",
   "features": [
     "external_connections_v1",
-    "task_result_v1",
-    "local_orchestrators_v1"
+    "task_result_v1"
   ],
   "commands": [
     {
@@ -141,104 +140,6 @@
       "durable": false,
       "relay": false,
       "enforcement": "server"
-    },
-    {
-      "async": false,
-      "channel": null,
-      "kind": "invoke",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server",
-      "scope": "workspace",
-      "relay": false,
-      "ids": {
-        "workspace": [
-          "workspace"
-        ]
-      },
-      "output": "-> Result < Value , Error >",
-      "name": "local_orchestrator_connect",
-      "path": "cli::connections::local_orchestrator_connect",
-      "parameters": [
-        {
-          "key": "workspace",
-          "name": "workspace",
-          "type": "String"
-        },
-        {
-          "key": "folder",
-          "name": "folder",
-          "type": "Option < String >"
-        },
-        {
-          "key": "label",
-          "name": "label",
-          "type": "String"
-        },
-        {
-          "key": "permissionMode",
-          "name": "permission_mode",
-          "type": "Option < String >"
-        }
-      ]
-    },
-    {
-      "async": false,
-      "channel": null,
-      "kind": "invoke",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server",
-      "scope": "workspace",
-      "relay": false,
-      "ids": {
-        "workspace": [
-          "workspace"
-        ]
-      },
-      "output": "-> Result < Value , Error >",
-      "name": "list_local_orchestrators",
-      "path": "cli::connections::list_local_orchestrators",
-      "parameters": [
-        {
-          "key": "workspace",
-          "name": "workspace",
-          "type": "String"
-        }
-      ]
-    },
-    {
-      "async": false,
-      "channel": null,
-      "kind": "invoke",
-      "audience": "window",
-      "authority": "admin",
-      "durable": false,
-      "enforcement": "server",
-      "scope": "workspace",
-      "relay": false,
-      "ids": {
-        "workspace": [
-          "workspace"
-        ]
-      },
-      "output": "-> Result < Value , Error >",
-      "name": "local_orchestrator_disconnect",
-      "path": "cli::connections::local_orchestrator_disconnect",
-      "parameters": [
-        {
-          "key": "workspace",
-          "name": "workspace",
-          "type": "String"
-        },
-        {
-          "key": "id",
-          "name": "id",
-          "type": "String"
-        }
-      ]
     }
   ]
 }

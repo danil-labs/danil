@@ -1,7 +1,7 @@
 import { listSourceSkills, setSourceSkill, uninstallSourceSkill } from "../queries/engine-skills";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
@@ -10,10 +10,10 @@ import { Toggle } from "../../../../ui/src/Toggle";
 import { EmptyState } from "../../../../ui/src/EmptyState";
 import Search from "lucide-solid/icons/search";
 import { SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
-import { lockedBy } from "../../../../../apps/desktop/src/lib/governance";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import { Governed } from "./Governed";
-import "../../../../../apps/desktop/src/locales/settingsPhrases";
+import { lockedBy } from "../../../../session/src/governance";
+import { cn } from "../../../../ui/src/lib/utils";
+import { Governed } from "../../../../ui/src/Governed";
+import "../../../../ui/src/locales/settingsPhrases";
 
 /** Una skill de una carpeta adjunta o de un repositorio. La compone `practices::SkillDeFuente`. */
 type SkillDeFuente = {

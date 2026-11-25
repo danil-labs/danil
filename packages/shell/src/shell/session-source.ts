@@ -15,12 +15,15 @@ type Listen = <T>(event: string, on: (e: { payload: T }) => void) => Promise<() 
 
 export const ENGINE_SESSION_FEATURE = "person_session_v1";
 
-export function deskSessionSource(invoke: Invoke, listen?: Listen): SessionSource {
+function deskSessionSource(rpc: Invoke, listen?: Listen): SessionSource {
   return {
     origin: "desk",
-    read: () => invoke<PersonSession>("danil_session_status").then((s) => s ?? null),
-    signIn: async () => { await invoke("danil_sign_in"); },
-    changes: (on) => listen ? listen<PersonSession>("danil-connect", (e) => on(e.payload ?? null)) : Promise.resolve(() => {}),
+    read: () => rpc<PersonSession>("danil_session_status").then((s) => s ?? null),
+    signIn: async () => { await rpc("danil_sign_in"); },
+    changes: async (on) => {
+      const off = await listen?.<PersonSession>("danil-connect", (e) => on(e.payload ?? null));
+      return () => off?.();
+    },
   };
 }
 
@@ -32,8 +35,18 @@ export const registerEngineSessionSource = (source: SessionSource | null) => { e
  * Con `person_session_v1`, `desk_auth` es el adaptador del motor (`engine_session.rs`): los mismos
  * comandos leen y abren la sesión del motor, y la del llavero de Desk ya no cuenta.
  */
-export async function personSessionSource(invoke: Invoke, features: () => Promise<readonly string[] | null>, listen?: Listen): Promise<SessionSource> {
+export async function personSessionSource(rpc: Invoke, features: () => Promise<readonly string[] | null>, listen?: Listen): Promise<SessionSource> {
   const announced = await features().catch(() => null);
-  if (!announced?.includes(ENGINE_SESSION_FEATURE)) return deskSessionSource(invoke, listen);
-  return engineSource ?? { ...deskSessionSource(invoke, listen), origin: "engine" };
+  if (!announced?.includes(ENGINE_SESSION_FEATURE)) return deskSessionSource(rpc, listen);
+  return engineSource ?? {
+    ...deskSessionSource(rpc, listen),
+    origin: "engine",
+    changes: async (on) => {
+      const offs = await Promise.all([
+        listen?.<PersonSession>("danil-connect", (e) => on(e.payload ?? null)),
+        listen?.<PersonSession>("person-session", (e) => on(e.payload ?? null)),
+      ]);
+      return () => { for (const off of offs) off?.(); };
+    },
+  };
 }

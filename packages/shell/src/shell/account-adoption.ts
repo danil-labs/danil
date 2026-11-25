@@ -1,9 +1,10 @@
 import { sendIdentityMe } from "../../../platform-client/src/identity.ts";
 import { accountId as asAccountId, type PendingUnions } from "./account-transfers.ts";
 import { WORKSPACES_ADOPT_CHALLENGE_PATH, WORKSPACES_ADOPT_PATH, workspacesPagePath } from "../../../platform-client/src/workspaces.ts";
+import type { Workspace, WorkspaceList } from "../../../platform-client/src/workspaces.ts";
 
 /** Un workspace local que se puede adoptar en la organización personal (`adoption_candidates`). */
-export type AdoptionCandidate = { id: string; name: string; created_at?: number; adoptable?: boolean; reason?: string };
+type AdoptionCandidate = { id: string; name: string; created_at?: number; adoptable?: boolean; reason?: string };
 type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>;
 type Send = (context: string, method: string, path: string, body?: unknown, key?: string) => Promise<{ status: number; body?: unknown; empty_reason?: unknown }>;
 export type AdoptionMemory = { key: (id: string) => string; skip: (org: string, id: string) => boolean; refuse: (org: string, id: string) => void; forget?: () => void };
@@ -68,9 +69,9 @@ async function platformByEngine(send: Send, context: string): Promise<Map<string
   do {
     const reply = await send(context, "GET", workspacesPagePath(cursor)).catch(() => null);
     if (!reply || reply.status !== 200) return null;
-    const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
+    const body = reply.body as WorkspaceList;
     for (const raw of body.items ?? []) {
-      const row = raw as { id?: unknown; engine_workspace_id?: unknown };
+      const row = raw;
       const account = asAccountId(row.id);
       if (account && typeof row.engine_workspace_id === "string" && row.engine_workspace_id) found.set(row.engine_workspace_id, account);
     }
@@ -97,7 +98,7 @@ async function platformByEngine(send: Send, context: string): Promise<Map<string
  * pedido no se sella.
  */
 export async function adoptLocals(
-  invoke: Invoke,
+  rpc: Invoke,
   header: Record<string, unknown>,
   send: Send,
   free: { context_id: string; org: string },
@@ -113,7 +114,7 @@ export async function adoptLocals(
   const empty = { adopted, already, refused, failed, unavailable: false, cause: null, attempted: 0 };
   let candidates: AdoptionCandidate[];
   try {
-    candidates = await invoke<AdoptionCandidate[]>("adoption_candidates", header);
+    candidates = await rpc<AdoptionCandidate[]>("adoption_candidates", header);
   } catch {
     return { ...empty, cause: "engine" };
   }
@@ -134,7 +135,7 @@ export async function adoptLocals(
     if (known) {
       // La plataforma ya la tiene: no se reclama otra vez, solo se recupera el sello local.
       try {
-        await invoke("adopt_account_workspace", { ...header, id: c.id, account: { org: free.org, account_id: known } });
+        await rpc("adopt_account_workspace", { ...header, id: c.id, account: { org: free.org, account_id: known } });
         already.push({ id: c.id, name: c.name });
         progress(c.id, c.name, "done");
         pending.add({ id: c.id, context: free.context_id, org: free.org, account_id: known });
@@ -158,7 +159,7 @@ export async function adoptLocals(
         continue;
       }
       nonce = value;
-      proof = proofOf(await invoke("adoption_proof", { ...header, id: c.id, nonce, org: free.org, sub }));
+      proof = proofOf(await rpc("adoption_proof", { ...header, id: c.id, nonce, org: free.org, sub }));
       if (!proof) {
         failed.push({ id: c.id, name: c.name, reason: "proof" });
         continue;
@@ -173,7 +174,7 @@ export async function adoptLocals(
     }
     const stop = stopCause(reply);
     if (stop) return { adopted, already, refused, failed, unavailable: true, cause: stop, attempted };
-    const body = reply.body as { id?: unknown; code?: unknown; engine_workspace_id?: unknown; org?: unknown; possession?: { jkt?: unknown } } | undefined;
+    const body = reply.body as Workspace | undefined;
     if (reply.status === 409) {
       const reason = typeof body?.code === "string" ? body.code : "conflict";
       if (reason === "id_taken") {
@@ -192,7 +193,7 @@ export async function adoptLocals(
       continue;
     }
     try {
-      await invoke("adopt_account_workspace", { ...header, id: c.id, account: { org: free.org, account_id: accountId } });
+      await rpc("adopt_account_workspace", { ...header, id: c.id, account: { org: free.org, account_id: accountId } });
     } catch {
       // La cuenta ya es de la persona en la plataforma: el siguiente repaso la sella (`already`).
       failed.push({ id: c.id, name: c.name, reason: "seal" });

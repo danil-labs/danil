@@ -1,8 +1,7 @@
 /** Cuántos proyectos abre el selector antes de «Más proyectos…». */
-export const RECENT_LIMIT = 8;
+const RECENT_LIMIT = 8;
 
-/** Última vez que se eligió cada proyecto en este selector: id → epoch en ms. */
-export type PickedAt = Record<string, number>;
+import type { PickedAt } from "../../../../ui/src/lib/picked-at.ts"; export type { PickedAt };
 
 type Ranked = { id: string; name: string; created_at?: number | null };
 
@@ -13,7 +12,7 @@ const ms = (at: number | null | undefined) =>
 const collator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
 
 /** El máximo de su última tarea viva, su última elección y su creación; nunca `updated_at`. */
-export function recency(project: Ranked, activity: Readonly<Record<string, number>>, picked: Readonly<PickedAt>): number {
+function recency(project: Ranked, activity: Readonly<Record<string, number>>, picked: Readonly<PickedAt>): number {
   return Math.max(ms(activity[project.id]), ms(picked[project.id]), ms(project.created_at));
 }
 

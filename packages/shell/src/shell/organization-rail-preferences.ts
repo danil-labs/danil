@@ -1,7 +1,7 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "../../../host/src/native.ts";
 import { createSignal } from "solid-js";
 import { capabilities } from "../../../host/src/platform";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs";
+import { escribirPref, leerPref } from "../../../session/src/prefs";
 import { changeOrgPreference, parseOrgPreference } from "./organization-rail-model";
 
 function windowKey() {

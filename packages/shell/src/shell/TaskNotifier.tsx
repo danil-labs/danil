@@ -1,20 +1,17 @@
 import { For, createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { leerPref } from "../../../../apps/desktop/src/lib/prefs";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { listen } from "../../../host/src/serviceEvents.ts";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
+import { leerPref } from "../../../session/src/prefs";
+import { t } from "../../../ui/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
 import { createWorkspaces } from "../../../features/settings/src/queries/workspaces-store";
 import type { AttentionState, WorkspaceAttention } from "./attention";
 import { Dynamic } from "solid-js/web";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { cn } from "../../../ui/src/lib/utils";
 import { stateColor, stateIcon } from "../../../features/projects/src/screens/TaskStatus";
-import type { ChatEvent } from "@terminus/protocol";
-
-/** Qué tareas avisan: todas, solo las que necesitan a la persona, o ninguna. */
-export type NotifyChoice = "all" | "needs_you" | "off";
-export const NOTIFY_PREF = "notify.tasks";
+import type { ChatEvent } from "../../../engine-client/src/index.ts";
+import { NOTIFY_PREF, type NotifyChoice } from "../../../features/settings/src/model/notify-pref";
 
 const NEEDS_YOU: AttentionState[] = ["approving", "asked", "failed"];
 
@@ -95,7 +92,7 @@ export default function TaskNotifier(props: {
       if (pending.get(notice.key) !== notice) return;
     }
     // Rust decide con el foco nativo: aviso del sistema, parpadeo, o este panel.
-    const where = await invoke<string>("tray_notify", {
+    const where = await callShellViewEngine<string>("tray_notify", {
       title: heading(notice.state, notice.title),
       body: hint(notice.state),
       needsYou: NEEDS_YOU.includes(notice.state),

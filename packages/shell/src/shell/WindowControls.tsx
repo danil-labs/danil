@@ -1,7 +1,7 @@
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getCurrentWindow } from "../../../host/src/native.ts";
 import { createSignal, onCleanup, onMount, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { t } from "../../../ui/src/lib/i18n";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { capabilities } from "../../../host/src/platform";
 import { isWindows } from "../../../host/src/window";
 import { Pressable } from "../../../ui/src/Pressable";
@@ -45,7 +45,7 @@ export default function ControlesDeVentana() {
       void getCurrentWindow().toggleMaximize().catch(() => {});
     } catch {}
   };
-  const pedirCierre = () => void invoke("request_close").catch(() => {});
+  const pedirCierre = () => void callShellViewEngine("request_close").catch(() => {});
 
   return (
     <Show when={isWindows() && capabilities().nativeWindow}>

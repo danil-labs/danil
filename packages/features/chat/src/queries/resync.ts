@@ -1,14 +1,15 @@
 
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import { esProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { t } from "../../../../ui/src/lib/i18n";
+import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
+import { esProvisional } from "../../../../ui/src/lib/taskDraft";
+import { callEngine } from "../../../../engine-client/src/client.ts";
+import { isNoMachines } from "../../../../host/src/platform.ts";
 import { claveDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
 import { type LiveTurn } from "./sleepSession.ts";
 import { createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
-import type { ServicePage, createServiceStream, createThreadsStore, createWorkspaceStore, machines } from "./types.js";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { CreateServiceStream, MachinesPort, ServicePage, WorkspaceContextPort, createThreadsStore } from "./types.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
 import type { createAttachments } from "./attachments.ts";
 import type { createResyncCommands } from "./resync-commands.ts";
@@ -18,10 +19,10 @@ import type { createThreadStream } from "./thread-stream.ts";
 
 /** Lo que el bloque usaba del cuerpo de App. */
 export type ResyncDeps = { applyPushed: ReturnType<typeof createAttachmentsMount>["applyPushed"]; asleep: (error: unknown) => boolean;
-  conversationScope: ReturnType<typeof createThreadStream>["conversationScope"]; createServiceStream: typeof createServiceStream;
+  conversationScope: ReturnType<typeof createThreadStream>["conversationScope"]; createServiceStream: CreateServiceStream;
   esDeLaAbierta: ReturnType<typeof createThreadStream>["esDeLaAbierta"]; handoff: ReturnType<typeof createThreadStream>["handoff"];
   leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number; liveThreads: ReturnType<typeof createThreadStream>["liveThreads"];
-  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machines: typeof machines; marcarViva: ReturnType<typeof createThreadStream>["marcarViva"];
+  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machines: MachinesPort; marcarViva: ReturnType<typeof createThreadStream>["marcarViva"];
   pendingStarts: ReturnType<typeof createThreadStream>["pendingStarts"]; pestanas: ReturnType<typeof createTabs>; ponerTerminal: ReturnType<typeof createResyncCommands>["ponerTerminal"];
   project: Accessor<string>; recargarMaterial: ReturnType<typeof createAttachments>["recargarMaterial"]; releerTrasHueco: () => void; reponerGates: ReturnType<typeof createSendGates>["reponerGates"];
   serviceListenersReady: Promise<unknown>; sesionesConPestana: Accessor<string[]>; sessionId: Accessor<string | null>; setConnectionError: Setter<string | null>;
@@ -29,7 +30,7 @@ export type ResyncDeps = { applyPushed: ReturnType<typeof createAttachmentsMount
   setPermissions: ReturnType<typeof createThreadStream>["setPermissions"]; settleTurn: ReturnType<typeof createAttachmentsMount>["settleTurn"];
   settlingTurns: ReturnType<typeof createThreadStream>["settlingTurns"]; soltarVistasHuerfanas: () => void; tareaDelRiel: (id: string) => SenderTask | null;
   terminales: ReturnType<typeof createThreadStream>["terminales"]; threads: ReturnType<typeof createThreadsStore>; vivas: ReturnType<typeof createThreadStream>["vivas"];
-  workspaceActivo: Accessor<string | null>; workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2197–2350, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createResync(deps: ResyncDeps) {
@@ -56,8 +57,8 @@ export function createResync(deps: ResyncDeps) {
 
   const serviceStream = createServiceStream({
     ready: () => deps.serviceListenersReady,
-    read: (request) => invoke<ServicePage>("service_poll", request),
-    filter: (sessions) => invoke("service_filter", { sessions }),
+    read: (request) => callEngine<ServicePage>("service_poll", request),
+    filter: (sessions) => callEngine("service_filter", { sessions }),
     visibleSessions: tareasQueSeVen,
     applyBatches: applyPushed,
     applyPage: (page, recovered: boolean) => {
@@ -74,9 +75,11 @@ export function createResync(deps: ResyncDeps) {
         if (affectedTurns) setError(t("chat.error.service_restarted"));
         void reconcileActiveTurns();
       }
-      // Un reinicio sin turnos vivos también corta el stream (`page.gap`); sin
-      // esta guarda el aviso de hueco sale sin que nada se haya perdido.
-      if (page.gap && !page.reset && affectedTurns) setError(t("chat.error.service_gap"));
+      // Un hueco del buffer en vivo se sana releyendo lo guardado y conciliando turnos activos.
+      if (page.gap && !page.reset && affectedTurns) {
+        for (const session of vivas()) releerUna(session);
+        void reconcileActiveTurns();
+      }
     },
     classifyFailure: (error) => {
       const code = claveDe(error);
@@ -92,13 +95,13 @@ export function createResync(deps: ResyncDeps) {
 
   async function reconcileActiveTurns() {
     const workspace = workspaceActivo();
-    if (!workspace) return;
+    if (!workspace || isNoMachines()) return;
     const revision = deps.lifecycleRevision;
     const generation = workspaceContext.generation();
     try {
       const [active, timing] = await Promise.all([
-        invoke<string[]>("list_active_turns", { workspace }),
-        invoke<LiveTurn[]>("list_live_turns").catch(() => []),
+        callEngine<string[]>("list_active_turns", { workspace }),
+        callEngine<LiveTurn[]>("list_live_turns").catch(() => []),
       ]);
       if (generation !== workspaceContext.generation() || revision !== deps.lifecycleRevision) return;
       const enVuelo = timing.filter((turn) => turn.workspace === workspace && active.includes(turn.session));
@@ -188,7 +191,7 @@ export function createResync(deps: ResyncDeps) {
   // vuelve— las dejaría flotando sobre la interfaz sin pestaña que las
   // cierre. Aquí es el primer instante en que se sabe que el documento es
   // nuevo. Ver `sites::site_sweep`.
-  onMount(() => void invoke("site_sweep").catch(() => {}));
+  onMount(() => void callEngine("site_sweep").catch(() => {}));
   // Lo mismo con los Tinymist de la vista de Typst: sin visor que los suelte, seguirían vivos.
   onMount(soltarVistasHuerfanas);
   return { enviarFiltro, reconcileActiveTurns, reconcileSoon, releerUna, serviceStream };

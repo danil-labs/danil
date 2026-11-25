@@ -1,251 +1,76 @@
-import ExternalLink from "lucide-solid/icons/external-link";
-import { createEffect, createSignal, Match, on, Show, Switch } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { openExternal } from "../queries/engine-open";
+import { Match, Show, Switch } from "solid-js";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";
-import { engineAccountProfile, engineAccountProfileOf, profileFromStatus } from "../queries/account-engine";
-import { type AccountProfile, type AccountProfileSource, PROFILE_CHANGED } from "../model/account-profile";
-import { AccountIdentityBlock, type AccountIdentityState, createAccountIdentity } from "./AccountIdentity";
-import type { DanilConnectStatus } from "../queries/danil-account";
-import { createDanilAccounts, type DanilAccounts } from "../queries/danil-accounts";
-import { createDanilSession, DanilSignInChoices, said } from "./danil-session";
-import { EmailsSection } from "./EmailsSection";
-import { type DanilSessionInfo, sessionForWorkspace, sessionKey, statusOf, syncLine } from "../queries/danil-sessions";
-import type { MaquinasDeAjustes } from "../model/machines-port";
-import { requestAccessInBrowser, TerminusLicense } from "../screens/TerminusLicense";
+import { t } from "../../../../ui/src/lib/i18n";
 import { SettingsBlock, SettingsPanel, SettingsRow, SettingsSection } from "../../../../ui/src/SettingsLayout";
-import { createWorkspaces } from "../queries/workspaces-store";
-import WorkspaceAccount from "./WorkspaceAccount";
+import type { AccountProfileSource } from "../model/account-profile";
+import type { SesionesDeAjustes } from "../model/sessions-port";
+import { engineAccountProfile } from "../queries/account-engine";
+import type { DanilConnectStatus } from "../queries/danil-account";
+import { requestAccessInBrowser, TerminusLicense } from "../screens/TerminusLicense";
+import { AccountIdentityBlock, createAccountIdentity } from "./AccountIdentity";
+import AccountPlan from "./AccountPlan";
+import { createDanilSession, DanilSignInChoices } from "./danil-session";
 
-/**
- * `profile`: la persona y su sesión (Cuenta › Perfil); `machines`: sus máquinas
- * (Máquinas), o la sesión mientras no hay máquinas que listar; `emails`: sus correos (solo la web).
- */
-export type DanilAccountPart = "profile" | "emails" | "machines";
-
-/** El nombre nuevo de esta computadora: Perfil lo enseña aunque se haya cambiado en Máquinas. */
-const [selfRename, setSelfRename] = createSignal<{ id: string; name: string } | null>(null);
-const renamedFor = (id: string | null | undefined) => {
-  const r = selfRename();
-  return r && id && r.id === id ? r.name : null;
-};
-const renameFor = (id: string | null | undefined) => (name: string) => {
-  if (id) setSelfRename({ id, name });
-};
-
-/** Configuración → Cuenta de Danil. Chunk aparte: solo lo carga quien abre esta sección. */
-export default function DanilAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
+/** Configuración → Cuenta de Danil (respaldo cuando no hay sesiones por grupo). */
+export default function DanilAccount(props: {
+  workspace: string | null;
+  context?: string | null;
+  sesiones: SesionesDeAjustes;
+}) {
   const web = capabilities().accountProfile;
-  return web ? <WebAccount source={web} part={props.part} maquinas={props.maquinas} /> : <MachineAccount part={props.part} maquinas={props.maquinas} />;
-}
-
-/** Los correos se administran en la web de alfa (vive en la raíz del dominio), con la sesión del navegador. */
-const EMAILS_URL = "https://alfa-app.danil.ai/?settings=emails";
-
-/** Sin fuente de correos aquí (el escritorio, o la web fuera de alfa): la fila que abre la web. */
-function ManageEmailsRow(props: { web?: boolean }) {
-  const open = () => {
-    if (props.web) window.open(EMAILS_URL, "_blank", "noopener");
-    else void openExternal({ target: EMAILS_URL }).catch(() => {});
-  };
-  return (
-    <SettingsRow label={t("danil.emails.manage_label")} description={t("danil.emails.manage_description")} data-account-emails-link="">
-      <Button size="sm" variant="secondary" onClick={open}>
-        <ExternalLink size={14} />
-        {t("danil.emails.manage")}
-      </Button>
-    </SettingsRow>
+  return web ? (
+    <WebAccount source={web} workspace={props.workspace} context={props.context} sesiones={props.sesiones} />
+  ) : (
+    <SingleAccount workspace={props.workspace} context={props.context} sesiones={props.sesiones} />
   );
 }
 
-/** En la web la persona ya entró con su cuenta. Perfil se monta de nuevo al volver a su pestaña, así que relee un principal cambiado en Correos. */
-function WebAccount(props: { source: AccountProfileSource; part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
-  const { AccountComputersSection, ConnectMachineSection, WslMachineSection } = props.maquinas;
+/** En la web la persona ya entró con su cuenta. */
+function WebAccount(props: {
+  source: AccountProfileSource;
+  workspace: string | null;
+  context?: string | null;
+  sesiones: SesionesDeAjustes;
+}) {
   const identity = createAccountIdentity(props.source);
-  const workspaces = createWorkspaces();
-  const emails = () => props.part === "emails" ? capabilities().accountEmails : undefined;
+  const canSignOut = () => Boolean(capabilities().webAccounts?.signOut);
   return (
     <SettingsPanel data-danil-account="web">
-      <Show when={props.part === "profile"}>
-        <SettingsSection title={t("danil.account.title")} description={t("danil.account.web_description")}>
-          <AccountIdentityBlock identity={identity} />
-        </SettingsSection>
-      </Show>
-      <Show when={emails()}>
-        {(source) => <EmailsSection source={source()} onPrimaryChanged={() => window.dispatchEvent(new CustomEvent(PROFILE_CHANGED))} />}
-      </Show>
-      <Show when={props.part === "machines"}>
-        {/* Por el id: cada recarga trae otro objeto del mismo workspace y desmontaba la lista. */}
-        {/* Sin workspace actual la lista de la cuenta se pinta igual: la web las lee de `/v1/machines`. */}
-        <Show when={workspaces.actual()?.id} keyed fallback={<AccountComputersSection />}>
-          {(id) => <AccountComputersSection workspace={id} />}
-        </Show>
-        <ConnectMachineSection />
-        <WslMachineSection />
-      </Show>
-    </SettingsPanel>
-  );
-}
-
-/** La cuenta se resuelve por el workspace, nunca por la sesión principal de la máquina. */
-function MachineAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
-  const workspaces = createWorkspaces();
-  const accounts = createDanilAccounts({ workspace: () => workspaces.actual()?.id, machines: props.maquinas.machines });
-  const loadFailed = () => accounts.loadFailed() || Boolean(workspaces.fallo());
-  const retry = () => void Promise.all([accounts.reload(), workspaces.cargar()]);
-  const aLoadText = () => t(loadFailed() ? "danil.workspace.read_failed" : "danil.account.loading");
-  return (
-    <Show when={accounts.sessions() !== null} fallback={<SingleAccount part={props.part} maquinas={props.maquinas} />}>
-      <Show when={accounts.sessions() !== undefined && !accounts.loadingOf() && !workspaces.cargando() && accounts.workspaceOf() === workspaces.actual()?.id && workspaces.actual()?.id} keyed fallback={
-        <SettingsPanel data-danil-account={loadFailed() ? "failed" : "loading"}>
-          <SettingsRow label={aLoadText()}>
-            <Show when={loadFailed()}>
-              <Button size="sm" variant="secondary" onClick={retry}>{t("danil.workspace.retry")}</Button>
-            </Show>
-          </SettingsRow>
-        </SettingsPanel>
-      }>
-        {(id) => <WorkspacePanel workspace={{ id, name: workspaces.actual()!.name }} accounts={accounts} part={props.part} maquinas={props.maquinas} />}
-      </Show>
-    </Show>
-  );
-}
-
-function WorkspacePanel(props: { workspace: { id: string; name: string }; accounts: DanilAccounts; part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
-  const { AccountComputersSection, ConnectMachineSection } = props.maquinas;
-  const a = props.accounts;
-  const [manage, setManage] = createSignal(false);
-  const session = () => a.of()?.signed_in ? sessionForWorkspace(a.sessions(), a.of()) : null;
-  let shownAccount: string | null | undefined;
-  createEffect(() => {
-    const s = session();
-    const key = s ? sessionKey(s) : null;
-    if (key === shownAccount) return;
-    shownAccount = key;
-    setManage(false);
-  });
-  const onlyMachines = () => props.part === "machines" && Boolean(session() && a.of()?.linked);
-  const line = () => syncLine(a.of(), a.sessions());
-  const description = () => {
-    const l = line();
-    if (l.kind === "synced") return t("danil.workspace.synced", { email: l.email });
-    if (l.kind === "unlinked") return t("danil.workspace.unlinked", { email: l.email });
-    if (l.kind === "none") return t("danil.workspace.no_account");
-    return l.email ? t("danil.workspace.unsynced_account", { email: l.email }) : t("danil.workspace.unsynced");
-  };
-  return (
-    <SettingsPanel data-danil-account="workspace">
-      <Show when={!onlyMachines()}>
-      <SettingsSection title={t("danil.here.title", { name: props.workspace.name })} data-danil-here="">
-        <Show when={a.of()} fallback={
-          <SettingsRow label={t("danil.workspace.read_failed")}>
-            <Button size="sm" variant="secondary" onClick={() => void a.reload()}>{t("danil.workspace.retry")}</Button>
-          </SettingsRow>
-        }>
-          <SettingsRow label={t("danil.workspace.title")} description={description()}>
-            <Button size="sm" variant="secondary" aria-expanded={manage()} onClick={() => setManage(!manage())} data-danil-manage="">
-              {manage() ? t("danil.workspace.done") : a.of()?.account ? t("danil.workspace.manage") : t("danil.workspace.connect")}
+      <SettingsSection title={t("settings.account.session_title")} data-account-session="">
+        <AccountIdentityBlock identity={identity} />
+        <Show when={canSignOut()}>
+          <SettingsRow label={identity.profile()?.email ?? capabilities().webAccounts?.current.email ?? t("danil.account.your_account")}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => capabilities().webAccounts?.signOut()}
+              data-account-sign-out=""
+            >
+              {t("danil.account.sign_out")}
             </Button>
           </SettingsRow>
-          <Show when={manage()}>
-            <SettingsBlock>
-              <WorkspaceAccount workspace={props.workspace.id} name={props.workspace.name} state={a} placement="section" maquinas={props.maquinas} onChanged={(problem) => { a.setProblem(problem); void a.reload(); }} />
-            </SettingsBlock>
-          </Show>
         </Show>
       </SettingsSection>
-      </Show>
-      <Show when={session() && sessionKey(session()!)} keyed>
-        {(key) => (
-          <>
-            <Show when={!onlyMachines()}>
-              <SettingsSection title={t("danil.account.title")}>
-                <SessionCard session={session()!} accounts={a} computerName={renamedFor(session()?.computer_id) ?? undefined} />
-                <Show when={a.problem()}>{(code) => <p class="m-0 text-sm text-error-strong" role="alert">{said(code())}</p>}</Show>
-              </SettingsSection>
-            </Show>
-            <Show when={a.of()?.linked && props.part !== "profile"}>
-              <AccountComputersSection account={key} workspace={props.workspace.id} self={session()?.computer_id} onSelfName={renameFor(session()?.computer_id)} />
-              <ConnectMachineSection account={key} />
-            </Show>
-          </>
-        )}
-      </Show>
-      <LocalMachines part={props.part} maquinas={props.maquinas} />
+      <AccountPlan workspace={props.workspace} context={props.context} sesiones={props.sesiones} />
     </SettingsPanel>
-  );
-}
-
-/** Una cuenta: su persona (con la foto), esta computadora en ella, y sus acciones. */
-function SessionCard(props: { session: DanilSessionInfo; accounts: DanilAccounts; computerName?: string }) {
-  const key = sessionKey(props.session) as string;
-  const s = () => props.session;
-  const identity = createAccountIdentity(engineAccountProfileOf(key), undefined, {
-    watch: () => [s().photo, s().name, s().email],
-  });
-  // Mientras el motor contesta, la persona sale de la lista.
-  const [listed, setListed] = createSignal<AccountProfile | null>(null);
-  createEffect(on(s, (session) => void profileFromStatus(statusOf(session)).then(setListed).catch(() => {})));
-  const shown: AccountIdentityState = { ...identity, profile: () => identity.profile() ?? listed() ?? null };
-  /** Cerrar la sesión deja sin sincronizar todos sus workspaces de aquí: se confirma antes. */
-  const [asking, setAsking] = createSignal(false);
-  const state = () =>
-    t("danil.accounts.row", {
-      status: s().online ? t("danil.accounts.online") : t("danil.accounts.offline"),
-      workspaces: t("danil.accounts.workspaces", { count: s().workspaces.length }),
-    });
-
-  return (
-    <div class="grid border-b border-border last:border-b-0" data-danil-session={key} data-default={s().default ? "" : undefined}>
-      <AccountIdentityBlock identity={shown} />
-      <ManageEmailsRow />
-      <SettingsRow
-        label={t("danil.account.this_computer", { name: props.computerName || s().computer_name || s().computer_id || "" })}
-        description={state()}
-      >
-        <Show when={!asking()}>
-          <Button size="sm" variant="secondary" disabled={props.accounts.busy()} onClick={() => setAsking(true)} data-danil-sign-out="">
-            {t("danil.account.sign_out")}
-          </Button>
-        </Show>
-      </SettingsRow>
-      <Show when={asking()}>
-        <SettingsRow label={t("danil.accounts.sign_out_confirm", { count: s().workspaces.length })} data-danil-sign-out-confirm="">
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={props.accounts.busy()}
-            onClick={() => {
-              setAsking(false);
-              void props.accounts.signOut(key);
-            }}
-            data-danil-sign-out-yes=""
-          >
-            {t("danil.account.sign_out")}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setAsking(false)}>
-            {t("danil.workspace.leave_no")}
-          </Button>
-        </SettingsRow>
-      </Show>
-    </div>
   );
 }
 
 /**
  * Compatibilidad con el motor anterior: su única sesión pertenece a esta computadora.
  */
-function SingleAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
-  const { AccountComputersSection, ConnectMachineSection } = props.maquinas;
+function SingleAccount(props: {
+  workspace: string | null;
+  context?: string | null;
+  sesiones: SesionesDeAjustes;
+}) {
   const session = createDanilSession();
   const { view, status, name, setName, busy } = session;
-  const onlyMachines = () => props.part === "machines" && status()?.state === "connected";
 
   return (
     <SettingsPanel data-danil-account={status()?.state ?? view().t}>
-      <Show when={!onlyMachines()}>
       <SettingsSection title={t("danil.account.title")} description={t("danil.account.description")}>
         <Switch>
           <Match when={view().t === "loading"}>
@@ -260,9 +85,8 @@ function SingleAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAju
           </Match>
           <Match when={status()?.state === "connected"}>
             <ConnectedIdentity status={status} />
-            <ManageEmailsRow />
             <SettingsRow
-              label={t("danil.account.this_computer", { name: renamedFor(status()?.computer_id) || status()?.name || status()?.computer_id || "" })}
+              label={t("danil.account.this_computer", { name: status()?.name || status()?.computer_id || "" })}
               description={status()?.online ? t("danil.account.online") : t("danil.account.offline")}
             >
               <Button size="sm" variant="secondary" disabled={busy()} onClick={() => void session.signOut()}>
@@ -311,23 +135,10 @@ function SingleAccount(props: { part?: DanilAccountPart; maquinas: MaquinasDeAju
           {(text) => <p class="m-0 pt-2 text-ui text-error-strong" role="alert">{text()}</p>}
         </Show>
       </SettingsSection>
+      <Show when={status()?.state === "connected"}>
+        <AccountPlan workspace={props.workspace} context={props.context} sesiones={props.sesiones} />
       </Show>
-      <Show when={status()?.state === "connected" && props.part !== "profile"}>
-        <AccountComputersSection self={status()?.computer_id ?? null} onSelfName={renameFor(status()?.computer_id)} />
-        <ConnectMachineSection />
-      </Show>
-      <LocalMachines part={props.part} maquinas={props.maquinas} />
     </SettingsPanel>
-  );
-}
-
-/** Linux en esta Mac o PC: es local y no pide cuenta de Danil. */
-function LocalMachines(props: { part?: DanilAccountPart; maquinas: MaquinasDeAjustes }) {
-  const { WslMachineSection } = props.maquinas;
-  return (
-    <Show when={props.part !== "profile"}>
-      <WslMachineSection />
-    </Show>
   );
 }
 

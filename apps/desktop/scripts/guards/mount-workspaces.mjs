@@ -214,7 +214,6 @@ const WINDOWS = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (K
 const windowsApp = await boot("listo", "title-bar-windows", { ...TASK_AFTER_QUEUE,
   "plugin:window|title": "Danil",
   check_environment: () => ({ ready: true, blocked: false, reason: null, items: [], bootstrap: [], engineBuild: "0.2.73 b1fed68" }),
-  list_dependencies: [],
   list_language_packs: [], list_bundled_language_packs: [],
 }, WINDOWS);
 await sleep(300);
@@ -231,13 +230,6 @@ await sleep(300);
 assert.ok(d3.querySelector("[data-task-files]"), "el panel de archivos abre");
 assert.equal(minimizeButton().length, 1, "con el panel abierto siguen siendo uno");
 assert.ok(minimizeButton()[0].closest("[data-title-bar]"));
-d3.querySelector('button[aria-label="Configuración"]')?.click();
-await sleep(150);
-d3.querySelector("#cfg-tab-machines").click();
-await sleep(50);
-[...d3.querySelectorAll("button")].find((b) => b.textContent.trim() === "Estado del entorno").click();
-await sleep(200);
-assert.equal(d3.body.textContent.split("Motor 0.2.73 b1fed68").length, 2, "el build del motor aparece una sola vez en Estado del entorno");
 assert.deepEqual(windowsApp.failures, []);
 /**
  * Un turno vivo sobrevive al cambio de workspace, y su reloj también.
@@ -263,7 +255,7 @@ const crossingApp = await boot("listo", 20, { ...TASK_AFTER_QUEUE,
   list_active_turns: () => inFlight.filter((turn) => turn.workspace === activeWs).map((turn) => turn.session),
 });
 const crossingBody = () => crossingApp.w.document.body.textContent;
-const turnClock = () => (crossingBody().match(/·\s([\dms ]+?)\s*(?:Fuentes|$)/) ?? [])[1] ?? null;
+const turnClock = () => (crossingBody().match(/·\s(\d+[ms](?:\s\d+s)?)/) ?? [])[1] ?? null;
 const waitingLabel = () => !!crossingApp.w.document.querySelector('[role="status"][aria-label="El agente está trabajando"]');
 const moveTo = async (destination) => {
   activeWs = destination;

@@ -1,9 +1,9 @@
 
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type Agent, type Source } from "../../../../../apps/desktop/src/lib/model.ts";
-import { type CatalogosDeModelos } from "../../../../../apps/desktop/src/lib/models.ts";
-import { esProvisional, tituloProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { t } from "../../../../ui/src/lib/i18n";
+import { type Agent, type Source } from "../../../../ui/src/lib/model.ts";
+import { type CatalogosDeModelos } from "../../../../ui/src/lib/models.ts";
+import { esProvisional, tituloProvisional } from "../../../../ui/src/lib/taskDraft";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { claveDe, prosaDe } from "../../../../ui/src/Failure";
 import { type Encolado } from "../components/MessageQueue";
@@ -16,10 +16,10 @@ import { comandoEscrito } from "../model/slashOutput";
 import { type Signatures } from "../model/transcript";
 import { type Session } from "../model/transcript.ts";
 import { type Msg } from "../screens/Chat";
-import { OPENCODE, canonicalAgentId, isFreeRouterModel } from "@terminus/tasks";
+import { OPENCODE, canonicalAgentId, isFreeRouterModel } from "../../../../ui/src/lib/tasks/index.ts";
 import { batch, type Accessor, type Setter } from "solid-js";
-import type { CarriedBase, MachineWait, SessionRow, createDraftsStore, createThreadsStore, createWorkspaceStore, machines } from "./types.js";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { CarriedBase, DraftsPort, MachineWait, MachinesPort, SessionRow, WorkspaceContextPort, createThreadsStore } from "./types.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createPanelDeChat } from "../screens/PanelDeChat.tsx";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
 import type { createAttachments } from "./attachments.ts";
@@ -37,12 +37,12 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
   apagadas: Accessor<Readonly<Record<string, string>>>; attachmentsFor: ReturnType<typeof createAttachments>["attachmentsFor"]; carryModule: ReturnType<typeof createSendGates>["carryModule"];
   catalogos: Accessor<CatalogosDeModelos>; claveAbierta: () => string; conversationScope: ReturnType<typeof createThreadStream>["conversationScope"];
   deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; draftBases: Accessor<Record<string, string>>;
-  draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: ReturnType<typeof createDraftsStore>;
-  espacioPara: (space: string | null | undefined, machine: string | null | undefined) => string | null; excludedSourceIds: Accessor<string[]>; filaDe: (id: string) => SessionRow | undefined;
+  draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: DraftsPort;
+  excludedSourceIds: Accessor<string[]>; filaDe: (id: string) => SessionRow | undefined;
   finishedTurns: ReturnType<typeof createThreadStream>["finishedTurns"]; firmas: Record<string, Author | null>; grupos: Accessor<string[]>;
   hablandoCon: Accessor<{ project: string; name: string; } | null>; handoff: ReturnType<typeof createThreadStream>["handoff"];
   leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number;
-  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>; machines: typeof machines;
+  loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>; machines: MachinesPort;
   marcarQuieta: ReturnType<typeof createThreadStream>["marcarQuieta"]; marcarViva: ReturnType<typeof createThreadStream>["marcarViva"]; modelosEnVivo: Record<string, string | null>;
   olvidarPestana: ReturnType<typeof createPanelDeChat>["olvidarPestana"];
   opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; };
@@ -51,12 +51,14 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
   refreshSessions: (proyectos: string[]) => Promise<void>; retirarNaciendo: (id: string) => { project: string; row: SessionRow; }[]; sessionId: Accessor<string | null>;
   setArrancando: ReturnType<typeof createThreadStream>["setArrancando"]; setError: Setter<string | null>; setHablandoCon: Setter<{ project: string; name: string; } | null>;
   setSessionId: Setter<string | null>; settleTurn: ReturnType<typeof createAttachmentsMount>["settleTurn"]; sourceIds: Accessor<string[]>;
-  taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; taskSources: Accessor<Source[] | null>; threads: ReturnType<typeof createThreadsStore>;
-  traspasos: Accessor<Readonly<Record<string, HandoverState>>>; workspaceActivo: Accessor<string | null>; workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; taskSources: Accessor<Source[] | null>;
+  taskSpaceCreate?: (requested: string | null | undefined) => { engineSpace: string | null; record: (taskId: string) => void };
+  threads: ReturnType<typeof createThreadsStore>;
+  traspasos: Accessor<Readonly<Record<string, HandoverState>>>; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 4892–5203, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createSend(deps: SendDeps) {
-  const { adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, espacioPara, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, threads, traspasos, workspaceActivo, workspaceContext } = deps;
+  const { adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, taskSpaceCreate, threads, traspasos, workspaceActivo, workspaceContext } = deps;
   const carryModule: SendDeps["carryModule"] = (...a: Parameters<SendDeps["carryModule"]>) => deps.carryModule(...a);
   const olvidarPestana: SendDeps["olvidarPestana"] = (...a: Parameters<SendDeps["olvidarPestana"]>) => deps.olvidarPestana(...a);
   /**
@@ -122,7 +124,7 @@ export function createSend(deps: SendDeps) {
     // no por el del selector: la cola guarda con qué se escribió cada uno, y
     // moverlo a mitad de un turno no puede reescribir hacia atrás quién
     // contestó los que ya estaban esperando.
-    const signatureReady = invoke<Signatures>("turn_authors", {
+    const signatureReady = callEngine<Signatures>("turn_authors", {
       provider: m.provider,
     }).catch(() => null);
     const firmaDelTurno = respuestas ? await signatureReady : null;
@@ -177,7 +179,10 @@ export function createSend(deps: SendDeps) {
         const selected = catalogos()[m.provider]?.models.find((model) => model.id === m.model);
         if (!selected || selected.gratis === true) throw new Error(t("surfaces.free_off"));
       }
-      const mandarTurno = () => invoke<string>("send_message", {
+      const spacePlan = !abierta && taskSpaceCreate
+        ? taskSpaceCreate(m.space)
+        : { engineSpace: m.space ?? null, record: () => {} };
+      const mandarTurno = () => callEngine<string>("send_message", {
         provider: m.provider,
         project: proyecto,
         session: abierta,
@@ -219,8 +224,9 @@ export function createSend(deps: SendDeps) {
         hops: m.hops ?? null,
         fromTask: m.from_task ?? null,
         // El escritorio que la persona tenía delante al escribirlo, sellado en el
-        // mensaje; lo que llega de otro canal no trae ninguno.
-        space: espacioPara(m.space, opciones?.headers?.["x-terminus-machine"]),
+        // mensaje; con spaces en workspaces el motor usa su espacio por defecto y
+        // el mapeo del usuario se graba inmediatamente al volver el id.
+        space: spacePlan.engineSpace,
         clientMessageId,
       }, opciones);
       // El consentimiento del traspaso va justo antes del turno: el motor lo
@@ -241,7 +247,7 @@ export function createSend(deps: SendDeps) {
         provider: m.provider,
         command: m.text.trimStart().startsWith("!"),
         setProvider: (provider) =>
-          invoke("set_session_provider", { project: proyecto, session: abierta ?? "", provider }, opcionesDeLaTarea(abierta, workspaceActivo())),
+          callEngine("set_session_provider", { project: proyecto, session: abierta ?? "", provider }, opcionesDeLaTarea(abierta, workspaceActivo())),
         send: () => {
           const target = opciones?.headers?.["x-terminus-machine"];
           const machine = target ? machines().find((row) => row.id === target) : undefined;
@@ -255,6 +261,7 @@ export function createSend(deps: SendDeps) {
         },
       });
       const id = traspaso.answer;
+      if (!abierta) spacePlan.record(id);
       if (generation === workspaceContext.generation()) handoff.observe({ kind: "accepted", scope: conversationScope(id, proyecto) });
       threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]);
       // El gesto quedó consumido: se escribió el consentimiento o el mensaje ya
@@ -332,25 +339,32 @@ export function createSend(deps: SendDeps) {
         pestanas.close(provisional);
         olvidarPestana(provisional);
       }
-      threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
-      if (generation !== workspaceContext.generation()) return false;
+      if (generation !== workspaceContext.generation()) {
+        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+        return false;
+      }
       if (abierta) handoff.observe({ kind: "rejected", scope: conversationScope(abierta, proyecto), error: e });
       if (e === CARRY_STOPPED) {
         // El texto vuelve a la caja: el globo se iría duplicado.
+        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
         setArrancando(false);
         return false;
       }
       if (destination && claveDe(e) === "history.error.busy") {
-        marcarQuieta(destination.session);
+        threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
+        marcarQuieta(destination.session, "failed");
         throw e;
       }
       // Lo escrito para una tarea que otro turno ocupa espera en su cola, con la misma identidad.
       if (!respuestas && !deLaCola && claveDe(e) === "history.error.busy" && abierta === sessionId()) {
-        batch(() => { taskQueues.enqueue({ ...m, id: clientMessageId }, true); setArrancando(false); if (abierta) marcarQuieta(abierta); });
+        batch(() => { threads.rejectOptimistic(clave, [turnoPropio, ...entrando]); taskQueues.enqueue({ ...m, id: clientMessageId }, true); setArrancando(false); if (abierta) marcarQuieta(abierta); });
         return true;
       }
-      if (!abierta) { threads.finishActivity(""); setArrancando(false); }
-      if (abierta) marcarQuieta(abierta);
+      // Error real de envío: conservamos el mensaje de la persona para que el hilo muestre
+      // «Mensaje → Hubo un error: … [Reintentar]» y «Reintentar» reenvíe este mensaje.
+      threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]);
+      if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
+      if (abierta) marcarQuieta(abierta, "failed");
       threads.appendLive(clave, [{
                   role: "system",
                   // Una negativa de comando llega como clave: la frase nombra lo escrito.
@@ -376,6 +390,6 @@ export function createSend(deps: SendDeps) {
   };
   /** Lo que esa tarea tiene esperando. No lanza: sin respuesta, no hay nada. */
   const pendientesDe = (session: string, workspace = workspaceActivo()) =>
-    invoke<Pendientes>("pending_requests", { session }, opcionesDeLaTarea(session, workspace)).catch(() => null);
+    callEngine<Pendientes>("pending_requests", { session }, opcionesDeLaTarea(session, workspace)).catch(() => null);
   return { enviar, pendientesDe };
 }

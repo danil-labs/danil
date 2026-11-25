@@ -3,9 +3,9 @@ import test from "node:test";
 import { JSDOM } from "jsdom";
 import { fromMarkdown } from "mdast-util-from-markdown";
 
-const { remarkMatematicas } = await import("../../src/ui/markdown-math.ts");
-const { pintarFormula, OPCIONES_KATEX } = await import("../../src/ui/markdown-katex.ts");
-const { bloquesDeMarkdown } = await import("../../src/ui/markdown-blocks.ts");
+const { remarkMatematicas } = await import("../../../../packages/ui/src/markdown-math.ts");
+const { pintarFormula, OPCIONES_KATEX } = await import("../../../../packages/ui/src/markdown-katex.ts");
+const { bloquesDeMarkdown } = await import("../../../../packages/ui/src/markdown-blocks.ts");
 const katex = (await import("katex")).default;
 
 type Nodo = { type: string; value?: string; children?: Nodo[] };

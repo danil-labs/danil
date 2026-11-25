@@ -10,9 +10,9 @@ import {
   visibles,
   type BloqueoAlta,
   type EstadoDeProveedor,
-} from "../../src/features/settings/ai-providers-groups.ts";
-import { SUPPORTED_AGENTS } from "../../src/features/settings/ai-providers-view.ts";
-import type { Superficie } from "../../src/lib/surfaces.ts";
+} from "../../../../packages/features/settings/src/model/ai-providers-groups.ts";
+import { SUPPORTED_AGENTS } from "../../../../packages/features/settings/src/model/ai-providers-view.ts";
+import type { Superficie } from "../../../../packages/ui/src/lib/surfaces.ts";
 
 const sup = (provider: string, extra: Partial<Superficie> = {}): Superficie => ({
   id: provider, provider, label: provider, catalogo: "todo", usable: true, marca: null, porque: null, ...extra,
@@ -118,6 +118,40 @@ test("visibles: varias superficies de un proveedor lo cuentan una sola vez", () 
 test("grupos: varias superficies del mismo proveedor comparten grupo, en orden de aparición", () => {
   const g = grupos([sup("claude", { id: "a" }), sup("codex"), sup("claude", { id: "b" })]);
   assert.deepEqual(g.map((x) => x.map((s) => s.id)), [["a", "b"], ["codex"]]);
+});
+
+test("grupos: danil-credits queda fuera de los grupos de proveedor", () => {
+  const todas = [
+    sup("opencode", { id: "opencode", catalogo: "de_pago" }),
+    sup("opencode", { id: "danil-credits", label: "Danil Credits", catalogo: "todo" }),
+    sup("claude"),
+  ];
+  assert.deepEqual(grupos(todas).map((g) => g.map((s) => s.id)), [["opencode"], ["claude"]]);
+  assert.deepEqual(idsDeGrupos([sup("opencode", { id: "danil-credits", label: "Danil Credits" })]), []);
+});
+
+test("visibles: con un proveedor ya cargado y otro pendiente nunca queda vacio='cargando'", () => {
+  const dos = [sup("claude"), sup("codex")];
+  assert.deepEqual(
+    visibles(dos, { claude: est({ cuentas: 1, cargando: false }), codex: est({ cuentas: null, cargando: true }) }),
+    { ids: ["claude"], vacio: null },
+  );
+  assert.deepEqual(
+    visibles(dos, { claude: est({ cuentas: 1, cargando: false }) }),
+    { ids: ["claude"], vacio: null },
+  );
+});
+
+test("visibles: si todos los proveedores dejaron de cargar sin cuentas ni fallo, nunca se queda en vacio='cargando'", () => {
+  const dos = [sup("claude"), sup("codex")];
+  assert.deepEqual(
+    visibles(dos, { claude: est({ cuentas: null, cargando: false }), codex: est({ cuentas: 0, cargando: false }) }),
+    { ids: [], vacio: null },
+  );
+  assert.deepEqual(
+    visibles(dos, { claude: est({ cuentas: null, cargando: true }), codex: est({ cuentas: 0, cargando: false }) }),
+    { ids: [], vacio: "cargando" },
+  );
 });
 
 // ---- PROP-T1: generador con semilla, 500 secuencias de hasta 12 pasos ----

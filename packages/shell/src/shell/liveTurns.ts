@@ -1,7 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative as invoke } from "../../../host/src/native.ts";
 import { createSignal } from "solid-js";
 import { invoke as routedInvoke } from "../../../engine-client/src/client.ts";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 
 export type LiveTurn = {
   session: string;
@@ -16,7 +16,7 @@ export type ShownTurn = LiveTurn & { title: string; named: boolean; waiting: boo
 type Call = (cmd: string, args?: Record<string, unknown>, options?: { headers: Record<string, string> }) => Promise<unknown>;
 
 /** Los turnos viven en el workspace que los lanzó, no en el que mira la ventana. */
-export const scope = (workspace: string) => ({ headers: { "x-terminus-workspace": workspace } });
+const scope = (workspace: string) => ({ headers: { "x-terminus-workspace": workspace } });
 
 export async function stopTurns(turns: LiveTurn[], call: Call = routedInvoke) {
   return await Promise.allSettled(

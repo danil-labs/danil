@@ -1,6 +1,7 @@
 /** El Free router de plataforma de esta ventana: un anfitrión (Desk o web) y un cliente por motor; sin anfitrión, cerrado. */
-import type { FreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-model-policy.ts";
+import { isPlatformFreeModelPolicy, type FreeModelPolicy } from "../../../../session/src/free-model-policy.ts";
 import { createFreeRouterPlatform, platformScope, type EdgeSend, type EngineCall, type FreeRouterPlatform, type FreeRouterScope } from "./free-router-platform.ts";
+import type { WorkspaceList } from "../../../../platform-client/src/workspaces.ts";
 
 export type FreeRouterHost = {
   edge: EdgeSend;
@@ -11,7 +12,7 @@ export type FreeRouterHost = {
 };
 
 /** El código con que el motor nuevo contesta `set_provider_consent` en un workspace que no es personal. */
-export const PLATFORM_REQUIRED = "free_router.platform_required";
+const PLATFORM_REQUIRED = "free_router.platform_required";
 
 let host: FreeRouterHost | null = null;
 const routers = new Map<string, FreeRouterPlatform>();
@@ -38,7 +39,7 @@ function routerFor(policy: FreeModelPolicy, h: FreeRouterHost): FreeRouterPlatfo
 /** El account activo de la sesión para este workspace del motor; sin él, el Router no se ofrece. */
 async function scopeOf(policy: FreeModelPolicy, h: FreeRouterHost): Promise<FreeRouterScope> {
   const who = await h.identity(policy.workspace_id).catch(() => null);
-  const active = who && (who.list as { active_workspace_id?: unknown } | null)?.active_workspace_id;
+  const active = who && (who.list as WorkspaceList | null)?.active_workspace_id;
   const scope = who && typeof active === "string" ? platformScope(who.list, active, who.sub, policy.workspace_id) : null;
   if (!scope) throw closed();
   return scope;
@@ -89,7 +90,7 @@ export async function signOutPlatform(): Promise<void> {
 }
 
 /** El motor marca la política de un workspace que no es personal (campo aditivo); sin la marca, camino personal. */
-export const isPlatformPolicy = (policy: FreeModelPolicy): boolean => (policy as { authority?: unknown }).authority === "platform";
+export const isPlatformPolicy = (policy: FreeModelPolicy): boolean => isPlatformFreeModelPolicy(policy);
 
 /** Si un rechazo del motor pide el camino de plataforma. */
 export const needsPlatform = (e: unknown): boolean =>

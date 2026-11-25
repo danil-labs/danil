@@ -13,7 +13,7 @@ export const LIGHT_STATE_MACHINES_FEATURE = "light_state_machines_v1";
  */
 export type EngineWorkspace = { id: string; name: string | null; local: boolean; organization: boolean; machines: string[]; logo?: string | null; logo_version?: string | null };
 
-import type { RailWorkspace } from "../../../../ui/src/lib/rail-workspace"; export type { RailWorkspace };
+import type { RailWorkspace } from "../../../../ui/src/lib/rail-workspace.ts"; export type { RailWorkspace };
 
 /**
  * El riel de la persona desde un solo índice: los de aquí y los que sirve otra
@@ -79,7 +79,7 @@ export type EngineWorkspaces = {
  * motor anuncia (`machine_list`). `onChange` avisa cuando la lista cambia.
  */
 export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen; features: () => Promise<readonly string[]>; onChange?: () => void }): EngineWorkspaces {
-  const { invoke } = options;
+  const { invoke: rpc } = options;
   let current: EngineWorkspace[] | null = null;
   let states = new Map<string, string>();
   let announced: readonly string[] = [];
@@ -91,23 +91,25 @@ export function createEngineWorkspaces(options: { invoke: Invoke; listen: Listen
   let stop: (() => void) | null = null;
 
   async function read(): Promise<boolean> {
-    if (version === null) announced = await options.features().catch(() => [] as readonly string[]);
+    const previousFeatures = announced;
+    if (version === null) announced = await options.features().catch(() => previousFeatures);
+    const featuresChanged = announced.join(",") !== previousFeatures.join(",");
     if (version === null && !announced.includes(LIGHT_STATE_MACHINES_FEATURE)) {
       const had = current !== null;
       current = null;
       states = new Map();
-      return had;
+      return had || featuresChanged;
     }
     let answer: { version?: unknown; not_modified?: unknown; workspaces?: unknown } | null;
     try {
-      answer = (await invoke("state_machines", version ? { version } : {})) as typeof answer;
+      answer = (await rpc("state_machines", version ? { version } : {})) as typeof answer;
     } catch {
       // Un motor que dejó de saberlo (otro motor tras actualizar) vuelve a la flota; un fallo pasajero conserva lo último.
-      return false;
+      return featuresChanged;
     }
-    if (answer?.not_modified === true) return false;
+    if (answer?.not_modified === true) return featuresChanged;
     const next = parse(answer?.workspaces);
-    if (!next) return false;
+    if (!next) return featuresChanged;
     version = typeof answer?.version === "string" ? answer.version : null;
     current = next;
     states = statesOf(answer?.workspaces);

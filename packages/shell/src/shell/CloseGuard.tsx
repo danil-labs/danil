@@ -1,8 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invokeNative } from "../../../host/src/native.ts";
 import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import { capabilities } from "../../../host/src/platform";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { Button } from "../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
 import { FailureNote, asFailure, type Failure } from "../../../ui/src/Failure";
@@ -41,10 +41,10 @@ export default function CloseGuard(props: { title: (session: string) => string |
     if (refreshing || disposed) return;
     refreshing = true;
     try {
-      const turns = await titled(await invoke<LiveTurn[]>("list_live_turns"));
-      if (!disposed) await invoke("tray_update", payload(turns));
+      const turns = await titled(await invokeNative<LiveTurn[]>("list_live_turns"));
+      if (!disposed) await invokeNative("tray_update", payload(turns));
     } catch {
-      if (!disposed) await invoke("tray_update", payload(null)).catch(() => {});
+      if (!disposed) await invokeNative("tray_update", payload(null)).catch(() => {});
     } finally {
       refreshing = false;
     }
@@ -57,7 +57,7 @@ export default function CloseGuard(props: { title: (session: string) => string |
 
   async function toBackground() {
     try {
-      await invoke("window_to_background", payload(null));
+      await invokeNative("window_to_background", payload(null));
       setShown(false);
       void tick();
     } catch (error) {
@@ -71,9 +71,9 @@ export default function CloseGuard(props: { title: (session: string) => string |
     setFailure(null);
     setRows([]);
     try {
-      const turns = await invoke<LiveTurn[]>("list_live_turns");
+      const turns = await invokeNative<LiveTurn[]>("list_live_turns");
       if (turns.length === 0) {
-        await invoke("quit_completely");
+        await invokeNative("quit_completely");
         exiting = true;
       }
       else {
@@ -93,13 +93,13 @@ export default function CloseGuard(props: { title: (session: string) => string |
     setStopping(true);
     setFailure(null);
     try {
-      const turns = await invoke<LiveTurn[]>("list_live_turns");
+      const turns = await invokeNative<LiveTurn[]>("list_live_turns");
       quietFinished();
-      const results = await stopTurns(turns, invoke);
+      const results = await stopTurns(turns, invokeNative);
       const rejected = results.find((result) => result.status === "rejected");
       if (rejected?.status === "rejected") throw rejected.reason;
       if (quit) {
-        await invoke("quit_completely");
+        await invokeNative("quit_completely");
         exiting = true;
       }
       else {

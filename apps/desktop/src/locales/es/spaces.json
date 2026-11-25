@@ -11,6 +11,10 @@
     "other": "Sus {count} tareas se archivan y se quitan sus árboles de trabajo. Las ramas y sus PR se quedan como están. El espacio no se recupera. Los proyectos no se borran."
   },
   "spaces.delete.body_empty": "No tiene tareas. Sale de la barra y no se recupera. Los proyectos no se borran.",
+  "spaces.delete.body_ungrouped": {
+    "one": "Su tarea vuelve a «{defaultSpace}» y sigue intacta. El espacio sale de tu barra. Los proyectos no se borran.",
+    "other": "Sus {count} tareas vuelven a «{defaultSpace}» y siguen intactas. El espacio sale de tu barra. Los proyectos no se borran."
+  },
   "spaces.delete.cancel": "Cancelar",
   "spaces.delete.changed_body": "Lo marcado apareció o cambió mientras mirabas. Revísalo y confirma otra vez.",
   "spaces.delete.changed_title": "Hay cambios nuevos desde que abriste esto",
@@ -28,13 +32,20 @@
   "spaces.delete.mark_changed": "cambió",
   "spaces.delete.mark_new": "nuevo",
   "spaces.delete.open": "Abrir",
+  "spaces.delete.no_answer": "El servicio no contestó. Reintenta.",
   "spaces.delete.open_named": "Abrir {title}",
   "spaces.delete.reading": "Leyendo qué tiene…",
+  "spaces.delete.see_details": "Ver qué no está guardado",
   "spaces.delete.see_archived": "Ver en Archivadas",
   "spaces.delete.title": "Eliminar «{name}»",
   "spaces.delete.toast": {
     "one": "«{name}» eliminado · 1 tarea archivada",
     "other": "«{name}» eliminado · {count} tareas archivadas"
+  },
+  "spaces.delete.toast_removed": "«{name}» eliminado",
+  "spaces.delete.toast_ungrouped": {
+    "one": "«{name}» eliminado · 1 tarea movida al espacio principal",
+    "other": "«{name}» eliminado · {count} tareas movidas al espacio principal"
   },
   "spaces.delete.uncommitted": "Cambios sin commitear ({count})",
   "spaces.delete.uncommitted_why": "Se descartan al eliminar y no se recuperan. Los archivos nuevos sin rastrear también.",

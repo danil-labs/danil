@@ -1,11 +1,10 @@
-import { resolveTaskGit as resolveSharedTaskGit } from "@terminus/tasks";
-import { Channel } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { resolveTaskGit as resolveSharedTaskGit } from "../../../../ui/src/lib/tasks/index.ts";
+import { Channel, callEngine } from "../../../../engine-client/src/client.ts";
 import { type Accessor, createSignal } from "solid-js";
 
-import { type TaskGitStatus, mergeRemoteGit, readTaskGit, retainGitObservation, sameGit as mismoGit, UNKNOWN_TASK_GIT } from "@terminus/tasks";
-export type { CheckState, KnState, ReviewState } from "@terminus/tasks";
-export { canFinishTask, mergeRemoteGit, retainGitObservation } from "@terminus/tasks";
+import { type TaskGitStatus, mergeRemoteGit, readTaskGit, retainGitObservation, sameGit as mismoGit, UNKNOWN_TASK_GIT } from "../../../../ui/src/lib/tasks/index.ts";
+export type { CheckState, KnState, ReviewState } from "../../../../ui/src/lib/tasks/index.ts";
+export { canFinishTask, mergeRemoteGit, retainGitObservation } from "../../../../ui/src/lib/tasks/index.ts";
 export type GitStatus = TaskGitStatus;
 export const UNKNOWN_GIT: GitStatus = UNKNOWN_TASK_GIT;
 
@@ -100,7 +99,7 @@ export function watchSessionGit(project: string, routing?: { workspace: string; 
         run: async () => {
           try {
             if (!current(started) || document.hidden) return;
-            const result = await readTaskGit(remote => withDeadline(invoke<Record<string, GitStatus>>("list_session_git", { project, remote, priority: priority(), progress: new Channel<Record<string, GitStatus>>() }, options)), { phase: "remote" });
+            const result = await readTaskGit(remote => withDeadline(callEngine<Record<string, GitStatus>>("list_session_git", { project, remote, priority: priority(), progress: new Channel<Record<string, GitStatus>>() }, options)), { phase: "remote" });
             if (current(started)) {
               if (!localFailed) setError(null); const before = rows();
               setRows(previous => {
@@ -135,7 +134,7 @@ export function watchSessionGit(project: string, routing?: { workspace: string; 
           if (!current(started) || !localBusy || sequence !== localSequence) return;
           setRows(previous => conservarFilas(previous, { ...previous, ...retainGitObservation(previous, partial) }));
         });
-        const local = await readTaskGit(remote => withDeadline(invoke<Record<string, GitStatus>>("list_session_git", { project, remote, priority: priority(), progress }, options)), { phase: "local" });
+        const local = await readTaskGit(remote => withDeadline(callEngine<Record<string, GitStatus>>("list_session_git", { project, remote, priority: priority(), progress }, options)), { phase: "local" });
         if (!current(started)) return;
         setError(null);
         lastLocal = Date.now();

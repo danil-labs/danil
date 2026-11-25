@@ -6,10 +6,10 @@
  */
 import { cancelEdgeWrites } from "../../../../platform-client/src/client.ts";
 import { signOutPlatform } from "./free-router-session.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { forgetMachineNames } from "../../../../session/src/known-machine-names.ts";
 
-export type DanilConnectState = "disconnected" | "pending" | "connected" | "error";
+type DanilConnectState = "disconnected" | "pending" | "connected" | "error";
 
 export type DanilConnectStatus = {
   state: DanilConnectState;
@@ -53,7 +53,7 @@ export function failureCode(e: unknown): string | null {
 /** `null` si la ventana todavía no trae la sesión de Desk. */
 export async function readDanilAccount(): Promise<DanilConnectStatus | null> {
   try {
-    return await invoke<DanilConnectStatus>("danil_session_status");
+    return await callEngine<DanilConnectStatus>("danil_session_status");
   } catch (e) {
     if (failureCode(e) === "command") return null;
     throw e;
@@ -77,7 +77,7 @@ const SIGN_IN_STARTED_MS = 1500;
  * `danil-connect`. Un fallo al empezar rechaza con su código.
  */
 export async function signInWithBrowser(name: string): Promise<DanilConnectStatus> {
-  const running = invoke<DanilConnectStatus>("danil_sign_in", name.trim() ? { name: name.trim() } : {});
+  const running = callEngine<DanilConnectStatus>("danil_sign_in", name.trim() ? { name: name.trim() } : {});
   const early = await Promise.race([
     running.then((status) => ({ status }), (error: unknown) => ({ error })),
     new Promise<null>((resolve) => setTimeout(() => resolve(null), SIGN_IN_STARTED_MS)),
@@ -101,5 +101,5 @@ export async function signOut(): Promise<DanilConnectStatus> {
   await signOutPlatform().catch(() => {});
   cancelEdgeWrites();
   forgetMachineNames();
-  return invoke<DanilConnectStatus>("danil_sign_out");
+  return callEngine<DanilConnectStatus>("danil_sign_out");
 }

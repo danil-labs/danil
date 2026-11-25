@@ -1,10 +1,10 @@
 import Check from "lucide-solid/icons/check";
 import Copy from "lucide-solid/icons/copy";
 import { For, Show } from "solid-js";
-import { df } from "../../../../../../apps/desktop/src/lib/format";
-import { t } from "../../../../../../apps/desktop/src/lib/i18n";
-import type { AgentModels, Source } from "../../../../../../apps/desktop/src/lib/model";
-import { modelBrand, nombreDeModelo } from "../../../../../../apps/desktop/src/lib/models";
+import { df } from "../../../../../ui/src/lib/format";
+import { t } from "../../../../../ui/src/lib/i18n";
+import type { AgentModels, Source } from "../../../../../ui/src/lib/model";
+import { modelBrand, nombreDeModelo } from "../../../../../ui/src/lib/models";
 import { Button } from "../../../../../ui/src/Button";
 import { MarcaAgente } from "../../../../../ui/src/icons";
 import { MarcaFuente } from "../../../../../ui/src/sources";

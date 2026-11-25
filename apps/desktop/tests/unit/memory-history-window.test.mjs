@@ -43,7 +43,7 @@ function engine() {
         index: { lines: 2, bytes: 80, line_limit: 200, byte_limit: 8192 },
       })),
       danil_workspace_account: record("danil_workspace_account", () => ({ account: "u_ana", email: "ana@danil.ai", signed_in: true, linked: true })),
-      account_relay_token: record("account_relay_token", () => ({ token: "client-tok", expires_at: Date.now() + 3_600_000, endpoint: "https://computers.danil.ai", computer_id: "cmp_mac" })),
+      account_relay_token: record("account_relay_token", () => ({ token: "client-tok", expires_at: Date.now() + 3_600_000, endpoint: "https://memory.test", computer_id: "cmp_mac" })),
     },
   };
 }
@@ -52,11 +52,13 @@ const buttons = (root, label) => [...root.querySelectorAll("button")].filter((b)
 const memory = (w) => [...w.document.querySelectorAll("section")].find((s) => s.querySelector('[aria-label="Alcance de la memoria"]'));
 
 async function openMemory(w) {
-  w.dispatchEvent(new w.CustomEvent("harness:open-settings", { detail: "proyectos" }));
-  await sleep(900);
-  w.document.querySelector('[aria-label="Acciones de «terminus»"]').click();
-  await sleep(300);
-  [...w.document.querySelectorAll("[role=menuitem]")].find((b) => b.textContent.trim() === "Material que lee").click();
+  const folderOpen = w.document.querySelector('[data-folder-group="p1"] [data-folder-open]');
+  assert.ok(folderOpen, w.document.body.textContent.slice(0, 400));
+  folderOpen.click();
+  await sleep(400);
+  const settingsTab = [...w.document.querySelectorAll('[role="tab"]')].find((b) => b.textContent.trim() === "Configuración");
+  assert.ok(settingsTab, "the project view offers its settings tab");
+  settingsTab.click();
   await sleep(1200);
   return memory(w);
 }

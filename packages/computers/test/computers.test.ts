@@ -14,10 +14,7 @@ import {
   systemOf,
   wakes,
   listComputers,
-  listWorkspacesWithDeleted,
   powerOf,
-  purgeWorkspace,
-  restoreWorkspace,
   sessionProbe,
   sessionUrl,
   startComputer,
@@ -69,9 +66,9 @@ function session() {
 }
 
 test("las URLs del plano de control aceptan host, https o wss", () => {
-  assert.equal(apiUrl("computers.danil.ai", "/v1/computers"), "https://computers.danil.ai/v1/computers");
+  assert.equal(apiUrl("computers.test", "/v1/computers"), "https://computers.test/v1/computers");
   assert.equal(apiUrl("http://127.0.0.1:8787/", "/v1/computers"), "http://127.0.0.1:8787/v1/computers");
-  assert.equal(sessionUrl("https://computers.danil.ai", "cmp_x"), "wss://computers.danil.ai/v1/computers/cmp_x/session");
+  assert.equal(sessionUrl("https://computers.test", "cmp_x"), "wss://computers.test/v1/computers/cmp_x/session");
   assert.equal(sessionUrl("http://127.0.0.1:8787", "cmp_x"), "ws://127.0.0.1:8787/v1/computers/cmp_x/session");
 });
 
@@ -87,7 +84,7 @@ test("el JWT va en los subprotocolos, nunca en la URL", async () => {
 test("con ticket ofrece solo danil.machine-session.v1 y ticket.*, nunca bearer.* (machine-session.v1 § Apertura)", async () => {
   FakeSocket.all = [];
   const relay = new RelaySession(
-    { endpoint: "https://computers.example", computerId: "cmp_a", getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: "t1" }) },
+    { endpoint: "https://computers.example", computerId: "cmp_a", getAdmission: async () => ({ url: "wss://connect.danil.ai/v1/machines/cmp_a/session", ticket: "t1" }) },
     (url, protocols) => new FakeSocket(url, protocols),
   );
   relay.start();
@@ -105,7 +102,7 @@ test("con ticket: conserva ?contracts= y cambia de ticket antes de session_expir
       endpoint: "https://computers.example",
       computerId: "cmp_a",
       contracts: ["abc123"],
-      getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, session_expires_at: new Date(Date.now() + 60_000).toISOString() }),
+      getAdmission: async () => ({ url: "wss://connect.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, session_expires_at: new Date(Date.now() + 60_000).toISOString() }),
     },
     (url, protocols) => new FakeSocket(url, protocols),
   );
@@ -113,13 +110,13 @@ test("con ticket: conserva ?contracts= y cambia de ticket antes de session_expir
   relay.start();
   for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
   const first = FakeSocket.all[0];
-  assert.equal(first.url, "wss://machines.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
+  assert.equal(first.url, "wss://connect.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
   first.open();
   t.mock.timers.tick(55_000);
   for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
   assert.equal(FakeSocket.all.length, 2, "reabrió sin cierre del servidor");
   assert.deepEqual(FakeSocket.all[1].protocols, ["danil.machine-session.v1", "ticket.t2"]);
-  assert.equal(FakeSocket.all[1].url, "wss://machines.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
+  assert.equal(FakeSocket.all[1].url, "wss://connect.danil.ai/v1/machines/cmp_a/session?contracts=abc123");
 });
 
 test("una llamada pendiente se reenvía con el mismo id al reconectar, y `cached` llega aparte", async () => {
@@ -312,26 +309,6 @@ test("cada `hello` del motor llega como `engine` con su contrato", async () => {
   relay.close();
 });
 
-test("lápidas: la lista con borrados, restaurar, purgar y el 409 con su código", async () => {
-  const asked: [string, string | undefined][] = [];
-  const reply = (status: number, body: unknown) => async (url: string, init?: { method?: string }) => {
-    asked.push([url, init?.method]);
-    return { status, ok: status < 300, json: async () => body };
-  };
-  const both = await listWorkspacesWithDeleted("https://c.example", "t", reply(200, { workspaces: [{ id: "w", name: "W", projects: [], computers: ["c"] }], deleted: [{ id: "w9", name: "Viejo", projects: [], computers: [], deleted_at: "2026-10-22T10:00:00Z" }] }));
-  assert.equal(both.kind, "ok");
-  if (both.kind === "ok") assert.deepEqual([both.value.workspaces.map((w) => w.id), both.value.deleted.map((w) => [w.id, w.deleted_at])], [["w"], [["w9", "2026-10-22T10:00:00Z"]]]);
-  assert.equal(asked[0][0], "https://c.example/v1/workspaces?include_deleted=1");
-  const restored = await restoreWorkspace("https://c.example", "t", "w9", reply(200, { id: "w9", name: "Viejo", projects: [], computers: [] }));
-  assert.equal(restored.kind === "ok" && restored.value?.id, "w9");
-  assert.equal((await purgeWorkspace("https://c.example", "t", "w9", reply(204, null))).kind, "ok");
-  assert.deepEqual(asked.slice(1), [
-    ["https://c.example/v1/workspaces/w9/restore", "POST"],
-    ["https://c.example/v1/workspaces/w9/purge", "POST"]
-  ]);
-  assert.deepEqual(await purgeWorkspace("https://c.example", "t", "w", reply(409, { error: "workspace_not_deleted" })), { kind: "error", status: 409, code: "workspace_not_deleted" });
-});
-
 test("sin licencia la sesión se detiene con nombre, sin reintentar en bucle, hasta «Reintentar»", async () => {
   const relay = session();
   await tick();
@@ -394,7 +371,7 @@ test("un bloque MCP con valores escritos no sale al socket; uno con marcadores s
   await assert.rejects(relay.call("m-3", "add_mcp_servers", "w", null, { bloque: "{ ACME_TOKEN: abc" }), (e: { code: string }) => e.code === "mcp_block_invalid");
   assert.equal(socket.sent.filter((m) => m.type === "call").length, 0, "nada llegó al socket");
   // Con la clave repetida `JSON.parse` se queda con la última: viaja eso, no el texto original.
-  const repeated = '{"acme":{"command":"npx","env":{"T":"${secret:env/*/T}"},"args":[],"env":{"T":"${secret:env/*/T}"}}}';
+  const repeated = '{"acme":{"command":"npx","env":{"T":"${secret:mcp/acme/env/T}"},"args":[],"env":{"T":"${secret:mcp/acme/env/T}"}}}';
   const pending = relay.call("m-4", "add_mcp_servers", "w", null, { bloque: repeated });
   const sent = socket.sent.find((m) => m.id === "m-4") as { args: { bloque: string } };
   assert.equal(sent.args.bloque, JSON.stringify(JSON.parse(repeated)));
@@ -425,7 +402,7 @@ function admissionSession(ms: number, extra: { renewInChannel?: () => boolean } 
     {
       endpoint: "https://computers.example",
       computerId: "cmp_a",
-      getAdmission: async () => ({ url: "wss://machines.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, protocol: "danil.machine-session.v1", session_expires_at: new Date(Date.now() + ms).toISOString() }),
+      getAdmission: async () => ({ url: "wss://connect.danil.ai/v1/machines/cmp_a/session", ticket: `t${++n}`, protocol: "danil.machine-session.v1", session_expires_at: new Date(Date.now() + ms).toISOString() }),
       ...extra,
     },
     (url, protocols) => new FakeSocket(url, protocols),

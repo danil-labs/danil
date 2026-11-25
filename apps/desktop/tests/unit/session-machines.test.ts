@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mergeBridgeInventory } from "../../src/features/machines/bridge-inventory.ts";
-import { createContextRelayPool } from "../../src/features/machines/context-relay-pool.ts";
-import { createSessionCloud, mergeContextMachines } from "../../src/features/machines/session-cloud.ts";
-import { createAccountWorkspaces } from "../../src/features/shell/session-account-workspaces.ts";
-import { confirmEmailClose, emailContextCount } from "../../src/features/shell/session-close-confirm.ts";
-import { createSessionEmptyState } from "../../src/features/shell/session-empty.ts";
-import { sessionWorkspaceSource } from "../../src/features/shell/session-workspace-source.ts";
+import { mergeBridgeInventory } from "../../../../packages/features/machines/src/model/bridge-inventory.ts";
+import { createContextRelayPool } from "../../../../packages/features/machines/src/queries/context-relay-pool.ts";
+import { createSessionCloud, mergeContextMachines } from "../../../../packages/features/machines/src/queries/session-cloud.ts";
+import { createAccountWorkspaces } from "../../../../packages/shell/src/shell/session-account-workspaces.ts";
+import { confirmEmailClose, emailContextCount } from "../../../../packages/shell/src/shell/session-close-confirm.ts";
+import { createSessionEmptyState } from "../../../../packages/shell/src/shell/session-empty.ts";
+import { sessionWorkspaceSource } from "../../../../packages/shell/src/shell/session-workspace-source.ts";
 import { subscribeOrganizationProblems } from "../../src/lib/organization-problems.ts";
 
 const contexts = [{ context_id: "a", org: "A" }, { context_id: "b", org: "B" }];
@@ -14,6 +14,13 @@ const machine = (id: string, org: string) => ({ computer_id: id, organization_id
 test("one machine retains each context and rejects mismatched organization endpoints", () => {
   const contexts = [{ context_id: "a", org: "A" }, { context_id: "b", org: "A" }];
   assert.deepEqual(mergeContextMachines(contexts.map((context) => ({ context, computers: [{ ...machine("same", "A"), kind: "organization" }, { ...machine("alien", "B"), kind: "organization" }] }))).map((m) => [m.computer_id, m.context]), [["same", "a"], ["same", "b"]]);
+  const normalized = mergeContextMachines([{ context: { context_id: "a", org: "A" }, computers: [
+    { ...machine("vm", "A"), kind: "hosted" },
+    { ...machine("alien_vm", "B"), kind: "hosted" },
+    { ...machine("own_mac", "A"), kind: "connected" },
+    { ...machine("other_pc", "A"), kind: "connected" },
+  ] }], new Set(["own_mac"]));
+  assert.deepEqual(normalized.map((m) => [m.computer_id, m.kind]), [["vm", "organization"], ["other_pc", "personal"]]);
 });
 
 test("one inventory per context, admission and wake use the selected row, expired contexts cannot buy tickets", async () => {

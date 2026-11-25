@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { HistoryRef } from "@terminus/protocol";
-import { transcripcion as transcript } from "../../src/features/chat/transcript.ts";
+import type { HistoryRef } from "../../../../packages/engine-client/src/index.ts";
+import { transcripcion as transcript } from "../../../../packages/features/chat/src/model/transcript.ts";
 
 const ref = (pointer: string): HistoryRef => ({ version: 1, turn: 0, pointer, revision: "r", bytes: 35000 });
 

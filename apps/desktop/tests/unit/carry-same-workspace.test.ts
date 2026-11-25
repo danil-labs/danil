@@ -6,10 +6,11 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { type CarryEngine, carryWork, newState } from "@terminus/carry";
+import { type CarryEngine } from "../../../../packages/features/machines/src/model/carryTypes.ts";
+import { carryWork, newState } from "../../../../packages/features/machines/src/queries/carryRun.ts";
 import { Fleet, type Link, type MachineInfo } from "@terminus/fleet";
 import "../helpers/catalog.ts";
-import { createRouter } from "../../src/features/machines/router.ts";
+import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
 
 type Args = Record<string, unknown>;
 type Call = { command: string; args: Args; workspace: string | null };

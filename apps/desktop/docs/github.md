@@ -9,7 +9,7 @@ instalación en GitHub.
 
 ## Conectar
 
-1. Abre Configuración → Control de Fuentes → GitHub y conecta la cuenta.
+1. Abre Configuración → Control git → GitHub y conecta la cuenta.
 2. El selector oficial de GitHub permite instalar o configurar la App en una
    cuenta personal u organización, aunque existan instalaciones previas.
 3. Al volver a Danil, elige las cuentas que usará este workspace.
@@ -44,7 +44,7 @@ el foco a la ventana se vuelven a pedir las instalaciones. La tarjeta no elige
 Sin sesión, la conexión local de la App Danil (`source = "device"`) dice «Solo
 en esta máquina» y ofrece «Iniciar sesión». Una conexión de la App anterior
 (`source = "legacy"`) pide volver a conectar con Danil. Los proveedores se
-listan en este orden: GitHub, GitLab y Bitbucket.
+listan en este orden: GitHub y Bitbucket.
 
 ## gh opcional
 

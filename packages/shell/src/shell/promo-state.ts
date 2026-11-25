@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import type { Capabilities } from "../../../host/src/platform";
-import { normalizePromoCode, promoRejection } from "../../../../apps/desktop/src/lib/promo-rejections";
+import { normalizePromoCode, promoRejection } from "../../../session/src/promo-rejections";
 
 export function createPromoState(redeem: () => NonNullable<Capabilities["webPromo"]>) {
   const [code, setCode] = createSignal("");

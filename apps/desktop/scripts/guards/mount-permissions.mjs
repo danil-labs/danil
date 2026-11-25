@@ -604,10 +604,10 @@ for (const changeKind of ["acepta", "rechaza"]) {
   oldEngine.w.close();
 }
 
-// Lo nuevo del workspace arranca con su modo por defecto y lo que ya existe
+// Lo nuevo del workspace arranca con su modo por defecto (`auto` sin override) y lo que ya existe
 // conserva el suyo. El ajuste vive en General, antes del contexto.
 const defaultSaves = [];
-const withDefault = { workspaces: [{ id: "w", name: "W", context_root: null, default_permission_mode: "auto" }], active: "w" };
+const withDefault = { workspaces: [{ id: "w", name: "W", context_root: null, default_permission_mode: null }], active: "w" };
 const defaultApp = await boot("listo", "default-permission-mode", {
   ...WINDOW_STATE,
   list_workspaces: withDefault,
@@ -624,16 +624,16 @@ const defaultModeLabel = () =>
     .map((el) => el.getAttribute("aria-label"))
     .find((tagLabel) => tagLabel.startsWith("Permisos: "));
 await sleep(150);
-assert.equal(defaultModeLabel(), "Permisos: Automático", "a new task starts with the workspace default");
+assert.equal(defaultModeLabel(), "Permisos: Automático", "a new task starts with auto when workspace has no override");
 defaultDoc.querySelector('[data-sesion="s1"]')?.click();
 await sleep(200);
 assert.equal(defaultModeLabel(), "Permisos: Manual", "an existing task keeps its own mode");
 defaultDoc.querySelector('button[aria-label="Nueva tarea"]').click();
 await sleep(150);
-assert.equal(defaultModeLabel(), "Permisos: Automático", "and the next new task starts with the default again");
+assert.equal(defaultModeLabel(), "Permisos: Automático", "and the next new task starts with auto again");
 defaultDoc.querySelector('button[aria-label="Configuración"]')?.click();
 await sleep(150);
-defaultDoc.querySelector("#cfg-tab-preferences")?.click();
+defaultDoc.querySelector("#cfg-tab-general")?.click();
 await sleep(50);
 const defaultSelect = defaultDoc.querySelector('select[aria-label="Permisos por defecto"]');
 assert.ok(defaultSelect, "General shows the default permissions select");

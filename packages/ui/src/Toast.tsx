@@ -1,10 +1,10 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import { createSignal, onCleanup, Show, splitProps, type JSX } from "solid-js";
 import { Portal } from "solid-js/web";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 import { Button } from "./Button";
 import { Close } from "./icons";
-import { t } from "../../../apps/desktop/src/lib/i18n";
+import { t } from "./lib/i18n";
 
 const [toastHost, setToastHost] = createSignal<HTMLDivElement>();
 

@@ -1,33 +1,7 @@
 import { Show } from "solid-js";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-
-/**
- * En qué etapa del trabajo puso una persona una tarea. Ver `sessions::Etapa`
- * para el motivo entero; aquí va lo que eso obliga en pantalla.
- *
- * **No es `EstadoDeTarea` y no puede parecerlo.** Aquel punto lo pone la
- * máquina y dura lo que dura el turno —está trabajando, preguntó, espera que
- * apruebes—; esto lo pone una persona y dura hasta que otra lo cambie. Son dos
- * respuestas a dos preguntas distintas de la misma fila, así que se pintan con
- * dos formas distintas: aquel es un punto de color sin texto, esto es una
- * palabra. Con la misma forma, una tarea marcada «Hecho» que además está
- * contestando tendría dos puntos discutiendo cuál es el estado.
- *
- * **El color no lleva el dato solo**: la palabra está escrita. Tres tonos que
- * solo se distinguen por matiz no llegan a los 3:1 de WCAG 2.2 § 1.4.11 y
- * dejarían la fila sin decir nada a quien no los separa.
- *
- * **La tarea sin etapa no pinta nada.** Una insignia «Sin empezar» en cada fila
- * del historial afirmaría de todas ellas algo que nadie declaró, y convertiría
- * una lista de veinte tareas en veinte insignias iguales — el ruido que hace
- * que la marcada deje de verse.
- *
- * **Y no viaja a la pestaña**, aunque el punto de estado sí lo haga. La pestaña
- * es la tarea que tienes delante: en qué etapa está se ve mirándola. Esto
- * contesta «cuál me queda por mirar», que es una pregunta de la lista.
- */
-export type Etapa = "in_progress" | "review" | "done";
+import { cn } from "../../../../ui/src/lib/utils";
+import { t } from "../../../../ui/src/lib/i18n";
+import type { Etapa } from "../../../../ui/src/lib/session-row.ts"; export type { Etapa };
 
 /**
  * Las tres etapas, en el orden en que avanza el trabajo — que es el orden en

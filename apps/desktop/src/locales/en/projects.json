@@ -386,8 +386,6 @@
   "projects.tabs.new_browser": "Browser",
   "projects.tabs.draft": "New task",
   "projects.picker.add": "Add a project…",
-  "projects.picker.manage": "Manage projects",
-  "projects.picker.manage_where": "Settings",
   "projects.picker.tasks": {
     "one": "{count} task",
     "other": "{count} tasks"
@@ -399,7 +397,7 @@
   "projects.hover_card.machine": "Machine",
   "projects.add.clone_lost": "The machine no longer remembers this clone (it may have restarted). Check whether the folder is in the list and, if not, clone it again.",
   "projects.add.remote_directory": "It is cloned into the projects folder of {name}.",
-  "projects.add.remote_git_host": "If {name} does not have your git account connected in this workspace, connect it on that machine (Settings → Source Control) or paste the repository's HTTPS or SSH address.",
+  "projects.add.remote_git_host": "If {name} does not have your git account connected in this workspace, connect it on that machine (Settings → Git control) or paste the repository's HTTPS or SSH address.",
   "projects.memory.busy": "The account's memory is busy right now. Try again.",
   "projects.memory.changed_meanwhile": "The entry changed while you had it open and was not deleted. I reloaded it.",
   "projects.memory.conflict_badge": "Conflict copy of {file}",

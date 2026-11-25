@@ -1,5 +1,5 @@
 import { type Accessor, createMemo, createSignal, type JSX, onCleanup, onMount, untrack } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { KeyedList } from "../../../ui/src/KeyedList";
 import { type OrgPreference, orderedOrganizations, type RailOrganization, stackedOrganizations } from "./organization-rail-model";
 import type { SessionRailGroup } from "./session-groups";

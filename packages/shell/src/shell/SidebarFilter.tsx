@@ -1,7 +1,7 @@
 import Check from "lucide-solid/icons/check";
 import SlidersHorizontal from "lucide-solid/icons/sliders-horizontal";
 import { For, type JSX, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import {
   type SidebarGrouping,
   type SidebarView,
@@ -10,17 +10,17 @@ import {
   groupingLabel,
   sameAgent,
   sortLabel,
-} from "../../../../apps/desktop/src/lib/sidebarView";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+} from "../../../ui/src/lib/sidebarView";
+import { cn } from "../../../ui/src/lib/utils";
 import { Button } from "../../../ui/src/Button";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import { FolderSquare } from "../../../features/projects/src/screens/FolderChip";
 import { Pressable } from "../../../ui/src/Pressable";
 
-export type SidebarFilterFolder = { id: string; name: string; count: number };
+type SidebarFilterFolder = { id: string; name: string; count: number };
 /** `installed` falso: ya no está instalado, pero tiene tareas. */
-export type SidebarFilterAgent = { name: string; installed: boolean; body?: string | null; avatar?: string | null };
+type SidebarFilterAgent = { name: string; installed: boolean; body?: string | null; avatar?: string | null };
 
 export type SidebarFilterProps = {
   view: SidebarView;
@@ -79,7 +79,7 @@ function Opcion(props: {
 }
 
 /** Las secciones de «Filtrar y agrupar»: carpetas, agente, agrupar y ordenar. */
-export function SidebarFilterSections(props: SidebarFilterProps) {
+function SidebarFilterSections(props: SidebarFilterProps) {
   const set = (patch: Partial<SidebarView>) => props.onChange({ ...props.view, ...patch });
   const total = () => props.folders.reduce((sum, f) => sum + f.count, 0);
   const alternarCarpeta = (id: string) =>

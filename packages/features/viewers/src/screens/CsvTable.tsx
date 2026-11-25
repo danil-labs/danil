@@ -1,5 +1,5 @@
 import { For, Show, createMemo } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { parseTable } from "../../../../ui/src/lib/csv";
 
 /**

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { freeMcpNoticeAt } from "../../src/features/chat/free-mcp-notice.ts";
+import { freeMcpNoticeAt } from "../../../../packages/features/chat/src/model/free-mcp-notice.ts";
 
 const header = { role: "system", meta: "aviso", text: "chat.notice.free_router_mcp_unavailable" };
 const names = (text: string) => ({ role: "system", meta: "aviso", text });

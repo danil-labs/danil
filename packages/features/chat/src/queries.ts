@@ -7,3 +7,5 @@ export * from "./queries/model-accounts.ts";
 export * from "./queries/scope-git.ts";
 export * from "./queries/mcp-apps.ts";
 export * from "./queries/history-details.ts";
+export * from "./queries/threads-store.ts";
+export * from "./queries/threads-store-core.ts";

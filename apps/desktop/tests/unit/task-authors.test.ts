@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const { authorKey, authorKeys, isSubtask } = await import(
-  "../../src/features/projects/taskAuthors.ts"
+  "../../../../packages/features/projects/src/model/taskAuthors.ts"
 );
 
 // El orden de los grupos salía de la primera aparición de cada autor en una

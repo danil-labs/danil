@@ -21,7 +21,10 @@ const PROVENANCE = fileURLToPath(new URL("../../src-tauri/crates/engine-protocol
 const LOCK = fileURLToPath(new URL("../../seldon-runtime.lock", import.meta.url));
 
 /** El contrato copiado cuyo motor aún no tiene release publicada, y qué falta. */
-const MOTOR_PENDIENTE = null;
+const MOTOR_PENDIENTE = {
+  contract: "3aa165a22b88d4c99d30f93776c37468e9f017d201477019eaa1bba2717ccdad",
+  why: "falta fijar un binario que hable el contrato nuevo (danil-engine#541)",
+};
 
 const vendored = createHash("sha256").update(readFileSync(CONTRACT)).digest("hex");
 const declared = /SHA-256:\s*`([0-9a-f]{64})`/.exec(readFileSync(PROVENANCE, "utf8"))?.[1];
@@ -36,13 +39,14 @@ if (declared !== vendored) {
 }
 
 const pending = MOTOR_PENDIENTE?.contract;
+const requirePinned = process.argv.includes("--require-pinned");
 if (pinned === vendored && pending) {
   failures.push(`seldon-runtime.lock ya fija el contrato ${vendored}: quita MOTOR_PENDIENTE de este guarda.`);
-} else if (pinned !== vendored && pending !== vendored) {
+} else if (pinned !== vendored && (requirePinned || pending !== vendored)) {
   failures.push(
     `seldon-runtime.lock fija un motor con contrato ${pinned}; la ventana habla ${vendored}\n` +
       `  y rechaza ese motor (version_mismatch). Publica seldon-runtime con este contrato y fíjalo\n` +
-      `  en el lock, o nómbralo en MOTOR_PENDIENTE con lo que falta.`,
+      (requirePinned ? `  en el lock antes de generar un instalador.` : `  en el lock, o nómbralo en MOTOR_PENDIENTE con lo que falta.`),
   );
 }
 

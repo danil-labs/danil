@@ -1,16 +1,15 @@
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
-import Plus from "lucide-solid/icons/plus";
-import { batch, createSignal, For, onMount, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
+import { batch, createSignal, For, Show } from "solid-js";
+import { t } from "../../../../ui/src/lib/i18n";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../../ui/src/Popover";
+import { Pressable } from "../../../../ui/src/Pressable";
 import { SignalDot } from "../../../../ui/src/SignalDot";
-import { ConnectMachine, connectSource } from "./ConnectMachine";
 import { MachineIcon } from "../../../../ui/src/MachineIcon";
 import { isGuestMachine } from "../queries/guestLink";
 import { capabilities } from "../../../../host/src/platform";
-import { cloudInventory, rememberedRunOn, type Machine, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "../queries/store";
+import type { Machine } from "../model";
+import { cloudInventory, rememberedRunOn, machineName, machines, type ProjectPlace, refetchMachines, runOn, runsWorkspace, setRunOn, unavailable, wakesOf } from "../queries/store";
 
 let pedida = false;
 
@@ -27,12 +26,8 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
     pedida = true;
     void refetchMachines();
   }
-  onMount(() => {
-  });
 
   const [abierto, setAbierto] = createSignal(false);
-  const [conectando, setConectando] = createSignal(false);
-  const fuente = connectSource();
   const opciones = () => machines().filter((m) => (!capabilities().nativeWindow ? !m.local : true) && runsWorkspace(m));
   const elegida = () => {
     const id = runOn(props.workspace, props.project);
@@ -67,7 +62,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
     const name = remembered ? machineName(remembered, false) : null;
     return name && name !== remembered ? name : t("shell.machines.label");
   };
-  const muestra = () => cloudInitial() || (!capabilities().nativeWindow ? machines().length > 0 : machines().length > 1);
+  const muestra = () => cloudInitial() || opciones().some((m) => !m.local);
   return (
     <Show when={muestra()}>
       <Popover open={abierto()} onOpenChange={(v) => { setAbierto(v); if (v) { void refetchMachines(); } }} placement="top-start" gutter={4}>
@@ -87,7 +82,7 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
           <div class="py-1">
             <For each={opciones()}>
               {(m) => (
-                <button
+                <Pressable
                   class={`${ITEM_DE_MENU} flex items-center gap-2 disabled:opacity-50`}
                   data-machine-option={m.id}
                   disabled={!!razon(m)}
@@ -105,44 +100,12 @@ export function MachinePicker(props: { workspace: string | null; project?: Proje
                       <Check size={12} aria-hidden="true" />
                     </Show>
                   </span>
-                </button>
+                </Pressable>
               )}
             </For>
           </div>
-          <Show when={fuente}>
-            <button
-              class={`${ITEM_DE_MENU} flex items-center gap-2 border-t border-border`}
-              data-connect-machine-item=""
-              onClick={() => {
-                setAbierto(false);
-                setConectando(true);
-              }}
-            >
-              <Plus size={12} aria-hidden="true" />
-              <span class="flex-1 truncate">{t("danil.connect_machine.button")}</span>
-            </button>
-          </Show>
         </PopoverContent>
       </Popover>
-      <Show when={fuente}>
-        {(f) => (
-          <Dialog open={conectando()} onOpenChange={setConectando}>
-            <DialogContent class="max-w-[520px]">
-              <DialogTitle class="mb-3 text-sm font-semibold">{t("danil.connect_machine.title")}</DialogTitle>
-              <Show when={conectando()}>
-                <ConnectMachine
-                  {...f()}
-                  onReady={(c) => {
-                    setConectando(false);
-                    f().onReady(c);
-                    void refetchMachines();
-                  }}
-                />
-              </Show>
-            </DialogContent>
-          </Dialog>
-        )}
-      </Show>
     </Show>
   );
 }

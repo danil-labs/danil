@@ -55,8 +55,14 @@ for (const streaming of [false, true]) test(`public messages remain outside acti
     assert.equal(disclosure.getAttribute("aria-expanded"), "false"); disclosure.click();
     assert.ok(await until(() => fixture.doc.querySelector("[data-turn-activity-content] [data-reasoning-content]")));
     const panel = fixture.doc.querySelector("[data-turn-activity-content]");
-    assert.ok(panel.textContent.includes(REASONING));
-    assert.equal(panel.querySelector("[data-reasoning-content] h4")?.textContent, "Razonamiento");
+    const reasoningToggle = panel.querySelector("[data-reasoning-content] button[data-fila]");
+    assert.ok(reasoningToggle, "reasoning renders as a collapsible row like tools");
+    assert.equal(reasoningToggle.textContent?.trim(), "Razonó");
+    assert.equal(reasoningToggle.getAttribute("aria-expanded"), "false");
+    assert.equal(panel.textContent.includes(REASONING), false, "reasoning body stays collapsed until clicked");
+    reasoningToggle.click();
+    assert.ok(await until(() => panel.querySelector("[data-reasoning-body]")?.textContent.includes(REASONING)));
+    assert.equal(reasoningToggle.getAttribute("aria-expanded"), "true");
     assert.ok(panel.textContent.includes("first.ts")); assert.ok(panel.textContent.includes("second.ts"));
     for (const text of [FIRST, SECOND, FINAL]) assert.equal(panel.textContent.includes(text), false);
     publicMessages(fixture.doc);
@@ -68,7 +74,7 @@ for (const streaming of [false, true]) test(`public messages remain outside acti
   } finally { fixture.app.w.close(); }
 });
 
-test("filtered internal tools leave an explicit unavailable-details notice", async () => {
+test("filtered internal tools show plain duration without an empty disclosure", async () => {
   const filtered = { ...saved, reasoning: [], tools: [{ name: "Read", target: "/lab/.preguntas.json", ok: true }], pieces: [{ text: FIRST }, { tool: 0 }, { text: FINAL }] };
   const fixture = await open("public-progress-no-internal-content", { computers: [HOME], extra: {
     list_live_sessions: () => [{ ...row("t1", "Mensajes sin herramientas visibles"), turns: 2 }],
@@ -79,20 +85,16 @@ test("filtered internal tools leave an explicit unavailable-details notice", asy
     assert.ok(await until(() => fixture.doc.querySelector("[data-chat-thread]")?.textContent.includes(FINAL)));
     const thread = fixture.doc.querySelector("[data-chat-thread]");
     assert.ok(thread.textContent.includes(FIRST));
-    const disclosure = thread.querySelector("[data-activity-label]")?.closest("button");
-    assert.ok(disclosure);
-    disclosure.click();
-    assert.ok(await until(() => thread.querySelector("[data-turn-activity-content]")));
-    const panel = thread.querySelector("[data-turn-activity-content]");
-    assert.ok(panel.textContent.includes("No hay detalles de actividad disponibles para este turno."));
-    assert.equal(panel.textContent.includes(".preguntas.json"), false);
-    assert.equal(panel.textContent.includes(FIRST), false);
+    const label = thread.querySelector("[data-activity-label]");
+    assert.equal(label?.textContent, "Trabajó durante 1s");
+    assert.equal(label?.closest("button"), null, "no empty disclosure button when all tools were internal");
+    assert.equal(thread.textContent.includes(".preguntas.json"), false);
     assert.deepEqual(fixture.app.failures, []);
   } finally { fixture.app.w.close(); }
 });
 
 
-test("a finished duration remains inspectable when no internal details were saved", async () => {
+test("a finished duration without tools or reasoning renders as plain text without a disclosure", async () => {
   const fixture = await open("finished-duration-only", { computers: [HOME], extra: {
     list_live_sessions: () => [{ ...row("t1", "Duración sin detalles"), turns: 2 }],
     load_session: () => ({ id: "t1", provider: "codex", sources: [], model: "gpt-5.6", turns: [human, { role: "agent", id: "answer", text: FINAL, duration_ms: 1500 }] }),
@@ -100,14 +102,10 @@ test("a finished duration remains inspectable when no internal details were save
   try {
     assert.ok(await until(() => fixture.doc.querySelector('[data-sesion="t1"]'))); await openTask(fixture.app, "t1");
     assert.ok(await until(() => fixture.doc.querySelector("[data-chat-thread]")?.textContent.includes(FINAL)));
-    const disclosure = [...fixture.doc.querySelectorAll("button")].find(button => button.textContent === "Trabajó durante 1s");
-    assert.ok(disclosure, "finished duration must not become a dead label");
-    disclosure.click();
-    assert.ok(await until(() => fixture.doc.querySelector("[data-turn-activity-content]")));
-    assert.equal(disclosure.getAttribute("aria-expanded"), "true");
-    assert.ok(fixture.doc.querySelector("[data-turn-activity-content]").textContent.includes("No hay detalles de actividad disponibles para este turno."));
-    disclosure.click();
-    assert.ok(await until(() => !fixture.doc.querySelector("[data-turn-activity-content]")));
+    const label = fixture.doc.querySelector("[data-activity-label]");
+    assert.equal(label?.textContent, "Trabajó durante 1s");
+    assert.equal(label?.closest("button"), null, "finished duration without tools or reasoning must not show an empty dropdown");
+    assert.equal(fixture.doc.querySelector("[data-turn-activity-content]"), null);
     assert.deepEqual(fixture.app.failures, []);
   } finally { fixture.app.w.close(); }
 });

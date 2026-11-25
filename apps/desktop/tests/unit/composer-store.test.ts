@@ -1,19 +1,28 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createRoot, createSignal } from "solid-js";
-import { createComposerStore } from "../../src/features/composer/index.ts";
-import type { AgentModels, ModelOption } from "../../src/lib/model.ts";
+import { modoInicial } from "../../../../packages/features/chat/src/model/modes.ts";
+import { createComposerStore } from "../../../../packages/features/composer/src/index.ts";
+import type { Agent, AgentModels, ModelOption, ModoDePermiso } from "../../src/lib/model.ts";
 import type { Superficie } from "../../src/lib/surfaces.ts";
 
 globalThis.window = new EventTarget() as unknown as Window & typeof globalThis;
 const model = (id: string): ModelOption => ({ id, label: id, efforts: ["low", "high"], default_effort: "low", gratis: false, note: null });
 const catalog = (provider: string, id: string): AgentModels => ({ provider, models: [model(id)], fallback: false });
 const surface: Superficie = { id: "claude", provider: "claude", label: "Claude", catalogo: "todo", usable: true, marca: null, porque: null };
+const provider = (id: string): Agent => ({ id, label: id, available: true, path: null, version: null, driver: true, limits: true });
+const permissionModes: ModoDePermiso[] = [
+  { id: "manual", label: { clave: "agents.mode.manual" }, falta: null, por_omision: false },
+  { id: "ediciones", label: { clave: "agents.mode.edits" }, falta: null, por_omision: false },
+  { id: "auto", label: { clave: "agents.mode.auto" }, falta: null, por_omision: true },
+];
 function pending<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(yes => { resolve = yes; }); return { promise, resolve }; }
-function fixture(options: { invoke?: Parameters<typeof createComposerStore>[0]["invoke"]; install?: boolean; last?: Parameters<typeof createComposerStore>[0]["withLastAnswer"] } = {}) {
+function fixture(options: { invoke?: Parameters<typeof createComposerStore>[0]["invoke"]; install?: boolean; connected?: boolean; machineOn?: boolean; last?: Parameters<typeof createComposerStore>[0]["withLastAnswer"] } = {}) {
   return createRoot(dispose => {
     const [workspace, setWorkspace] = createSignal<string | null>("A");
     const [machine, setMachine] = createSignal<string | null>("m1");
+    const [machineOn, setMachineOn] = createSignal<boolean | undefined>(options.machineOn ?? true);
+    const [connected, setConnected] = createSignal(options.connected ?? false);
     const [session, setSession] = createSignal<string | null>(null);
     const [workspaceMode, setWorkspaceMode] = createSignal<string | null>(null);
     const [configuration, setConfiguration] = createSignal<ReturnType<typeof createComposerStore>["snapshot"] extends () => infer C ? C | undefined : never>(undefined);
@@ -22,15 +31,17 @@ function fixture(options: { invoke?: Parameters<typeof createComposerStore>[0]["
       invoke: async <T>(command: string, args?: Record<string, unknown>, routed?: { headers: Record<string, string> }) => {
         calls.push({ command, headers: routed?.headers });
         if (options.invoke) return options.invoke<T>(command, args, routed);
-        const value = command === "list_models" ? catalog(String(args?.provider), "first") : command === "list_surfaces" ? [surface] : command === "list_slash_menu" ? { commands: [], skills: [] } : [];
+        const value = command === "list_models" ? catalog(String(args?.provider), "first") : command === "list_surfaces" ? [surface] : command === "list_permission_modes" ? permissionModes : command === "list_slash_menu" ? { commands: [], skills: [] } : [];
         return value as T;
       },
       withLastAnswer: options.last ?? (async (_machine, _key, read) => read()),
-      scope: { workspace, machine, machineOn: () => true, connected: () => false, session },
+      scope: { workspace, machine, machineOn, connected, session },
       workspaceMode, draftConfiguration: configuration,
+      modoInicial,
+      recordarModo: () => {},
     });
     if (options.install) store.installEffects();
-    return { store, calls, setWorkspace, setMachine, setSession, setWorkspaceMode, setConfiguration, dispose: () => { store.dispose(); dispose(); } };
+    return { store, calls, setWorkspace, setMachine, setMachineOn, setConnected, setSession, setWorkspaceMode, setConfiguration, dispose: () => { store.dispose(); dispose(); } };
   });
 }
 const tick = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
@@ -63,10 +74,12 @@ test("A to B to A discards an old catalog response", async () => {
 
 test("restoring a draft is atomic and manual permission mode beats workspace default", async () => {
   const f = fixture({ install: true }); await tick();
+  assert.equal(f.store.modo(), "auto");
   const config = { agent: "claude", surface: "claude", model: "first", effort: "high", mode: "manual" };
   f.setConfiguration(config); f.store.restoreDraft(config); f.setWorkspaceMode("auto"); await tick();
   assert.equal(f.store.model(), "first"); assert.equal(f.store.effort(), "high"); assert.equal(f.store.modo(), "manual");
-  f.setConfiguration(undefined); f.setWorkspaceMode("ediciones"); await tick(); assert.equal(f.store.modo(), "ediciones"); f.dispose();
+  f.setConfiguration(undefined); f.setWorkspaceMode("ediciones"); await tick(); assert.equal(f.store.modo(), "ediciones");
+  f.setWorkspaceMode(null); await tick(); assert.equal(f.store.modo(), "auto"); f.dispose();
 });
 
 test("existing legacy session cannot adopt a draft provider but absent session can", () => {
@@ -93,4 +106,172 @@ test("dispose blocks pending answers, new reads and scope-triggered reads", asyn
   f.setWorkspace("B"); f.store.refreshCommands("claude"); void f.store.refreshSurfaces(false); void f.store.refreshProviders();
   await f.store.readModels("codex"); result.resolve(catalog("claude", "late")); await tick();
   assert.equal(f.calls.length, count); assert.deepEqual(f.store.catalogos(), {}); f.dispose();
+});
+
+test("providers recover when switching workspace, waking a machine, or falling back from an offline machine", async () => {
+  let failMachine = true;
+  const f = fixture({
+    install: true,
+    connected: true,
+    machineOn: false,
+    invoke: async <T>(command: string, args?: Record<string, unknown>, routed?: { headers: Record<string, string> }) => {
+      if (command === "list_providers") {
+        if (routed?.headers?.["x-terminus-workspace"] === "A" && failMachine) throw new Error("machine_off");
+        if (routed?.headers?.["x-terminus-machine"] === "m-off") throw new Error("machine_off");
+        return [provider(routed?.headers?.["x-terminus-workspace"] === "B" ? "codex" : "claude")] as T;
+      }
+      if (command === "list_models") return catalog(String(args?.provider), "first") as T;
+      if (command === "list_surfaces") return [surface] as T;
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  await f.store.refreshProviders();
+  assert.deepEqual(f.store.agents(), []);
+
+  // Machine wakes up -> providers load automatically.
+  failMachine = false;
+  f.setMachineOn(true);
+  await tick();
+  assert.deepEqual(f.store.agents().map(a => a.id), ["claude"]);
+
+  // Switching workspace with an offline remembered machine falls back to workspace routing.
+  f.setMachine("m-off");
+  f.setWorkspace("B");
+  await tick();
+  assert.deepEqual(f.store.agents().map(a => a.id), ["codex"]);
+  assert.ok(f.calls.some(c => c.command === "list_providers" && c.headers?.["x-terminus-workspace"] === "B" && !c.headers?.["x-terminus-machine"]));
+  f.dispose();
+});
+
+test("stale provider reads from an earlier workspace are discarded", async () => {
+  const slow = pending<Agent[]>();
+  let reads = 0;
+  const f = fixture({
+    install: true,
+    connected: true,
+    invoke: async <T>(command: string, args?: Record<string, unknown>) => {
+      if (command === "list_providers") return (++reads === 1 ? slow.promise : Promise.resolve([provider("codex")])) as Promise<T>;
+      if (command === "list_models") return catalog(String(args?.provider), "first") as T;
+      if (command === "list_surfaces") return [surface] as T;
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  const first = f.store.refreshProviders();
+  f.setWorkspace("B");
+  await tick();
+  assert.deepEqual(f.store.agents().map(a => a.id), ["codex"]);
+  slow.resolve([provider("claude")]);
+  await first;
+  await tick();
+  assert.deepEqual(f.store.agents().map(a => a.id), ["codex"]);
+  f.dispose();
+});
+
+test("forced refresh failure preserves previously loaded models and selected model", async () => {
+  let failModels = false;
+  const f = fixture({
+    install: true,
+    invoke: async <T>(command: string, args?: Record<string, unknown>) => {
+      if (command === "list_models") {
+        if (failModels) throw new Error("list_models timeout");
+        return { provider: String(args?.provider), models: [model("sonnet"), model("opus")], fallback: false } as T;
+      }
+      if (command === "list_surfaces") return [surface] as T;
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  await f.store.refreshSurfaces(true);
+  await tick();
+  f.store.selectModel({
+    key: "claude:opus",
+    superficie: "claude",
+    agent: "claude",
+    usable: true,
+    proveedor: { id: "claude", label: "Claude", logo: "claude" },
+    model: model("opus"),
+  });
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet", "opus"]);
+  assert.equal(f.store.model(), "opus");
+
+  failModels = true;
+  await f.store.refreshSurfaces(false);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet", "opus"]);
+  assert.equal(f.store.model(), "opus");
+
+  await f.store.readModels("claude", true);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet", "opus"]);
+  assert.equal(f.store.model(), "opus");
+  f.dispose();
+});
+
+test("initial catalog load failure sets agent catalog to null", async () => {
+  const f = fixture({
+    invoke: async <T>(command: string) => {
+      if (command === "list_models") throw new Error("list_models timeout");
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  await f.store.readModels("claude");
+  assert.equal("claude" in f.store.catalogos(), true);
+  assert.equal(f.store.catalogos().claude, null);
+  assert.equal(f.store.models(), null);
+  f.dispose();
+});
+
+test("empty fallback refresh preserves loaded models, while authoritative empty catalog replaces them", async () => {
+  let response: AgentModels = catalog("claude", "sonnet");
+  const f = fixture({
+    install: true,
+    invoke: async <T>(command: string) => {
+      if (command === "list_models") return response as T;
+      if (command === "list_surfaces") return [surface] as T;
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  await f.store.refreshSurfaces(true);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet"]);
+  assert.equal(f.store.model(), "sonnet");
+
+  response = { provider: "claude", models: [], fallback: true };
+  await f.store.readModels("claude", true);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet"]);
+  assert.equal(f.store.catalogos().claude?.fallback, false);
+  assert.equal(f.store.model(), "sonnet");
+
+  response = { provider: "claude", models: [], fallback: false };
+  await f.store.readModels("claude", true);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude, { provider: "claude", models: [], fallback: false });
+  f.dispose();
+});
+
+test("switching machine or workspace still clears previous catalogs", async () => {
+  const f = fixture({
+    install: true,
+    connected: false,
+    invoke: async <T>(command: string, args?: Record<string, unknown>) => {
+      if (command === "list_models") return catalog(String(args?.provider), "sonnet") as T;
+      if (command === "list_surfaces") return [surface] as T;
+      return (command === "list_slash_menu" ? { commands: [], skills: [] } : []) as T;
+    },
+  });
+  await f.store.refreshSurfaces(true);
+  await tick();
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet"]);
+
+  f.setMachine("m2");
+  await tick();
+  assert.deepEqual(f.store.catalogos(), {});
+
+  await f.store.readModels("claude");
+  assert.deepEqual(f.store.catalogos().claude?.models.map(m => m.id), ["sonnet"]);
+
+  f.setWorkspace("B");
+  await tick();
+  assert.deepEqual(f.store.catalogos(), {});
+  f.dispose();
 });

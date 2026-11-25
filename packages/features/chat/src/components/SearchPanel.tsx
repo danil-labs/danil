@@ -1,9 +1,9 @@
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import { createEffect, For, Show } from "solid-js";
-import { df } from "../../../../../apps/desktop/src/lib/format";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { df } from "../../../../ui/src/lib/format";
+import { t } from "../../../../ui/src/lib/i18n";
+import { cn } from "../../../../ui/src/lib/utils";
 import { HEADER_HEIGHT } from "../../../../host/src/window";
 import { Button } from "../../../../ui/src/Button";
 import { Input } from "../../../../ui/src/Input";

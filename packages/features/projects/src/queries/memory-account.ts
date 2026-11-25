@@ -8,16 +8,19 @@
  *   de Danil no tiene historial: solo su memoria local.
  */
 import {
-  entriesIn,
+  deleteMemoryFile,
   type MemoryFileRef,
-  type MemorySource,
-  memoryDirs,
   memoryFiles,
-  parseMemoryEntry,
+  memoryHistory,
+  type MemorySource,
+  type MemoryVersion,
   readMemoryFile,
-} from "@terminus/computers";
-import { invoke } from "../../../../engine-client/src/client.ts";
-import type { MemoriaEntrada, MemoriaScope } from "../../../../../apps/desktop/src/lib/model";
+  writeMemoryFile,
+} from "../../../../platform-client/src/memory.ts";
+import { entriesIn, memoryDirs, parseMemoryEntry } from "../model/memory.ts";
+export { deleteMemoryFile, memoryHistory, type MemoryVersion, readMemoryFile, writeMemoryFile };
+import { callEngine } from "../../../../engine-client/src/client.ts";
+import type { MemoriaEntrada, MemoriaScope } from "../../../../ui/src/lib/model";
 import { capabilities } from "../../../../host/src/platform";
 
 /** La memoria de un workspace en la cuenta: a dónde hablar y de qué workspace. */
@@ -47,13 +50,13 @@ export function memoriaDeCuenta(workspace: string | null | undefined): Promise<M
 }
 
 async function desdeElEscritorio(workspace: string): Promise<MemoriaDeCuenta | null> {
-  const of = (await invoke<WorkspaceAccountOf>("danil_workspace_account", { workspace }).catch(() => null)) ?? null;
+  const of = (await callEngine<WorkspaceAccountOf>("danil_workspace_account", { workspace }).catch(() => null)) ?? null;
   if (!of?.signed_in) return null;
   const account = of.account ?? null;
   let token: ClientToken | null = null;
   const pedir = async () => {
     if (token && token.expires_at - Date.now() > MARGEN_MS) return token;
-    token = await invoke<ClientToken>("account_relay_token", account ? { account } : {});
+    token = await callEngine<ClientToken>("account_relay_token", account ? { account } : {});
     return token;
   };
   try {
@@ -72,13 +75,13 @@ export type EntradaDeCuenta = MemoriaEntrada & { path: string; oid: string };
  * La carpeta del repo que corresponde a ese alcance: la primera que ya tiene
  * entradas (un encargado puede ser del proyecto o del workspace), o la primera.
  */
-export function carpetaDe(files: MemoryFileRef[], project: string, scope: MemoriaScope): string {
+function carpetaDe(files: MemoryFileRef[], project: string, scope: MemoriaScope): string {
   const dirs = memoryDirs(project, scope);
   return dirs.find((d) => entriesIn(files, d).length > 0) ?? (dirs[0] as string);
 }
 
 /** Lo que el motor llama `EntryView`, armado desde un archivo del repo. */
-export function entradaDesdeTexto(path: string, oid: string, raw: string, workspace: string, project: string): EntradaDeCuenta {
+function entradaDesdeTexto(path: string, oid: string, raw: string, workspace: string, project: string): EntradaDeCuenta {
   const p = parseMemoryEntry(raw);
   const o = p.origin;
   return {

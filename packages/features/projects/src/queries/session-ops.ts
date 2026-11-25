@@ -1,5 +1,4 @@
-import type { InvokeOptions } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine, type InvokeOptions } from "../../../../engine-client/src/client.ts";
 import { machineOf } from "../../../../host/src/machine";
 
 export type Blockers = {
@@ -29,7 +28,7 @@ export const finishTask = (
   id: string,
   options?: InvokeOptions,
 ): Promise<void> =>
-  invoke("finish_task", { project, id }, options);
+  callEngine("finish_task", { project, id }, options);
 
 export const setTaskArchived = (
   project: string,
@@ -37,7 +36,7 @@ export const setTaskArchived = (
   archived: boolean,
   options?: InvokeOptions,
 ): Promise<void> =>
-  invoke("set_task_archived", { project, id, archived }, options);
+  callEngine("set_task_archived", { project, id, archived }, options);
 
 export const getTaskBlockers = (
   project: string,
@@ -45,7 +44,7 @@ export const getTaskBlockers = (
   finish: boolean,
   options?: InvokeOptions,
 ): Promise<(Blockers)> =>
-  invoke<(Blockers)>("task_blockers", { project, id, finish }, options);
+  callEngine<(Blockers)>("task_blockers", { project, id, finish }, options);
 
 export const discardTaskChanges = (
   project: string,
@@ -53,12 +52,12 @@ export const discardTaskChanges = (
   files: string[],
   options?: InvokeOptions,
 ): Promise<void> =>
-  invoke("discard_task_changes", { project, id, files }, options);
+  callEngine("discard_task_changes", { project, id, files }, options);
 
 export const getTaskHistory = (
   target: { project: string; id: string },
 ): Promise<(TaskWork | undefined)> =>
-  invoke<(TaskWork)>("task_history", target, machineOf(target.id) as InvokeOptions).then(
+  callEngine<(TaskWork)>("task_history", target, machineOf(target.id) as InvokeOptions).then(
     (work) => (work && typeof work === "object" && "history" in work ? work : undefined),
   );
 
@@ -66,4 +65,4 @@ export const recreateTaskWork = (
   project: string,
   id: string,
 ): Promise<void> =>
-  invoke("recreate_task_work", { project, id }, machineOf(id) as InvokeOptions);
+  callEngine("recreate_task_work", { project, id }, machineOf(id) as InvokeOptions);

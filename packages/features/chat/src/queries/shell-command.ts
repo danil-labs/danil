@@ -1,16 +1,16 @@
 
-import { connected } from "../../../../../apps/desktop/src/lib/engineConnection";
-import { type Agent } from "../../../../../apps/desktop/src/lib/model.ts";
-import { esProvisional, tituloProvisional } from "../../../../../apps/desktop/src/lib/taskDraft";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { connected } from "../../../../session/src/engineConnection.ts";
+import { type Agent } from "../../../../ui/src/lib/model.ts";
+import { esProvisional, tituloProvisional } from "../../../../ui/src/lib/taskDraft";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { claveDe } from "../../../../ui/src/Failure";
 import { type Encolado } from "../components/MessageQueue";
 import { mensajeDeFallo } from "../model/failures";
 import { esDeLaTerminal, interrumpible, type RazonDeRetencion } from "../../../../ui/src/lib/queue.ts";
 import { type ComandoQueNace, type Corrida, type TerminalLanzada } from "./sleepSession.ts";
 import { batch, createEffect, createMemo, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
-import type { DefaultPermissionModeChange, SessionRow, createComposerStore, createProjectsStore, createThreadsStore, createWorkspaceStore, machines } from "./types.js";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { ComposerPort, DefaultPermissionModeChange, MachinesPort, ProjectsPort, SessionRow, WorkspaceContextPort, createThreadsStore } from "./types.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createPanelDeChat } from "../screens/PanelDeChat.tsx";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
 import type { createAttachments } from "./attachments.ts";
@@ -24,19 +24,19 @@ import type { createThreadStream } from "./thread-stream.ts";
 /** Lo que el bloque usaba del cuerpo de App. */
 export type ShellCommandDeps = { DEFAULT_PERMISSION_MODE_EVENT: "harness:default-permission-mode"; adoptarNacida: ReturnType<typeof createHandover>["adoptarNacida"]; agent: Accessor<string>;
   agents: Accessor<Agent[]>; busy: ReturnType<typeof createThreadStream>["busy"]; carpetasDeTerminal: ReturnType<typeof createThreadStream>["carpetasDeTerminal"]; claveAbierta: () => string;
-  cola: ReturnType<typeof createThreadStream>["cola"]; comandosDeLaCola: ReturnType<typeof createThreadStream>["comandosDeLaCola"]; composer: ReturnType<typeof createComposerStore>;
+  cola: ReturnType<typeof createThreadStream>["cola"]; comandosDeLaCola: ReturnType<typeof createThreadStream>["comandosDeLaCola"]; composer: ComposerPort;
   configDeLaSesion: ReturnType<typeof createHandover>["configDeLaSesion"]; conversationScope: ReturnType<typeof createThreadStream>["conversationScope"];
   deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; detenerYEnviar: ReturnType<typeof createSendNow>["detenerYEnviar"];
   draftBases: Accessor<Record<string, string>>; draftMachine: () => string | null; draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; effort: Accessor<string>;
   enCache: Accessor<boolean>; engineCanDispatch: ReturnType<typeof createThreadStream>["engineCanDispatch"]; enviar: ReturnType<typeof createSend>["enviar"]; escritorio: Accessor<string | null>;
-  espacioPara: (space: string | null | undefined, machine: string | null | undefined) => string | null; esperando: Accessor<boolean>; grupos: Accessor<string[]>;
+  esperando: Accessor<boolean>; grupos: Accessor<string[]>;
   hablandoCon: Accessor<{ project: string; name: string; } | null>; handoff: ReturnType<typeof createThreadStream>["handoff"]; handoffAt: ReturnType<typeof createThreadStream>["handoffAt"];
   injecting: ReturnType<typeof createThreadStream>["injecting"]; lanzados: ReturnType<typeof createThreadStream>["lanzados"]; lifecycleRevision: number;
-  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; machines: typeof machines;
+  machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; machines: MachinesPort;
   marcarQuieta: ReturnType<typeof createThreadStream>["marcarQuieta"]; marcarViva: ReturnType<typeof createThreadStream>["marcarViva"]; model: Accessor<string>; modo: Accessor<string>;
   nacenConComando: ReturnType<typeof createThreadStream>["nacenConComando"]; olvidarPestana: ReturnType<typeof createPanelDeChat>["olvidarPestana"];
   pendingStarts: ReturnType<typeof createThreadStream>["pendingStarts"]; pestanas: ReturnType<typeof createTabs>; pintarNaciendo: ReturnType<typeof createHandover>["pintarNaciendo"];
-  ponerTerminal: ReturnType<typeof createResyncCommands>["ponerTerminal"]; project: Accessor<string>; projectCatalog: ReturnType<typeof createProjectsStore>;
+  ponerTerminal: ReturnType<typeof createResyncCommands>["ponerTerminal"]; project: Accessor<string>; projectCatalog: ProjectsPort;
   quitarDeLaCola: ReturnType<typeof createResyncCommands>["quitarDeLaCola"]; reanudarCola: ReturnType<typeof createSendNow>["reanudarCola"];
   refreshFolder: ReturnType<typeof createAttachments>["refreshFolder"]; refreshSessions: (proyectos: string[]) => Promise<void>;
   retenidaPorElMotor: ReturnType<typeof createThreadStream>["retenidaPorElMotor"]; retirarNaciendo: (id: string) => { project: string; row: SessionRow; }[];
@@ -45,13 +45,15 @@ export type ShellCommandDeps = { DEFAULT_PERMISSION_MODE_EVENT: "harness:default
   setPermissionError: ReturnType<typeof createThreadStream>["setPermissionError"]; setPorContestar: ReturnType<typeof createResyncCommands>["setPorContestar"]; setSessionId: Setter<string | null>;
   setTerminales: ReturnType<typeof createThreadStream>["setTerminales"]; settleTurn: ReturnType<typeof createAttachmentsMount>["settleTurn"];
   settlingTurns: ReturnType<typeof createThreadStream>["settlingTurns"]; soltarTerminal: ReturnType<typeof createResyncCommands>["soltarTerminal"];
-  stopping: ReturnType<typeof createThreadStream>["stopping"]; taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; terminales: ReturnType<typeof createThreadStream>["terminales"];
+  stopping: ReturnType<typeof createThreadStream>["stopping"]; taskQueues: ReturnType<typeof createThreadStream>["taskQueues"];
+  taskSpaceCreate?: (requested: string | null | undefined) => { engineSpace: string | null; record: (taskId: string) => void };
+  terminales: ReturnType<typeof createThreadStream>["terminales"];
   threads: ReturnType<typeof createThreadsStore>; vivas: ReturnType<typeof createThreadStream>["vivas"]; workspaceActivo: Accessor<string | null>;
-  workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 2961–3259, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createShellCommand(deps: ShellCommandDeps) {
-  const { DEFAULT_PERMISSION_MODE_EVENT, agent, agents, busy, carpetasDeTerminal, claveAbierta, cola, comandosDeLaCola, composer, conversationScope, deLaTarea, draftBases, draftMachine, draftOptions, effort, enCache, engineCanDispatch, escritorio, espacioPara, esperando, grupos, hablandoCon, handoff, handoffAt, injecting, lanzados, machineOf, machines, marcarQuieta, marcarViva, model, modo, nacenConComando, pendingStarts, pestanas, ponerTerminal, project, projectCatalog, quitarDeLaCola, refreshFolder, refreshSessions, retenidaPorElMotor, retirarNaciendo, sesiones, sessionId, setArrancando, setHablandoCon, setInjecting, setPermissionError, setPorContestar, setSessionId, setTerminales, settleTurn, settlingTurns, soltarTerminal, stopping, taskQueues, terminales, threads, vivas, workspaceActivo, workspaceContext } = deps;
+  const { DEFAULT_PERMISSION_MODE_EVENT, agent, agents, busy, carpetasDeTerminal, claveAbierta, cola, comandosDeLaCola, composer, conversationScope, deLaTarea, draftBases, draftMachine, draftOptions, effort, enCache, engineCanDispatch, escritorio, esperando, grupos, hablandoCon, handoff, handoffAt, injecting, lanzados, machineOf, machines, marcarQuieta, marcarViva, model, modo, nacenConComando, pendingStarts, pestanas, ponerTerminal, project, projectCatalog, quitarDeLaCola, refreshFolder, refreshSessions, retenidaPorElMotor, retirarNaciendo, sesiones, sessionId, setArrancando, setHablandoCon, setInjecting, setPermissionError, setPorContestar, setSessionId, setTerminales, settleTurn, settlingTurns, soltarTerminal, stopping, taskQueues, taskSpaceCreate, terminales, threads, vivas, workspaceActivo, workspaceContext } = deps;
   const adoptarNacida: ShellCommandDeps["adoptarNacida"] = (...a: Parameters<ShellCommandDeps["adoptarNacida"]>) => deps.adoptarNacida(...a);
   const configDeLaSesion: ShellCommandDeps["configDeLaSesion"] = (...a: Parameters<ShellCommandDeps["configDeLaSesion"]>) => deps.configDeLaSesion(...a);
   const detenerYEnviar: ShellCommandDeps["detenerYEnviar"] = (...a: Parameters<ShellCommandDeps["detenerYEnviar"]>) => deps.detenerYEnviar(...a);
@@ -73,7 +75,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
     pendingStarts.set(session, Symbol());
     marcarViva(session);
     try {
-      const abrio = await invoke<boolean>("answer_shell_output", {
+      const abrio = await callEngine<boolean>("answer_shell_output", {
         provider: lanzado.provider,
         project: lanzado.project,
         session,
@@ -109,7 +111,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
       });
     });
     try {
-      await invoke<Corrida>("run_shell_command", { project: lanzado.project, session, command, queueId }, deLaTarea(session));
+      await callEngine<Corrida>("run_shell_command", { project: lanzado.project, session, command, queueId }, deLaTarea(session));
       return null;
     } catch (error) {
       if (lanzados.get(session) === lanzado) {
@@ -131,6 +133,8 @@ export function createShellCommand(deps: ShellCommandDeps) {
     if (!nace) return false;
     nacenConComando.delete(runId);
     nace.session = session;
+    nace.recordSpace?.(session);
+    nace.recordSpace = undefined;
     if (nace.generation !== workspaceContext.generation()) return true;
     lanzados.set(session, nace.lanzado);
     batch(() => {
@@ -153,6 +157,9 @@ export function createShellCommand(deps: ShellCommandDeps) {
     const lanzado = { project: proyecto, provider: agent(), model: model() || null, effort: effort() || null, permission_mode: modo() || null };
     const titulo = tituloProvisional(command);
     const runId = crypto.randomUUID();
+    const spacePlan = taskSpaceCreate
+      ? taskSpaceCreate(escritorio())
+      : { engineSpace: escritorio(), record: () => {} };
     const nace: ComandoQueNace = {
       lanzado,
       provisional: pintarNaciendo(proyecto, titulo, lanzado, encargado),
@@ -160,6 +167,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
       claveBorrador,
       generation: workspaceContext.generation(),
       session: null,
+      recordSpace: spacePlan.record,
     };
     nacenConComando.set(runId, nace);
     deps.lifecycleRevision++;
@@ -169,7 +177,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
     });
     try {
       const enOtra = draftOptions();
-      const corrida = await invoke<Corrida>("run_shell_command", {
+      const corrida = await callEngine<Corrida>("run_shell_command", {
         project: proyecto,
         session: null,
         command,
@@ -178,11 +186,13 @@ export function createShellCommand(deps: ShellCommandDeps) {
         model: lanzado.model,
         effort: lanzado.effort,
         permissionMode: lanzado.permission_mode,
-        space: espacioPara(escritorio(), enOtra?.headers["x-terminus-machine"]),
+        space: spacePlan.engineSpace,
         agent: encargado,
         baseRef: draftBases()[claveBorrador] ?? null,
         runId,
       }, enOtra);
+      nace.recordSpace?.(corrida.session);
+      nace.recordSpace = undefined;
       // Sin su `shell_started` no hay nada pintado: se adopta aquí y se lee del disco.
       if (adoptarComando(runId, corrida.session) && nace.generation === workspaceContext.generation()) void settleTurn(corrida.session, true);
       return true;
@@ -232,7 +242,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
     const vivo = id ? terminales()[id] : null;
     if (!id || !vivo?.id) return false;
     try {
-      if (!(await invoke<boolean>("write_shell_input", { session: id, input: texto }, deLaTarea(id)))) return false;
+      if (!(await callEngine<boolean>("write_shell_input", { session: id, input: texto }, deLaTarea(id)))) return false;
     } catch (e) {
       threads.appendLive(id, [{ role: "system", ...mensajeDeFallo(e), meta: "fallo" }]);
       return false;

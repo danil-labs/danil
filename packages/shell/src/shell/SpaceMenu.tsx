@@ -1,20 +1,19 @@
-import Check from "lucide-solid/icons/check";
 import { SignalDot } from "../../../ui/src/SignalDot";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Pencil from "lucide-solid/icons/pencil";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
-import { createSignal, For, Match, Show, Switch } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import type { Project } from "../../../../apps/desktop/src/lib/model";
-import { type Space, spaceName } from "../../../../apps/desktop/src/lib/spaces";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { createSignal, Match, Show, Switch } from "solid-js";
+import { t } from "../../../ui/src/lib/i18n";
+import type { Project } from "../../../ui/src/lib/model";
+import { type Space, spaceName } from "../../../ui/src/lib/spaces";
+import { cn } from "../../../ui/src/lib/utils";
 import { Button } from "../../../ui/src/Button";
 import { Input } from "../../../ui/src/Input";
 import { ITEM_DE_MENU, Popover, PopoverContent, PopoverTrigger } from "../../../ui/src/Popover";
 import type { AttentionState } from "./attention";
 import { NewSpaceForm } from "./SpaceBar";
-import { AttentionBadge } from "./WorkspaceColumn";
+import { SpaceMenuList } from "./SpaceMenuList";
 import { Pressable } from "../../../ui/src/Pressable";
 
 /** El tope de `spaces::NAME_MAX_CHARS`. */
@@ -25,10 +24,13 @@ type Modo = { kind: "list" } | { kind: "new" };
 /** El espacio actual en la franja de la ventana; elegir, crear, renombrar y eliminar viven en su menú. */
 export default function SpaceMenu(props: {
   workspace: string;
+  workspaceId?: string;
   spaces: Space[];
   activa: string | null;
   proyectos: Project[];
   senal: (id: string) => AttentionState | null;
+  reordering?: boolean;
+  onReorder?: (ids: string[]) => void;
   onElegir: (id: string) => void;
   onCrear: (name: string, folders: string[]) => Promise<void>;
   onRenombrar: (id: string, name: string) => Promise<void>;
@@ -105,29 +107,18 @@ export default function SpaceMenu(props: {
             <p class="m-0 truncate px-2 pt-1 pb-1 text-caption font-medium text-neutral-500">
               {t("spaces.bar.label", { workspace: props.workspace })}
             </p>
-            <For each={props.spaces}>
-              {(space) => {
-                const elegida = () => space.id === props.activa;
-                const senal = () => (elegida() ? null : props.senal(space.id));
-                return (
-                  <Pressable
-                    class={cn(ITEM_DE_MENU, "flex items-center gap-2")}
-                    data-space={space.id}
-                    aria-current={elegida() ? "true" : undefined}
-                    onClick={() => {
-                      setAbierto(false);
-                      if (!elegida()) props.onElegir(space.id);
-                    }}
-                  >
-                    <span class="grid w-3.5 shrink-0 text-neutral-950">
-                      <Show when={elegida()}><Check size={14} aria-hidden="true" /></Show>
-                    </span>
-                    <span class="min-w-0 flex-1 truncate">{spaceName(space)}</span>
-                    <Show when={senal()}>{(s) => <AttentionBadge state={s()} />}</Show>
-                  </Pressable>
-                );
+            <SpaceMenuList
+              workspaceKey={props.workspaceId ?? props.workspace}
+              spaces={props.spaces}
+              activa={props.activa}
+              senal={props.senal}
+              reordering={props.reordering}
+              onReorder={props.onReorder}
+              onSelect={(id) => {
+                setAbierto(false);
+                if (id !== props.activa) props.onElegir(id);
               }}
-            </For>
+            />
             <div class="my-1 h-px bg-border" />
             <Pressable class={cn(ITEM_DE_MENU, "flex items-center gap-2")} onClick={() => setModo({ kind: "new" })}>
               <Plus size={14} aria-hidden="true" class="shrink-0 text-neutral-500" />

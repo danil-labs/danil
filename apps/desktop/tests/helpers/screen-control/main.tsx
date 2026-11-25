@@ -1,6 +1,6 @@
 import { render } from "solid-js/web";
-import Screen from "../../../src/features/screen/Screen";
-import "../../../src/styles/global.css";
+import Screen from "../../../../../packages/features/screen/src/screens/Screen";
+import "../../../../../packages/ui/src/styles/global.css";
 import "../../../src/locales/catalogs";
 const port = new URLSearchParams(location.search).get("relay");
 const mode = new URLSearchParams(location.search).get("mode") || "control";

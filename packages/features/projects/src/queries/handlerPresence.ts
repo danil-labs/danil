@@ -1,7 +1,7 @@
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import { createEffect, createSignal, onCleanup } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client.ts";
-import type { HandlerStatus, HandlerStatusRow } from "../../../../../apps/desktop/src/lib/model";
+import { callEngine } from "../../../../engine-client/src/client.ts";
+import type { HandlerStatus, HandlerStatusRow } from "../../../../ui/src/lib/model";
 
 type PresenceCacheEntry = {
   rows: () => HandlerStatusRow[];
@@ -15,7 +15,7 @@ async function reload(project: string) {
   const entry = cache.get(project);
   if (!entry) return;
   try {
-    entry.setRows(await invoke<HandlerStatusRow[]>("list_agent_status", { project }));
+    entry.setRows(await callEngine<HandlerStatusRow[]>("list_agent_status", { project }));
   } catch {
   }
 }

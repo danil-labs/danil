@@ -1,8 +1,8 @@
 import ArrowUp from "lucide-solid/icons/arrow-up";
 import Square from "lucide-solid/icons/square";
 import { Show } from "solid-js";
-import { t } from "../../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../../apps/desktop/src/lib/utils";
+import { t } from "../../../../../ui/src/lib/i18n";
+import { cn } from "../../../../../ui/src/lib/utils";
 import { Button } from "../../../../../ui/src/Button";
 
 /** A draft is submitted to the existing sender; busy never grants direct runtime admission. */

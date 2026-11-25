@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js";
-import { invoke } from "../../engine-client/src/client.ts";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { openExternalTarget } from "../../host/src/file-preview.ts";
+import { cn } from "./lib/utils";
 
 export const ENLACE =
   "text-link underline underline-offset-2 outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
@@ -13,7 +13,7 @@ export function ExternalLink(props: { url: string | null | undefined; class?: st
       href="#"
       onClick={(e) => {
         e.preventDefault();
-        if (props.url) invoke("open_external", { target: props.url }).catch(() => {});
+        if (props.url) openExternalTarget(props.url).catch(() => {});
       }}
     >
       {props.children}

@@ -1,28 +1,34 @@
 /* @refresh reload */
 // Antes que nada: sin los catálogos dentro, `t()` devuelve la clave.
-import "../../../../apps/desktop/src/locales/catalogs";
+import "../../../ui/src/locales/catalogs";
 import { render } from "solid-js/web";
 import App from "./App";
+import { enchufarProyectos } from "./projectsPorts";
+import { enchufarAlta } from "./onboardingPorts";
 import { Setup } from "../../../features/onboarding/src";
 import { checkEnvironment, installTool, prepareRuntime, restartApp, servicePoll, setupRequired } from "../../../features/settings/src/queries/engine-environment";
 import { listWorkspaces } from "../../../features/settings/src/queries/engine-workspaces";
-import { Lanzador, SessionGate } from "../shell";
-import { invoke } from "../../../engine-client/src/client.ts";
-import { seguirElTema } from "../../../../apps/desktop/src/lib/theme";
-import { aplicarEscala, atajoDeEscala } from "../../../../apps/desktop/src/lib/zoom";
-import { trimNativeMenu } from "../../../../apps/desktop/src/lib/contextMenu";
-import { acotarSeleccionarTodo } from "../../../../apps/desktop/src/lib/selectAll";
-import { activarBarrasAlDesplazar } from "../../../../apps/desktop/src/lib/scrollbars";
-import { aplicarVeloDePestanas } from "../../../../apps/desktop/src/lib/chat-background-store";
-import { aplicarLengua, refreshLanguage, lenguasDisponibles, semillaDelAlta } from "../../../../apps/desktop/src/lib/i18n";
-import { cargarPaquetes } from "../../../../apps/desktop/src/locales/packs";
-import { mountAfterLanguagePacks } from "../../../../apps/desktop/src/locales/startup";
+import { Lanzador, sealFirstFreeWorkspace, SessionGate } from "../shell";
+import ControlesDeVentana from "../shell/WindowControls";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
+import { seguirElTema } from "../../../ui/src/lib/theme";
+import { aplicarEscala, atajoDeEscala } from "../../../ui/src/lib/window-zoom.ts";
+import { trimNativeMenu } from "../../../host/src/contextMenu";
+import { acotarSeleccionarTodo } from "../../../host/src/selectAll";
+import { activarBarrasAlDesplazar } from "../../../host/src/scrollbars";
+import { aplicarVeloDePestanas } from "../../../ui/src/lib/chat-background-store";
+import { aplicarLengua, refreshLanguage, lenguasDisponibles, semillaDelAlta } from "../../../ui/src/lib/i18n";
+import { cargarPaquetes } from "../../../session/src/packs";
+import { mountAfterLanguagePacks } from "../../../ui/src/locales/startup";
 import { capabilities, setCapabilities } from "../../../host/src/platform";
 import { askGuestChannels } from "../../../features/machines/src/queries/guestChannels";
-import "../../../../apps/desktop/src/lib/sharedClock";
+import "../../../ui/src/lib/sharedClock";
+// Antes de montar nada: las pantallas de projects leen machines, code y chat por aquí.
+enchufarProyectos();
+enchufarAlta();
 // Errores y avisos de encargado se leen al fallar algo, ya con la ventana montada: entran por detrás.
 // Si el trozo no carga, caen a la prosa del motor; el panel de encargados lo vuelve a pedir.
-void import("../../../../apps/desktop/src/locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
+void import("../../../ui/src/locales/failurePhrases").catch((e) => console.warn("[lenguas] failurePhrases", e));
 
 // Los canales de máquinas locales los dice la ventana (`guest_channels`), no el userAgent.
 // La web también carga este archivo: ahí `invoke` va por el relay y despertaría la máquina.
@@ -47,7 +53,7 @@ if (capabilities().nativeWindow) {
 seguirElTema();
 // Rust crea la próxima ventana de este color (`appearance.rs`): sin él abre en blanco.
 const reportarFondo = () =>
-  void invoke("window_background", {
+  void callShellViewEngine("window_background", {
     color: getComputedStyle(document.documentElement).getPropertyValue("--color-bg").trim(),
   }).catch(() => {});
 reportarFondo();
@@ -108,6 +114,8 @@ const montar = () => {
           servicePoll={servicePoll}
           setupRequired={setupRequired}
           listWorkspaces={listWorkspaces}
+          sealFirstFreeWorkspace={sealFirstFreeWorkspace}
+          ControlesDeVentana={ControlesDeVentana}
         >
           <SessionGate><App /></SessionGate>
         </Setup>
@@ -123,4 +131,4 @@ else void mountAfterLanguagePacks(lenguasDeDisco, montar);
 
 // Las otras computadoras de la cuenta de Danil, en un trozo aparte: sin sesión no instala nada.
 // La web trae su propio transporte (`web/main.tsx`).
-if (capabilities().nativeWindow) void import("../../../features/machines/src/screens/account").then((m) => m.startAccountMachines());
+if (capabilities().nativeWindow) void Promise.all([import("../../../features/machines/src/screens/account"), import("../../../features/settings/src/queries/danil-sessions")]).then(([m, s]) => m.startAccountMachines(s.railSession));

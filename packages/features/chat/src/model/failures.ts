@@ -5,10 +5,10 @@
  */
 // Con extensión: este módulo se carga también desde `node --test`, que no tiene
 // el resolvedor de Vite. Es el mismo motivo escrito en `lib/prose.ts`.
-import { asFailure, prosaDe } from "../../../../../apps/desktop/src/lib/failure.ts";
-import { prosa } from "../../../../../apps/desktop/src/lib/prose.ts";
-import { df } from "../../../../../apps/desktop/src/lib/format.ts";
-import { clavesConocidas, t } from "../../../../../apps/desktop/src/lib/i18n.ts";
+import { asFailure, prosaDe } from "../../../../ui/src/lib/failure.ts";
+import { prosa } from "../../../../ui/src/lib/prose.ts";
+import { df } from "../../../../ui/src/lib/format.ts";
+import { clavesConocidas, t } from "../../../../ui/src/lib/i18n.ts";
 
 /**
  * Por qué el proveedor no contestó, tal como lo guardó Rust
@@ -40,7 +40,7 @@ export type CambioPorCupo = {
  * «vuelve a las 3:03 PM» manda a reintentar esta tarde contra una pared que
  * sigue en pie una semana.
  */
-export function horaDeVuelta(ms: number) {
+function horaDeVuelta(ms: number) {
   const fecha = new Date(ms);
   const hoy = fecha.toDateString() === new Date().toDateString();
   return df(hoy ? { timeStyle: "short" } : { dateStyle: "medium", timeStyle: "short" }).format(

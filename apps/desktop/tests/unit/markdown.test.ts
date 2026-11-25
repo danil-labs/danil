@@ -17,7 +17,7 @@ import test from "node:test";
  * sí se corta donde es seguro.
  */
 
-const { bloquesDeMarkdown } = await import("../../src/ui/markdown-blocks.ts");
+const { bloquesDeMarkdown } = await import("../../../../packages/ui/src/markdown-blocks.ts");
 
 test("dos párrafos son dos bloques", () => {
   assert.deepEqual(bloquesDeMarkdown("uno\n\ndos"), ["uno", "dos"]);
@@ -79,7 +79,7 @@ test("mientras se escribe, solo el último bloque cambia", () => {
   assert.notEqual(dos.at(-1), tres.at(-1), "y el último sí");
 });
 
-const { textoDelBloque } = await import("../../src/ui/markdown-code.ts");
+const { textoDelBloque } = await import("../../../../packages/ui/src/markdown-code.ts");
 
 // El árbol que entrega `mdast-util-to-hast` para un ```bash: el valor del
 // `code` termina en el salto que añade el markdown.

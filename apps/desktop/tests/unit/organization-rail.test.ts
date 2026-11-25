@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { emptySessionEmails } from "../../src/features/shell/empty-session-emails.ts";
-import { changeOrgPreference, orderedOrganizations, parseOrgPreference, stackedOrganizations } from "../../src/features/shell/organization-rail-model.ts";
-import type { SessionRailGroup } from "../../src/features/shell/session-groups.ts";
+import { emptySessionEmails } from "../../../../packages/shell/src/shell/empty-session-emails.ts";
+import { changeOrgPreference, orderedOrganizations, parseOrgPreference, stackedOrganizations } from "../../../../packages/shell/src/shell/organization-rail-model.ts";
+import type { SessionRailGroup } from "../../../../packages/shell/src/shell/session-groups.ts";
+import { sessionVisible } from "../../../../packages/shell/src/shell/session-rail-view.ts";
 
 const group = (org: string, context: string, ids: string[]): SessionRailGroup => ({ org, context_id: context, family: context, email: `${context}@example.test`, org_name: org, plan: "paid", available: ids.map((id) => ({ id, name: id })), added: new Set(ids), person: context });
 const rows = (ids: string[]) => ids.map((id) => ({ id, name: id, logo: null }));
@@ -42,7 +43,7 @@ test("stack only if needed, oldest first, never pinned, opened or a single works
 });
 
 test("tooltip balance shares a context read, rejects the wrong organization and refetches after invalidation", async () => {
-  const { organizationCredits } = await import("../../src/features/shell/organization-credits.ts");
+  const { organizationCredits } = await import("../../../../packages/shell/src/shell/organization-credits.ts");
   const cache = organizationCredits();
   const calls: string[] = [];
   let responseOrg = "a";
@@ -60,7 +61,7 @@ test("tooltip balance shares a context read, rejects the wrong organization and 
 });
 
 test("attention for the same workspace stays personal and organization priority combines both contexts", async () => {
-  const { mergeContextAttention } = await import("../../src/features/shell/context-attention.ts");
+  const { mergeContextAttention } = await import("../../../../packages/shell/src/shell/context-attention.ts");
   const rows = mergeContextAttention([{ workspace: "shared", context: "one", tasks: [{ session: "a", project: "p", state: "asked" }] }], [{ workspace: "shared", context: "two", tasks: [{ session: "b", project: "p", state: "failed" }] }]);
   assert.deepEqual(rows.map((row) => [row.context, row.tasks[0].session]), [["one", "a"], ["two", "b"]]);
   const changed = mergeContextAttention(rows, [{ workspace: "shared", context: "two", tasks: [] }]);
@@ -69,12 +70,27 @@ test("attention for the same workspace stays personal and organization priority 
 });
 
 test("startup and login return select an explicit context even when two contexts share an id", async () => {
-  const { organizationStartTarget } = await import("../../src/features/shell/organization-start-target.ts");
-  const { accountReturnTarget } = await import("../../src/features/shell/account-return-target.ts");
+  const { organizationStartTarget } = await import("../../../../packages/shell/src/shell/organization-start-target.ts");
+  const { accountReturnTarget } = await import("../../../../packages/shell/src/shell/account-return-target.ts");
   const groups = [group("org", "one", ["shared"]), group("org", "two", ["shared"])];
   assert.deepEqual(organizationStartTarget(groups, "shared", null, "two"), { id: "shared", context: "two" });
   assert.deepEqual(organizationStartTarget(groups, "shared", "one", "two"), { id: "shared", context: "one" });
   assert.deepEqual(accountReturnTarget(groups, ["one"]), { id: "shared", context: "two" });
+});
+
+test("a tile exists because its catalog lists it, not because a machine reports it", () => {
+  const catalog = group("org", "one", ["from-catalog"]);
+  const [org] = orderedOrganizations([catalog], [], { version: 1, orgs: [] });
+  assert.deepEqual(org.tiles.map((tile) => tile.id), ["from-catalog"], "the machine inventory is not needed to paint the tile");
+  const [withoutCatalog] = orderedOrganizations([group("org", "one", [])], rows(["only-a-machine"]), { version: 1, orgs: [] });
+  assert.equal(withoutCatalog, undefined, "a machine-only workspace never becomes a tile");
+});
+
+test("the rail keeps the added tiles and the open one; the open one shows without being added", () => {
+  const catalog = group("org", "one", ["added", "hidden", "open"]);
+  catalog.added = new Set(["added", "hidden"]);
+  assert.deepEqual(sessionVisible(null, [catalog]).map((row) => row.id), ["added", "hidden"]);
+  assert.deepEqual(sessionVisible("open", [catalog]).map((row) => row.id), ["added", "hidden", "open"]);
 });
 
 test("tile metadata comes only from its contextual listing, never from the global engine index", () => {

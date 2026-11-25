@@ -5,7 +5,7 @@
  * Al iniciar o cerrar sesión (`danil-connect`) se vuelve a leer.
  */
 
-import { createOrganizationSelection, type OrganizationSelection } from "@terminus/computers";
+import { createOrganizationSelection, type OrganizationSelection } from "../../../platform-client/src/organizations.ts";
 import { cancelEdgeWrites, edgeFetch, ORGANIZATION_CHANGED } from "../../../platform-client/src/client";
 import { edgeOrganizationSource } from "./organization-edge";
 import { legacyOrganizationGate } from "./organization-session-gate";

@@ -1,28 +1,30 @@
+import { parseWorkspaceAddLink } from "./workspace-add-link";
 import { createRoot, createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 import { forgetMachineNames } from './known-machine-names';
-import { aplicarLengua, t } from '../../../apps/desktop/src/lib/i18n';
-import { setShellCacheScope } from '../../../apps/desktop/src/lib/shellCache';
-import { seguirElTema } from '../../../apps/desktop/src/lib/theme';
+import { aplicarLengua, t } from '../../ui/src/lib/i18n';
+import { setShellCacheScope } from './shellCache';
+import { seguirElTema } from '../../ui/src/lib/theme';
 import { Button } from '../../ui/src/Button';
 import { ToastStack } from '../../ui/src/Toast';
-import { SessionLoading } from '../../../apps/desktop/src/web/auth/SessionLoading';
-import { signInError, WorkosAuthPage } from '../../../apps/desktop/src/web/auth/workos';
-import { webWorkspacePicker } from '../../../apps/desktop/src/web/workspace-picker';
+import { SessionLoading } from './auth/SessionLoading';
+import { signInError, WorkosAuthPage } from './auth/workos';
+import { webWorkspacePicker } from './workspace-picker';
 import { webCredentialSource } from '../../platform-client/src/credentials';
-import { webAccountProfile } from '../../../apps/desktop/src/web/account';
+import { webEdgeWorkspaceAssets } from './workspace-assets';
+import { webAccountProfile } from './account';
 import { contextMachines, type PlatformProfile, PlatformSessionError, platformSession, platformTransport } from './platform-session';
-import { type CapabilitiesSnapshot, readCapabilities, supports } from '../../../apps/desktop/src/web/service-capabilities';
+import { type CapabilitiesSnapshot, readCapabilities, supports } from './service-capabilities';
 import type { WebSessionDeployment } from './session-config';
 import { clearWebCaches, retryWait, sessionExit, workspaceCache } from './session-wait';
-import { UpdateNotice } from '../../../apps/desktop/src/web/UpdateNotice';
-import { mountWindow } from '../../../apps/desktop/src/web/window';
-import '../../../apps/desktop/src/web/phrases';
-import { organizationMachine, windowBilling } from '../../../apps/desktop/src/web/window-billing';
-import { webSessionCommands, type WebSessionStatus } from '../../../apps/desktop/src/web/web-session-contexts';
-import { webRailCatalog } from '../../../apps/desktop/src/web/web-rail-catalog';
-import { windowActiveContext } from '../../../apps/desktop/src/web/window-active-context';
-import { freeModelScope } from '../../../apps/desktop/src/lib/free-model-policy';
+import { UpdateNotice } from './UpdateNotice';
+import { mountWindow } from './window';
+import '../../ui/src/phrases';
+import { organizationMachine, windowBilling } from './window-billing';
+import { webSessionCommands, type WebSessionStatus } from './web-session-contexts';
+import { webRailCatalog } from './web-rail-catalog';
+import { windowActiveContext } from './window-active-context';
+import { freeModelScope } from './free-model-policy';
 import { freeRouterEngine, freeRouterWebEdge } from '../../features/settings/src/queries/free-router-adapters';
 import { setFreeRouterHost, signOutPlatform } from '../../features/settings/src/queries/free-router-session';
 import { sessionRailState } from '../../shell/src/shell';
@@ -67,6 +69,15 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let wait = FIRST_RETRY_MS;
     const home = new URL(import.meta.env.BASE_URL, window.location.origin).href;
+    const returnSearch = new URLSearchParams(window.location.search);
+    let harnessWorkspace = parseWorkspaceAddLink(returnSearch);
+    const loginReturn = new URL(home);
+    if (harnessWorkspace) {
+      for (const key of ["add_workspace", "org", "workspace", "account"]) {
+        const value = returnSearch.get(key);
+        if (value) loginReturn.searchParams.set(key, value);
+      }
+    }
     const permits = (name: string) => supports(caps(), name);
     const gone = () => stopped || signedOut() || exit.leaving();
     const sessions = webSessionCommands(raw, { expired: () => expired() });
@@ -97,7 +108,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(home)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(loginReturn.href)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={error()}><p role="alert">{t(error())}</p><Button onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
@@ -174,7 +185,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       setShellCacheScope({ mine: () => false, prefer: null });
       disposeGate?.();
       disposeGate = undefined;
-      const picker = webWorkspacePicker(plain, { store: window.sessionStorage, signIn: organization => window.location.assign(api.loginUrl(home, organization)) });
+      const picker = webWorkspacePicker(plain, { store: window.sessionStorage, takeHarnessWorkspace: () => { const link = harnessWorkspace; harnessWorkspace = null; return link; }, signIn: organization => window.location.assign(api.loginUrl(loginReturn.href, organization)) });
       const organizations = active.organizations(() => sessions.handle('danil_session_status'));
       setFreeRouterHost({ edge: freeRouterWebEdge(transport), engine: policy => freeRouterEngine(policy ? freeModelScope(policy) : undefined),
         identity: active.freeRouterIdentity(rail.accountOf) });
@@ -183,13 +194,17 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
         const listed = group ? await machines(group.context).list(signal) : null;
         return listed?.kind === 'ok' ? organizationMachine(id, listed.value) : null;
       }, active.billingFor(plain, profile.id));
-      const current = async () => { const group = active.current(); return group ? { context: group.context, org: group.org, name: group.name, plan: group.plan, role: group.role } : null; };
-      windowApp = mountWindow({ sessions, rail, contextMachines: machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0], credentials: webCredentialSource(options.origin, transport),
+      const current = async () => { const group = active.current(); return group ? { context: group.context, org: group.org, name: group.name, plan: group.plan, role: group.role, personal: group.personal } : null; };
+      windowApp = mountWindow({ sessions, rail, contextMachines: machines, permits, relayOrigin: __DANIL_WEB_RELAY_ORIGINS__[0], origin: options.origin, transport, assets: webEdgeWorkspaceAssets(plain, () => active.current()?.context ?? null), credentials: webCredentialSource(options.origin, transport),
         profile: webAccountProfile(transport), active,
         onUnavailable: () => { setError('web.platform.unavailable'); mounted = false; gate(); later(); },
         services: {
           webWorkspacePicker: picker,
-          danilCredits: { readBalance: async signal => { const group = active.current(); return group ? api.creditsBalance(group.org, signal, group.context) : null; } },
+          danilCredits: {
+            readBalance: async signal => { const group = active.current(); return group ? api.creditsBalance(group.org, signal, group.context) : null; },
+            scope: () => active.current()?.context ?? null,
+            clearCache: () => api.clearCreditsCache(),
+          },
         },
         // W4: una organización con la sesión vencida ofrece volver a entrar a esa organización.
         // Admite solo esa organización (como el «+»): un login completo reemplazaría todo el conjunto de la cookie. Solo

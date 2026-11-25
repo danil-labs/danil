@@ -185,12 +185,16 @@ export async function handleEdgeRoute(route) {
         default_context: "ctx_personal",
       }) });
     }
+    // Borde real (~/work/terminus-workspace/repos/edge/src/web-session.ts 259-343): devuelve el cuerpo de identity
+    // sin `carrier`. La forma pública es la de identity `docs/contracts/session-set.v1.json` (`catalog.example`):
+    // `version: 1`, y cada workspace con su `account_id` (el id numérico de la cuenta) y `engine_workspace_id`.
     if (pathname === "/v1/identity/sessions/catalog") {
-      const of = (org) => mockData.workspaces.filter(w => w.org === org).map(w => ({ engine_workspace_id: `ws_${w.id}`, name: w.name, account_id: null }));
+      const of = (org) => mockData.workspaces.filter(w => w.org === org).map(w => ({ account_id: w.id, engine_workspace_id: `ws_${w.id}`, name: w.name }));
       return route.fulfill({ status: 200, headers: jsonHeaders, body: JSON.stringify({
+        version: 1,
         items: [{ session_id: "fam_ana", sub: "user_ana_perez", email: "ana@danil.ai", contexts: [
-          { context_id: "ctx_personal", org: "org_personal", catalog_state: "listed", workspaces: of("org_personal") },
-          { context_id: "ctx_danil", org: "org_danil", catalog_state: "listed", workspaces: of("org_danil") },
+          { context_id: "ctx_personal", org: "org_personal", org_name: "Personal", catalog_state: "listed", workspaces: of("org_personal") },
+          { context_id: "ctx_danil", org: "org_danil", org_name: "Danil", catalog_state: "listed", workspaces: of("org_danil") },
         ] }],
       }) });
     }
@@ -376,10 +380,41 @@ export async function handleEdgeRoute(route) {
   });
 }
 
+/** Los mandos del motor simulado de cada página (ver `attachFixtures`). */
+const ENGINES = new WeakMap();
+export function engine(page) {
+  const controls = ENGINES.get(page);
+  if (!controls) throw new Error("engine: la página no tiene el borde simulado");
+  return controls;
+}
+
 export async function attachFixtures(page) {
   await page.route("https://edge.danil.ai/**", handleEdgeRoute);
 
   let cursor = 0;
+  // Lo que la persona mandó en esta página (`send_message`, receta tarea-enviar): `load_session` lo relee como el
+  // motor, que lo persiste. Sin envío la tarea es la misma de siempre.
+  const sent = [];
+  // Los eventos `chat` del motor (el frame `events` del relay). Sin la acción que los dispara no sale ninguno, así que
+  // las recetas que no ejecutan un `!` ni arman la respuesta ven lo mismo que antes.
+  const after = [];
+  let shells = 0, shellRunning = false;
+  const chat = (kind, text, extra = {}) => ({ name: "chat", payload: { session: "t1", kind, text, meta: null, ok: null, request_id: null, ...extra } });
+  const emit = (socket, events) => socket.send(JSON.stringify({ type: "events", runtime: "rt1", cursor: ++cursor, replay: false, events }));
+  // El turno del agente (receta tarea-enviar-respuesta): `answerNextMessage()` arma el motor; el `send_message`
+  // siguiente arranca el turno y manda los deltas, y `finishTurn()` guarda la respuesta y manda el `done`, como el
+  // motor, que la persiste antes de cerrar. Mientras corre (o corre un `!`), `list_active_turns` nombra la tarea.
+  const REPLY = ["Hola, Ana. ", "Ya revisé la tarea."];
+  const turn = { armed: false, running: false, socket: null };
+  ENGINES.set(page, {
+    answerNextMessage() { turn.armed = true; },
+    finishTurn() {
+      if (!turn.running) throw new Error("finishTurn: no hay un turno en marcha");
+      turn.running = false;
+      sent.push({ role: "assistant", id: `a${sent.length + 2}`, at: 3 + sent.length, text: REPLY.join("") });
+      emit(turn.socket, [chat("done", "", { ok: true })]);
+    },
+  });
   await page.routeWebSocket("**/v1/machines/**", (ws) => {
     ws.send(JSON.stringify({ type: "state", state: "online" }));
     ws.send(JSON.stringify({ type: "engine", contract: "1", host_version: "1.0.0" }));
@@ -412,7 +447,8 @@ export async function attachFixtures(page) {
             permission_mode: null,
             turns: [
               { role: "user", id: "u1", at: 1, text: "Primera tarea" },
-              { role: "assistant", id: "a1", at: 2, text: "Respuesta del agente" }
+              { role: "assistant", id: "a1", at: 2, text: "Respuesta del agente" },
+              ...sent
             ]
           };
         } else if (msg.command === "list_surfaces") {
@@ -421,10 +457,48 @@ export async function attachFixtures(page) {
           value = { provider: "codex", models: [{ id: "gpt-5.6", label: "GPT-5.6", gratis: null, note: null, efforts: [], default_effort: null }], fallback: false };
         } else if (msg.command === "list_providers") {
           value = [{ id: "codex", label: "Codex", available: true, driver: true }];
+        } else if (msg.workspace === "ws_2" && msg.command === "list_accounts" && msg.args?.provider === "codex") {
+          // Solo el workspace Beta (ws_2) tiene cuentas conectadas: una de Codex y GitHub con la cuenta de Danil.
+          // Las recetas de antes no pasan por Beta, así que lo que ven no cambia (configuracion-cuentas-ia-conectada
+          // y configuracion-control-codigo-github).
+          value = { provider: "codex", env_var: "CODEX_HOME", shared_credential: null, secret_note: null, active: "acc_codex_1",
+            accounts: [{ id: "acc_codex_1", label: "Cuenta 1", created_at: 1000, identity: "ana@danil.ai", authenticated_at: 1000 }] };
+        } else if (msg.workspace === "ws_2" && msg.command === "account_status" && msg.args?.id === "acc_codex_1") {
+          value = { id: "acc_codex_1", authenticated: true, detail: "ana@danil.ai · Plus" };
+        } else if (msg.workspace === "ws_2" && msg.command === "list_git_hosts") {
+          const frase = (clave) => ({ clave });
+          value = [{ id: "github", name: "GitHub", summary: frase("providers.github.summary"),
+            vocabulary: { change: frase("providers.github.change"), change_short: frase("providers.github.change_short"), change_prefix: "#", checks: frase("providers.github.checks") },
+            select_area: true, setup_url: null, fields: [], token_label: frase("providers.github.token_label"), token_help: frase("providers.github.token_help"),
+            token_url: "https://github.com/settings/tokens", area_label: frase("providers.github.area_label"), areas_label: frase("providers.github.areas_label"),
+            area_help: frase("providers.github.area_help"), browser_login: true, login_help: frase("providers.github.login_help.browser"),
+            connected: { selected_area: { key: "danil-labs", installation_id: 1, repository_ids: null }, selected_areas: [{ key: "danil-labs", installation_id: 1, repository_ids: null }],
+              data: {}, workspace: "ws_2", identity: { user: "ana-perez", name: "Ana Pérez" }, connected_at: 1000 },
+            source: "account", unverified: null }];
+        } else if (msg.command === "send_message") {
+          sent.push({ role: "user", id: `u${sent.length + 2}`, at: 3 + sent.length, text: msg.args?.prompt ?? "" });
+          value = "t1";
+          if (turn.armed) {
+            turn.armed = false; turn.running = true; turn.socket = ws;
+            after.push([chat("started", ""), ...REPLY.map((text) => chat("delta", text))]);
+          }
+        } else if (msg.command === "list_active_turns") {
+          value = turn.running || shellRunning ? ["t1"] : [];
+        } else if (msg.command === "run_shell_command") {
+          // Un `!` que corre (receta tarea-terminal-salida): arranca y escribe su salida; sigue en marcha.
+          const id = `sh${++shells}`;
+          shellRunning = true;
+          value = { session: "t1", turn: id };
+          after.push([
+            chat("shell_started", msg.args?.command ?? "", { id, target: "/lab/p1" }),
+            chat("shell_output", "total 8\n-rw-r--r--  1 ana  staff  120 nov 21 10:00 README.md\n", { id }),
+          ]);
         } else if (msg.command === "task_history") {
           value = { history: { archived: false, events: [], recovery: null }, branch: null, path: "/lab", available: true, owned: false, restorable: false, recreatable: false, incomplete: false };
         }
         ws.send(JSON.stringify({ type: "result", id: msg.id, value }));
+        // Lo que la acción dispara llega después de su respuesta, como en el motor.
+        for (const events of after.splice(0)) emit(ws, events);
       }
     });
   });

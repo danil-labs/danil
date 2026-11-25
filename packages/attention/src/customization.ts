@@ -7,12 +7,11 @@ export const FEATURES = [
   { id: 'inventory', available: false },
 ] as const;
 
-export type FeatureId = typeof FEATURES[number]['id'];
-export type EnabledFeature = Extract<typeof FEATURES[number], { available: true }>['id'];
+type EnabledFeature = Extract<typeof FEATURES[number], { available: true }>['id'];
 export type Selection = { enabled: readonly EnabledFeature[]; writable: boolean };
 export type Context = { user: string | null | undefined; workspace: string | null | undefined; space: string | null | undefined };
 const eligible = new Set<string>(FEATURES.filter(row => row.available).map(row => row.id));
-export const isEnabledFeature = (id: string): id is EnabledFeature => eligible.has(id);
+const isEnabledFeature = (id: string): id is EnabledFeature => eligible.has(id);
 export const emptySelection = (): Selection => ({ enabled: [], writable: true });
 
 export function decodeSelection(raw: string | null): Selection {

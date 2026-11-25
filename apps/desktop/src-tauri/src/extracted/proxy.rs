@@ -299,6 +299,8 @@ pub(super) fn desktop_command(name: &str) -> bool {
                 | "guest_copy_folder"
                 | "guest_sync_spaces"
                 | "guest_events"
+                | "loopback_login_listen"
+                | "loopback_login_cancel"
         )
 }
 pub(super) fn with_desktop(
@@ -1016,15 +1018,6 @@ fn read_history(
         Duration::from_secs(30),
     )
 }
-#[tauri::command]
-pub(super) fn service_prepare_update() -> Result<(), Value> {
-    // El cliente y el host se actualizan por separado; Windows ya no reemplaza el ejecutable del host.
-    Ok(())
-}
-#[tauri::command]
-pub(super) fn service_cancel_update() -> Result<(), Value> {
-    Ok(())
-}
 
 /// El token de cliente de vida corta de la cuenta de Danil, con el que la ventana
 /// lista las otras computadoras de la persona y les abre una sesión del relay. La
@@ -1055,6 +1048,17 @@ pub(super) fn engine_call(
         .try_state::<Arc<State>>()
         .ok_or_else(|| failure(&Error::new("app_unavailable")))?;
     invoke(&state, command, args)
+}
+
+/// Si el motor de esta ventana ya quedó conectado (`attach`). Mientras la ventana está
+/// en `Phase::Connecting`, `try_state::<Arc<State>>()` es `None`: no significa «motor viejo».
+pub(super) fn engine_attached(app: &tauri::AppHandle) -> bool {
+    app.try_state::<Arc<State>>().is_some()
+}
+
+/// El error estándar cuando la ventana aún no tiene motor (`engine_down`).
+pub(super) fn engine_down() -> Value {
+    failure(&Error::new("app_unavailable"))
 }
 
 /// Los rasgos que anuncia el motor de esta ventana; `[]` sin motor.

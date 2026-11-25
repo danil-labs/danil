@@ -72,7 +72,6 @@ const SIN_INTERFAZ = {
   ...Object.fromEntries([
     "free_router_binding", "prove_free_router_binding", "set_free_router_grant", "clear_free_router_grant", "release_free_router_owner",
   ].map(command => [command, "el pase de plataforma del Free router (TW#72 1d): la ventana lo pide y lo renueva en su propio cambio; hoy solo fija la unión al re-sellar"])),
-  credits_pilot_install: "extensión del contrato del motor que conservan los clientes anteriores",
   change_agent_folders: "la configuración global solo administra workspace; el CLI conserva la asignación de carpetas y el contrato congelado",
   set_go_usage_key: "la conexión única de OpenCode reemplaza el campo de Go; se conserva el contrato y las claves guardadas de clientes anteriores",
   consent_text: "el contrato conserva la lectura antigua; el router usa la política y referencia de aceptación de workspaces_startup",
@@ -151,6 +150,23 @@ const SIN_INTERFAZ = {
   state_resource: "lo pide el router de máquinas (features/machines/router.ts, `native`): la barra de esta máquina sale de su índice con la versión que ya tiene",
   state_manifest: "la ventana pide cada recurso con su versión (state_resource); el manifiesto lo leen los motores de otras máquinas para sus copias",
   tree_diff: "el diff de un turno se pintaba bajo cada turno del chat; ahora «Editó N archivos» abre el panel de la tarea en «Cambios» (tree_changes)",
+  ...Object.fromEntries([
+    "list_activity", "read_activity", "read_activity_log",
+  ].map(command => [command, "se retiró la pestaña Actividad de Configuración; sigue en uso desde apps/mobile"])),
+  ...Object.fromEntries([
+    "wsl_state", "wsl_catalog", "wsl_enable", "wsl_install", "wsl_connect", "wsl_job_pause", "wsl_job_dismiss", "wsl_resume_forget", "wsl_distro_user", "wsl_reboot", "guest_remove",
+  ].map(command => [command, "la UI de alta/gestión WSL vivía en Configuración › Máquinas; se conserva el código Rust para revisión en Windows"])),
+  ...Object.fromEntries([
+    "install_language_pack", "remove_language_pack", "list_bundled_language_packs", "install_bundled_language_pack",
+  ].map(command => [command, "se retiró la pestaña Lenguas de Configuración y Maayatʼaan (yua) ya viaja embebido en src/locales/yua; queda en el contrato del motor"])),
+  // La pestaña Configuración › Barra de workspaces se retiró; los workspaces se administran desde el riel principal.
+  remove_workspace: "la llamaba Configuración › Barra de workspaces, ya retirada; queda en el contrato del motor",
+  set_workspace_worktrees_root: "la llamaba Configuración › Barra de workspaces, ya retirada; queda en el contrato del motor",
+  // La edición del logo del workspace vive en Danil Harness, no en Configuración › Apariencia.
+  set_workspace_logo: "la edición del logo del workspace vive en Danil Harness; queda en el contrato del motor",
+  set_workspace_logo_png: "la edición del logo del workspace vive en Danil Harness; queda en el contrato del motor",
+  // La pestaña Memoria de Configuración › Conectores se retiró; la memoria nativa es automática.
+  set_memory_provider: "la pestaña Memoria de Configuración › Conectores se retiró; queda en el contrato del motor",
   // `docs/agents.md` § Estado observable: el comando de agregación existe
   // para que el riel deje de sondear; el riel mismo no está construido.
 };

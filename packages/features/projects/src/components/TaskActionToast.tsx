@@ -1,12 +1,12 @@
 import { Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { errorCode } from "../../../../../apps/desktop/src/lib/errorCode";
+import { t } from "../../../../ui/src/lib/i18n";
+import { errorCode } from "../../../../ui/src/lib/errorCode.ts";
 import { claveDe, detalleDe, prosaDe } from "../../../../ui/src/Failure";
 import { Button } from "../../../../ui/src/Button";
 import { Toast, ToastPortal } from "../../../../ui/src/Toast";
 
 /** El gesto sobre una tarea que falló: el aviso dice cuál y no la frase genérica del servicio. */
-export type TaskAction = "finish" | "archive" | "discard" | "pin";
+type TaskAction = "finish" | "archive" | "discard" | "pin";
 export type TaskActionFailure = { action: TaskAction; error: unknown; retry?: () => void };
 
 const TITULOS: Record<TaskAction, string> = {
@@ -19,7 +19,7 @@ const TITULOS: Record<TaskAction, string> = {
 const GENERICAS = new Set(["shell.service.failed", "common.failure.generic"]);
 
 /** El porqué, en una frase para personas, o nada si el motor no dio uno. */
-export function taskActionCause(error: unknown): string | null {
+function taskActionCause(error: unknown): string | null {
   // `task_family_busy`: otro gesto tiene tomados los candados de la familia.
   if (errorCode(error) === "task_family_busy") return t("projects.sessions.action_failed.busy");
   const clave = claveDe(error);

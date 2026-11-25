@@ -1,5 +1,4 @@
-import type { InvokeOptions } from "@tauri-apps/api/core";
-import type { Component } from "solid-js";
+import type { InvokeOptions } from "../../../../engine-client/src/client.ts";
 import type { Machine } from "../../../../ui/src/lib/machine";
 
 /**
@@ -11,8 +10,5 @@ export type MaquinasDeAjustes = {
   machineName: (id: string, local?: boolean) => string;
   machineOf: (id: string | null | undefined) => InvokeOptions | undefined;
   isDanilWorkspace: (workspace: string) => boolean;
-  ActivityLogs: Component<{ workspace: string | null; machine?: string | null }>;
-  AccountComputersSection: Component<{ account?: string | null; workspace?: string; owner?: string | null; self?: string | null; onSelfName?: (name: string) => void }>;
-  ConnectMachineSection: Component<{ account?: string | null }>;
-  WslMachineSection: Component;
+  availability?: () => import("../../../machines/src/model/availability").MachineAvailability;
 };

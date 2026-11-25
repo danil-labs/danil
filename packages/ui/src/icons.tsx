@@ -1,7 +1,7 @@
 import { createUniqueId, For, type JSX, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import GitBranch from "lucide-solid/icons/git-branch";
-import { AGENT_MARKS, type AgentMark, agentMarkId } from "@terminus/design";
+import { AGENT_MARKS, type AgentMark, agentMarkId } from "./agentMarks";
 import { MarcaServicio } from "./marcas";
 
 /**
@@ -68,7 +68,7 @@ export function Print(props: { size?: number }) {
 }
 
 /**
- * Las marcas de los servicios se pintan desde `@terminus/design`, que el
+ * Las marcas de los servicios se pintan desde `packages/ui`, que el
  * teléfono pinta igual; `MarcaServicio` pide los trazos cuando se ve la primera
  * y aquí solo se elige cuál.
  */
@@ -80,33 +80,39 @@ export function GitHubMark(props: { size?: number }) {
   return <MarcaServicio id="github" size={props.size} />;
 }
 
+// Git Logo by Jason Long, CC BY 3.0 (https://git-scm.com/community/logos),
+// monocromo con `currentColor` para rieles y controles que siguen el tema.
+export function GitMark(props: { size?: number }) {
+  return (
+    <svg class="block shrink-0" width={props.size ?? 14} height={props.size ?? 14} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M13.09 23.549a1.54 1.54 0 0 1-2.18 0L.451 13.089a1.54 1.54 0 0 1 0-2.179l7.191-7.19 2.733 2.733a1.85 1.85 0 0 0 .964 2.326v6.66a1.849 1.849 0 1 0 1.54 0V8.957l2.508 2.508a1.85 1.85 0 1 0 1.09-1.09l-2.634-2.634a1.85 1.85 0 0 0-2.378-2.377L8.73 2.63 10.91.451a1.54 1.54 0 0 1 2.179 0l10.459 10.46a1.54 1.54 0 0 1 0 2.179z" />
+    </svg>
+  );
+}
+
 export function BitbucketMark(props: { size?: number }) {
   return <MarcaServicio id="bitbucket" size={props.size} />;
 }
 
-export function GitLabMark(props: { size?: number }) {
-  return <MarcaServicio id="gitlab" size={props.size} />;
-}
-
-export function FigmaMark(props: { size?: number }) {
+function FigmaMark(props: { size?: number }) {
   return <MarcaServicio id="figma" size={props.size} />;
 }
 
-export function ExcalidrawMark(props: { size?: number }) {
+function ExcalidrawMark(props: { size?: number }) {
   return <MarcaServicio id="excalidraw" size={props.size} />;
 }
 
-export function AtlassianMark(props: { size?: number }) {
+function AtlassianMark(props: { size?: number }) {
   return <MarcaServicio id="atlassian" size={props.size} />;
 }
 
-export function NotionMark(props: { size?: number }) {
+function NotionMark(props: { size?: number }) {
   return <MarcaServicio id="notion" size={props.size} />;
 }
 
 /**
  * Las marcas de los proveedores de IA: los trazos y colores viven en
- * `@terminus/design` (`AGENT_MARKS`), que el teléfono pinta igual. Relleno
+ * `packages/ui` (`AGENT_MARKS`), que el teléfono pinta igual. Relleno
  * `null` es `currentColor`; una marca con variante oscura lleva dos `<svg>` y
  * el tema elige.
  */
@@ -200,7 +206,6 @@ export function MarcaAgente(props: { id: string; size?: number }) {
 const MARCAS_PROVEEDOR: Record<string, (props: { size?: number }) => JSX.Element> = {
   github: GitHubMark,
   bitbucket: BitbucketMark,
-  gitlab: GitLabMark,
   figma: FigmaMark,
   atlassian: AtlassianMark,
   excalidraw: ExcalidrawMark,

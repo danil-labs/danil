@@ -1,5 +1,5 @@
-import { fondoPropio } from "../../../../../apps/desktop/src/lib/chat-background-store";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { fondoPropio } from "../../../../ui/src/lib/chat-background-store.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { createResource } from "solid-js";
 import type { Preview } from "../../../../ui/src/lib/preview.ts";
 
@@ -13,7 +13,7 @@ export function createChatBackground(deps: ChatBackgroundDeps) {
   const [fondoPropioUrl] = createResource(fondoPropio, async (ruta) => {
     if (!ruta) return null;
     try {
-      return (await invoke<Preview>("preview_file", { path: ruta, rel: ruta }, machineOf(ruta))).data_url;
+      return (await callEngine<Preview>("preview_file", { path: ruta, rel: ruta }, machineOf(ruta))).data_url;
     } catch {
       return null;
     }

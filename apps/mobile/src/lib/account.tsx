@@ -62,6 +62,8 @@ const SIGNED_OUT_ACCOUNT: Account = {
     wake: noSession,
     relay: { endpoint: "", getToken: noSession },
     bearerServices: false,
+    limitToRegistry: false,
+    scope: null,
   },
   organizations: null,
   loginUrl: null,

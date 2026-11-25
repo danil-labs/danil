@@ -204,7 +204,7 @@ test("el proveedor gratuito sigue la lengua activa con la marca Danil", () => {
   aplicarLenguaDeWorkspace("es");
 });
 
-import { availableDanilCredits, DANIL_CREDITS } from "../../src/features/chat/danil-credits.ts";
+import { availableDanilCredits, DANIL_CREDITS } from "../../../../packages/features/chat/src/model/danil-credits.ts";
 
 const billingOrg = "org_test";
 const response = (amount: unknown, currency = "MXN") => ({
@@ -212,17 +212,27 @@ const response = (amount: unknown, currency = "MXN") => ({
   available: { currency, amount_micro: amount },
 });
 
-test("Danil Credits conserva el ejecutor y el modelo que anuncia el engine", () => {
+test("Danil Credits conserva el ejecutor y los niveles que anuncia el engine", () => {
   const surface: Superficie = { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
   const options = opcionesDeModelos([surface], {
-    "opencode": { provider: "opencode", fallback: false, models: [model(DANIL_CREDITS.modelId, "DeepSeek V4.1 Flash")] },
+    "opencode": {
+      provider: "opencode",
+      fallback: false,
+      models: [
+        model("danil-credits/danil/ligero", "Ligero"),
+        model("danil-credits/danil/equilibrado", "Equilibrado"),
+        model("danil-credits/danil/avanzado", "Avanzado"),
+      ],
+    },
   });
-  assert.equal(options.length, 1);
-  assert.equal(options[0].agent, "opencode");
-  assert.equal(options[0].model.id, DANIL_CREDITS.modelId);
-  assert.equal(options[0].proveedor.id, "danil-credits");
-  assert.equal(options[0].proveedor.logo, "danil");
-  assert.equal(modelBrand("opencode", DANIL_CREDITS.modelId), "danil");
+  assert.equal(options.length, 3);
+  for (const option of options) {
+    assert.equal(option.agent, "opencode");
+    assert.equal(option.proveedor.id, "danil-credits");
+    assert.equal(option.proveedor.logo, "danil");
+    assert.equal(modelBrand("opencode", option.model.id), "danil");
+  }
+  assert.deepEqual(options.map((o) => o.model.id), [...DANIL_CREDITS.tiers]);
   assert.equal(agruparModelos(options, "Danil Credits")[0].id, "danil-credits");
   assert.equal(opcionesDeModelos([surface], {}).length, 0);
 });
@@ -241,8 +251,12 @@ test("missing, failed or incompatible balance data never becomes zero", () => {
     { ...response("0"), available: null }]) {
     assert.equal(availableDanilCredits(value, billingOrg), null);
   }
-  assert.equal(DANIL_CREDITS.modelId, "danil-credits/deepseek/deepseek-v4.1-flash");
-  assert.equal(DANIL_CREDITS.upstreamModelId, "deepseek/deepseek-v4.1-flash");
+  assert.equal(DANIL_CREDITS.modelId, "danil-credits/danil/equilibrado");
+  assert.deepEqual(DANIL_CREDITS.tiers, [
+    "danil-credits/danil/ligero",
+    "danil-credits/danil/equilibrado",
+    "danil-credits/danil/avanzado",
+  ]);
 });
 
 
@@ -251,9 +265,11 @@ test("Credits no habilita BYOK ni Free y sus permisos no heredan otra superficie
   const byok: Superficie = { ...credits, id: "opencode", label: "OpenCode", catalogo: "de_pago", usable: false };
   const free: Superficie = { ...credits, id: "opencode-free", label: "Free", catalogo: "gratuitos", usable: false };
   const catalog = { "opencode": { provider: "opencode", fallback: false, models: [
-    model(DANIL_CREDITS.modelId, "DeepSeek"), model("byok/model", "Own key"),
+    model(DANIL_CREDITS.modelId, "Equilibrado"),
+    model("byok/model", "Own key"),
     { ...model("danil-free/reflection/beam-free", "Beam"), gratis: true },
     model("danil-credits/other", "Unapproved"),
+    model("danil-credits/deepseek/deepseek-v4.1-flash", "Retired pilot"),
   ] } };
   const options = opcionesDeModelos([credits, byok, free], catalog);
   assert.deepEqual(options.filter((option) => option.usable).map((option) => [option.superficie, option.model.id]), [["danil-credits", DANIL_CREDITS.modelId]]);

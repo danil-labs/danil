@@ -90,14 +90,12 @@ pub const EXTENSIONS: &[&str] = &[
     include_str!("../extensions/orchestrators.json"),
     include_str!("../extensions/engine_update_v1.json"),
     include_str!("../extensions/machine_usage_v1.json"),
-    include_str!("../extensions/secrets_v1.json"),
     include_str!("../extensions/artifact_parts_v1.json"),
     include_str!("../extensions/task-lifecycle-v1.json"),
     include_str!("../extensions/attachment_documents_v1.json"),
     include_str!("../extensions/provider_handoff_v1.json"),
     include_str!("../extensions/tree_parts_v1.json"),
     include_str!("../extensions/session_model_v1.json"),
-    include_str!("../extensions/credits_pilot_v1.json"),
     include_str!("../extensions/light_state_v1.json"),
     include_str!("../extensions/light_state_machines_v1.json"),
     include_str!("../extensions/account_workspace_v1.json"),
@@ -110,6 +108,8 @@ pub const EXTENSIONS: &[&str] = &[
     include_str!("../extensions/person_session_v1.json"),
     include_str!("../extensions/connected_machines_v1.json"),
     include_str!("../extensions/engine_adoption_v1.json"),
+    include_str!("../extensions/account_rename_v1.json"),
+    include_str!("../extensions/loopback_login_v1.json"),
 ];
 
 /// Las órdenes del contrato más las de las extensiones. La huella sigue siendo

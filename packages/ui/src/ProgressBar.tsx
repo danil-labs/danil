@@ -1,5 +1,5 @@
 import { For, Show, splitProps, type JSX } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 /**
  * La barra de progreso, segmentada.
@@ -9,7 +9,7 @@ import { cn } from "../../../apps/desktop/src/lib/utils";
  * nada.
  */
 
-export type ProgressSegment = {
+type ProgressSegment = {
   /** Cuánto cubre este tramo, en las mismas unidades que `max`. */
   value: number;
   /** Utility de relleno respaldada por token (`bg-warning`, `bg-error`…). */

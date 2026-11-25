@@ -1,4 +1,4 @@
-import { editMentions, finishEdit, trimMentions, type PendingEdit, type TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
+import { editMentions, finishEdit, trimMentions, type PendingEdit, type TaskMention } from "../../../../ui/src/lib/taskMentions";
 import CornerDownLeft from "lucide-solid/icons/corner-down-left";
 import Paperclip from "lucide-solid/icons/paperclip";
 import Pause from "lucide-solid/icons/pause";
@@ -8,13 +8,13 @@ import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import X from "lucide-solid/icons/x";
 import { createSignal, For, onCleanup, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
-import type { Agent } from "../../../../../apps/desktop/src/lib/model";
+import { t } from "../../../../ui/src/lib/i18n";
+import type { Agent } from "../../../../ui/src/lib/model";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Button } from "../../../../ui/src/Button";
 import { Textarea } from "../../../../ui/src/Textarea";
 import { deOtraTarea, esDeLaTerminal, interrumpible, type Encolado, type RazonDeRetencion } from "../../../../ui/src/lib/queue.ts";
-import { Pressable } from "../../../../ui/src/Pressable";
+import { OpenSenderTask } from "./OpenSenderTask";
 export type { Encolado };
 
 
@@ -164,18 +164,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                             ? t("chat.queue.from_task", { title: it.from_task.title })
                             : t("chat.queue.from_agent", { name: it.agent ?? "" })}
                           <Show when={props.onOpenTask ? it.from_task : null}>
-                            {(sender) => (
-                              <>
-                                {" — "}
-                                <Pressable
-                                  class="cursor-pointer underline underline-offset-2"
-                                  aria-label={t("chat.recipients.open_task", { title: sender().title })}
-                                  onClick={() => props.onOpenTask?.(sender().folder, sender().task, sender().machine)}
-                                >
-                                  {t("chat.task_completed.open")}
-                                </Pressable>
-                              </>
-                            )}
+                            {(sender) => <OpenSenderTask sender={sender} onOpenTask={props.onOpenTask} />}
                           </Show>
                         </span>
                       </Show>

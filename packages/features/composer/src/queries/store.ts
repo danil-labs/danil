@@ -1,14 +1,16 @@
 import { batch, createEffect, createMemo, createSignal, on, onCleanup, onMount, untrack } from "solid-js";
-import type { Agent, AgentModels, ModoDePermiso } from "../../../../../apps/desktop/src/lib/model.ts";
-import { type CatalogosDeModelos, effortAlCambiarDeModelo, type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models.ts";
-import type { CliCommand, Skill, SlashMenu } from "../../../../../apps/desktop/src/lib/skills.ts";
-import { esDe, paraElMenu, type Superficie, superficieDe } from "../../../../../apps/desktop/src/lib/surfaces.ts";
-import { OPENCODE } from "../../../../tasks/src/agents.ts";
+import { isNoMachines, machineAvailability } from "../../../../host/src/platform.ts";
+import type { Agent, AgentModels, ModoDePermiso } from "../../../../ui/src/lib/model.ts";
+import { type CatalogosDeModelos, effortAlCambiarDeModelo, type OpcionDeModelo } from "../../../../ui/src/lib/models.ts";
+import type { CliCommand, Skill, SlashMenu } from "../../../../ui/src/lib/skills.ts";
+import { esDe, modeloPredeterminadoDe, paraElMenu, type Superficie, superficieDe } from "../../../../ui/src/lib/surfaces.ts";
 
 type Invoke = <T>(command: string, args?: Record<string, unknown>, options?: { headers: Record<string, string> }) => Promise<T>;
 export type ComposerConfiguration = { agent: string; surface: string; model: string; effort: string; mode?: string };
 type DraftSelection = { configuration?: ComposerConfiguration; provider?: { from: string; to: string } };
 type Scope = { workspace: () => string | null; machine: () => string | null; machineOn: () => boolean | undefined; connected: () => boolean; session: () => string | null };
+
+const DEFAULT_PERMISSION_MODE = "auto";
 
 /** Owns the composer selection and the catalogs that make it executable. Task sending owns persistence. */
 export function createComposerStore(deps: {
@@ -18,10 +20,10 @@ export function createComposerStore(deps: {
   workspaceMode: () => string | null;
   draftConfiguration: () => ComposerConfiguration | undefined;
   modoInicial: (modos: ModoDePermiso[], recordado: string) => string;
-  modoRecordado: () => string;
+  modoRecordado?: () => string;
   recordarModo: (id: string) => void;
 }) {
-  const { invoke, withLastAnswer, modoInicial, modoRecordado, recordarModo } = deps;
+  const { invoke: rpc, withLastAnswer, modoInicial, recordarModo } = deps;
   const composerMachine = deps.scope.machine;
   const workspaceActivo = deps.scope.workspace;
   const connected = deps.scope.connected;
@@ -58,6 +60,12 @@ export function createComposerStore(deps: {
   const catalogosEnVuelo = new Map<string, Promise<void>>();
   const cargarComandos = (a: string) => {
     if (disposed) return;
+    if (isNoMachines()) {
+      setCliCommands([]);
+      setSkills([]);
+      setSideCommand(null);
+      return;
+    }
     const revision = composerRevision;
     const poner = (menu: SlashMenu) => {
       if (a !== agent() || disposed || revision !== composerRevision) return;
@@ -65,21 +73,30 @@ export function createComposerStore(deps: {
       setSkills(menu.skills);
       setSideCommand(menu.side_question ?? null);
     };
-    void invoke<SlashMenu>("list_slash_menu", { provider: a }, options())
+    void rpc<SlashMenu>("list_slash_menu", { provider: a }, options())
       .then(poner)
       .catch(() => poner({ commands: [], skills: [] }));
   };
   function cargarModelos(a: string, forzar = false) {
-    if (disposed) return Promise.resolve();
+    if (disposed || isNoMachines()) return Promise.resolve();
     if (!forzar && untrack(() => catalogos()[a])) return Promise.resolve();
     const yaVa = catalogosEnVuelo.get(a);
     if (yaVa) return yaVa;
     const revision = composerRevision;
     const machine = composerMachine(), routed = options();
-    const pedido = withLastAnswer(machine, `list_models:${a}`, () => invoke<AgentModels>("list_models", { provider: a }, routed))
+    const pedido = withLastAnswer(machine, `list_models:${a}`, () => rpc<AgentModels>("list_models", { provider: a }, routed))
       .then((catalogo) => {
         if (disposed || revision !== composerRevision) return;
-        setCatalogos((actuales) => ({ ...actuales, [a]: catalogo }));
+        setCatalogos((actuales) => {
+          if (
+            catalogo.fallback &&
+            catalogo.models.length === 0 &&
+            (actuales[a]?.models.length ?? 0) > 0
+          ) {
+            return actuales;
+          }
+          return { ...actuales, [a]: catalogo };
+        });
         if (a !== agent()) return;
         const actual = superficies()?.find((s) => s.id === superficie());
         const disponibles = catalogo.models.filter((m) => esDe(actual, m));
@@ -87,12 +104,15 @@ export function createComposerStore(deps: {
           disponibles.length > 0 &&
           !disponibles.some((m) => m.id === model())
         ) {
-          setModel(disponibles[0].id);
+          const initial = modeloPredeterminadoDe(actual, disponibles);
+          if (initial) setModel(initial.id);
         }
       })
       .catch(() => {
         if (disposed || revision !== composerRevision) return;
-        setCatalogos((actuales) => ({ ...actuales, [a]: null }));
+        setCatalogos((actuales) =>
+          actuales[a] === undefined ? { ...actuales, [a]: null } : actuales,
+        );
       })
       .finally(() => {
         if (catalogosEnVuelo.get(a) === pedido) catalogosEnVuelo.delete(a);
@@ -102,10 +122,14 @@ export function createComposerStore(deps: {
   }
   async function cargarSuperficies(inicial: boolean) {
     if (disposed) return;
+    if (isNoMachines()) {
+      setSuperficies([]);
+      return;
+    }
     const revision = composerRevision;
     try {
       const machine = composerMachine(), routed = options();
-      const s = await withLastAnswer(machine, "list_surfaces", () => invoke<Superficie[]>("list_surfaces", {}, routed));
+      const s = await withLastAnswer(machine, "list_surfaces", () => rpc<Superficie[]>("list_surfaces", {}, routed));
       if (disposed || revision !== composerRevision) return;
       const primera = s.find((x) => x.usable);
       batch(() => {
@@ -124,6 +148,7 @@ export function createComposerStore(deps: {
       const agentes = new Set(
         s.filter((x) => x.usable || x.provider === agent()).map((x) => x.provider),
       );
+      if (untrack(agents).length === 0) void refreshProviders();
       await Promise.all([...agentes].map((a) => cargarModelos(a, !inicial)));
     } catch {
       if (disposed || revision !== composerRevision) return;
@@ -132,8 +157,8 @@ export function createComposerStore(deps: {
   }
   function startWithWorkspaceMode() {
     if (disposed) return;
-    const mode = workspaceMode();
-    if (!mode || sessionId() || borrador().configuration?.mode) return;
+    const mode = workspaceMode() ?? DEFAULT_PERMISSION_MODE;
+    if (sessionId() || borrador().configuration?.mode) return;
     const list = modos();
     setModo(list.some((m) => !m.falta) ? modoInicial(list, mode) : mode);
   }
@@ -149,14 +174,14 @@ export function createComposerStore(deps: {
       if (configuration.mode) setModo(configuration.mode);
     });
   }
-  function restoreSessionDraft(draft: DraftSelection, session?: { provider?: string | null }) {
+  function restoreSessionDraft(draft: DraftSelection, current?: { provider?: string | null }) {
     if (disposed) return;
     batch(() => {
       if (draft.configuration) {
         setModel(draft.configuration.model); setEffort(draft.configuration.effort);
         if (draft.configuration.mode) setModo(draft.configuration.mode);
       }
-      if (draft.provider && (!session || session.provider === draft.provider.from)) setAgent(draft.provider.to);
+      if (draft.provider && (!current || current.provider === draft.provider.from)) setAgent(draft.provider.to);
     });
   }
   function useProfile(profile: { provider?: string | null; model?: string | null; effort?: string | null }) {
@@ -178,17 +203,25 @@ export function createComposerStore(deps: {
   }
   async function refreshProviders() {
     if (disposed) return;
-    try { const rows = await invoke<Agent[]>("list_providers"); if (!disposed) setAgents(rows); }
-    catch { /* A transient provider probe keeps the last known installation list. */ }
-  }
-  async function prepareCredits(prepare: (headers: Record<string, string>) => Promise<unknown>) {
-    if (disposed) return;
-    const revision = composerRevision, routed = options();
-    await prepare(routed.headers);
-    if (disposed || revision !== composerRevision) return;
-    await cargarSuperficies(false);
-    if (disposed || revision !== composerRevision) return;
-    await cargarModelos(OPENCODE, true);
+    if (isNoMachines()) {
+      setAgents([]);
+      return;
+    }
+    const revision = composerRevision;
+    const workspace = workspaceActivo();
+    const routed = options();
+    try {
+      const rows = await rpc<Agent[]>("list_providers", {}, routed);
+      if (!disposed && revision === composerRevision) setAgents(rows);
+      return;
+    } catch {
+      if (disposed || revision !== composerRevision || !routed.headers["x-terminus-machine"]) return;
+    }
+    try {
+      const headers: Record<string, string> = workspace ? { "x-terminus-workspace": workspace } : {};
+      const rows = await rpc<Agent[]>("list_providers", {}, { headers });
+      if (!disposed && revision === composerRevision) setAgents(rows);
+    } catch { /* A transient provider probe keeps the last known installation list. */ }
   }
   function installEffects() {
     if (installed || disposed) return;
@@ -199,12 +232,40 @@ export function createComposerStore(deps: {
     catalogosEnVuelo.clear();
     batch(() => {
       setCatalogos({});
-      setSuperficies(null);
+      setSuperficies(isNoMachines() ? [] : null);
     });
-    if (connected() && workspaceActivo()) void cargarSuperficies(false);
+    if (connected() && workspaceActivo() && !isNoMachines()) {
+      void cargarSuperficies(false);
+      void refreshProviders();
+    }
   }, { defer: true }));
   createEffect(on(deps.scope.machineOn, (encendida, antes) => {
-    if (encendida && antes === false && connected() && workspaceActivo()) void cargarSuperficies(false);
+    if (encendida && antes !== true && connected() && workspaceActivo() && !isNoMachines()) {
+      void cargarSuperficies(false);
+      void refreshProviders();
+    }
+  }, { defer: true }));
+  let lastAvailability = machineAvailability().kind;
+  createEffect(on(() => machineAvailability().kind, (kind) => {
+    const prev = lastAvailability;
+    lastAvailability = kind;
+    if (disposed || kind === prev) return;
+    if (kind === "no_machines") {
+      batch(() => {
+        setSuperficies([]);
+        setAgents([]);
+        setModos([]);
+        setCliCommands([]);
+        setSkills([]);
+        setSideCommand(null);
+      });
+      return;
+    }
+    if (prev === "no_machines" && (kind === "ready" || kind === "offline") && connected() && workspaceActivo()) {
+      void cargarSuperficies(false);
+      void refreshProviders();
+      cargarComandos(agent());
+    }
   }, { defer: true }));
 
   createEffect(on(agent, (a) => void cargarModelos(a)));
@@ -212,18 +273,18 @@ export function createComposerStore(deps: {
     on([agent, composerMachine, workspaceActivo], ([a]) => {
       if (disposed) return;
       const revision = composerRevision;
-      if (!a) {
+      if (!a || isNoMachines()) {
         setModos([]);
         return;
       }
-      void invoke<ModoDePermiso[]>("list_permission_modes", { provider: a }, options())
+      void rpc<ModoDePermiso[]>("list_permission_modes", { provider: a }, options())
         .then((lista) => {
           if (a !== agent() || disposed || revision !== composerRevision) return;
           batch(() => {
             setModos(lista);
             const puede = lista.filter((m) => !m.falta);
             if (!puede.some((m) => m.id === modo())) {
-              setModo(modoInicial(lista, workspaceMode() ?? modoRecordado()));
+              setModo(modoInicial(lista, workspaceMode() ?? DEFAULT_PERMISSION_MODE));
             }
           });
         })
@@ -261,7 +322,10 @@ export function createComposerStore(deps: {
       const s = sups?.find((x) => x.id === id);
       const lista = (cat?.models ?? []).filter((m) => esDe(s, m));
       if (lista.length === 0) return;
-      if (!lista.some((m) => m.id === model())) setModel(lista[0].id);
+      if (!lista.some((m) => m.id === model())) {
+        const initial = modeloPredeterminadoDe(s, lista);
+        if (initial) setModel(initial.id);
+      }
     }),
   );
   onMount(() => {
@@ -276,7 +340,7 @@ export function createComposerStore(deps: {
   }
   return {
     agents, agent, superficies, superficie, catalogos, models, modelosParaAgentes, model, effort, modo, modos, skills, cliCommands, sideCommand,
-    menu: menuDeSuperficies, options, installEffects, refreshProviders, prepareCredits, startNewDraft: startWithWorkspaceMode,
+    menu: menuDeSuperficies, options, installEffects, refreshProviders, startNewDraft: startWithWorkspaceMode,
     refreshSurfaces: cargarSuperficies, refreshCommands: cargarComandos, readModels: cargarModelos,
     snapshot: (): ComposerConfiguration => ({ agent: agent(), surface: superficie(), model: model(), effort: effort() }),
     effortForTurn: () => effort() || models()?.models.find(option => option.id === model())?.default_effort || null,

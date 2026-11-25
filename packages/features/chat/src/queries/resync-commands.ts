@@ -1,14 +1,14 @@
 
-import { pasoDe } from "../../../../../apps/desktop/src/lib/steps";
-import { type Superficie } from "../../../../../apps/desktop/src/lib/surfaces.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { pasoDe } from "../../../../ui/src/lib/steps";
+import { type Superficie } from "../../../../ui/src/lib/surfaces.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { type ComandoEnVivo } from "../components/ShellCard";
 import { contestaALaTerminal } from "../../../../ui/src/lib/queue.ts";
 import { type Turn } from "../model/transcript";
 import { type Msg, type PermissionRequest } from "../screens/Chat";
 import { batch, createSignal, type Accessor } from "solid-js";
-import type { createThreadsStore } from "./types.js";
+import type { createThreadsStore } from "./types.ts";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
 import type { createSendGates } from "./send-gates.ts";
 import type { createSendNow } from "./send-now.ts";
@@ -51,7 +51,7 @@ export function createResyncCommands(deps: ResyncCommandsDeps) {
       // Un motor anterior a los pendientes durables los lista sin `id` ni
       // `revision` y contesta por `request_id`; exigir la revisión dejaba el
       // gate sin forma de aprobarse. El motor nuevo acepta la misma forma.
-      const guardado = await invoke<Turn>("respond_permission", {
+      const guardado = await callEngine<Turn>("respond_permission", {
         session: p.session,
         requestId: current?.id ?? p.requestId,
         revision: current?.revision,

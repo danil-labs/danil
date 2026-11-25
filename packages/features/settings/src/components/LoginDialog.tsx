@@ -3,32 +3,18 @@ import ChevronRight from "lucide-solid/icons/chevron-right";
 import Copy from "lucide-solid/icons/copy";
 import ExternalLink from "lucide-solid/icons/external-link";
 import { Spinner } from "../../../../ui/src/Spinner";
-import { Show, createSignal, type JSX } from "solid-js";
+import { Show, createSignal } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
-import { enfocar } from "../../../../../apps/desktop/src/lib/focus";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";
-import { Input } from "../../../../ui/src/Input";
 import { Terminal, TerminalBody } from "../../../../ui/src/Terminal";
-import "../../../../../apps/desktop/src/locales/settingsPhrases";
-
-/** Un paso de la conexión: el número, qué hacer, y con qué. */
-function Paso(props: { numero: number; titulo: string; children: JSX.Element }) {
-  return (
-    <section class="flex gap-3">
-      <span class="grid size-5 shrink-0 place-items-center rounded-full bg-surface-muted text-caption font-semibold text-neutral-700">
-        {props.numero}
-      </span>
-      <div class="flex min-w-0 flex-1 flex-col gap-2">
-        <h3 class="m-0 text-xs font-semibold text-neutral-950">{props.titulo}</h3>
-        {props.children}
-      </div>
-    </section>
-  );
-}
+import { isHeadlessCodeNotice, manualLoginMode } from "../../../../ui/src/lib/account-auth.ts";
+import "../../../../ui/src/locales/settingsPhrases";
+import { LoginCodeForm } from "../screens/LoginCodeForm";
+import { Paso } from "./ConnectionStep";
 
 /**
  * La ventana de una conexión por navegador, la misma de Configuración: el enlace para
@@ -38,17 +24,36 @@ function Paso(props: { numero: number; titulo: string; children: JSX.Element }) 
 export function DialogoDeConexion(props: {
   etiqueta: string;
   url: string | null;
+  aviso?: string | null;
   porConfirmar: string | null;
   pideCodigo: boolean;
+  enviandoCodigo?: boolean;
+  codigoEnviado?: boolean;
+  errorCodigo?: string | null;
+  onLimpiarErrorCodigo?: () => void;
   salida: string[];
   onCancelar: () => void;
   onCodigo: (codigo: string) => void;
 }) {
+  const modoCodigo = () => manualLoginMode(props.url, props.aviso);
+  const tituloCodigo = () =>
+    modoCodigo() === "callback_url"
+      ? t("settings.accounts.step_callback_url")
+      : modoCodigo() === "hosted_code"
+        ? t("settings.accounts.step_hosted_code")
+        : t("settings.accounts.step_code");
+  const esperaCodigo = () =>
+    modoCodigo() === "callback_url"
+      ? t("onboarding.login.waiting_callback_url")
+      : modoCodigo() === "hosted_code"
+        ? t("onboarding.login.waiting_hosted_code")
+        : t("onboarding.login.waiting_code");
   const [codigo, setCodigo] = createSignal("");
   const [copiaFallida, setCopiaFallida] = createSignal<string | null>(null);
   const { copied: copiado, copy } = createCopied(1400, (e) => setCopiaFallida(prosaDe(e)));
   const enviar = () => {
-    if (codigo().trim()) props.onCodigo(codigo().trim());
+    const valor = codigo().trim();
+    if (valor && !props.enviandoCodigo) props.onCodigo(valor);
   };
   async function copiar(u: string) {
     setCopiaFallida(null);
@@ -66,14 +71,16 @@ export function DialogoDeConexion(props: {
             <DialogTitle class="text-sm font-semibold">
               {t("settings.accounts.connect_agent", { agent: props.etiqueta })}
             </DialogTitle>
-            {/* Siempre dice qué espera: que abra el navegador, que termines ahí o que pegues su código. */}
+            {/* Siempre dice qué espera: que abra el navegador, que termines ahí o que pegues su código o URL. */}
             <span class="flex items-center gap-1.5 text-xs text-neutral-500" role="status">
               <Spinner size={12} />
-              {props.pideCodigo
-                ? t("onboarding.login.waiting_code")
-                : props.url || props.porConfirmar
-                  ? t("onboarding.login.waiting_browser")
-                  : t("onboarding.login.opening_browser")}
+              {props.codigoEnviado
+                ? (modoCodigo() === "code" ? t("settings.accounts.verifying_code") : t("settings.accounts.verifying_callback_url"))
+                : props.pideCodigo
+                  ? esperaCodigo()
+                  : props.url || props.porConfirmar
+                    ? t("onboarding.login.waiting_browser")
+                    : t("onboarding.login.opening_browser")}
             </span>
           </div>
           <Button variant="outline" size="compact" onClick={() => props.onCancelar()}>
@@ -114,22 +121,45 @@ export function DialogoDeConexion(props: {
         </Show>
 
         <Show when={props.pideCodigo}>
-          <Paso numero={props.url ? 2 : 1} titulo={t("settings.accounts.step_code")}>
-            <div class="flex items-center gap-2">
-              <Input
-                class="min-w-0 flex-1 font-mono text-xs"
-                type="text"
-                ref={enfocar}
-                value={codigo()}
-                placeholder={t("settings.accounts.code_placeholder")}
-                onInput={(e) => setCodigo(e.currentTarget.value)}
-                onKeyDown={(e) => e.key === "Enter" && enviar()}
-              />
-              <Button disabled={!codigo().trim()} onClick={enviar}>
-                {t("settings.accounts.send_code")}
-              </Button>
-            </div>
+          <Paso numero={props.url ? 2 : 1} titulo={tituloCodigo()}>
+            <Show when={modoCodigo() === "callback_url"}>
+              <p class="m-0 text-xs text-neutral-500" data-login-loopback-hint="">
+                {t("settings.accounts.step_callback_url_hint")}
+              </p>
+            </Show>
+            <Show when={modoCodigo() === "hosted_code"}>
+              <p class="m-0 text-xs text-neutral-500" data-login-hosted-hint="">
+                {t("settings.accounts.step_hosted_code_hint")}
+              </p>
+            </Show>
+            <Show
+              when={
+                props.aviso &&
+                modoCodigo() !== "callback_url" &&
+                !(modoCodigo() === "hosted_code" && isHeadlessCodeNotice(props.aviso))
+              }
+            >
+              <p class="m-0 text-xs text-neutral-500" data-login-notice="">{props.aviso}</p>
+            </Show>
+            <LoginCodeForm
+              value={codigo()}
+              onInput={(v) => {
+                setCodigo(v);
+                props.onLimpiarErrorCodigo?.();
+              }}
+              onSubmit={enviar}
+              submitting={props.enviandoCodigo}
+              error={props.errorCodigo}
+              mode={modoCodigo()}
+            />
           </Paso>
+        </Show>
+
+        <Show when={!props.pideCodigo && props.codigoEnviado}>
+          <p role="status" data-login-code-sent="" class="m-0 flex items-center gap-1.5 text-xs text-neutral-500">
+            <Spinner size={12} />
+            {modoCodigo() === "code" ? t("settings.accounts.verifying_code") : t("settings.accounts.verifying_callback_url")}
+          </p>
         </Show>
 
         <Show when={props.salida.length > 0}>

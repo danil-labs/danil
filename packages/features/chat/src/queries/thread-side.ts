@@ -1,19 +1,17 @@
-import { carpetaDeTrabajo } from "../../../../../apps/desktop/src/lib/model";
-import { type Project } from "../../../../../apps/desktop/src/lib/model.ts";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import { accionDeAtajo, navegacionDePestanas, ventanaVecina } from "../../../../../apps/desktop/src/lib/shortcuts";
-import { type NavegacionDePestanas } from "../../../../../apps/desktop/src/lib/shortcuts.ts";
+import { carpetaDeTrabajo } from "../../../../ui/src/lib/model";
+import { type Project } from "../../../../ui/src/lib/model.ts";
+import { listen } from "../../../../host/src/serviceEvents.ts";
+import { accionDeAtajo, navegacionDePestanas, ventanaVecina } from "../../../../ui/src/lib/shortcuts";
+import { type NavegacionDePestanas } from "../../../../ui/src/lib/shortcuts.ts";
 import { capabilities } from "../../../../host/src/platform";
-import { type ActivityEvent } from "@terminus/protocol";
+import { type ActivityEvent } from "../../../../engine-client/src/index.ts";
 import { createEffect, createSignal, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
-import type { InicioDeCarpeta } from "./types.js";
-import type { createTaskFiles } from "../../../../../apps/desktop/src/lib/taskFiles.ts";
-import type { createSidebar } from "../../../../shell/src/shell/Sidebar.tsx";
-import type { SearchFilter } from "../../../../shell/src/shell/GlobalSearch.tsx";
+import type { CreateSidebarPort, InicioDeCarpeta, SearchFilter } from "./types.ts";
+import type { createTaskFiles } from "../../../../ui/src/lib/taskFiles.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type ThreadSideDeps = { createSidebar: typeof createSidebar; alta: Accessor<boolean>; archivosDeTarea: ReturnType<typeof createTaskFiles>; closeActiveTab: () => void;
+export type ThreadSideDeps = { createSidebar: CreateSidebarPort; alta: Accessor<boolean>; archivosDeTarea: ReturnType<typeof createTaskFiles>; closeActiveTab: () => void;
   irAPestanaDe: (nav: NavegacionDePestanas) => void; irAVentanaVecina: (salto: 1 | -1) => void; juntarLaActiva: () => void; llaveDeBorrador: (proyecto: string | undefined) => string;
   nuevaSesion: (enProyecto?: string) => void; partirLaActiva: () => void; project: Accessor<string>; projectList: Accessor<Project[]>; reabrirPestana: () => void; sessionId: Accessor<string | null>;
   setBuscando: Setter<SearchFilter | null>; workspaceActivo: Accessor<string | null>; };
@@ -69,7 +67,6 @@ export function createThreadSide(deps: ThreadSideDeps) {
   // `null` = cerrada. Una cadena es además con qué destino abrirla.
   const [settings, setSettings] = createSignal<string | null>(capabilities().initialSettings ?? null);
   const [activityNotice, setActivityNotice] = createSignal<ActivityEvent | null>(null);
-  const [activityMachine, setActivityMachine] = createSignal<string | null>(null);
   onMount(() => {
     const states = new Map<string, ActivityEvent["state"]>();
     const events = listen<ActivityEvent>("activity", event => {
@@ -87,5 +84,5 @@ export function createThreadSide(deps: ThreadSideDeps) {
 
   const [anadiendoCarpeta, setAnadiendoCarpeta] = createSignal(false);
   const [inicioDeCarpeta, setInicioDeCarpeta] = createSignal<InicioDeCarpeta | null>(null);
-  return { activityMachine, activityNotice, anadiendoCarpeta, carpetaDelProyecto, inicioDeCarpeta, setActivityMachine, setActivityNotice, setAnadiendoCarpeta, setInicioDeCarpeta, setSettings, settings, sidebar };
+  return { activityNotice, anadiendoCarpeta, carpetaDelProyecto, inicioDeCarpeta, setActivityNotice, setAnadiendoCarpeta, setInicioDeCarpeta, setSettings, settings, sidebar };
 }

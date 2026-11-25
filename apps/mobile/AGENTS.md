@@ -43,7 +43,7 @@ se agregan con `npx expo install <paquete>`, que elige la versión compatible.
 ## Reglas
 
 - **Lista cerrada en los dos caminos.** La app manda al motor de una máquina
-  solo los comandos de `APP_COMMANDS` (`packages/protocol/src/commands.ts`):
+  solo los comandos de `APP_COMMANDS` (`packages/engine-client/src/commands.ts`):
   funciones de ventana (`service invoke`) con los nombres del contrato
   renombrado (`list_agents`, `provider`…). El relay de Danil Machines bloquea
   poco (solo funciones de escritorio), así que el cliente del relay
@@ -60,7 +60,7 @@ se agregan con `npx expo install <paquete>`, que elige la versión compatible.
   (`machine_asleep`) y se dice en tono neutro. Apagada nunca se pinta como
   error.
 - En iOS y Android la cuenta de Danil es la sesión de Supabase y es lo único que se guarda de
-  ella, en el llavero (`apps/mobile/src/lib/supabase.ts`). Nada de contraseñas ni tokens
+  ella, en el llavero. Nada de contraseñas ni tokens
   propios.
 - En la web (`<base>m/`, `web-mobile.mjs`) todo va por el borde `/v1`, como la web y Desk:
   la cookie del borde, identity, organizaciones y `/v1/machines` con ticket de un solo uso
@@ -83,7 +83,7 @@ se agregan con `npx expo install <paquete>`, que elige la versión compatible.
   `@terminus/design`; qué lleva cada línea de la tarjeta lo decide `taskCard`,
   y la vista previa, `taskPreview`.
 - Los íconos son los de Lucide del escritorio (`apps/mobile/src/ui/Icon.tsx`) y las marcas
-  de proveedor, las de `apps/desktop/src/ui/icons.tsx` (`apps/mobile/src/ui/BrandMark.tsx`). Nada de SF
+  de proveedor, las de `packages/ui/src/icons.tsx` (`apps/mobile/src/ui/BrandMark.tsx`). Nada de SF
   Symbols sin par en Android: en Android no se ven.
 - Las hojas de la pila (`formSheet`) no pintan cabecera en Android: su título
   va en el contenido (`SheetTitle`).

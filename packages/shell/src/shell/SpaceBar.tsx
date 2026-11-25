@@ -1,11 +1,11 @@
 import Plus from "lucide-solid/icons/plus";
 import { createSignal, For, Show } from "solid-js";
-import { enfocarYSeleccionar } from "../../../../apps/desktop/src/lib/focus";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { type Space, spaceName } from "../../../../apps/desktop/src/lib/spaces";
-import type { Project } from "../../../../apps/desktop/src/lib/model";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
-import { createNavigationReorder } from "../../../../apps/desktop/src/lib/navigation-order";
+import { enfocarYSeleccionar } from "../../../ui/src/lib/focus";
+import { t } from "../../../ui/src/lib/i18n";
+import { type Space, spaceName } from "../../../ui/src/lib/spaces";
+import type { Project } from "../../../ui/src/lib/model";
+import { cn } from "../../../ui/src/lib/utils";
+import { createNavigationReorder } from "../../../ui/src/lib/navigation-order";
 import { Button } from "../../../ui/src/Button";
 import {
   ContextMenu,
@@ -321,7 +321,8 @@ export function NewSpaceForm(props: {
                 <For each={recientes()}>
                   {(p) => (
                     <label class="flex min-w-0 items-center gap-2 text-ui">
-                      <input
+                      <Input
+                        variant="plain"
                         type="checkbox"
                         class="size-4 shrink-0 accent-primary"
                         checked={elegidas().includes(p.id)}

@@ -1,10 +1,10 @@
-import { routerAvailable } from "@terminus/tasks";
+import { routerAvailable } from "../../../../ui/src/lib/tasks/index.ts";
 import { createSignal, lazy, onCleanup, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { listModels, setProviderConsent, workspacesStartup } from "../queries/engine-consent";
-import { acceptedFreeModelPolicy, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelPolicy, type FreeModelStartup } from "../../../../../apps/desktop/src/lib/free-model-policy.ts";
-import { loadFreeModelPolicy } from "../../../../../apps/desktop/src/lib/free-model-policy-load.ts";
-import type { Frase } from "../../../../../apps/desktop/src/lib/prose";
+import { acceptedFreeModelPolicy, freeModelPolicyAvailable, freeModelScope, sameFreeModelPolicy, type FreeModelConsent, type FreeModelPolicy, type FreeModelStartup } from "../../../../session/src/free-model-policy.ts";
+import { loadFreeModelPolicy } from "../../../../session/src/free-model-policy-load.ts";
+import type { Consentimiento } from "../../../../ui/src/lib/freeRouterConsent.ts";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { activatePlatform, isPlatformPolicy, needsPlatform, withdrawPlatform } from "../queries/free-router-session.ts";
 
@@ -28,7 +28,7 @@ async function politicaConReintento(): Promise<FreeModelPolicy | null> {
  * frase tiene el número al lado, y un guarda en Rust falla si el texto se
  * mueve sin que la versión suba.
  */
-export type Consentimiento = { lineas: Frase[]; version: number; policy: FreeModelPolicy };
+export type { Consentimiento };
 
 /** El consentimiento de Router IA gratis: lo comparten Configuración y el selector de modelos. */
 export function createFreeRouterConsent(opts: { agente: () => string; despues?: () => Promise<void> | void }) {
@@ -75,8 +75,8 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
       // En un workspace de plataforma no hay oferta local: el texto se lee sin referencia y decide `workspaces`.
       const shown = texto()?.policy;
       const policy = shown && isPlatformPolicy(shown) ? shown : await politicaConReintento();
-      if (!policy || (!policy.enabled && !isPlatformPolicy(policy))) throw new Error(t("settings.accounts.free.unavailable"));
-      setTexto({ lineas: policy.lines, version: policy.version, policy });
+      if (!freeModelPolicyAvailable(policy)) throw new Error(t("settings.accounts.free.unavailable"));
+      setTexto({ lineas: policy!.lines, version: policy!.version, policy: policy! });
     } catch (e) {
       // Sin texto vigente el diálogo no ofrece aceptar; el error queda dentro.
       setTexto(null);
@@ -125,8 +125,11 @@ export function createFreeRouterConsent(opts: { agente: () => string; despues?: 
       setFallo(prosaDe(e));
       // Con la política cambiada se relee y se pide confirmar de nuevo sobre el texto vigente.
       if (valor && preguntando()) {
-        const policy = await politicaConReintento().catch(() => null);
-        if (policy?.enabled) setTexto({ lineas: policy.lines, version: policy.version, policy });
+        const shown = texto()?.policy;
+        const policy = shown && isPlatformPolicy(shown)
+          ? await loadFreeModelPolicy(undefined, true).catch(() => null)
+          : await politicaConReintento().catch(() => null);
+        if (freeModelPolicyAvailable(policy)) setTexto({ lineas: policy!.lines, version: policy!.version, policy: policy! });
       }
     } finally {
       setGuardando(false);

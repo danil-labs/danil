@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { activeTaskCounts, activityByProject, byRecent, hiddenIn, pickerSections, picksIn, recentProjects, rememberPick, setHidden, storedPicks, taskCountOf } from "../../src/features/projects/recent.ts";
-import { lastActivity } from "../../../../packages/tasks/src/view.ts";
+import { activeTaskCounts, activityByProject, byRecent, hiddenIn, pickerSections, picksIn, recentProjects, rememberPick, setHidden, storedPicks, taskCountOf } from "../../../../packages/features/projects/src/model/recent.ts";
+import { lastActivity } from "../../../../packages/ui/src/lib/tasks/view.ts";
 
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 10, 17);

@@ -1,0 +1,497 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.danil.ai/billing-v2/common.v1.schema.json",
+  "title": "Tipos comunes de billing v2",
+  "$comment": "Subconjunto de JSON Schema usado por este contrato: type, properties, required, additionalProperties, enum, const, pattern, minimum, maximum, minLength, maxLength, items, minItems, maxItems, $ref, oneOf y format (date-time, uuid). Los consumidores ignoran campos desconocidos (cambio aditivo); un valor desconocido que decide dinero, autorización o borrado falla cerrado.",
+  "$defs": {
+    "organization_id": {
+      "type": "string",
+      "pattern": "^org_[A-Za-z0-9]{1,64}$",
+      "$comment": "Lo emite solo identity. Billing nunca lo toma del cuerpo de una petición de persona."
+    },
+    "person_id": {
+      "type": "string",
+      "pattern": "^user_[A-Za-z0-9]{1,64}$"
+    },
+    "service_subject": {
+      "type": "string",
+      "pattern": "^svc:[a-z][a-z0-9-]{1,62}$"
+    },
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+    },
+    "realm": {
+      "type": "string",
+      "enum": [
+        "danil-platform"
+      ]
+    },
+    "currency": {
+      "type": "string",
+      "enum": [
+        "MXN"
+      ]
+    },
+    "amount_micro": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+      "$comment": "Entero en [0, 9223372036854775807] (int64) en micro-unidades, como cadena decimal sin ceros a la izquierda. El pattern impone el máximo exacto (no solo 19 dígitos). Nunca número JSON."
+    },
+    "signed_amount_micro": {
+      "type": "string",
+      "pattern": "^(0|-?([1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807))$",
+      "$comment": "Entero con signo, |x| ≤ 9223372036854775807; sin «-0». El pattern impone el rango exacto."
+    },
+    "money": {
+      "type": "object",
+      "required": [
+        "currency",
+        "amount_micro"
+      ],
+      "properties": {
+        "currency": {
+          "$ref": "#/$defs/currency"
+        },
+        "amount_micro": {
+          "$ref": "#/$defs/amount_micro"
+        }
+      }
+    },
+    "signed_money": {
+      "type": "object",
+      "required": [
+        "currency",
+        "amount_micro"
+      ],
+      "properties": {
+        "currency": {
+          "$ref": "#/$defs/currency"
+        },
+        "amount_micro": {
+          "$ref": "#/$defs/signed_amount_micro"
+        }
+      }
+    },
+    "rational": {
+      "type": "object",
+      "required": [
+        "num",
+        "den"
+      ],
+      "properties": {
+        "num": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,6}$"
+        },
+        "den": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,6}$"
+        }
+      },
+      "$comment": "Factor exacto num/den, ambos enteros en [1, 1000000]. Nunca decimal binario."
+    },
+    "plan_key": {
+      "type": "string",
+      "enum": [
+        "free",
+        "pro",
+        "team",
+        "enterprise"
+      ]
+    },
+    "catalog_version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "rate_card_version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "entry_point": {
+      "type": "string",
+      "enum": [
+        "messaging",
+        "danil_ai_app",
+        "danil_ai_api"
+      ]
+    },
+    "subscription_id": {
+      "type": "string",
+      "pattern": "^bsub_[0-9A-Za-z]{16,40}$"
+    },
+    "checkout_id": {
+      "type": "string",
+      "pattern": "^bchk_[0-9A-Za-z]{16,40}$"
+    },
+    "purchase_id": {
+      "type": "string",
+      "pattern": "^bpur_[0-9A-Za-z]{16,40}$"
+    },
+    "invoice_id": {
+      "type": "string",
+      "pattern": "^binv_[0-9A-Za-z]{16,40}$"
+    },
+    "transaction_id": {
+      "type": "string",
+      "pattern": "^btx_[0-9A-Za-z]{16,40}$"
+    },
+    "subscription_state": {
+      "type": "string",
+      "enum": [
+        "none",
+        "pending_checkout",
+        "incomplete",
+        "active",
+        "canceled_pending",
+        "suspended",
+        "terminated"
+      ],
+      "$comment": "none = Free (sin suscripción). `terminating` y `discarded` son internos de billing y no se publican: hacia fuera `terminating` se ve como `suspended`."
+    },
+    "suspension_reason": {
+      "type": "string",
+      "enum": [
+        "nonpayment",
+        "cancellation",
+        "dispute_lost"
+      ]
+    },
+    "resource_spec": {
+      "type": "object",
+      "required": [
+        "count",
+        "os",
+        "ram_mib",
+        "vcpu",
+        "disk_gib_per_org"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 64
+        },
+        "os": {
+          "type": "string",
+          "enum": [
+            "linux",
+            "macos",
+            "windows"
+          ]
+        },
+        "ram_mib": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4194304
+        },
+        "vcpu": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 512
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disk_gib_per_org": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65536
+        }
+      },
+      "$comment": "Máquina del plan y capacidad de disco compartida por organización (D16). count=0 no da máquina. CPU y precio sin confirmar no hacen vendible un plan."
+    },
+    "actor": {
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "person",
+            "operator",
+            "service",
+            "stripe",
+            "scheduler"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^(user_[A-Za-z0-9]{1,64}|svc:[a-z][a-z0-9-]{1,62}|stripe|job:[a-z][a-z0-9_-]{1,62})$"
+        }
+      },
+      "$comment": "Registro cerrado de actores. person/operator → user_*; service → svc:*; stripe → 'stripe'; scheduler → job:<nombre>. Nunca correo ni nombre."
+    },
+    "problem": {
+      "type": "object",
+      "required": [
+        "type",
+        "title",
+        "status",
+        "code"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "pattern": "^https://contracts\\.danil\\.ai/billing-v2/problems/[a-z_]+$"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "status": {
+          "type": "integer",
+          "minimum": 400,
+          "maximum": 599
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[a-z_]{3,64}$"
+        },
+        "detail": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        }
+      }
+    },
+    "credit_source": {
+      "type": "string",
+      "enum": [
+        "plan_included",
+        "purchase",
+        "gift",
+        "compensation"
+      ]
+    },
+    "lot_id": {
+      "type": "string",
+      "pattern": "^blot_[0-9A-Za-z]{16,40}$"
+    },
+    "reservation_id": {
+      "type": "string",
+      "pattern": "^bres_[0-9A-Za-z]{16,40}$"
+    },
+    "payment_reference": {
+      "type": "string",
+      "pattern": "^bpay_[0-9A-Za-z]{16,40}$"
+    },
+    "optional_expiry_lot": {
+      "type": "object",
+      "required": [
+        "lot_id",
+        "source",
+        "initial",
+        "remaining",
+        "expires_at",
+        "created_at",
+        "payment_reference"
+      ],
+      "properties": {
+        "lot_id": {
+          "$ref": "#/$defs/lot_id"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "purchase",
+            "gift",
+            "compensation"
+          ]
+        },
+        "initial": {
+          "$ref": "#/$defs/money"
+        },
+        "remaining": {
+          "$ref": "#/$defs/money"
+        },
+        "expires_at": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "payment_reference": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/payment_reference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "included_lot": {
+      "type": "object",
+      "required": [
+        "lot_id",
+        "source",
+        "initial",
+        "remaining",
+        "expires_at",
+        "created_at",
+        "payment_reference"
+      ],
+      "properties": {
+        "lot_id": {
+          "$ref": "#/$defs/lot_id"
+        },
+        "source": {
+          "const": "plan_included"
+        },
+        "initial": {
+          "$ref": "#/$defs/money"
+        },
+        "remaining": {
+          "$ref": "#/$defs/money"
+        },
+        "expires_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "created_at": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "payment_reference": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/payment_reference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "credit_lot": {
+      "description": "Lote público por organización; payment_reference conserva el vínculo opaco al pago. El libro interno conserva PaymentIntent, invoice y periodo.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/included_lot"
+        },
+        {
+          "$ref": "#/$defs/optional_expiry_lot"
+        }
+      ]
+    },
+    "member_budget": {
+      "type": "object",
+      "required": [
+        "person_id",
+        "limit_micro",
+        "spent_micro",
+        "reserved_micro",
+        "period_start",
+        "period_end"
+      ],
+      "properties": {
+        "person_id": {
+          "$ref": "#/$defs/person_id"
+        },
+        "limit_micro": {
+          "$ref": "#/$defs/amount_micro"
+        },
+        "spent_micro": {
+          "$ref": "#/$defs/amount_micro"
+        },
+        "reserved_micro": {
+          "$ref": "#/$defs/amount_micro"
+        },
+        "period_start": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "period_end": {
+          "$ref": "#/$defs/timestamp"
+        }
+      }
+    },
+    "organization_reservation_id": {
+      "type": "string",
+      "pattern": "^borgres_[0-9A-Za-z]{16,40}$"
+    },
+    "inference_tier_id": {
+      "type": "string",
+      "enum": [
+        "danil/ligero",
+        "danil/equilibrado",
+        "danil/avanzado"
+      ]
+    },
+    "organization_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F<>]*$",
+      "description": "Texto plano: sin controles Unicode Cc ni delimitadores HTML < >. Treasury rechaza controles antes de normalizar, aplica NFC y trim, y valida después 1..80 puntos de código Unicode (no unidades UTF-16). No decodifica entidades HTML; los clientes presentan texto, no HTML."
+    },
+    "refund_allocation": {
+      "type": "object",
+      "required": [
+        "credits_micro",
+        "non_credit_micro",
+        "source",
+        "policy_version"
+      ],
+      "properties": {
+        "credits_micro": {
+          "$ref": "#/$defs/amount_micro"
+        },
+        "non_credit_micro": {
+          "$ref": "#/$defs/amount_micro"
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "operator",
+            "policy",
+            "stripe_lines"
+          ]
+        },
+        "policy_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "additionalProperties": false
+    },
+    "cost_usd": {
+      "type": "string",
+      "pattern": "^[0-9]+(?:\\.[0-9]{1,12})?(?![\\s\\S])",
+      "description": "Costo USD exacto del proveedor: entero o decimal con 1..12 posiciones, sin signo, exponente ni espacios. El fin absoluto rechaza también saltos de línea. Ceros iniciales admitidos. Nunca float ni micro-USD truncado."
+    },
+    "usd_decimal": {
+      "type": "string",
+      "pattern": "^[0-9]+(?:\\.[0-9]{1,12})?(?![\\s\\S])",
+      "description": "Rev. 12. Importe USD exacto, misma regla que cost_usd: entero o decimal con 1..12 posiciones, sin signo, exponente, espacios ni saltos de línea. Nunca un número JSON."
+    }
+  }
+}

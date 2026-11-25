@@ -20,7 +20,7 @@ test("el rechazo de OpenCode no se dice crudo: la clave del ejecutor da la frase
   assert.equal(steerNotice("unconfirmed"), "chat.steer.unconfirmed");
   assert.equal(steerNotice("unsupported"), "chat.steer.unsupported");
   // Las dos frases existen en el catálogo compartido: `w()` no deja la clave en pantalla.
-  const words = readFileSync(new URL("../../../packages/design/src/words.ts", import.meta.url), "utf8");
+  const words = ["words.ts", "words-en.ts"].map((f) => readFileSync(new URL(`../../../packages/ui/src/${f}`, import.meta.url), "utf8")).join("\n");
   for (const key of ["chat.steer.unsupported", "chat.steer.unconfirmed", "chat.queue.stop_and_send", "chat.failure.retry"]) {
     assert.equal(words.split(`"${key}":`).length - 1, 2, `${key} en es y en`);
   }

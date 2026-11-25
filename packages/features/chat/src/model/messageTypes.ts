@@ -1,8 +1,8 @@
-import type { HistoryRef } from "@terminus/protocol";
-import type { CodeRange } from "../../../../../apps/desktop/src/lib/model";
-import type { Recipient, SenderTask } from "../../../../../apps/desktop/src/lib/recipients";
-import type { Paso } from "../../../../../apps/desktop/src/lib/steps";
-import type { TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions";
+import type { HistoryRef } from "../../../../engine-client/src/index.ts";
+import type { CodeRange } from "../../../../ui/src/lib/model";
+import type { Recipient, SenderTask } from "../../../../ui/src/lib/recipients";
+import type { Paso } from "../../../../ui/src/lib/steps";
+import type { TaskMention } from "../../../../ui/src/lib/taskMentions";
 import type { Producido } from "../components/Delivery";
 import type { CambioPorCupo, FalloDelTurno } from "./failures";
 import type { Pregunta, Respuesta } from "../components/Questions";
@@ -22,6 +22,8 @@ export type Author = {
 /** Un bloque de lo que el agente pensó. No es su respuesta. */
 export type Razonamiento = {
   text: string;
+  /** Título breve opcional del razonamiento cuando el motor o un resumidor lo entrega. */
+  summary?: string;
   /** Cuánto duró, cuando el turno guardado lo trae. */
   durationMs?: number;
   /** El motor cortó el bloque por su tope. */

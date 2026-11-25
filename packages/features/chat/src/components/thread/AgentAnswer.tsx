@@ -1,6 +1,6 @@
 import { createMemo, createSignal, Index, Show } from "solid-js";
-import { imagenInerte } from "../../../../../../apps/desktop/src/lib/links";
-import { splitNextSteps, type NextStepsPart } from "../../../../../../apps/desktop/src/lib/nextSteps";
+import { imagenInerte } from "../../../../../ui/src/lib/chat/links";
+import { splitNextSteps, type NextStepsPart } from "../../../../../ui/src/lib/chat/nextSteps";
 import { CarruselDeImagenes } from "../../../../../ui/src/EnlargeableImage";
 import { Markdown } from "../../../../../ui/src/Markdown";
 import ChatVisual from "../ChatVisual";

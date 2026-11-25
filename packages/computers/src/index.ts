@@ -6,30 +6,13 @@ export {
   type Computer,
   type Fetch,
   COMPUTERS_ENDPOINT,
-  COMPUTER_NAME_MAX,
   apiUrl,
   listComputers,
+  listWorkspaces,
   sessionProbe,
   startComputer,
   startedOf,
 } from "./api.ts";
-export {
-  type AuditEntry,
-  type Connection,
-  type ConnectionCapabilities,
-  type ConnectionMachine,
-  type ConnectionPatch,
-  type ConnectionState,
-  type UpdatedConnection,
-  PERMISSION_MODES,
-  connectionAudit,
-  connectionCapabilities,
-  listConnections,
-  mcpUrl,
-  revokeConnection,
-  updateConnection,
-  webhookUrlOk,
-} from "./connections.ts";
 export {
   type MachineState,
   type Power,
@@ -51,16 +34,6 @@ export {
 export { type WorkspaceGroup, type WorkspaceRow, groupWorkspaces, hasAccountWorkspaces, registryProjects, withRegistry } from "./fleet.ts";
 export { callWorkspace, hasLinkedWorkspaces, linkedAttention, linkedEvent, linkedEvents, linkedListing, linkedWorkspaces, onlyLinked, organizationOf, serviceFeatures, unlinkedWorkspaces } from "./links.ts";
 export { machineContracts } from "./compatibility.ts";
-export {
-  type ConnectHop,
-  type ConnectProgress,
-  type WatchOptions,
-  APPEAR_WAIT,
-  INSTALL_URL,
-  ONLINE_WAIT,
-  installCommand,
-  watchNewComputer,
-} from "./connect.ts";
 export {
   type Blocked,
   type Cached,
@@ -161,14 +134,8 @@ export {
   credentialOf,
   credentialSlot,
   credentialsListingOf,
-  ENV_SECRET_NAME,
   credentialHint,
-  SECRETS_FEATURE,
   sealRecipientsFor,
-  type EnvSecretSlot,
-  envSecretFolderValid,
-  envSecretNameProblem,
-  envSecretOf,
   deleteCredential,
   isAgentCredential,
   listCredentials,
@@ -179,7 +146,7 @@ export {
 export { type McpBlockCheck, MCP_BLOCK_ARGS, checkMcpBlock, relayArgs, urlWithCredentials } from "./mcp-block.ts";
 export { type SealOptions, type SealRecipient, SEAL_MAX_BYTES, canSeal, fromBase64, sealCredential, sealForRecipients, toBase64 } from "./seal.ts";
 
-export { arrangeSpaces, spaceOrder, type SpaceOrderSource } from "./space-order.ts";
+export { arrangeSpaces, createSpaceOrderSource, spaceOrder, type SpaceOrderSource } from "./space-order.ts";
 export { ACCOUNT_ASSET_MAX_BYTES, ACCOUNT_ASSET_TYPES, type AccountAssetKind, type BlobFetch, accountAssetUrl, readAccountAsset } from "./assets.ts";
 
 export { type CapabilityList, announces, capabilityList, mayCall } from "./capabilities.ts";

@@ -1,8 +1,8 @@
 /** El Free router de plataforma de la ventana: anfitrión, ámbito de la organización activa, aceptar lo que se vio y logout. */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { FreeModelPolicy } from "../../src/lib/free-model-policy.ts";
-import { activatePlatform, isPlatformPolicy, needsPlatform, setFreeRouterHost, signOutPlatform, withdrawPlatform } from "../../src/features/settings/free-router-session.ts";
+import { freeModelPolicyAvailable, type FreeModelPolicy } from "../../src/lib/free-model-policy.ts";
+import { activatePlatform, isPlatformPolicy, needsPlatform, setFreeRouterHost, signOutPlatform, withdrawPlatform } from "../../../../packages/features/settings/src/queries/free-router-session.ts";
 
 const POLICY = { workspace_id: "q3ce37ff", version: 3, providers: ["kilo", "vercel", "reflection"], lines: [], acceptance_ref: "", enabled: false, terms: [], accepted: false, authority: "platform" } as FreeModelPolicy;
 const LIST = { active_workspace_id: "42", items: [{ id: "42", org: "org_A1", name: "Activa", role: "owner" }] };
@@ -38,6 +38,11 @@ test("only a policy the engine marks as platform, or its platform_required refus
   assert.equal(isPlatformPolicy(POLICY), true);
   assert.equal(isPlatformPolicy({ ...POLICY, authority: undefined } as FreeModelPolicy), false);
   assert.equal(isPlatformPolicy({ ...POLICY, authority: "local" } as FreeModelPolicy), false);
+  assert.equal(freeModelPolicyAvailable(POLICY), true);
+  assert.equal(freeModelPolicyAvailable({ ...POLICY, authority: undefined, enabled: false }), false);
+  assert.equal(freeModelPolicyAvailable({ ...POLICY, authority: "local", enabled: false }), false);
+  assert.equal(freeModelPolicyAvailable({ ...POLICY, authority: undefined, enabled: true }), true);
+  assert.equal(freeModelPolicyAvailable(null), false);
   assert.equal(needsPlatform("free_router.platform_required"), true);
   assert.equal(needsPlatform({ detail: "free_router.platform_required" }), true);
   assert.equal(needsPlatform({ code: "settings.accounts.free.unavailable" }), false);

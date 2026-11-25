@@ -2,9 +2,10 @@ import Check from "lucide-solid/icons/check";
 import Copy from "lucide-solid/icons/copy";
 import { Show } from "solid-js";
 import { createCopied } from "../../../../host/src/clipboard";
-import { mb } from "../../../../../apps/desktop/src/lib/format";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { mb } from "../../../../ui/src/lib/format";
+import { t } from "../../../../ui/src/lib/i18n";
 import { CancelButton } from "../../../../ui/src/IconAction";
+import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
  * Lo que baja, igual en proveedores de IA, herramientas y plugins: a la derecha su peso y la ×
@@ -52,8 +53,7 @@ export function CodigoParaConfirmar(props: { codigo: string }) {
       <strong class="select-all rounded-sm bg-surface-muted px-1.5 py-0.5 font-mono text-ui font-semibold tracking-[0.04em] whitespace-nowrap text-neutral-950">
         {props.codigo}
       </strong>
-      <button
-        type="button"
+      <Pressable
         class="grid size-[22px] shrink-0 cursor-pointer place-items-center rounded-full border border-border bg-surface-raised p-0 text-neutral-500 hover:text-neutral-950"
         aria-label={copiado() ? t("onboarding.code.copied") : t("onboarding.code.copy")}
         title={copiado() ? t("onboarding.code.copied") : t("onboarding.code.copy")}
@@ -62,7 +62,7 @@ export function CodigoParaConfirmar(props: { codigo: string }) {
         <Show when={copiado()} fallback={<Copy size={12} aria-hidden="true" />}>
           <Check size={12} aria-hidden="true" />
         </Show>
-      </button>
+      </Pressable>
     </>
   );
 }

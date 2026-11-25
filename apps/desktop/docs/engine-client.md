@@ -69,11 +69,11 @@ tiene «Cuenta de este workspace» (`WorkspaceAccount.tsx`, chunk aparte):
 `danil_workspace_account` y `danil_workspace_set_account`, con
 `workspace_id_taken` y `danil.error.account_not_found` en castellano. El pie
 de la barra lateral muestra la cuenta del workspace abierto. El escritorio con
-cuenta (`features/machines/account.tsx`) pide el token de cliente de esa
+cuenta (`packages/features/machines/src/screens/account.tsx`) pide el token de cliente de esa
 cuenta (`account_relay_token {account}` → `danil_client_token {account}`) y
 solo ve sus computadoras y su registro; cambiar a un workspace de otra cuenta
 reinstala el abanico. La lógica sin Solid vive en
-`features/settings/danil-sessions.ts`. Con un motor sin `danil_sessions`
+`packages/features/settings/src/queries/danil-sessions.ts`. Con un motor sin `danil_sessions`
 todo vuelve a la cuenta única: la tarjeta de siempre, sin sección por
 workspace, y el abanico con `danil_connect_status`. `danil_workspace_link`,
 `danil_workspace_unlink` y `danil_workspace_link_status` siguen sin interfaz
@@ -203,7 +203,7 @@ se registra en `EXTENSIONS`, fuera de la huella. Solo la ventana local
 (`relay: false`).
 
 - El riel del escritorio es de la persona, no del workspace abierto: si el motor
-  anuncia el rasgo (`machine_list`), `features/machines/engine-workspaces.ts`
+  anuncia el rasgo (`machine_list`), `packages/features/machines/src/queries/engine-workspaces.ts`
   lee `state_machines` y los workspaces que no son de aquí (de una organización
   o de otra cuenta) entran en la lista que devuelve el router, con el workspace
   abierto que sea. Un workspace sale del riel solo cuando el motor lo borra.
@@ -252,8 +252,8 @@ is a new folder name. `scripts/work-tools.py` builds it from the pins in
 `resources/work-tools/<target>/pins.json`; see
 [development](development.md#bundled-work-tools).
 
-- **macOS:** two trees in the universal app, one per architecture, under
-  `Contents/Resources/work-tools/`. Their Mach-O files are signed in place
+- **macOS:** the Apple Silicon (`aarch64-apple-darwin`) tree under
+  `Contents/Resources/work-tools/`. Its Mach-O files are signed in place
   before the app is signed and notarized.
 - **Windows:** NSIS installs the tree per user in
   `%LOCALAPPDATA%\Terminus\work-tools\<target>\<tree>\`. The build fails if a
@@ -398,7 +398,7 @@ and native validation that remains required.
 Before starting the engine, the window looks at the data root. If it holds
 0.2.74 data and no `seldon-authority.json`, or a 0.2.74 service answers on it,
 the window opens on the handoff screen instead of the app
-(`src-tauri/src/extracted/launcher.rs`, `src/features/shell/Launcher.tsx`). It
+(`src-tauri/src/extracted/launcher.rs`, `packages/shell/src/shell/Launcher.tsx`). It
 does the same when the engine refuses with `cli.error.adoption_required`
 (0.2.74 opened the root again, or the app moved). After the person accepts:
 
@@ -671,10 +671,9 @@ those systems.
 
 ## Not done yet
 
-- The engine is pinned for the four platforms and bundled on all of them. The
-  published installers were tried on Windows 11, macOS 15.8 (Apple silicon)
-  and Linux, updating from 0.2.74 with real data (#60). The macOS universal
-  bundle carries a `lipo` of the two pinned macOS binaries.
+- The engine is pinned for the three desktop platforms and bundled on all of
+  them. The published installers were tried on Windows 11, macOS 15.8 (Apple
+  silicon) and Linux, updating from 0.2.74 with real data (#60).
 - The engine still installs, updates and removes the Typst plugin, while the
   window runs its Tinymist. Settings stops every live view before touching the
   plugin (`typst_live_stop`); moving the plugin into the window is planned in

@@ -11,66 +11,50 @@
  * a guests-only fleet as `"local"`; with no guest either, nothing is installed.
  * Lazy from `app/main.tsx`.
  */
-import "../../../../../apps/desktop/src/web/phrases";
-import {
-  type Computer,
-  createScreenAccess,
-  listComputers,
-  type MachineState,
-  orderComputers,
-  RelaySession,
-  type SystemId,
-  serviceFeatures,
-  sessionProbe,
-  startComputer,
-  startedOf,
-  systemOf,
-  wakes,
-} from "@terminus/computers";
-import { cancelEdgeWrites, setMachineRoute, wokeOf } from "../queries";
-import { Fleet, type MachineInfo, unwrap } from "@terminus/fleet";
+import "../../../../ui/src/phrases";
+import type { Computer } from "../../../../platform-client/src/api.ts";
+import type { MachineState, SystemId } from "../../../../platform-client/src/machine.ts";
+import { serviceFeatures } from "../model/links.ts";
+import { RelaySession } from "../queries/relay.ts";
+import { createScreenAccess } from "../queries/screen-access.ts";
+import { settledContextIds } from "../../../../session/src/settled-contexts.ts";
+import { cancelEdgeWrites, isRetiredComputersEndpoint, listComputers, readContextSpaces, sessionProbe, setMachineRoute, startComputer, startedOf, wokeOf } from "../queries";
+import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
 import { createRoot, createSignal } from "solid-js";
-import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
-import { whenConnected } from "../../../../../apps/desktop/src/lib/engineConnection";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
+import { whenConnected } from "../../../../session/src/engineConnection.ts";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type Capabilities, capabilities, setCapabilities } from "../../../../host/src/platform";
-import { leerPref } from "../../../../../apps/desktop/src/lib/prefs";
-import { deliver, listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import { isMac, isWindows } from "../../../../host/src/window";
-import type { MachineStatus } from "../../../../../apps/desktop/src/web/SyncNote";
-import { type DanilSessionInfo, railSession, type WorkspaceAccount } from "../../../settings/src/queries/danil-sessions";
+import { deliver, listen } from "../../../../host/src/serviceEvents.ts";
+import { isMac } from "../../../../host/src/window";
+import type { MachineStatus } from "../model/SyncNote";
 import AccountMachines from "./AccountMachines";
 import { mergeBridgeInventory } from "../model/bridge-inventory";
 import { CLOUD_RETRY_INITIAL_MS, CLOUD_RETRY_MS } from "../queries/cloud-machines";
 import { createConnectedStatus } from "../queries/connected-status";
 import { createCloudRelayFactory } from "../queries/context-relay";
-import { machinesListed, setDanilFleet } from "../queries/danil-source";
-import { createEngineWorkspaces, railOf } from "../queries/engine-workspaces";
+import { machinesListed, readDanilContext, setDanilFleet } from "../queries/danil-source";
+import { createEngineWorkspaces } from "../queries/engine-workspaces";
 import { guestChannels } from "../queries/guestChannels";
-import { createGuestLink, guestMachineInfo, isGuestMachine, wakeGuestMachine } from "../queries/guestLink";
+import { createGuestLink, guestMachineInfo, invalidateGuestChildren, isGuestMachine, wakeGuestMachine } from "../queries/guestLink";
 import { MachinePicker } from "./MachinePicker";
-import { infoOf } from "../model/machine-info";
-import { createRouter, type Invoke, type Router, type SliceChange } from "../queries/router";
+import { infoOf, orderComputers, systemOf, wakes } from "../model/machine-info";
+import { createRouter, type Invoke } from "../queries/router";
 import { createSessionCloud } from "../queries/session-cloud";
 import { machineNamesChanged, refetchMachines, setCloudInventory } from "../queries/store";
-import type { WslChild } from "../model/wsl";
-
-type Internals = { invoke: Invoke };
-type Target = Window & { __TAURI_INTERNALS__?: Internals };
-
-/** `account_relay_token` (`proxy.rs`): the engine's short-lived client token of the account. */
-type ClientToken = { token: string; expires_at: number; endpoint: string; computer_id: string };
-type DanilStatus = { state: string; computer_id?: string | null };
-
-const RELIST = 10 * 60_000;
-const TOKEN_MARGIN = 60_000;
-
-/** Who the fan-out is for: this computer, its account and the control plane. Another one installs anew. */
-/** Sin cuenta: esta computadora es `"local"` (`machine_list`), como en el resto de la ventana. */
-const LOCAL = "local";
-const LOCAL_KEY = JSON.stringify([LOCAL, null, null]);
-
-type Installed = { key: string; fleet: Fleet; router: Router; restore: () => void };
+import { normalizeWslChildren, type WslChild } from "../model/wsl";
+import { RELIST, TOKEN_MARGIN, LOCAL, LOCAL_KEY, windowSystem, type ClientToken, type Installed } from "./account-helpers";
+import { refresh, slicesChanged, pickedFor } from "../queries/account-events";
+import {
+  fetchAccountRelayToken,
+  listNativeMachines,
+  readDanilConnectStatusOrNull,
+  readDanilSessionStatusOrNull,
+  readDanilSessionsOrNull,
+  readDanilWorkspaceAccountOrNull,
+  readListedWorkspacesOrNull,
+} from "../queries/account-queries.ts";
+import { invokeNative, nativeInternals, type NativeInternals } from "../../../../host/src/native";
 
 let started = false;
 
@@ -79,17 +63,21 @@ let started = false;
  * hijas de esta computadora. No vienen del plano de control; se suman a la
  * flota con un enlace directo (`guestLink.ts`).
  */
-let guestMachines: MachineInfo[] = [];
+let rawGuestChildren: WslChild[] = [];
+const guestMachines = (): MachineInfo[] =>
+  rawGuestChildren.map((child) => guestMachineInfo(child, homeName(), rawGuestChildren.length)).filter((m) => isGuestMachine(m.id));
 async function readGuestMachines(): Promise<MachineInfo[]> {
-  if (!(await guestChannels()).length) return [];
+  if (!(await guestChannels()).length) {
+    rawGuestChildren = [];
+    return [];
+  }
   try {
-    const { invoke } = await import("@tauri-apps/api/core");
     // Solo ids de huésped: la flota local no sabe llegar a otra cosa (`connect` lanza).
-    guestMachines = (await invoke<WslChild[]>("guest_children")).map(guestMachineInfo).filter((m) => isGuestMachine(m.id));
+    rawGuestChildren = normalizeWslChildren(await invokeNative<WslChild[]>("guest_children")).filter((c) => isGuestMachine(c.id));
   } catch {
     // Sin canal o sin registro: la flota sigue con las de la cuenta.
   }
-  return guestMachines;
+  return guestMachines();
 }
 let installed: Installed | null = null;
 let syncing: Promise<void> | null = null;
@@ -98,48 +86,24 @@ let syncing: Promise<void> | null = null;
 const [selfName, setSelfName] = createRoot(() => createSignal<string | null>(null));
 const homeName = () => selfName() ?? (isMac() ? t("shell.machines.this_mac") : t("shell.machines.this_computer"));
 
-/** Sistema de la ventana de escritorio. La web no carga este módulo. */
-function windowSystem(): SystemId {
-  if (isMac()) return "macos";
-  if (isWindows()) return "windows";
-  return "linux";
-}
-
-/** Tell every list of the window to read again: the machines behind it changed. */
-function refresh() {
-  for (const name of ["harness:workspace-name", "harness:sources", "harness:tasks-changed", "harness:service-resync"]) {
-    window.dispatchEvent(new CustomEvent(name));
-  }
-  void refetchMachines();
-}
-
-/** Another machine's slice changed: the window rereads just that. */
-function slicesChanged(changes: SliceChange[]) {
-  if (changes.includes("workspaces")) window.dispatchEvent(new CustomEvent("harness:workspace-name"));
-  window.dispatchEvent(new CustomEvent("harness:machine-slices", { detail: { changes } }));
-  if (changes.includes("attention")) window.dispatchEvent(new CustomEvent("harness:service-resync"));
-}
-
-/** The machine picked in «Ejecutar en» for `workspace` (`store.ts`), remembered per workspace. */
-const pickedFor = (workspace: string | null) => (workspace ? (leerPref<Record<string, string>>("machines.run_on", {})[workspace] ?? null) : null);
-
-export function startAccountMachines(target: Target = window) {
+/** `railSession` es la sesión del riel de la cuenta: la pasa el shell, que es quien la conoce. */
+export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
+  railSession: (list: DanilSessionInfo[] | null, of: WorkspaceAccount | null) => { computer_id: string | null; account: string | null } | null,
+) {
   if (started) return;
-  const found = target.__TAURI_INTERNALS__;
+  const found = nativeInternals();
   if (!found) return;
-  const internals: Internals = found;
+  const internals: NativeInternals = found;
   started = true;
   setCloudInventory("initial");
   const native: Invoke = internals.invoke.bind(internals);
-  // The window's own IPC under its usual name: the command guards read these two literally.
-  const invoke = native;
   let token: ClientToken | null = null;
   // Las máquinas de la organización por el borde (`/v1/machines`); el motor local sigue por su RPC.
-  const cloud = createSessionCloud(invoke, (e) => {
+  const cloud = createSessionCloud(native, (e) => {
     // `403 organization_selection_required`: se abre el selector de organización (si esta ventana lo tiene).
     const organizations = (capabilities() as { organizations?: () => Promise<{ report: (e: unknown) => unknown }> }).organizations;
     void organizations?.().then((selector) => selector.report(e));
-  }, undefined, contexts => { installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts); }, createConnectedStatus(invoke));
+  }, undefined, contexts => { installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts); }, createConnectedStatus(native));
   let cloudIds = new Set<string>();
   /** `machines.session.renew` anunciada por el borde: el relay renueva dentro del canal. */
   let cloudRenew = false;
@@ -163,12 +127,12 @@ export function startAccountMachines(target: Target = window) {
     syncing = null;
     again = false;
   }
-  function readCloud(): Promise<Computer[]> {
+  function readCloud(allowLegacy = true): Promise<Computer[]> {
     if (cloudRead) return cloudRead;
     const epoch = cloudEpoch;
     cloudRead = (async () => {
       try {
-        const answer = await cloud.rows();
+        const answer = await cloud.rows(allowLegacy);
         if (epoch !== cloudEpoch) return [];
         cloudRetrying = answer.state === "retrying" || ("retrying" in answer && answer.retrying === true);
         if (!cloudRetrying) setCloudInventory("settled");
@@ -187,7 +151,7 @@ export function startAccountMachines(target: Target = window) {
           cloudRetryDelay = cloudRetrying ? Math.min(cloudRetryDelay * 2, CLOUD_RETRY_MS) : CLOUD_RETRY_INITIAL_MS;
           cloudRetry = setTimeout(() => {
             cloudRetry = null;
-            void readCloud().then(() => { if (epoch === cloudEpoch && !cloudRetrying) void sync(); });
+            void readCloud(allowLegacy).then(() => { if (epoch === cloudEpoch && !cloudRetrying) void sync(); });
           }, delay);
           (cloudRetry as unknown as { unref?: () => void }).unref?.();
         } else cloudRetryDelay = CLOUD_RETRY_INITIAL_MS;
@@ -207,28 +171,18 @@ export function startAccountMachines(target: Target = window) {
   let account: string | null = null;
   // Los workspaces de otras máquinas que el motor de aquí conoce, de todas sus sesiones: el riel es de la persona, no del workspace abierto.
   const engineWorkspaces = createEngineWorkspaces({
-    invoke,
+    invoke: native,
     listen,
     features: async () => {
-      const rows = (await invoke("machine_list", {})) as { features?: unknown }[] | null;
+      const rows = await listNativeMachines();
       const features = Array.isArray(rows) ? rows[0]?.features : null;
       return Array.isArray(features) ? features.filter((f): f is string => typeof f === "string") : [];
     },
     onChange: () => {
-      bumpRail((n) => n + 1);
       if (!installed) return void window.dispatchEvent(new CustomEvent("harness:workspace-name"));
       observeEngine(installed.fleet);
+      void refetchMachines();
       slicesChanged(["workspaces"]);
-    },
-  });
-  // El riel sale del índice del motor cuando lo tiene; el capability lo lee con su señal.
-  const [railRead, bumpRail] = createRoot(() => createSignal(0));
-  setCapabilities({
-    ...capabilities(),
-    railWorkspaces: () => {
-      railRead();
-      const rows = engineWorkspaces.workspaces();
-      return rows ? railOf(rows) : null;
     },
   });
   /** Lo que la vista del motor sabe de cada máquina vale hasta que su sesión del relay diga algo. */
@@ -239,7 +193,7 @@ export function startAccountMachines(target: Target = window) {
   const getToken = async (): Promise<ClientToken> => {
     if (token && token.expires_at - Date.now() > TOKEN_MARGIN) return token;
     const asked = account;
-    const next = (await invoke("account_relay_token", asked ? { account: asked } : {})) as ClientToken;
+    const next = await fetchAccountRelayToken(asked);
     if (asked === account) token = next;
     return next;
   };
@@ -253,6 +207,11 @@ export function startAccountMachines(target: Target = window) {
     refresh();
   };
 
+  function readCloudWorkspaces(context: string) {
+    const info = cloud.contextInfo(context);
+    if (info && info.plan !== "free") void readDanilContext(info.org, context);
+  }
+
   const disconnect = () => {
     uninstall();
     const { spaceOrder: _order, ...rest } = capabilities();
@@ -265,8 +224,9 @@ export function startAccountMachines(target: Target = window) {
     const cloudRelay = createCloudRelayFactory(cloud, () => cloudRenew, () => void sync(), { suspended: info => router.attentionSuspended(info.id, info.context), resumed: (info, value) => router.attentionResumed(info.id, info.context, value) });
     const fleet = new Fleet({
       self,
+      selfName: homeName,
       connect: (info) => {
-        if (isGuestMachine(info.id)) return createGuestLink(info.id);
+        if (isGuestMachine(info.id)) return createGuestLink(info.id, native);
         if (cloudIds.has(info.id)) return cloudRelay(info);
         if (endpoint === null) throw { code: "unknown_machine", detail: info.id };
         return new RelaySession({
@@ -293,6 +253,7 @@ export function startAccountMachines(target: Target = window) {
       onChange: () => {
         bump((n) => n + 1);
         window.dispatchEvent(new CustomEvent("harness:machines"));
+        void refetchMachines();
       },
       // La cola de aplazadas cambió (aquí, en la web o en el teléfono): la lista se relee.
       onDeferred: (machine, _frame, context) => router.deferredChanged(machine, context),
@@ -300,6 +261,7 @@ export function startAccountMachines(target: Target = window) {
       onEvents: (machine, events, gap, metadata, context) => {
         if (events.length) router.events(machine, events, metadata, context);
         if (gap) {
+          if (context) readCloudWorkspaces(context);
           window.dispatchEvent(new CustomEvent("harness:service-resync"));
           window.dispatchEvent(new CustomEvent("harness:service-gap"));
         }
@@ -307,6 +269,7 @@ export function startAccountMachines(target: Target = window) {
     });
     const router = createRouter({
       self, contextInfo: cloud.contextInfo,
+      readContextSpaces: readContextSpaces(native),
       fleet,
       native,
       onSlices: slicesChanged,
@@ -316,12 +279,14 @@ export function startAccountMachines(target: Target = window) {
       engineFeatures: engineWorkspaces.features,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
-    fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+    fleet.setMachines([...others.map(infoOf), ...guestMachines()]);
     const validatedContexts = cloud.validatedContexts();
     if (validatedContexts !== null) { router.pruneContexts(validatedContexts); fleet.pruneContexts(validatedContexts); }
     observeEngine(fleet);
     machinesListed(fleet);
     fleet.subscribeEvents();
+    const stopListing = fleet.onListing((_machine, context) => { if (context) refresh(); });
+    for (const context of validatedContexts ?? []) readCloudWorkspaces(context);
     const screens =
       endpoint === null
         ? null
@@ -331,15 +296,16 @@ export function startAccountMachines(target: Target = window) {
             knows: (id) => id === self || !!fleet.info(id),
           });
 
-    const status = (id: string): MachineStatus => {
-      const power = fleet.power(id);
+    const activeCtx = () => router.activeContext() ?? undefined;
+    const status = (id: string, context?: string): MachineStatus => {
+      const power = fleet.power(id, context);
       return power === "on" ? "online" : power === "off" ? "offline" : power;
     };
     const previous: Capabilities = capabilities();
     setCapabilities({
       ...previous,
-      machineName: (id) => (id === self ? homeName() : fleet.name(id)),
-      taskMachine: (id) => unwrap(id, fleet.remotes())?.machine ?? null,
+      machineName: (id) => (id === self ? homeName() : fleet.name(id, activeCtx())),
+      taskMachine: (id) => unwrap(id, fleet.remotes(activeCtx()))?.machine ?? null,
       windowMachine: () => ({ id: self, name: homeName(), local: true }),
       ...(screens ? { machineScreen: (id: string) => screens.opener(id) } : {}),
       remoteCreate: (workspace) => {
@@ -363,7 +329,7 @@ export function startAccountMachines(target: Target = window) {
               changed();
               return [
                 { id: self, name: homeName(), status: "online" as const, at: null },
-                ...fleet.machines().map((info) => ({ id: info.id, name: info.name, status: status(info.id), at: null })),
+                ...fleet.machines().map((info) => ({ id: info.id, name: info.name, status: status(info.id, info.context), at: null })),
               ];
             }}
           />
@@ -388,6 +354,7 @@ export function startAccountMachines(target: Target = window) {
       router,
       restore: () => {
         screens?.close();
+        stopListing();
         setMachineRoute(null);
         window.removeEventListener("pagehide", onPageHide);
         setCapabilities(previous);
@@ -409,50 +376,30 @@ export function startAccountMachines(target: Target = window) {
    * without `danil_sessions` has one session, the one of `danil_connect_status`.
    */
   async function whoAmI(): Promise<{ self: string | null; account: string | null }> {
-    const sessions = (await invoke("danil_sessions", {}).catch(() => null)) as DanilSessionInfo[] | null;
+    const sessions = (await readDanilSessionsOrNull()) as DanilSessionInfo[] | null;
     if (Array.isArray(sessions)) {
-      const listed = installed ? null : ((await invoke("list_workspaces", {}).catch(() => null)) as { active?: unknown } | null);
+      const listed = installed ? null : await readListedWorkspacesOrNull();
       const workspace = installed?.router.activeWorkspace() ?? (typeof listed?.active === "string" ? listed.active : null);
-      const of = (await invoke("danil_workspace_account", workspace ? { workspace } : {}).catch(() => null)) as WorkspaceAccount | null;
+      const of = (await readDanilWorkspaceAccountOrNull(workspace)) as WorkspaceAccount | null;
       const session = railSession(sessions, of);
       return { self: session?.computer_id ?? null, account: session?.account ?? session?.computer_id ?? null };
     }
-    const status = (await invoke("danil_connect_status", {}).catch(() => null)) as DanilStatus | null;
+    const status = await readDanilConnectStatusOrNull();
     return { self: status?.state === "connected" ? (status.computer_id ?? null) : null, account: null };
   }
-
-  /**
-   * Una salida definitiva de la cuenta (sin token, `401`, licencia): sin nube que
-   * leer, el inventario de esta época queda resuelto y la recordada ausente cae
-   * a la local. Solo la llama `check` con su época aún vigente.
-   */
-  const settled = () => {
-    setCloudInventory("settled");
-    disconnect();
-  };
 
   /** Reads the account and its computers; installs, updates or removes the fan-out to match. */
   async function check(who: { self: string | null; account: string | null }) {
     const epoch = cloudEpoch;
     const self = who.self;
-    if (!self) {
-      token = null;
-      return installLocal(epoch);
-    }
-    let client: ClientToken;
-    try {
-      client = await getToken();
-    } catch {
-      // An engine without `danil_client_token`, or a control plane without client tokens.
-      if (epoch === cloudEpoch) settled();
-      return;
-    }
+    const client = self ? await getToken().catch(() => null) : null;
     if (epoch !== cloudEpoch) return;
-    const answer = await listComputers(client.endpoint, client.token);
+    const answer = client && !isRetiredComputersEndpoint(client.endpoint) && await listComputers(client.endpoint, client.token);
     if (epoch !== cloudEpoch) return;
-    if (answer.kind === "unauthorized" || answer.kind === "license") {
+    if (!self || !client || !answer || answer.kind === "unauthorized" || answer.kind === "license") {
       token = null;
-      return settled();
+      if (installed?.key !== LOCAL_KEY) uninstall();
+      return installLocal(epoch, !self);
     }
     // `/v1/computers` es del sistema viejo: si no responde, las VMs de `/v1/machines` se leen igual.
     const legacyRows = answer.kind === "ok" ? answer.value : [];
@@ -471,9 +418,10 @@ export function startAccountMachines(target: Target = window) {
 
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
     if (installed?.key === key) {
-      installed.fleet.setMachines([...others.map(infoOf), ...guestMachines]);
+      installed.fleet.setMachines([...others.map(infoOf), ...guestMachines()]);
       observeEngine(installed.fleet);
       machinesListed(installed.fleet);
+      for (const context of cloud.validatedContexts() ?? []) readCloudWorkspaces(context);
       machineNamesChanged();
       return void refetchMachines();
     }
@@ -482,16 +430,17 @@ export function startAccountMachines(target: Target = window) {
   }
 
   /** Sin cuenta: la flota de los huéspedes y los contextos de la sesión; sin ninguno, nada, como antes. */
-  async function installLocal(epoch: number) {
+  async function installLocal(epoch: number, allowLegacy: boolean) {
     const guests = await readGuestMachines();
     if (epoch !== cloudEpoch) return;
-    const cloudRows = await readCloud();
+    const cloudRows = (await readCloud(allowLegacy)).filter((row) => allowLegacy || "context" in row);
     if (epoch !== cloudEpoch) return;
     // Un contexto Free corre en este motor: sin VM ni huéspedes, el router sigue para conservar la pareja activa de la ventana.
     if (!guests.length && !cloudRows.length && !cloud.validatedContexts()?.length) return disconnect();
     if (installed?.key === LOCAL_KEY) {
       installed.fleet.setMachines([...cloudRows.map(infoOf), ...guests]);
       machinesListed(installed.fleet);
+      for (const context of cloud.validatedContexts() ?? []) readCloudWorkspaces(context);
       machineNamesChanged();
       return void refetchMachines();
     }
@@ -511,7 +460,9 @@ export function startAccountMachines(target: Target = window) {
   const sync = async (): Promise<void> => {
     const identity = ++identityRead;
     const epoch = cloudEpoch;
-    const who = await whoAmI();
+    const status = await readDanilSessionStatusOrNull();
+    const scoped = status?.state === "connected" && settledContextIds(status.sessions) !== null;
+    const who = scoped ? { self: null, account: null } : await whoAmI();
     if (identity !== identityRead || epoch !== cloudEpoch) return;
     if (who.account !== account) {
       invalidateCloud();
@@ -523,7 +474,7 @@ export function startAccountMachines(target: Target = window) {
       again = true;
       return syncing;
     }
-    const pending = check(who)
+    const pending = (scoped ? installLocal(cloudEpoch, false) : check(who))
       .catch(() => {})
       .finally(() => {
         if (syncing !== pending) return;
@@ -553,8 +504,13 @@ export function startAccountMachines(target: Target = window) {
     window.addEventListener("harness:workspace", () => { cancelEdgeWrites(); void sync(); });
     // Una máquina recién conectada («Conectar otra máquina») suma su rebanada sin desmontar las demás.
     window.addEventListener("harness:account-computers", () => void sync());
-    // Una VM conectada o quitada en Configuración: con cuenta o sin ella, la flota la suma o la quita.
-    window.addEventListener("danil:guests-changed", () => void sync());
+    // Una distro conectada, quitada o cambiada de estado en esta PC: la flota se actualiza en vivo.
+    const onGuestsChanged = () => {
+      invalidateGuestChildren();
+      void sync();
+    };
+    window.addEventListener("danil:guests-changed", onGuestsChanged);
+    void listen("guest-state-changed", onGuestsChanged);
     setInterval(() => void sync(), RELIST);
     void engineWorkspaces.refresh();
     return sync();

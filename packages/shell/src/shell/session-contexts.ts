@@ -2,10 +2,10 @@ import { probeIdentityMe } from "../../../platform-client/src/identity.ts";
 import { addSessionAccount } from "./add-session-account.ts";
 import { createSessionEmptyState, refusalEmptyReason } from "./session-empty.ts";
 
-export type { ContextGroup, ContextInvoke, ContextReply, SessionContext, SessionFamily, SessionStatus } from "./session-context-types.ts";
+export type { ContextGroup, ContextInvoke, ContextReply, SessionStatus } from "./session-context-types.ts";
 
 import type { ContextGroup, ContextInvoke, ContextReply, SessionFamily, SessionStatus } from "./session-context-types.ts";
-import { isWorkspaceCreationPath } from "../../../platform-client/src/workspaces.ts";
+import { WORKSPACES_ADOPT_PATH } from "../../../platform-client/src/workspaces.ts";
 
 export function contextGroups(status: SessionStatus | null): ContextGroup[] | null {
   if (!status || !Array.isArray(status.sessions)) return null;
@@ -18,7 +18,7 @@ export function contextGroups(status: SessionStatus | null): ContextGroup[] | nu
 }
 
 /** El portador se queda en Rust; una lectura vieja nunca repone un contexto cerrado. */
-export function createSessionContexts(invoke: ContextInvoke, changed: () => void, onStatus?: (status: SessionStatus | null) => void) {
+export function createSessionContexts(rpc: ContextInvoke, changed: () => void, onStatus?: (status: SessionStatus | null) => void) {
   let groups: ContextGroup[] | null = null;
   let families: SessionFamily[] = [];
   let epoch = 0;
@@ -31,15 +31,23 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
   async function refresh() {
     const read = ++epoch;
     try {
-      const status = await invoke<SessionStatus>("danil_session_status");
+      const status = await rpc<SessionStatus>("danil_session_status");
       if (read !== epoch) return;
+      const hasSessions = Array.isArray(status.sessions);
+      // Un refresco transitorio sin `sessions` (caída momentánea o sin red) no borra los grupos ya cargados.
+      if (!hasSessions && groups !== null && (connected || groups.length > 0) && (status.state === "connected" || Boolean(status.error))) {
+        onStatus?.(status);
+        ready = true;
+        notify();
+        return;
+      }
       onStatus?.(status);
       ready = true;
       defaultContext = status.default_context ?? null;
       connected = status.state === "connected";
       if (unsupported && status.sessions?.some((f) => f.contexts.length)) {
         const context = status.sessions.flatMap((f) => f.contexts)[0].context_id;
-        await probeIdentityMe(invoke, context);
+        await probeIdentityMe(rpc, context);
         if (read !== epoch) return;
       }
       families = status.sessions ?? [];
@@ -51,15 +59,15 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
       if (read === epoch) { onStatus?.(null); ready = true; notify(); }
     }
   }
-  // Crear y adoptar exigen la llave de quien llama (Rust lo rechaza sin ella): inventarla aquí rompería sus reintentos.
+  // Adoptar exige la llave de quien llama (Rust lo rechaza sin ella): inventarla aquí rompería sus reintentos.
   const callerKey = (method: string, path: string, key?: string) =>
-    key || !(method === "POST" && isWorkspaceCreationPath(path)) ? { idempotencyKey: key ?? crypto.randomUUID() } : {};
+    key || !(method === "POST" && path === WORKSPACES_ADOPT_PATH) ? { idempotencyKey: key ?? crypto.randomUUID() } : {};
   const send = async (context: string, method: string, path: string, body?: unknown, idempotencyKey?: string, optionalRoute = false): Promise<ContextReply> => {
     if (unsupported) throw { detail: "session_echo_mismatch" };
     const group = groups?.find((g) => g.context_id === context);
     if (!group) throw { detail: "session_not_in_set" };
     try {
-      const reply = await invoke<ContextReply>("danil_edge_fetch", { method, path, context, ...(body === undefined ? {} : { body }), ...(method === "GET" ? {} : callerKey(method, path, idempotencyKey)) });
+      const reply = await rpc<ContextReply>("danil_edge_fetch", { method, path, context, ...(body === undefined ? {} : { body }), ...(method === "GET" ? {} : callerKey(method, path, idempotencyKey)) });
       if (!groups?.some((g) => g.context_id === context)) throw { detail: "session_not_in_set" };
       if (empty.note(context, reply)) notify();
       return empty.reason(context) ? { ...reply, body: undefined, empty_reason: empty.reason(context) } : reply;
@@ -78,7 +86,7 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     }
   };
   async function close(target: { context: string } | { family: string }) {
-    await invoke("danil_sign_out", target);
+    await rpc("danil_sign_out", target);
     ++epoch;
     groups = groups?.filter((g) => "context" in target ? g.context_id !== target.context : g.family !== target.family) ?? null;
     families = families.map((f) => ({ ...f, contexts: f.contexts.filter((c) => groups?.some((g) => g.context_id === c.context_id)) }));
@@ -100,6 +108,6 @@ export function createSessionContexts(invoke: ContextInvoke, changed: () => void
     groups: () => unsupported ? null : groups,
     families: () => families,
     emptyReason: empty.reason, removed: empty.removed, dismissRemoved: (context: string) => { empty.dismiss(context); changed(); },
-    addAccount: () => addSessionAccount(invoke, refresh, () => groups),
+    addAccount: () => addSessionAccount(rpc, refresh, () => groups),
   };
 }

@@ -1,33 +1,17 @@
-// Tipos de otras features que el chat recibe del shell por `deps` (R3: un `import type` por módulo, y R3 lo cuenta).
-// Se tipan por referencia a lo que ya existe; nada se reescribe aquí.
-import type { createComposerStore } from "../../../composer/src";
-import type { ConversationScope, createConversationHandoff } from "../../../conversation-handoff/src";
-import type { Draft, createDraftsStore } from "../../../drafts/src";
-import type * as carry from "../../../machines/src/queries/carry";
-import type { machines, runOn } from "../../../machines/src/queries/store";
-import type { MachinePicker } from "../../../machines/src/screens/MachinePicker";
-import type { PickedAt, createProjectsStore } from "../../../projects/src";
-import type { watchProfiles } from "../../../projects/src/queries/profiles";
-import type { InicioDeCarpeta } from "../../../projects/src/screens/AddWorkdir";
-import type { ProjectPicker } from "../../../projects/src/screens/Projects";
-import type { SessionRow } from "../../../projects/src/screens/Sessions";
-import type TabStrip from "../../../projects/src/screens/Tabs";
-import type { ServicePage, createBatchDelivery, createServiceStream } from "../../../service-stream/src";
-import type { listaBasta, reconciliar } from "../../../settings/src/model/early-startup";
-import type { Startup } from "../../../settings/src/queries/workspaces-store";
-import type { DefaultPermissionModeChange } from "../../../settings/src/screens/DefaultPermissions";
-import type { createEngineQueue, createTaskQueues } from "../../../task-queues/src";
-import type { createThreadsStore } from "../../../threads/src";
-import type { createWorkspaceStore } from "../../../workspace/src";
-import type { createContextSource } from "../../../workspaces/src";
+// Lo que el chat recibe del shell por `deps` (R3): los puertos que declara el chat y los tipos compartidos de `packages/ui`.
+import type { createThreadsStore } from "./threads-store.ts";
 
-export type {
-  ConversationScope, DefaultPermissionModeChange, Draft, InicioDeCarpeta, MachinePicker, PickedAt, ProjectPicker, ServicePage, SessionRow, Startup, TabStrip,
-  createBatchDelivery, createComposerStore, createContextSource, createConversationHandoff, createDraftsStore, createEngineQueue, createProjectsStore,
-  createServiceStream, createTaskQueues, createThreadsStore, createWorkspaceStore, listaBasta, machines, reconciliar, runOn, watchProfiles,
-};
-export type CarryModule = typeof carry;
-export type CarriedBase = carry.CarriedBase;
-export type CarryCheck = carry.CarryCheck;
+export type * from "../model/ports.ts";
+export type { CarriedBase, CarryCheck } from "../../../../ui/src/lib/carry.ts";
+export type { DefaultPermissionModeChange } from "../../../../ui/src/lib/default-permission-mode.ts";
+export type { Draft } from "../../../../ui/src/lib/draft.ts";
+export type { ConversationScope } from "../../../../ui/src/lib/handoff.ts";
+export type { PickedAt } from "../../../../ui/src/lib/picked-at.ts";
+export type { SearchFilter } from "../../../../ui/src/lib/search-filter.ts";
+export type { ServicePage } from "../../../../ui/src/lib/service-page.ts";
+export type { SessionRow } from "../../../../ui/src/lib/session-row.ts";
+export type { InicioDeCarpeta } from "../../../../ui/src/lib/workdirKind.ts";
+export type { Startup } from "../../../../ui/src/lib/workspace-startup.ts";
+export type { createThreadsStore };
 export type Hilo = ReturnType<ReturnType<typeof createThreadsStore>["current"]>;
 export type MachineWait = ReturnType<ReturnType<typeof createThreadsStore>["machineWaits"]>[string];

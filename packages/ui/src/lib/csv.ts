@@ -1,2 +1,2 @@
-/** El lector de tablas vive en `@terminus/chat/table`: el teléfono pinta los mismos CSV. */
-export * from "@terminus/chat/table";
+/** El lector de tablas vive en `./chat/table.ts`: el teléfono pinta los mismos CSV. */
+export * from "./chat/table.ts";

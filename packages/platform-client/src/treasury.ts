@@ -1,31 +1,47 @@
-import type { edgeTransport } from "@terminus/computers";
+import type { edgeTransport } from "./edge.ts";
 import { z } from "zod";
 import { edgeUntil, type Patience } from "./client.ts";
+import type {
+  Balance, Catalog, Checkout, CheckoutStatusActive, CheckoutStatusNotActive, OrganizationBilling, PortalSession, Purchase, TransactionPage,
+} from "./generated/billing.ts";
+import type { GroupReply } from "./treasury-config.ts";
+import { withIdempotencyKey } from "./idempotency.ts";
+
+/**
+ * Las respuestas del dominio salen del OpenAPI de billing-v2 vendorizado (`contract/billing-v2/`, R2 y R7). Los
+ * esquemas zod de abajo siguen validando en tiempo de ejecución lo que el front lee; `Fits` comprueba al compilar
+ * que cada campo que leen está en el contrato con un tipo compatible. `price_pending` del plan y `edition` de la
+ * organización no están en el contrato (hallazgo para danil-contracts): se leen opcionales, como antes.
+ */
 
 /** La ruta del saldo de Treasury en el borde. */
 export const CREDITS_BALANCE_PATH = "/v1/credits/balance";
 
-/** La respuesta de una lectura por contexto (saldo o promoción de un grupo). */
-export type GroupReply = { status: number; body?: unknown; retry_after_ms?: number };
-
 /** Lee el saldo de Treasury por el transporte de Desk. */
 export const readCreditsBalance = (patience?: Patience, transport?: Parameters<typeof edgeUntil>[4]) => edgeUntil("GET", CREDITS_BALANCE_PATH, undefined, patience, transport);
 
+/** El campo que se lee cabe en el del contrato: existe (o el contrato admite campos aditivos) y los tipos se cruzan. */
+type Fits<R, C> = [R] extends [readonly (infer RI)[]] ? ([NonNullable<C>] extends [readonly (infer CI)[]] ? Fits<RI, CI> : false)
+  : [NonNullable<R>] extends [object] ? ([NonNullable<C>] extends [object]
+    ? ({ [K in keyof NonNullable<R>]-?: [NonNullable<NonNullable<R>[K]>] extends [never] ? true : K extends keyof NonNullable<C> ? Fits<NonNullable<R>[K], NonNullable<C>[K]> : false }[keyof NonNullable<R>]) extends true ? true : false
+    : false)
+  : [Extract<R, C> | Extract<C, R>] extends [never] ? false : true;
+/** El esquema tal cual; no compila si lo que valida no cabe en la respuesta `C` del contrato. */
+const fits = <C>() => <S extends z.ZodType>(schema: S & (Fits<z.infer<S>, C> extends true ? unknown : { "no cabe en el contrato": C })) => schema;
 type Transport = { call(path: string, init?: RequestInit): Promise<Response>; mutation(path: string, init?: RequestInit): Promise<Response> };
 const money = z.object({ currency: z.literal("MXN"), amount_micro: z.string().regex(/^-?(0|[1-9]\d{0,18})$/) });
-const checkout = z.object({ checkout_id: z.string(), state: z.enum(["creating", "open", "completed", "expired", "canceled"]), url: z.string().url().nullable() });
+const checkout = fits<Checkout>()(z.object({ checkout_id: z.string(), state: z.enum(["creating", "open", "completed", "expired", "canceled"]), url: z.string().url().nullable() }));
 const checkoutStatusBase = { checkout_id: z.string(), url: z.string().url().nullable(), expires_at: z.string().nullable() };
 const checkoutStatus = z.union([
-  z.object({ ...checkoutStatusBase, kind: z.literal("plan"), state: z.literal("active"), terminal: z.literal(true), organization_id: z.string().regex(/^org_[A-Za-z0-9]{1,64}$/) }),
-  z.object({ ...checkoutStatusBase, kind: z.enum(["plan", "credits"]), state: z.enum(["pending", "paid", "canceled", "expired", "error"]), terminal: z.boolean(), organization_id: z.never().optional() }),
+  fits<CheckoutStatusActive>()(z.object({ ...checkoutStatusBase, kind: z.literal("plan"), state: z.literal("active"), terminal: z.literal(true), organization_id: z.string().regex(/^org_[A-Za-z0-9]{1,64}$/) })),
+  fits<CheckoutStatusNotActive>()(z.object({ ...checkoutStatusBase, kind: z.enum(["plan", "credits"]), state: z.enum(["pending", "paid", "canceled", "expired", "error"]), terminal: z.boolean(), organization_id: z.never().optional() })),
 ]);
-const organization = z.object({ organization_id: z.string(), plan_key: z.string(), edition: z.string().nullish(), state: z.string(), payer: z.object({ is_you: z.boolean() }) });
-export type PlanChoice = { plan_key: "pro" | "team"; variant?: string };
-const catalog = z.object({ catalog_version: z.number().int(), plans: z.array(z.object({ plan_key: z.string(), sellable: z.boolean(), price: money.nullable(), price_pending: z.boolean().optional(), display_variants: z.array(z.object({ variant: z.string(), plan_key: z.string(), edition: z.string(), display_name: z.string() })).optional() })), credit_packs: z.array(z.object({ pack_id: z.string(), sellable: z.boolean(), credits: money })) });
-const balance = z.object({ organization_id: z.string(), available: money, included: money, gift: money, purchased: money });
-const page = z.object({ items: z.array(z.record(z.string(), z.unknown())), next_cursor: z.string().nullable() });
-const purchase = z.object({ purchase_id: z.string(), state: z.enum(["creating", "open", "paid", "failed", "expired"]), url: z.string().url().nullable() });
-const portal = z.object({ url: z.string().url() });
+const organization = fits<OrganizationBilling>()(z.object({ organization_id: z.string(), plan_key: z.string(), edition: z.string().nullish(), state: z.string(), payer: z.object({ is_you: z.boolean() }) }));
+const catalog = fits<Catalog>()(z.object({ catalog_version: z.number().int(), plans: z.array(z.object({ plan_key: z.string(), sellable: z.boolean(), price: money.nullable(), price_pending: z.boolean().optional(), display_variants: z.array(z.object({ variant: z.string(), plan_key: z.string(), edition: z.string(), display_name: z.string() })).optional() })), credit_packs: z.array(z.object({ pack_id: z.string(), sellable: z.boolean(), credits: money })) }));
+const balance = fits<Balance>()(z.object({ organization_id: z.string(), available: money, included: money, gift: money, purchased: money }));
+const page = fits<TransactionPage>()(z.object({ items: z.array(z.record(z.string(), z.unknown())), next_cursor: z.string().nullable() }));
+const purchase = fits<Purchase>()(z.object({ purchase_id: z.string(), state: z.enum(["creating", "open", "paid", "failed", "expired"]), url: z.string().url().nullable() }));
+const portal = fits<PortalSession>()(z.object({ url: z.string().url() }));
 
 export class PromotionCodeFormatError extends Error {
   constructor() { super("promotion_code_invalid"); }
@@ -41,7 +57,7 @@ function promotionCode(code: string | undefined) {
 export function billingV2(transport: Transport, organizationId: string | null) {
   const read = async <T>(path: string, schema: z.ZodType<T>, signal?: AbortSignal) => schema.parse(await (await transport.call(path, { signal: signal ?? AbortSignal.timeout(15000) })).json());
   const write = async <T>(path: string, body: unknown, key: string, schema: z.ZodType<T>) => schema.parse(await (await transport.mutation(path, {
-    signal: AbortSignal.timeout(15000), headers: { "Content-Type": "application/json", "Idempotency-Key": key }, body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(15000), headers: withIdempotencyKey({ "Content-Type": "application/json" }, key), body: body === undefined ? undefined : JSON.stringify(body),
   })).json());
   const pagePath = (path: string, cursor?: string) => cursor ? `${path}?${new URLSearchParams({ cursor })}` : path;
   return {

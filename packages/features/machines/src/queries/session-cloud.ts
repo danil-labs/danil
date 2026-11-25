@@ -1,6 +1,7 @@
-import type { Computer } from "@terminus/computers";
-import { reportOrganizationProblem } from "../../../../../apps/desktop/src/lib/organization-problems.ts";
-import { settledContextIds } from "../../../../../apps/desktop/src/lib/settled-contexts.ts";
+import type { Computer } from "../../../../platform-client/src/api.ts";
+import { normalizeMachineKind } from "../../../../platform-client/src/machines.ts";
+import { reportOrganizationProblem } from "../../../../session/src/organization-problems.ts";
+import { settledContextIds } from "../../../../session/src/settled-contexts.ts";
 import { createCloudMachines, EDGE_ENDPOINT } from "./cloud-machines.ts";
 
 type Invoke = (command: string, args?: Record<string, unknown>) => Promise<unknown>;
@@ -12,9 +13,10 @@ export type ContextComputer = Computer & { context?: string };
 export function mergeContextMachines(groups: { context: Context; computers: Computer[] }[], own: ReadonlySet<string> = new Set()): ContextComputer[] {
   const rows = new Map<string, ContextComputer>();
   for (const { context, computers } of groups) for (const row of computers) {
-    if (row.kind === "organization" && row.organization_id !== context.org) continue;
-    if (row.kind === "personal" && own.has(row.computer_id)) continue;
-    rows.set(contextMachineKey(row.computer_id, context.context_id), { ...row, context: context.context_id });
+    const kind = normalizeMachineKind(row.kind);
+    if (kind === "organization" && row.organization_id !== context.org) continue;
+    if (kind === "personal" && own.has(row.computer_id)) continue;
+    rows.set(contextMachineKey(row.computer_id, context.context_id), { ...row, ...(kind !== undefined ? { kind } : {}), context: context.context_id });
   }
   return [...rows.values()];
 }
@@ -22,8 +24,8 @@ export function mergeContextMachines(groups: { context: Context; computers: Comp
 export const contextMachineKey = (machine: string, context?: string) => JSON.stringify([machine, context ?? ""]);
 
 /** `here`: las inscripciones que el motor reporta de esta computadora (`connected-status.ts`). */
-export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT, onContextsSettled?: (contexts: readonly string[]) => void, here?: { read: () => Promise<void>; own: () => ReadonlySet<string> }) {
-  const legacy = createCloudMachines(invoke, onProblem, endpoint);
+export function createSessionCloud(rpc: Invoke, onProblem?: (error: unknown) => void, endpoint = EDGE_ENDPOINT, onContextsSettled?: (contexts: readonly string[]) => void, here?: { read: () => Promise<void>; own: () => ReadonlySet<string> }) {
+  const legacy = createCloudMachines(rpc, onProblem, endpoint);
   let clients = new Map<string, ReturnType<typeof createCloudMachines>>();
   let current = new Map<string, ContextComputer>();
   let contexts: Map<string, Context> | null = null;
@@ -34,7 +36,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
     let client = clients.get(context);
     if (!client) {
       client = createCloudMachines(async (_command, args) => {
-        try { return await invoke("danil_edge_fetch", { ...args, context }); }
+        try { return await rpc("danil_edge_fetch", { ...args, context }); }
         catch (error) {
           if ((error as { detail?: string } | null)?.detail === "session_echo_mismatch") unsupported = true;
           throw error;
@@ -60,16 +62,16 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
       start: (id: string, context?: string) => target(id, context).start(id),
       wake: (id: string, context?: string) => target(id, context).wake(id),
     },
-    async rows() {
+    async rows(allowLegacy = true) {
       const version = ++epoch;
       unsupported = false;
       validated = null;
       let status: Status;
-      try { status = await invoke("danil_session_status") as Status; }
+      try { status = await rpc("danil_session_status") as Status; }
       catch {
         if (version !== epoch) return { state: "retrying" as const };
         contexts = null; clients.clear(); current.clear();
-        return legacy.rows();
+        return allowLegacy ? legacy.rows() : { state: "denied" as const };
       }
       if (version !== epoch) return { state: "retrying" as const };
       const settled = settledContextIds(status?.sessions);
@@ -77,7 +79,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
         contexts = null;
         clients.clear();
         current.clear();
-        return status?.state === "disconnected" ? { state: "ready" as const, computers: [], renewInChannel: false } : legacy.rows();
+        return status?.state === "disconnected" || !allowLegacy ? { state: "ready" as const, computers: [], renewInChannel: false } : legacy.rows();
       }
       validated = settled;
       onContextsSettled?.(settled);
@@ -89,7 +91,7 @@ export function createSessionCloud(invoke: Invoke, onProblem?: (error: unknown) 
       if (unsupported) {
         contexts = null;
         current.clear();
-        return legacy.rows();
+        return allowLegacy ? legacy.rows() : { state: "denied" as const };
       }
       const rows = mergeContextMachines(answers.flatMap(({ context, answer }) => answer.state === "ready" ? [{ context, computers: answer.computers }] : []), here?.own());
       current = new Map(rows.map((r) => [contextMachineKey(r.computer_id, r.context), r]));

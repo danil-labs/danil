@@ -1,9 +1,11 @@
 packages:
   - apps/desktop
-  - apps/workspace
-  - apps/auth
-  - apps/desk
   - packages/*
+  - "!packages/design"
+  - "!packages/tasks"
+  - "!packages/protocol"
+  - "!packages/carry"
+  - "!packages/chat"
   - packages/features/*
 
 # pnpm 10.15+ / 12: approval for packages that run install scripts.

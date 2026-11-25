@@ -15,10 +15,10 @@ const DESKTOP = "apps/desktop/";
 const RUST = /^apps\/desktop\/(?:src-tauri\/|seldon-runtime\.lock$)/;
 const FULL = /(?:^|\/)(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml)$|^apps\/desktop\/tests\/helpers\/|^apps\/desktop\/scripts\/(?:verify|verify-scope|git)\.mjs$/;
 const OUTSIDE_CHAIN = /\.md$|^\.github\/|^apps\/mobile\/|^apps\/desktop\/(?:docs|release-notes|tests\/release|tests\/security)\//;
-const MAPPED_CODE = /^apps\/desktop\/(?:src|scripts|alpha-entry|web-redirect)\//;
+const MAPPED_CODE = /^apps\/desktop\/(?:src|scripts|alpha-entry)\//;
 const MAPPED_TESTS = /^apps\/desktop\/tests\/(?:unit|perf)\//;
 const EXTENSIONS = ["", ".ts", ".tsx", ".mjs", ".js", ".json", "/index.ts", "/index.tsx"];
-const NAMED_PATH = /["'`](?:\.{1,2}\/)*((?:src|scripts|alpha-entry|web-redirect)\/[\w./-]*)/g;
+const NAMED_PATH = /["'`](?:\.{1,2}\/)*((?:src|scripts|alpha-entry)\/[\w./-]*)/g;
 const NAMES_BUILD = /["'`/]dist(?:-web)?\b/;
 
 /** Los archivos que difieren de la base, con los de sin commitear y sin seguimiento; `{ reason }` si git no contesta. */

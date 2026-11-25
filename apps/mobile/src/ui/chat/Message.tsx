@@ -1,6 +1,5 @@
 import { TEXT } from "@terminus/design";
-import { imagenInerte } from "@terminus/chat/links";
-import { splitNextSteps } from "@terminus/chat/nextSteps";
+import { imagenInerte, splitNextSteps } from "@terminus/chat";
 import type { TurnTool } from "@terminus/protocol";
 import { memo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";

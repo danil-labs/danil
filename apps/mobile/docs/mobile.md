@@ -20,7 +20,7 @@ como la web.
   Google y Microsoft por el navegador del sistema con PKCE
   (`expo-web-browser`). Lo único que se guarda es la sesión de Supabase, en el
   llavero (`expo-secure-store`, en trozos porque pasa de 2 KB). Hermes no trae
-  WebCrypto: `apps/mobile/src/lib/supabase.ts` lo completa con `expo-crypto` para que PKCE
+  WebCrypto: `expo-crypto` lo completa para que PKCE
   use S256 y no `plain`.
 - **Las reglas de la web valen igual** (`@terminus/computers`): abrir la app
   nunca enciende una máquina; cada máquina se ve solo encendida, apagada o
@@ -55,7 +55,7 @@ como la web.
   título grande es el espacio y abre su menú. Todo lo demás se apila encima
   con su atrás. Nada flota.
 - **Tema claro y oscuro** según el sistema, con los tokens por omisión del
-  escritorio en `apps/desktop/src/styles/global.css`: Violeta en claro y Grafito en oscuro.
+  escritorio en `packages/ui/src/styles/global.css`: Violeta en claro y Grafito en oscuro.
 - **Solo los workspaces vinculados a la cuenta.** Con la sesión de Danil
   iniciada en una computadora, su motor vincula todos sus workspaces; no hay
   vínculo a mano. Cada fila de `/v1/computers`
@@ -123,7 +123,7 @@ workspaces, que va a la raíz que fijó la compilación,
 - **Avisos push:** `apps/mobile/public/sw.js` solo muestra avisos (`push` y
   `notificationclick`, sin `fetch` ni caché) y vive con scope `<base>m/`: en
   app.danil.ai la raíz es del service worker de Appv2. Lo registra
-  `apps/mobile/src/lib/push.web.ts` cuando la persona activa «Avisos de tareas» en Cuenta de
+  la app cuando la persona activa «Avisos de tareas» en Cuenta de
   Danil; la suscripción se guarda en Danil Machines, cuyo relay avisa cuando una
   tarea termina, se detiene o pide algo, también con el navegador cerrado. El
   aviso trae los identificadores y, si el relay ya leyó la carpeta, el nombre de
@@ -159,7 +159,7 @@ workspaces, que va a la raíz que fijó la compilación,
 | Cuadro de escribir (`Chat.tsx`): adjuntar y permisos a la izquierda; modelo y razonamiento, y enviar/detener a la derecha; `/`, `@`, `!`; cola con «Mandar ahora» | El mismo cuadro y la misma fila (`apps/mobile/src/ui/Composer.tsx`), con el texto que crece hasta seis líneas; los selectores son hojas desde abajo; `/` y `@` abren la lista sobre el cuadro; `!` lo vuelve terminal («Ejecutar»). En una tarea nueva, encima del cuadro: «Ejecutar en» (más de una máquina), Carpeta, Rama base (con git) y Agente | Popovers y menús no se tocan con el dedo; una fila compacta y hojas sí |
 | Ajustes → Proveedores de IA en la web (#154): una tarjeta por proveedor y correo, consumo una vez, chapas de máquina, «Iniciar sesión en otra máquina» | La misma pantalla (`accounts`), desde la hoja de workspaces (sección Máquinas); el inicio sin pantalla de la máquina (enlace y código) va en una hoja; cerrar sesión pide confirmar | Es la misma regla (`groupAccounts` en `@terminus/computers`); el teléfono abre el enlace en el navegador del sistema y ahí mismo se copia el código |
 | Pestaña Memoria de la vista de proyecto: alcance Proyecto, Workspace o encargado; escribir a mano, editar, borrar; historial por entrada y copias `.conflicto-*` marcadas | Pantalla `memory/[workspace]` desde la hoja de workspaces (sección Memoria, un renglón por workspace de la cuenta): alcance Workspace o cada proyecto del registro; editar y escribir en una tarjeta en la misma pantalla; el historial se despliega bajo la entrada y tocar una versión muestra su texto. Habla **directo con el Worker** (`/v1/workspaces/:id/memory/*`, cliente de `@terminus/computers`, lógica en `apps/mobile/src/lib/memory.ts`), nunca con el relay: funciona con todas las máquinas apagadas y no enciende ninguna. Avisa la copia de un conflicto al guardar, un borrado que no pisó (409) y una memoria ocupada (503) sin perder lo escrito | La memoria vive en el repo de la cuenta (D8): el teléfono no tiene motor que la guarde; los encargados no están en el registro, así que su memoria todavía no se ofrece |
-| Íconos de Lucide | Los mismos trazos (`apps/mobile/src/ui/lucide.ts`, `apps/mobile/src/ui/Icon.tsx`) con react-native-svg; las marcas de proveedor de `apps/desktop/src/ui/icons.tsx` en `apps/mobile/src/ui/BrandMark.tsx` | Los SF Symbols no existen en Android: la chincheta y el filtro no se veían en el teléfono de prueba |
+| Íconos de Lucide | Los mismos trazos (`apps/mobile/src/ui/lucide.ts`, `apps/mobile/src/ui/Icon.tsx`) con react-native-svg; las marcas de proveedor de `packages/ui/src/icons.tsx` en `apps/mobile/src/ui/BrandMark.tsx` | Los SF Symbols no existen en Android: la chincheta y el filtro no se veían en el teléfono de prueba |
 
 ## Cómo está armado
 
@@ -220,7 +220,7 @@ El cuadro deja cambiarlos, igual que el razonamiento y los permisos.
 
 ## Lista cerrada
 
-`APP_COMMANDS` (`packages/protocol/src/commands.ts`) creció a propósito con lo
+`APP_COMMANDS` (`packages/engine-client/src/commands.ts`) creció a propósito con lo
 que piden la vista previa, el cuadro de escribir y las cuentas; cada grupo
 lleva su comentario allí:
 

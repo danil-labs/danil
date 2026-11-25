@@ -1,1 +1,1 @@
-export * from "../../../../ui/src/lib/sandbox";
+export * from "../../../../ui/src/lib/sandbox.ts";

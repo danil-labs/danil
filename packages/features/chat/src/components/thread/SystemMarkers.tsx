@@ -1,5 +1,5 @@
-import { t } from "../../../../../../apps/desktop/src/lib/i18n";
-import { prosa } from "../../../../../../apps/desktop/src/lib/prose";
+import { t } from "../../../../../ui/src/lib/i18n";
+import { prosa } from "../../../../../ui/src/lib/prose";
 import { type CambioPorCupo, prosaDelCambioPorCupo } from "../../model/failures";
 
 /** El turno dejó de avanzar; lo que produjo ya está arriba en el hilo. */

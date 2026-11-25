@@ -1,13 +1,14 @@
-import "../../../../apps/desktop/src/locales/danilPhrases";
+import "../../../ui/src/locales/danilPhrases";
 import { createEffect, createMemo, createSignal, For, type JSX, Match, onCleanup, onMount, Show, Switch } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client";
+import { t } from "../../../ui/src/lib/i18n";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries";
 import { capabilities } from "../../../host/src/platform";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { escribirPref, leerPref } from "../../../session/src/prefs";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import { Button } from "../../../ui/src/Button";
 import { Spinner } from "../../../ui/src/Spinner";
 import { CabeceraDelAlta, rememberAccountWelcome } from "../../../features/onboarding/src";
+import ControlesDeVentana from "./WindowControls";
 import { said } from "../../../features/settings/src";
 import { type EngineAdoption, engineAdoptionDone, engineAdoptionFinished, engineAdoptionProgress, engineAdoptionReport, engineOwnsAdoption, onEngineAdoption, readEngineAdoption } from "./engine-adoption";
 import { accountWorkspaces } from "./session-account-workspaces";
@@ -44,14 +45,14 @@ export function SessionGate(props: { children: JSX.Element }) {
   const [signing, setSigning] = createSignal(false);
   const [problem, setProblem] = createSignal<string | null>(null);
   let source: Promise<SessionSource> | null = null;
-  const origin = () => (source ??= personSessionSource(invoke, engineFeatures, listen));
+  const origin = () => (source ??= personSessionSource(callShellViewEngine, engineFeatures, listen));
   let running = false;
 
   const read = () => origin().then((s) => s.read()).then((s) => setStatus(s), () => setStatus(null));
   onMount(() => {
     if (!capabilities().nativeWindow) return;
     void read();
-    void localCandidateCount(invoke, engineFeatures).then((n) => setCount(n ?? 0));
+    void localCandidateCount(callShellViewEngine, engineFeatures).then((n) => setCount(n ?? 0));
     const changes = origin().then((s) => s.changes(setStatus));
     // Una sesión que venció sin evento se nota al volver a la ventana.
     window.addEventListener("focus", read);
@@ -67,13 +68,13 @@ export function SessionGate(props: { children: JSX.Element }) {
   const contextOf = (org: string | null) => contexts().find((c) => c.org === org);
   /** El motor adopta solo: se espera a que cierre su repaso y se pinta lo que reporta. */
   async function linkByEngine(locals: number) {
-    const first = await readEngineAdoption(invoke);
+    const first = await readEngineAdoption(callShellViewEngine);
     if (!first) return void console.warn("[first-login] the engine owns adoption but reports no state");
     // Sin locales no hay nada que esperar; con locales, un `done` de antes del login no basta.
     if (locals === 0) return markDone();
-    const candidates = await invoke<{ id: string; name: string; adoptable?: boolean }[]>("adoption_candidates").catch(() => []);
+    const candidates = await callShellViewEngine<{ id: string; name: string; adoptable?: boolean }[]>("adoption_candidates").catch(() => []);
     setEngineLocals(candidates.filter((c) => c.adoptable !== false).map(({ id, name }) => ({ id, name })));
-    setEngineKept(accountWorkspaces(await invoke("list_workspaces").catch(() => null)).map((w) => ({ id: w.id, name: w.name, org: w.account.org })));
+    setEngineKept(accountWorkspaces(await callShellViewEngine("list_workspaces").catch(() => null)).map((w) => ({ id: w.id, name: w.name, org: w.account.org })));
     // Un repaso que ya cerró antes del login no cuenta: se espera el que corre ahora.
     let settled = first.state === "running" ? null : first;
     setEngineRun(first);
@@ -90,7 +91,7 @@ export function SessionGate(props: { children: JSX.Element }) {
     off?.();
     const last = engineRun();
     if (!last) return;
-    const remaining = await localCandidateCount(invoke, engineFeatures);
+    const remaining = await localCandidateCount(callShellViewEngine, engineFeatures);
     const target = contextOf(last.org);
     handAdoptionReport(engineAdoptionReport(last, target?.context_id, target?.org_name ?? null));
     if (engineAdoptionDone(last, remaining)) markDone();
@@ -101,18 +102,18 @@ export function SessionGate(props: { children: JSX.Element }) {
     running = true;
     rememberAccountWelcome("connected");
     try {
-      if (engineOwnsAdoption(await engineFeatures())) return void (await linkByEngine(await localCandidateCount(invoke, engineFeatures) ?? -1));
-      const n = await localCandidateCount(invoke, engineFeatures);
+      if (engineOwnsAdoption(await engineFeatures())) return void (await linkByEngine(await localCandidateCount(callShellViewEngine, engineFeatures) ?? -1));
+      const n = await localCandidateCount(callShellViewEngine, engineFeatures);
       if (n === null) console.warn("[first-login] engine features unknown: the rail keeps trying");
       if (n) {
         setCount(n);
-        const next = createLinker(invoke, engineFeatures);
+        const next = createLinker(callShellViewEngine, engineFeatures);
         setLinker(next);
         const outcome = await Promise.race([next.run(), new Promise<"background">((resolve) => setTimeout(() => resolve("background"), LINKING_LIMIT_MS))]);
         handAdoptionReport(next.report());
         if (outcome === "background") console.warn("[first-login] linking continues in the background");
       }
-      const remaining = n ? await localCandidateCount(invoke, engineFeatures) : n;
+      const remaining = n ? await localCandidateCount(callShellViewEngine, engineFeatures) : n;
       if (shouldMarkFirstLoginDone({ signedIn: true, remaining })) markDone();
     } finally {
       setLinker(null);
@@ -162,7 +163,7 @@ export function SessionGate(props: { children: JSX.Element }) {
       <Match when={view().t === "open"}>{props.children}</Match>
       <Match when={true}>
         <div class="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg" data-session-gate={view().t}>
-          <CabeceraDelAlta />
+          <CabeceraDelAlta ControlesDeVentana={ControlesDeVentana} />
           <div class="min-h-0 flex-1 overflow-y-auto">
             <section class="mx-auto flex w-full max-w-[520px] flex-col gap-6 px-8 py-12">
               <Switch>

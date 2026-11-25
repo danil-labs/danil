@@ -29,7 +29,7 @@ export type PreparedPhoto = { dataUrl: string; blob: Blob; type: string };
 export const PROFILE_CHANGED = "terminus:account-profile";
 
 /** El mismo límite que la cuenta: el plano de control rechaza más. */
-export const PHOTO_MAX_BYTES = 2 * 1024 * 1024;
+const PHOTO_MAX_BYTES = 2 * 1024 * 1024;
 export const PHOTO_TYPES = ["image/png", "image/jpeg", "image/webp"];
 /** Lado del cuadrado que se sube: basta para el pie y Configuración, y pesa poco. */
 const PHOTO_SIDE = 256;
@@ -49,13 +49,9 @@ export class PhotoError extends Error {
   }
 }
 
-/** `data:` URI de una imagen (con su tipo). */
-export async function blobToDataUrl(blob: Blob, type = blob.type): Promise<string> {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return `data:${type};base64,${btoa(binary)}`;
-}
+import { blobToDataUrl } from "../../../../ui/src/lib/shrink-image.ts";
+
+export { blobToDataUrl };
 
 /** Recorte cuadrado al centro, re-codificado a PNG: quita metadatos (EXIF, ubicación). */
 async function reencode(file: Blob): Promise<Blob | null> {

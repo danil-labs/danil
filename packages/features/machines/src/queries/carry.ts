@@ -5,65 +5,30 @@
  * al enviar a otra máquina: no entra en la carga inicial.
  */
 import { createRoot, createSignal } from "solid-js";
-import {
-  type CarryEngine,
-  type CarryFailure,
-  type CarryJob,
-  type CarryProgress,
-  type CarryResult,
-  type CarryState,
-  type Exported,
-  type Imported,
-  type Part,
-  type WorkStatus,
-  CarryError,
-  PART_RELAY,
-  cancelCarry,
-  carryWork,
-  type Selection,
-  keyVerdict,
-  needsSheet,
-  newState,
-  withoutRemote,
-} from "@terminus/carry";
-import "../../../../../apps/desktop/src/locales/workPhrases";
-import { invoke } from "../../../../engine-client/src/client";
-import type { Project } from "../../../../../apps/desktop/src/lib/model";
-import { escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { type CarryEngine, type Exported, type Imported, type Part, type WorkStatus } from "../model/carryTypes.ts";
+import { type CarryFailure, type CarryJob, type CarryResult, type CarryState, CarryError, cancelCarry, carryWork, newState } from "./carryRun.ts";
+import { PART_RELAY, type Selection, keyVerdict, needsSheet, withoutRemote } from "../model/carryPlan.ts";
+import "../../../../ui/src/locales/workPhrases";
+import { callEngine } from "../../../../engine-client/src/client";
+import type { Project } from "../../../../ui/src/lib/model";
+import { escribirPref, leerPref } from "../../../../session/src/prefs";
+import { t } from "../../../../ui/src/lib/i18n";
 import { type CarryOrigin, machineName, rememberOrigin } from "./store";
 
 const on = (machine: string) => ({ headers: { "x-terminus-machine": machine } });
 
 /** Los `work_*` por el proxy de la ventana (o el transporte de la web), con la máquina en la cabecera. */
 export const engine: CarryEngine = {
-  status: (machine, args) => invoke<WorkStatus>("work_status", args, on(machine)),
-  exportWork: (machine, args) => invoke<Exported>("work_export", args, on(machine)),
-  readPart: (machine, args) => invoke<Part>("work_read_part", args, on(machine)),
-  writePart: (machine, args) => invoke("work_write_part", args, on(machine)),
-  importWork: (machine, args) => invoke<Imported>("work_import", args, on(machine)),
-  cancel: (machine, args) => invoke("work_cancel", args, on(machine)),
-  key: (machine) => invoke<{ publicKey: string }>("work_key", {}, on(machine)),
+  status: (machine, args) => callEngine<WorkStatus>("work_status", args, on(machine)),
+  exportWork: (machine, args) => callEngine<Exported>("work_export", args, on(machine)),
+  readPart: (machine, args) => callEngine<Part>("work_read_part", args, on(machine)),
+  writePart: (machine, args) => callEngine("work_write_part", args, on(machine)),
+  importWork: (machine, args) => callEngine<Imported>("work_import", args, on(machine)),
+  cancel: (machine, args) => callEngine("work_cancel", args, on(machine)),
+  key: (machine) => callEngine<{ publicKey: string }>("work_key", {}, on(machine)),
 };
 
-/** Lo que se sabe al enviar: de dónde a dónde, qué hay sin subir y si el destino ya tiene el proyecto. */
-export type CarryCheck = {
-  workspace: string;
-  project: Project;
-  source: string;
-  target: string;
-  status: WorkStatus;
-  /** `null`: no se pudo saber (la máquina dormía); se clona si el import lo echa en falta. */
-  hasProject: boolean | null;
-  /** Al traer: la tarea de la otra máquina cuyo worktree se trae. */
-  task: { id: string; title: string } | null;
-  /**
-   * La llave del destino con la que se sella, o `null` si viaja sin sellar (un
-   * motor sin `work_key`). `keyChanged`: no es la fijada.
-   */
-  recipientKey: string | null;
-  keyChanged: boolean;
-};
+import type { CarryCheck, Carry, CarriedBase } from "../../../../ui/src/lib/carry.ts"; export type { CarryCheck, Carry, CarriedBase };
 
 const KEYS = "machines.carry_keys";
 /** Por qué la máquina de destino no contestó (`router.ts`): apagada, sin poder encenderla o sin llegar a tiempo. */
@@ -101,7 +66,7 @@ async function keyFor(target: string): Promise<{ recipientKey: string | null; ke
  */
 async function targetHasProject(target: string, project: Project): Promise<boolean> {
   if (project.machines?.includes(target)) return true;
-  const theirs = await invoke<Project[]>("list_projects", {}, on(target));
+  const theirs = await callEngine<Project[]>("list_projects", {}, on(target));
   const same = theirs.find((p) => p.id === project.id);
   return !!same && !!(same.working_directory ?? same.work_tree);
 }
@@ -152,22 +117,6 @@ export function bringSummary(check: CarryCheck, lastAgentMessage: string | null,
 /** Del último mensaje del agente basta el final de su respuesta: el resto está en la original. */
 const SUMMARY_MAX = 1200;
 
-/** Una copia en marcha o detenida, por la clave del borrador que la espera. */
-export type Carry = {
-  check: CarryCheck;
-  job: CarryJob;
-  state: CarryState;
-  progress: CarryProgress | null;
-  failure: CarryFailure | null;
-  /** El tamaño de la rama completa, cuando falta la base y ya se exportó. */
-  fullBytes: number | null;
-  cancelled: boolean;
-  /** Ya traído: la base con la que nace la tarea nueva aquí, sin copiar nada más. */
-  ready: CarryResult | null;
-};
-
-/** Con qué nace la tarea: la base y en qué máquina (`x-terminus-machine`). */
-export type CarriedBase = CarryResult & { target: string };
 
 const [carries, setCarries] = createRoot(() => createSignal<Record<string, Carry>>({}));
 export { carries };
@@ -206,11 +155,22 @@ export function jobFor(check: CarryCheck, choice: { selection: Selection; partSi
   return { source: check.source, target: check.target, project: check.project.id, task: choice.task, selection, partSize: choice.partSize, branchAs: choice.branchAs, create, recipientKey: check.recipientKey };
 }
 
+/** El seguimiento del clon es de projects (`followClone`): lo enchufa el shell al cargar este módulo. */
+type FollowClone = (
+  clone: { operation: string; machine: string; workspace: string; name: string },
+  start: Record<string, unknown> | null,
+  onProgress: (progress: { phase: string; percent: number | null }) => void,
+) => Promise<unknown>;
+let followClone: FollowClone = () => Promise.reject(new Error("carry: followClone sin enchufar"));
+
+export function setFollowClone(follow: FollowClone) {
+  followClone = follow;
+}
+
 /** Clona en el destino por `start_project_clone`, con su avance, como al añadir una carpeta. */
 async function cloneOn(check: CarryCheck, progress: (phase: string, percent: number | null) => void) {
   const url = check.status.remoteUrl ?? check.project.remote_url;
   if (!url) throw { what: { clave: "work.error.project_missing" }, detail: "no_remote" };
-  const { followClone } = await import("../../../projects/src/queries/remoteClone");
   const operation = crypto.randomUUID();
   await followClone(
     { operation, machine: check.target, workspace: check.workspace, name: check.project.name },

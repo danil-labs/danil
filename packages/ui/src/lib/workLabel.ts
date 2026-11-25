@@ -1,5 +1,5 @@
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { df } from "../../../../apps/desktop/src/lib/format";
+import { t } from "./i18n";
+import { df } from "./format";
 
 // La forma del alias la escribe `workspace/alias.rs`; cambiar una sin la otra
 // deja el alias pintado en crudo.

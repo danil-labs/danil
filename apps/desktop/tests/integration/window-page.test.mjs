@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { boot } from '../helpers/jsdom-app.mjs';
 import { relay } from '../helpers/fake-relay.mjs';
+import { RESPONSES } from '../helpers/mount-guard.mjs';
 
 const origin = new URL(process.env.DANIL_WEB_API_ORIGIN).origin;
 async function until(read) {
@@ -478,6 +479,7 @@ for (const scenario of ['one account with two organizations', 'two accounts', 'r
     const { pathname } = new URL(String(input));
     if (init?.method && init.method !== 'GET') writes.push(pathname);
     if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'QA', workspace: null, active_organization_id: null, organizations: [] });
+    if (pathname === '/v1/identity/sessions') return Response.json({ items: dirs });
     if (pathname === '/v1/identity/sessions/catalog') return Response.json({ version: 1, items: dirs });
     if (pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: [{ name: 'workspaces', version: 1, status: 'available' }] });
     return new Response(null, { status: 404 });
@@ -488,7 +490,12 @@ for (const scenario of ['one account with two organizations', 'two accounts', 'r
   } });
   const doc = app.w.document;
   await until(() => doc.querySelector('[data-add-workspace]'));
-  if (!returning) doc.querySelector('[data-add-workspace]').click();
+  if (!returning) {
+    doc.querySelector('[data-add-workspace]').click();
+    await until(() => doc.querySelector('[data-add-danil-step]'));
+    assert.equal(doc.querySelector('[data-web-workspace-picker]'), null);
+    doc.querySelector('[data-add-danil-step]').click();
+  }
   await until(() => doc.querySelectorAll('[data-picker-workspace]').length === (single ? 2 : 3));
   assert.deepEqual([...doc.querySelectorAll('[data-picker-workspace]')].map(w => w.textContent),
     single ? ['CatálogoDanil', 'EntregasAzul'] : ['CatálogoDanil · a@example.test', 'EntregasAzul', 'CatálogoDanil · b@example.test']);
@@ -519,6 +526,7 @@ test('the picker lists an organization that needs admission in the same list and
     if (pathname === '/v1/capabilities') return new Response(null, { status: 404 });
     if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', name: 'QA', workspace: null, active_organization_id: null, organizations: [] });
     if (pathname === '/v1/identity/organizations') return new Response(null, { status: 404 });
+    if (pathname === '/v1/identity/sessions') return Response.json({ items: [{ session_id: 's1', sub: 'user_A', email: 'a@example.test', contexts: contexts().filter((c) => c.context_id) }] });
     if (pathname === '/v1/identity/sessions/catalog') return Response.json({ version: 1, items: [{ session_id: 's1', sub: 'user_A', email: 'a@example.test', contexts: contexts() }] });
     if (pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
     if (pathname === '/v1/identity/contexts') { admitted = true; return Response.json({ context_id: 'c2', org: 'org_B' }); }
@@ -532,6 +540,8 @@ test('the picker lists an organization that needs admission in the same list and
   const doc = app.w.document;
   await until(() => doc.querySelector('[data-add-workspace]'));
   doc.querySelector('[data-add-workspace]').click();
+  await until(() => doc.querySelector('[data-add-danil-step]'));
+  doc.querySelector('[data-add-danil-step]').click();
   await until(() => doc.querySelector('[data-picker-organization="org_B"]'));
   assert.equal(doc.querySelectorAll('[data-picker-workspace]').length, 1, 'una sola lista: el admitido y la organización pendiente');
   assert.match(doc.querySelector('[data-picker-organization="org_B"]').textContent, /Azul.*Requiere admisión/);
@@ -541,4 +551,101 @@ test('the picker lists an organization that needs admission in the same list and
   assert.deepEqual(writes.filter(w => w.startsWith('POST /v1/identity/contexts')), ['POST /v1/identity/contexts {"organization":"org_B","session_id":"s1"}']);
   assert.deepEqual([...doc.querySelectorAll('[data-picker-workspace]')].map(w => w.textContent), ['CatálogoDanil', 'EntregasAzul']);
   assert.deepEqual(app.failures, []);
+});
+
+test('Desk adds a catalog workspace with the organization machine offline', async t => {
+  const context = 'desk_danil';
+  const target = 'engine42';
+  const catalogReads = [];
+  const added = new Set();
+  const app = await open(t, 'listo', 'desk-catalog-offline', {
+    ...RESPONSES,
+    danil_session_status: {
+      state: 'connected', default_context: context,
+      sessions: [{ family: 's1', email: 'a@example.test', contexts: [
+        { context_id: context, org: 'org_A', org_name: 'Danil', plan: 'enterprise' },
+      ] }],
+    },
+    danil_edge_fetch: ({ method, path, context: requested }) => {
+      if (path === '/v1/identity/me') return { status: 200, body: { id: 'user_A' } };
+      if (path === '/v1/capabilities') return { status: 200, body: { contract: 'mvp-v1', items: [{ name: 'machines', version: 1, status: 'available' }] } };
+      if (path === '/v1/machines' && requested === context) return { status: 200, body: { items: [
+        { machine_id: 'offline', kind: 'organization', organization_id: 'org_A', name: 'Danil', state: 'stopped' },
+      ] } };
+      if (path === '/v1/workspaces') {
+        catalogReads.push(requested);
+        return { status: 200, body: { items: [
+          { id: '42', org: 'org_A', engine_workspace_id: target, name: 'Entregas' },
+          { id: '43', org: 'org_B', engine_workspace_id: 'engine43', name: 'Otra organización' },
+        ] } };
+      }
+      if (path === '/v1/workspaces/preferences') return { status: 200, body: { added: [...added], version: 1 } };
+      if (method === 'PUT' && path === `/v1/workspaces/preferences/added/${target}`) {
+        assert.equal(requested, context);
+        added.add(target);
+        return { status: 204 };
+      }
+      return { status: 404 };
+    },
+    list_workspaces: (_args, options) => {
+      assert.equal(new Headers(options?.headers).get('x-terminus-machine'), null);
+      return RESPONSES.list_workspaces;
+    },
+  });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-add-workspace]'));
+  doc.querySelector('[data-add-workspace]').click();
+  await until(() => doc.querySelector('[data-add-danil-step]'));
+  doc.querySelector('[data-add-danil-step]').click();
+  const row = () => doc.querySelector(`[data-add-danil="${target}"]`);
+  await until(row);
+  assert.ok(catalogReads.includes(context));
+  assert.match(row().textContent, /Entregas/);
+  assert.doesNotMatch(doc.querySelector('[data-danil-workspaces]').textContent, /Otra organización|no responde/);
+  row().click();
+  await until(() => added.has(target) && doc.querySelector(`[data-workspace-tile="${target}"][aria-current="true"]`));
+});
+
+test('web adds a catalog workspace with the organization machine offline', async t => {
+  const context = 'web_danil';
+  const target = 'engine42';
+  const added = new Set();
+  const organization = { context_id: context, org: 'org_A', org_name: 'Danil', plan: 'enterprise' };
+  const session = { session_id: 's1', sub: 'user_A', email: 'a@example.test', contexts: [organization] };
+  const fetcher = async (input, init) => {
+    const { pathname } = new URL(String(input));
+    const requested = new Headers(init?.headers).get('X-Danil-Session');
+    const headers = { 'X-Danil-Session-Applied': context, 'X-Danil-Session-Applied-Org': 'org_A' };
+    if (pathname === '/v1/identity/sessions') return Response.json({ version: 1, items: [session], default_context: context });
+    if (pathname === '/v1/identity/sessions/catalog') return Response.json({ version: 1, items: [{ ...session, contexts: [
+      { ...organization, catalog_state: 'listed', workspaces: [{ account_id: '42', engine_workspace_id: target, name: 'Entregas' }] },
+    ] }] });
+    if (pathname === '/v1/identity/me') return Response.json({ id: 'user_A', organizations: [] }, { headers });
+    if (pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
+    if (pathname === '/v1/capabilities') return Response.json({ contract: 'mvp-v1', items: ['machines', 'workspaces'].map(name => ({ name, version: 1, status: 'available' })) });
+    if (pathname === '/v1/machines') return Response.json({ items: [
+      { machine_id: 'offline', kind: 'organization', organization_id: 'org_A', name: 'Danil', state: 'stopped' },
+    ] }, { headers });
+    if (pathname === '/v1/workspaces') return Response.json({ items: [] }, { headers });
+    if (pathname === '/v1/workspaces/preferences') return Response.json({ version: 1, added: [...added] }, { headers });
+    if (init?.method === 'PUT' && pathname === `/v1/workspaces/preferences/added/${target}`) {
+      assert.equal(requested, context);
+      added.add(target);
+      return new Response(null, { status: 204, headers });
+    }
+    return new Response(null, { status: 404 });
+  };
+  globalThis.fetch = Object.assign(fetcher, { __jsdomApp: true, __sessions: true });
+  const app = await open(t, 'listo', 'web-catalog-offline', {}, undefined, {}, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-add-workspace]'));
+  doc.querySelector('[data-add-workspace]').click();
+  await until(() => doc.querySelector('[data-add-danil-step]'));
+  doc.querySelector('[data-add-danil-step]').click();
+  const row = () => doc.querySelector('[data-picker-workspace]');
+  await until(row);
+  assert.match(row().textContent, /Entregas.*Danil/);
+  assert.equal(doc.querySelector('[data-web-workspace-picker] [role="alert"]'), null);
+  row().click();
+  await until(() => added.has(target) && doc.querySelector(`[data-workspace-tile="${target}"][aria-current="true"]`));
 });

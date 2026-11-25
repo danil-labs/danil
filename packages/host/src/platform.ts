@@ -3,13 +3,14 @@
  * el valor por defecto; la entrada web (`src/web/main.tsx`) lo fija antes de
  * importar la app y no cambia después.
  */
-import type { AccountWorkspace, Answer, Computer, CredentialSource, MemorySource, SpaceOrderSource } from "@terminus/computers";
+import type { AccountWorkspace, Answer, Computer } from "../../platform-client/src/api.ts";
+import type { CredentialSource } from "../../platform-client/src/account-credentials.ts";
+import type { MemorySource } from "../../platform-client/src/memory.ts";
+import type { SpaceOrderSource } from "../../platform-client/src/space-order.ts";
 import { createRoot, createSignal, type JSX } from "solid-js";
-import type { AccountEmailsSource } from "../../features/settings/src/model/account-emails";
 import type { AccountProfileSource } from "../../features/settings/src/model/account-profile";
 import type { Account } from "../../features/settings/src/queries/accounts-store";
-import type { AuditLogSource } from "../../../apps/desktop/src/web/audit-log";
-import type { WorkspaceAssetsSource } from "../../../apps/desktop/src/web/workspace-assets";
+import type { WorkspaceAssetsSource } from "../../platform-client/src/workspace-assets";
 
 /** Una cuenta agrupada (web y escritorio): las máquinas donde tiene sesión (`@terminus/fleet`, `merge.ts`). */
 export type AccountMachinesProps = {
@@ -58,9 +59,10 @@ export type WebAccountsSource = {
   signOut: () => void;
 };
 
-export type Capabilities = import("../../../apps/desktop/src/lib/group-account").GroupAccountCapabilities & {
+export type Capabilities = import("../../session/src/group-account").GroupAccountCapabilities & {
+  revokeWorkspaceAccess?: (context: string, workspace: string) => Promise<"revoked" | "unavailable">;
   webPromo?: (code: string, idempotencyKey: string) => Promise<{ machine?: { state?: string }; unavailable?: boolean }>;
-  webWorkspacePicker?: import("../../../apps/desktop/src/web/workspace-picker").WorkspacePicker;
+  webWorkspacePicker?: import("../../session/src/workspace-picker").WorkspacePicker;
   webReauth?: { needed: () => boolean; signIn: () => void; failed?: () => boolean };
   /** Saldo de la cuenta Danil desde un BFF autenticado; ausente hasta verificar el adaptador. */
   danilCredits?: import("../../features/chat/src/model/danil-credits").DanilCreditsSource;
@@ -83,32 +85,16 @@ export type Capabilities = import("../../../apps/desktop/src/lib/group-account")
   danilAccount?: boolean;
   /** La persona de la cuenta de Danil leída sin el motor (la web, con su sesión): pie y Configuración. */
   accountProfile?: AccountProfileSource;
-  /** Los correos de la cuenta con la sesión (la web de alfa, por su proxy al BFF). */
-  accountEmails?: AccountEmailsSource;
   /** El panel de Configuración que la página pidió abrir al cargar (`?settings=`). */
   initialSettings?: string;
-  /** La bitácora de cambios de la cuenta de Danil activa, con la sesión (la web en alfa); la muestra `/admin`. */
-  accountAuditLog?: AuditLogSource;
   /** El selector de organización (`identity.organizations`); sin esto, o sin la ruta en el servidor, no sale. */
-  organizations?: () => Promise<import("@terminus/computers").OrganizationSelection>;
-  /** `/admin` dentro de esta web (alfa); `allowed` dice si la persona es owner o admin de algún workspace de Danil. Sin esto, el escritorio la abre en el navegador. */
-  adminPage?: { href: string; allowed: () => Promise<boolean> };
-  /** Lo de una cuenta personal en Configuración › Cuenta. `isPersonal` decide si se ofrece; sin `plan`, esa pestaña no sale. */
+  organizations?: () => Promise<import("../../platform-client/src/organizations.ts").OrganizationSelection>;
+  /** Lo de una cuenta personal. */
   personalAccount?: { isPersonal: () => Promise<boolean>; plan?: () => JSX.Element };
-  /** El consumo propio en Configuración › Cuenta. Sin fuente, la pestaña no sale. */
-  accountUsage?: () => JSX.Element;
-  /** Plan y cobro de Danil Business del workspace activo (solo la web). Sin esto, la entrada no sale. */
-  businessBilling?: (part: "plan" | "fiscal") => JSX.Element;
   /** El logo y el fondo de los workspaces leídos y cambiados en la cuenta con la sesión (la web). */
   accountAssets?: WorkspaceAssetsSource;
   /** Botón extra al lado de la búsqueda de la barra lateral (en la web, volver a Danil Agents). */
   sidebarExtra?: () => JSX.Element;
-  /**
-   * El riel desde el índice del motor (`state_machines`, `light_state_machines_v1`):
-   * los workspaces de aquí y los que sirven las otras máquinas de la persona.
-   * `null` sin ese índice: el riel sale de `list_workspaces`.
-   */
-  railWorkspaces?: () => readonly import("../../features/machines/src/queries/engine-workspaces").RailWorkspace[] | null;
   machineName?: (id: string) => string;
   /** La máquina de la cuenta que guarda una tarea o un space por su id de panel (`<máquina>~<id>`); `null` si es de la ventana. */
   taskMachine?: (id: string) => string | null;
@@ -142,32 +128,38 @@ export type Capabilities = import("../../../apps/desktop/src/lib/group-account")
   accountCredentials?: CredentialSource;
   /** Bajo la tarjeta de una cuenta: sus máquinas. */
   accountMachines?: (props: AccountMachinesProps) => JSX.Element;
-  /**
-   * «Conectar otra máquina» con la sesión de la página (la web): la lista de la
-   * cuenta y qué hacer cuando la nueva está en línea. El escritorio usa su token
-   * de cliente (`features/machines/ConnectMachine.tsx`).
-   */
   /** Las computadoras de la cuenta con la sesión de la página (la web); el escritorio usa su token de cliente. */
   accountComputers?: AccountComputersSource;
   /** Varias cuentas de Danil en una ventana (la web); el escritorio no la da. */
   webAccounts?: WebAccountsSource;
-  connectMachine?: {
-    list: () => Promise<Answer<Computer[]>>;
-    onReady: (computer: Computer) => void;
-  };
+  /** Disponibilidad reactiva de máquinas en el contexto activo (web); en Desk siempre hay motor local. */
+  machineAvailability?: () => import("../../features/machines/src/model/availability").MachineAvailability;
+  /** Plan activo de la organización o cuenta en el contexto actual (ej. "free", "pro", "team"). */
+  activePlan?: () => string | null;
 };
 
 const DESKTOP: Capabilities = { nativeWindow: true, updater: true, localSetup: true, computerStatus: false, danilAccount: true, radiant: true };
+const DESKTOP_READY: import("../../features/machines/src/model/availability").MachineAvailability = { kind: "ready", online: 1, total: 1 };
 
 let current = DESKTOP;
+const [caps, setCaps] = createRoot(() => createSignal<Capabilities>(DESKTOP));
 const [screenAccess, setScreenAccess] = createRoot(() => createSignal<Capabilities["machineScreen"]>(DESKTOP.machineScreen));
 
 export const capabilities = (): Capabilities => current;
 
 export function setCapabilities(next: Capabilities) {
   current = next;
+  setCaps(() => next);
   setScreenAccess(() => next.machineScreen);
 }
+
+export const machineAvailability = () => caps().machineAvailability?.() ?? DESKTOP_READY;
+export const isNoMachines = () => machineAvailability().kind === "no_machines";
+export const activePlan = (): string | null => caps().activePlan?.() ?? null;
+export const isPaidPlan = (): boolean => {
+  const plan = activePlan();
+  return !!plan && plan !== "free";
+};
 
 export const machineScreen = (machine: string) => screenAccess()?.(machine) ?? null;
 

@@ -1,7 +1,7 @@
 import { createEffect, createSignal, on, onCleanup } from "solid-js";
 
 /** El evento del DOM, y lo que lleva dentro. */
-export const ARBOLES = "harness:arboles";
+const ARBOLES = "harness:arboles";
 
 /** La tarea cuyo árbol se movió. Basta la sesión: su id es único. */
 export type DetalleDeArboles = { session: string };

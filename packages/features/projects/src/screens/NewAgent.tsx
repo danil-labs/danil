@@ -1,23 +1,23 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
-import { lockedBy } from "../../../../../apps/desktop/src/lib/governance";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { lockedBy } from "../../../../session/src/governance";
+import { t } from "../../../../ui/src/lib/i18n";
 import { createAgent, saveAgentProfile, setAgentModel } from "../queries";
-import type { CreatedHandler, HandlerScope } from "../../../../../apps/desktop/src/lib/model";
+import type { CreatedHandler, HandlerScope } from "../../../../ui/src/lib/model";
 import {
   effortOptions,
   effortValue,
   type OpcionDeModelo,
   opcionesDeModelos,
-} from "../../../../../apps/desktop/src/lib/models";
+} from "../../../../ui/src/lib/models";
 import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Input } from "../../../../ui/src/Input";
 import { Select } from "../../../../ui/src/Select";
 import { Textarea } from "../../../../ui/src/Textarea";
-import SelectorDeModelo from "../../../chat/src/components/ModelPicker";
+import { SelectorDeModelo } from "../model/ports";
 import type { CreateFreeRouterConsent } from "../../../../ui/src/lib/freeRouterConsent.ts";
-import { GovernedNotice } from "../../../settings/src/components/Governed";
+import { GovernedNotice } from "../../../../ui/src/Governed";
 import { AstroAvatar, type Cuerpo } from "./AstroAvatar";
 import { agentId } from "../model/agentId";
 import { BodyPicker } from "../components/BodyPicker";
@@ -171,7 +171,11 @@ export default function NewAgent(props: {
         <Show
           when={eclipse()}
           fallback={
-            <div class="mt-3 grid gap-3">
+            /* La columna se ata al ancho del diálogo. Sin `minmax(0,1fr)` la
+               pista crece con su hijo más ancho —la fila del modelo— y se lleva
+               a todos los campos por delante: el select, las caras y las
+               instrucciones se recortaban por la derecha. */
+            <div class="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3">
               <label class="grid gap-1">
                 <span class="text-xs text-neutral-500">
                   {t("projects.agents.new_name")}
@@ -230,7 +234,7 @@ export default function NewAgent(props: {
 
               <div class="grid gap-1">
                 <span class="text-xs text-neutral-500">{t("projects.agents.profile_model")}</span>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <SelectorDeModelo
                     createFreeRouterConsent={props.createFreeRouterConsent}
                     models={opciones()}

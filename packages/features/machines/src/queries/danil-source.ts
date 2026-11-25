@@ -1,4 +1,4 @@
-import { type Fleet, type Listed, listedWorkspaces } from "@terminus/fleet";
+import { type Fleet, type Listed, listedWorkspaces } from "../model/fleet/index.ts";
 import { createRoot, createSignal } from "solid-js";
 import { availableInContext } from "../model/context-source.ts";
 import { rememberMachineNames } from "../../../../session/src/known-machine-names.ts";
@@ -47,6 +47,15 @@ export function noteListing(machine: string, value: unknown, context?: string) {
 export function danilAvailable(organization: string | null): Listed[] | null {
   revision();
   return organization && fleet ? fleet.available(organization) : null;
+}
+
+/** Fuentes confirmadas de un workspace para invalidar lecturas hechas durante el arranque. */
+export function workspaceMachineSources(workspace: string | null, context: string | null): string {
+  revision();
+  if (!workspace || !fleet) return "";
+  return JSON.stringify(fleet.machines()
+    .filter(row => row.context === (context ?? undefined) && fleet?.lists(row.id, workspace, row.context) === true)
+    .map(row => row.id).sort());
 }
 
 /** Las máquinas `kind=organization` de `organization`; vacío sin flota. */

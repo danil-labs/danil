@@ -1,3 +1,4 @@
+import { findLocalMachine, type MachineListEntry } from "../../../host/src/machine.ts";
 import type { PersonalOutcome } from "./personal-open.ts";
 
 /** Hecho cuando el login terminó y no quedan locales sin organización (plan § 2.6). */
@@ -8,10 +9,7 @@ export type AdoptionProgress = { org: string; finished: boolean; rows: { id: str
 type Status = { state?: string; email?: string | null; sessions?: { email?: string | null }[] } | null;
 export type FirstLoginPhase = { t: "hidden" } | { t: "sign_in" } | { t: "continue"; email: string } | { t: "linking" };
 
-let signedInThisRun = false;
-/** El alta de esta ventana ya pidió la sesión: la pantalla no la vuelve a pedir. */
-export const noteFirstLoginSignedIn = () => { signedInThisRun = true; };
-export const firstLoginSignedIn = () => signedInThisRun;
+export { firstLoginSignedIn } from "../../../session/src/first-login-run.ts";
 
 export function firstLoginPhase(input: { done: boolean; status: Status; signedInThisRun: boolean }): FirstLoginPhase {
   if (input.done) return { t: "hidden" };
@@ -36,13 +34,13 @@ type Invoke = <T>(command: string, args?: Record<string, unknown>) => Promise<T>
  * Los locales sin organización que este motor puede ligar. `0` con un motor que no sabe adoptar;
  * `null` si no se sabe (sin respuesta del motor): quien marca el login como hecho no debe adivinar.
  */
-export async function localCandidateCount(invoke: Invoke, features?: () => Promise<readonly string[] | null>): Promise<number | null> {
+export async function localCandidateCount(rpc: Invoke, features?: () => Promise<readonly string[] | null>): Promise<number | null> {
   try {
-    const self = (await invoke<{ id: string; local?: boolean; features?: string[] }[]>("machine_list")).find((m) => m.local);
+    const self = findLocalMachine(await rpc<MachineListEntry[]>("machine_list"));
     const announced = features ? await features().catch(() => null) : self?.features ?? null;
     if (!self || !announced) return null;
     if (!announced.includes("account_adoption_v1") || !announced.includes("account_adoption_proof_v1")) return 0;
-    return (await invoke<{ adoptable?: boolean }[]>("adoption_candidates", { "x-terminus-machine": self.id })).filter((c) => c.adoptable !== false).length;
+    return (await rpc<{ adoptable?: boolean }[]>("adoption_candidates", { "x-terminus-machine": self.id })).filter((c) => c.adoptable !== false).length;
   } catch {
     return null;
   }

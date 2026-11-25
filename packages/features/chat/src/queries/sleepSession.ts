@@ -1,4 +1,4 @@
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import type { Turn } from "../model/transcript.ts";
 
 // Lo que falla en el camino a la ventana y no en el comando: se vuelve a
@@ -29,6 +29,7 @@ export type ComandoQueNace = {
   claveBorrador: string;
   generation: number;
   session: string | null;
+  recordSpace?: (taskId: string) => void;
 };
 
 export type LiveTurn = {
@@ -50,7 +51,7 @@ export type SleepSessionDeps = { machineOf: (session: string | null | undefined)
 export function createSleepSession(deps: SleepSessionDeps) {
   const { machineOf } = deps;
   async function sleepSession(project: string, session: string) {
-    await invoke<void>("sleep_session", { project, session }, machineOf(session));
+    await callEngine<void>("sleep_session", { project, session }, machineOf(session));
   }
   return { sleepSession };
 }

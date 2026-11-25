@@ -10,5 +10,4 @@ export {
   ORIGEN_BUNDLE,
   type Dependency,
   type EnvReport,
-  type Preparacion,
 } from "../../../../ui/src/lib/bundled";

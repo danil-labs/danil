@@ -10,10 +10,10 @@ import { isDeferrable } from "@terminus/computers";
 import { Fleet, type Link, type MachineInfo, classOf } from "@terminus/fleet";
 import "../helpers/catalog.ts";
 import { withoutAbout } from "../../src/lib/taskMentions.ts";
-import { createRouter, unconfirmedOpen } from "../../src/features/machines/router.ts";
-import type { EngineWorkspace } from "../../src/features/machines/engine-workspaces.ts";
-import { notHere, silent } from "../../src/features/settings/github-account/failures.ts";
-import { runsWorkspace } from "../../src/features/machines/runs-workspace.ts";
+import { createRouter, unconfirmedOpen } from "../../../../packages/features/machines/src/queries/router.ts";
+import type { EngineWorkspace } from "../../../../packages/features/machines/src/queries/engine-workspaces.ts";
+import { notHere, silent } from "../../../../packages/features/settings/src/model/github-account-failures.ts";
+import { runsWorkspace } from "../../../../packages/features/machines/src/model/runs-workspace.ts";
 
 type Args = Record<string, unknown>;
 type Call = { command: string; args: Args; workspace: string | null; id: string };
@@ -686,7 +686,7 @@ test("the router does not judge an MCP block: a link that is not the relay (a WS
   await other.router.handle("list_workspaces");
   await assert.rejects(other.router.handle("add_mcp_servers", { bloque: plain }, on("cmp_vm")), (e: { detail: string; what: string }) => {
     assert.equal(e.detail, "mcp_values_over_relay");
-    assert.ok(e.what.includes("${secret:env/*/"), "the catalog phrase, with the marker");
+    assert.ok(e.what.includes("env") && !e.what.includes("${secret:env/*/"), "the catalog phrase, without retired env secret marker");
     return true;
   });
 });
@@ -1014,7 +1014,7 @@ test("a slow machine with a new open tab delays the list at most FRESH_WAIT and 
 
 test("remote GitHub account status distinguishes absent command from real authorization failure", async () => {
   // Un `Failure` de allá sin código propio llega como `command_failed`: igual que un Worker que no
-  // contesta. Se calla y queda la conexión local (decisión de Alberto, 2026-11-18).
+  // contesta. Se calla y queda la conexión local.
   for (const [failure, absent, code = "command_failed"] of [
     [{ what: { clave: "shell.service.command" }, detail: "github_account_status" }, true],
     [{ what: { clave: "providers.github.error.expired" }, detail: "private-sentinel" }, true],
@@ -1048,3 +1048,31 @@ test("regression: on the web a workspace of the personal machine is created ther
   assert.equal(router.createsOn("mine")?.machine, "cmp_vm", "the composer proposes the machine that has it");
   assert.equal(router.createsOn("ws_acme")?.machine, "cmp_org", "and the organization's workspace goes to its server");
 });
+
+test("local open tab changes keep remote list_live_sessions throttled and identical cached->ok refreshes do not re-notify", async () => {
+  const vm = fakeLink({ list_live_sessions: [row("r1")] });
+  const { router, fleet, changes } = setup({ cmp_vm: vm });
+  await router.handle("list_workspaces");
+  await fleet.read({ machine: "cmp_vm", workspace: "w", command: "list_live_sessions", args: { project: "p1", open: [] } });
+  const callsAfterWarmup = vm.calls.filter((c) => c.command === "list_live_sessions").length;
+
+  await router.handle("list_live_sessions", { project: "p1", open: ["local_a"] });
+  await sleep(20);
+  const callsAfterFirst = vm.calls.filter((c) => c.command === "list_live_sessions").length;
+  assert.equal(callsAfterFirst, callsAfterWarmup + 1, "first background refresh runs once");
+
+  // Changing only local open tabs keeps the same remote argsFor(cmp_vm) -> stays within REFRESH_GAP.
+  await router.handle("list_live_sessions", { project: "p1", open: ["local_b"] });
+  await router.handle("list_live_sessions", { project: "p1", open: ["local_c"] });
+  await sleep(20);
+  assert.equal(vm.calls.filter((c) => c.command === "list_live_sessions").length, callsAfterFirst, "local tab changes do not bypass REFRESH_GAP");
+
+  // Switching to a known remote open tab misses peek (returns cached previous slice) and refreshes behind;
+  // identical rows coming back as status ok must not notify sessions again.
+  changes.length = 0;
+  await router.handle("list_live_sessions", { project: "p1", open: ["cmp_vm~r1"] });
+  await sleep(250);
+  assert.ok(!changes.flat().includes("sessions"), "identical cached->ok remote slice does not trigger a full session refresh");
+  router.close();
+});
+

@@ -1,7 +1,7 @@
 import LogOut from "lucide-solid/icons/log-out";
 import { createSignal, For, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { t } from "../../../ui/src/lib/i18n";
+import { cn } from "../../../ui/src/lib/utils";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import { emptySessionEmails } from "./empty-session-emails";
 import { confirmEmailClose, emailContextCount } from "./session-close-confirm";

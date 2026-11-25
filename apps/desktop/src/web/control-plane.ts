@@ -1,11 +1,9 @@
 /** Lo común de las fuentes web del plano de control. */
 import { platformFetch } from "../../../../packages/platform-client/src/client.ts";
-
 export type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 /** A refused call, shaped like an engine failure so the panel words it the same way. */
 export const refused = (code: string) => Object.assign(new Error(code), { detail: code });
-
 /** La llamada con la sesión; un 401 avisa y la respuesta sigue a quien llamó. */
 export function sessionCall(getToken: () => string | Promise<string>, onUnauthorized: (() => void) | undefined, f: Fetch = (input, init) => platformFetch(input, init)) {
   return async (url: string, init: RequestInit = {}): Promise<Response> => {

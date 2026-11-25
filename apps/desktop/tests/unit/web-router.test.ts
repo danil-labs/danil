@@ -10,9 +10,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { INTENT_COMMANDS, type MachineState, startedOf } from "@terminus/computers";
 import { Fleet, type Link, type MachineInfo } from "@terminus/fleet";
-import { delegatedOf, flattenTasks } from "@terminus/tasks";
+import { delegatedOf, flattenTasks } from "../../../../packages/ui/src/lib/tasks/index.ts";
 import "../helpers/catalog.ts";
-import { createRouter } from "../../src/features/machines/router.ts";
+import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
 
 type Args = Record<string, unknown>;
 type Call = { command: string; args: Args; workspace: string | null };

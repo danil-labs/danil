@@ -1,5 +1,5 @@
 import { splitProps, type JSX } from "solid-js";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { cn } from "./lib/utils";
 
 /**
  * La superficie de terminal, la segunda capa de color
@@ -8,12 +8,12 @@ import { cn } from "../../../apps/desktop/src/lib/utils";
  */
 /* Las mismas formas como cadena, para donde el elemento no cabe: dentro de un
    `<button>` no se anida un `div` ni un `pre`. Patrón de `ITEM_DE_MENU`. */
-export const SUPERFICIE_DE_TERMINAL =
+const SUPERFICIE_DE_TERMINAL =
   "grid min-h-0 min-w-0 overflow-hidden rounded-md bg-terminal text-terminal-text";
 export const BARRA_DE_TERMINAL =
   "flex items-center gap-3 bg-terminal-bar px-3 py-2 text-xs text-terminal-muted";
-export const NOMBRE_DE_TERMINAL = "font-medium text-terminal-text";
-export const CUERPO_DE_TERMINAL =
+const NOMBRE_DE_TERMINAL = "font-medium text-terminal-text";
+const CUERPO_DE_TERMINAL =
   "m-0 min-h-0 overflow-auto p-3 font-mono text-xs leading-5 break-words whitespace-pre-wrap outline-none";
 
 export function Terminal(props: JSX.HTMLAttributes<HTMLDivElement>) {

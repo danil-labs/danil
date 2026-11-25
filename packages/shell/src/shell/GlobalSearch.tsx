@@ -4,11 +4,12 @@ import Plus from "lucide-solid/icons/plus";
 import Search from "lucide-solid/icons/search";
 import SquarePen from "lucide-solid/icons/square-pen";
 import { createEffect, createMemo, createResource, createSignal, For, type JSX, on, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
-import type { Project } from "../../../../apps/desktop/src/lib/model";
-import { type Space, type SpaceRef, spaceName } from "../../../../apps/desktop/src/lib/spaces";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { t } from "../../../ui/src/lib/i18n";
+import { isNoMachines } from "../../../host/src/platform";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
+import type { Project } from "../../../ui/src/lib/model";
+import { type Space, type SpaceRef, spaceName } from "../../../ui/src/lib/spaces";
+import { cn } from "../../../ui/src/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
 import { asFailure, FailureNote } from "../../../ui/src/Failure";
 import { Input } from "../../../ui/src/Input";
@@ -16,7 +17,7 @@ import type { SessionRow } from "../../../features/projects/src/screens/Sessions
 import { matchesTaskQuery } from "../../../features/projects/src/model/taskSearch";
 import { Pressable } from "../../../ui/src/Pressable";
 
-export type SearchFilter = "all" | "tasks" | "archived" | "folders" | "actions";
+import type { SearchFilter } from "../../../ui/src/lib/search-filter.ts"; export type { SearchFilter };
 type Group = Exclude<SearchFilter, "all">;
 
 
@@ -72,7 +73,9 @@ function Panel(props: Parameters<typeof GlobalSearch>[0] & { initial: SearchFilt
   const [text, setText] = createSignal("");
   const [filter, setFilter] = createSignal<SearchFilter>(props.initial);
   const [active, setActive] = createSignal(0);
-  const [archived] = createResource(() => invoke<Archivadas>("archived_tasks"));
+  const [archived] = createResource(isNoMachines, (noMachines) =>
+    noMachines ? Promise.resolve<Archivadas>({ tasks: [], spaces: [] }) : callShellViewEngine<Archivadas>("archived_tasks"),
+  );
   const query = () => text().trim();
   // Leer un recurso fallido lanza: un fallo de Archivadas no apaga los demás grupos.
   const archivadas = () => (archived.error ? undefined : archived());

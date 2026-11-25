@@ -1,12 +1,13 @@
 import { createSignal, lazy, onMount, Show, Suspense } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { capabilities } from "../../../../host/src/platform";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote, asFailure, prosaDe } from "../../../../ui/src/Failure";
 import { crearConexiones } from "../queries/connect-store";
-import { Comprobacion, MapaDeConexiones, PanelDeIA } from "../components/ConnectAI";
+import { Comprobacion, MapaDeConexiones, PanelDeIA } from "./ConnectAI";
 import { accountWelcomeAnswered } from "../model/account-welcome";
 import { entrarAlWorkspaceFree } from "../queries/onboarding-store";
+import type { ControlesDeVentanaDelShell, SellarWorkspaceFree } from "../model/shell-port";
 import Personalizar from "./Personalize";
 import { CabeceraDelAlta } from "../components/Phases";
 import { Escenario, TituloCambiante } from "../components/Stage";
@@ -18,10 +19,10 @@ import { Escenario, TituloCambiante } from "../components/Stage";
  * Free; nunca crea uno local (plan de cuentas F1.2).
  */
 // Una computadora gestionada llega preparada y con sus asistentes: en el navegador el alta es otra.
-const AltaGestionada = lazy(() => import("../../../../../apps/desktop/src/web/Onboarding"));
+const AltaGestionada = lazy(() => import("./WebOnboarding"));
 const ConectarCuenta = lazy(() => import("./ConnectAccount"));
 
-type Props = { onListo: () => void };
+type Props = { onListo: () => void; sealFirstFreeWorkspace: SellarWorkspaceFree; ControlesDeVentana: ControlesDeVentanaDelShell };
 
 /** La primera alta de esta computadora pide antes la sesión de Danil. */
 export default function Onboarding(props: Props) {
@@ -33,7 +34,7 @@ export default function Onboarding(props: Props) {
       when={respondida()}
       fallback={
         <div class="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg">
-          <CabeceraDelAlta fase={0} />
+          <CabeceraDelAlta fase={0} ControlesDeVentana={props.ControlesDeVentana} />
           <Suspense fallback={null}>
             <ConectarCuenta
               onListo={() => setRespondida(true)}
@@ -59,7 +60,11 @@ function AltaConSesion(props: Props & { tomado: { id: string; nombre: string } |
       if (props.tomado) {
         setWorkspace(props.tomado);
       } else {
-        const w = await entrarAlWorkspaceFree();
+        const w = await entrarAlWorkspaceFree(props.sealFirstFreeWorkspace);
+        if (!w) {
+          props.onListo();
+          return;
+        }
         setWorkspace(w);
         props.onWorkspace(w);
       }
@@ -74,7 +79,7 @@ function AltaConSesion(props: Props & { tomado: { id: string; nombre: string } |
 
   return (
     <div class="flex min-h-0 flex-1 flex-col overflow-hidden bg-bg">
-      <CabeceraDelAlta fase={paso() === "ia" ? 0 : 1} />
+      <CabeceraDelAlta fase={paso() === "ia" ? 0 : 1} ControlesDeVentana={props.ControlesDeVentana} />
       <Show
         when={paso() === "personalizar"}
         fallback={

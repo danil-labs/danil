@@ -1,15 +1,15 @@
-import type { OrganizationSelection, OrganizationState } from "@terminus/computers";
+import type { OrganizationSelection, OrganizationState } from "../../../platform-client/src/organizations.ts";
 import Check from "lucide-solid/icons/check";
 import { createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../apps/desktop/src/lib/utils";
+import { t } from "../../../ui/src/lib/i18n";
+import { cn } from "../../../ui/src/lib/utils";
 import { ITEM_DE_MENU } from "../../../ui/src/Popover";
 import { organizationMenuReady } from "./organization-menu-state";
 import { hasSessionGroups } from "./session-groups";
 import { Pressable } from "../../../ui/src/Pressable";
 
 /** Lo mismo que un `createSignal` sobre el store, sin que el store dependa de Solid. */
-export function useOrganizations(selection: OrganizationSelection) {
+function useOrganizations(selection: OrganizationSelection) {
   const [state, setState] = createSignal<OrganizationState>(selection.state());
   const [needed, setNeeded] = createSignal(selection.needed());
   onCleanup(selection.subscribe(() => {

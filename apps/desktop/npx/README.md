@@ -8,7 +8,7 @@ npx @danil-labs/terminus
 
 Es un canal de distribución para desarrolladores —que ya tienen Node— adicional
 a los instaladores que se bajan a mano desde [danil.ai/download](https://danil.ai/download/).
-Funciona en Windows, macOS (Apple Silicon e Intel) y Linux x86_64.
+Funciona en Windows x64, macOS (Apple Silicon) y Linux x86_64.
 
 Este paquete instala la app; su único bin `danil-terminus` es el
 instalador de escritorio. `danil` y `dn` se configuran por separado; consulta la
@@ -18,8 +18,9 @@ descarga conservan compatibilidad con las instalaciones existentes.
 ## Qué hace
 
 1. Detecta tu sistema operativo y arquitectura (`process.platform` / `process.arch`).
-2. Lee `latest.json` de la última release pública de
-   [`danil-labs/danil`](https://github.com/danil-labs/danil/releases/latest)
+2. Lee `latest-<target>.json` (`latest-darwin.json`, `latest-windows.json` o
+   `latest-linux.json`) de la release puntero pública `updater-stable` en
+   [`danil-labs/danil`](https://github.com/danil-labs/danil/releases/tag/updater-stable)
    (repo público, sin autenticación) y resuelve el instalador de tu plataforma.
 3. Descarga el instalador a una carpeta temporal, con barra de progreso.
 4. **Verifica su firma antes de ejecutar ni copiar nada.** Si la verificación
@@ -30,11 +31,10 @@ descarga conservan compatibilidad con las instalaciones existentes.
    `~/Applications/Terminus.AppImage`, ejecutable. A partir de ahí, la app se
    actualiza sola.
 
-El comando selecciona Windows x64, Mac Apple Silicon, Mac Intel o Linux x86_64
-según la entrada disponible en `latest.json`. El workflow universal asigna el
-mismo archivo y firma a `darwin-aarch64` y `darwin-x86_64`. Si falta la entrada
-de una plataforma —por ejemplo, una release anterior a la que trajo Linux—,
-informa que no hay build y termina con error. No hace falta cambiar el comando.
+El comando selecciona Windows x64, Mac Apple Silicon o Linux x86_64 según la
+entrada disponible en el manifiesto de su SO (`windows-x86_64`, `darwin-aarch64` o
+`linux-x86_64`). En una plataforma no soportada —o si falta la entrada en una
+release anterior— informa y termina con error. No hace falta cambiar el comando.
 
 **En Linux** no hay instalador que ejecutar: el AppImage es un ejecutable
 portátil. Se copia a `~/Applications/Terminus.AppImage` (la misma ruta que usa

@@ -24,9 +24,12 @@ test("account return opens first, announces counts, retries errors and keeps can
   const { mountReturn } = await import(pathToFileURL(join(dir, "fixture.mjs")).href);
   const mounted = mountReturn(root); t.after(mounted.dispose);
   const doc = app.w.document;
-  const add = () => [...root.querySelectorAll("button")].find((b) => b.textContent === "Agregar cuenta u organización").click();
+  const add = () => {
+    root.querySelector("[data-add-workspace]").click();
+    doc.querySelector("[data-add-danil-step]").click();
+  };
   for (const detail of ["access_denied", "cancelled", "timeout"]) {
-    add(); assert.equal(mounted.closes(), mounted.starts());
+    add(); assert.equal(mounted.closes(), 1);
     mounted.fail(detail); await sleep(50);
     assert.ok(!doc.body.textContent.includes("No se pudo agregar la cuenta"));
     assert.ok(!doc.body.textContent.includes("Agregaste"));
@@ -60,6 +63,23 @@ test("account return opens first, announces counts, retries errors and keeps can
   assert.ok(!alert.textContent.includes("Intentar de nuevo"));
   assert.ok([...alert.querySelectorAll("p")].find((p) => p.textContent.startsWith("Llegaste al máximo de 20")).classList.contains("text-neutral-500"));
   limit.dispose(); root.replaceChildren();
+  const browserErr = mountReturn(root); t.after(browserErr.dispose);
+  add(); browserErr.fail("browser");
+  assert.ok(await until(() => doc.body.textContent.includes("No se pudo abrir el navegador para iniciar sesión.")));
+  const browserAlert = [...doc.querySelectorAll('[role="alert"]')].find((row) => row.textContent.includes("No se pudo abrir el navegador"));
+  assert.ok(browserAlert);
+  assert.ok(!browserAlert.textContent.includes("Revisa tu conexión"));
+  assert.ok(browserAlert.textContent.includes("Intentar de nuevo"));
+  browserErr.dispose(); root.replaceChildren();
+
+  const unavailableErr = mountReturn(root); t.after(unavailableErr.dispose);
+  add(); unavailableErr.fail("unavailable");
+  assert.ok(await until(() => doc.body.textContent.includes("Danil no responde ahora.")));
+  const unavailableAlert = [...doc.querySelectorAll('[role="alert"]')].find((row) => row.textContent.includes("Danil no responde ahora."));
+  assert.ok(unavailableAlert);
+  assert.ok(!unavailableAlert.textContent.includes("Revisa tu conexión"));
+  assert.ok(unavailableAlert.textContent.includes("Intentar de nuevo"));
+  unavailableErr.dispose(); root.replaceChildren();
   for (const [locale, names, expected] of [
     ["es", ["IYEM", "Danil"], "Agregaste IYEM y Danil"],
     ["es", ["IYEM", "Danil", "Acme"], "Agregaste IYEM, Danil y Acme"],
@@ -67,7 +87,7 @@ test("account return opens first, announces counts, retries errors and keeps can
     ["en", ["IYEM", "Danil", "Acme"], "You added IYEM, Danil, and Acme"],
   ]) {
     const flow = mountReturn(root, locale);
-    [...root.querySelectorAll("button")].find((b) => b.textContent === (locale === "es" ? "Agregar cuenta u organización" : "Add account or organization")).click();
+    add();
     flow.success(names);
     assert.ok(await until(() => doc.body.textContent.includes(expected)), expected);
     flow.dispose(); root.replaceChildren();

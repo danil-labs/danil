@@ -1,12 +1,12 @@
 import { Match, Show, Suspense, Switch, createResource, createSignal, lazy, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../engine-client/src/client";
+import { openFileExternalTarget, readHostFilePreview, readHostFileSize, readHostOfficePreview } from "../../host/src/file-preview.ts";
 import FileIcon from "lucide-solid/icons/file";
 import FileText from "lucide-solid/icons/file-text";
 import FileSpreadsheet from "lucide-solid/icons/file-spreadsheet";
 import Presentation from "lucide-solid/icons/presentation";
 import FileCode from "lucide-solid/icons/file-code";
-import { t } from "../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { t } from "./lib/i18n";
+import { cn } from "./lib/utils";
 import X from "lucide-solid/icons/x";
 import Navegador from "lucide-solid/icons/external-link";
 import PanelRight from "lucide-solid/icons/panel-right";
@@ -76,7 +76,7 @@ export function FilePreview(props: { path: string; alt?: string }) {
   const enSuMaquina = useFileMachine();
 
   const [bytes] = createResource(() =>
-    invoke<number>("file_size", { path: props.path }, enSuMaquina()).catch(() => null),
+    readHostFileSize(props.path, enSuMaquina()).catch(() => null),
   );
 
   onMount(() => {
@@ -95,9 +95,9 @@ export function FilePreview(props: { path: string; alt?: string }) {
   const [html] = createResource(
     () => esHtml && visible(),
     async () => {
-      const p = await invoke<{ kind: string; text: string | null; truncated: boolean }>(
-        "preview_file",
-        { path: props.path, rel: props.path },
+      const p = await readHostFilePreview<{ kind: string; text: string | null; truncated: boolean }>(
+        props.path,
+        props.path,
         enSuMaquina(),
       ).catch(() => null);
       return p && p.kind === "html" && !p.truncated && p.text ? p.text : null;
@@ -112,8 +112,8 @@ export function FilePreview(props: { path: string; alt?: string }) {
     try {
       const preview =
         ext === "pdf"
-          ? await invoke<{ pdf: string | null }>("preview_file", { path: props.path, rel: props.path }, enSuMaquina())
-          : await invoke<{ pdf: string | null }>("office_preview", { path: props.path }, enSuMaquina());
+          ? await readHostFilePreview<{ pdf: string | null }>(props.path, props.path, enSuMaquina())
+          : await readHostOfficePreview(props.path, enSuMaquina());
       if (!preview.pdf || !lienzo) throw new Error("sin_pdf");
       setPdf(preview.pdf);
       const { renderFirstPage } = await import("../../features/viewers/src/model/pdfThumb");
@@ -129,7 +129,7 @@ export function FilePreview(props: { path: string; alt?: string }) {
     setAbierta(false);
     window.dispatchEvent(new CustomEvent("harness:open-file", { detail: props.path }));
   };
-  const conSuApp = () => void invoke("open_file_external", { target: props.path }).catch(() => enPestana());
+  const conSuApp = () => void openFileExternalTarget(props.path).catch(() => enPestana());
   const abrir = () => {
     if (esHtml) return html() ? setAbierta(true) : enPestana();
     if (!conPagina || pagina() === "sin-office" || pagina() === "falla") return enPestana();

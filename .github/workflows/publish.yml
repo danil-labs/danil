@@ -1,5 +1,6 @@
-# Builds Danil (the desktop app) for macOS (universal), Windows and Linux from this repository,
-# signs it and publishes it as a GitHub release.
+# Builds Danil (the desktop app) for macOS (Apple Silicon), Windows and/or Linux
+# from this repository, signs the requested platform(s) and stages them as a
+# prerelease (`v<version>`) on GitHub Releases.
 #
 # **Who can run it.** Only a tag push (`v*`) or a manual `workflow_dispatch`,
 # and both require write access to this repository. It never runs for pull
@@ -7,53 +8,49 @@
 # this file skip every job (`github.repository` check) instead of failing on
 # missing secrets.
 #
-# ## El contrato con las dos cosas que consumen esto
+# ## El contrato por sistema operativo (`updater-stable`)
+#
+#   • **Cada release versionada (`v<versión>`) es inmutable y nace en staging**
+#     (`--prerelease --latest=false`). Puedes construir los tres SO (`platforms=all`)
+#     o uno solo (`platforms=macos`, `windows`, `linux`). Si `v<versión>` ya existe
+#     como prerelease de otro SO, este workflow sube únicamente los artefactos de
+#     la plataforma nueva con `gh release upload --clobber`, sin borrar ni pisar
+#     los de los demás SO.
 #
 #   • **La app instalada** pregunta por
-#     `releases/latest/download/latest.json` (`tauri.conf.json` → `plugins.updater`)
-#     y enseña el aviso de versión nueva abajo a la derecha. `releases/latest`
-#     resuelve a la última release **publicada** —ni borrador ni prerelease—.
-#     Una corrida normal publica con `--latest`: llega a todas las copias.
+#     `releases/download/updater-stable/latest-{{target}}.json`
+#     (`tauri.conf.json` → `plugins.updater`), donde `{{target}}` resuelve a
+#     `darwin`, `windows` o `linux`. Cada archivo vive en la release fija
+#     `updater-stable` (`--latest=false`) y apunta a los binarios inmutables en
+#     `releases/download/v<versión>/`.
 #
-#   • **Prerelease** (`-f prerelease=true`, solo a mano). La release sale con
-#     `--prerelease` y sin marca de latest: `releases/latest` sigue en la
-#     anterior, así que ni el updater ni la página la ven. Lleva los mismos
-#     archivos que una normal, `latest.json` y nombres estables incluidos. El
-#     tag lo crea la release sobre `sha` con el token del workflow, y eso no
-#     dispara otra corrida; empujar el tag `v*` a mano sí, y publicaría como
-#     latest. Se lanza desde la rama, sin tag:
+#   • **Promover o revertir un SO no recompila ni gasta firmas.** Se hace con
+#     `.github/workflows/promote-update.yml`:
 #
-#         gh workflow run publish.yml -R danil-labs/danil --ref main -f prerelease=true
+#         gh workflow run promote-update.yml -R danil-labs/danil -f version=0.3.5 -f platforms=macos
 #
-#     Pasarla a latest después de probar la actualización es una sola orden; no
-#     se reconstruye ni se resube nada, porque `latest.json` y los nombres
-#     estables ya están en la release y apuntan a `download/v<versión>`:
+#     Eso verifica la firma minisign de `v0.3.5` y actualiza solo
+#     `latest-darwin.json`, `Danil-macOS.dmg` y `Terminus-macOS.dmg` en
+#     `updater-stable`, sin tocar Windows ni Linux.
 #
-#         gh release edit v<versión> -R danil-labs/danil --prerelease=false --latest
+#   • **Compatibilidad con copias anteriores (`v0.3.2`).** Cuando se construyen
+#     las tres plataformas juntas (`platforms=all`), `release-manifest.mjs` emite
+#     además `latest.json` combinado para permitir una release puente explícita
+#     (`gh release edit v<versión> --prerelease=false --latest`). Una corrida
+#     parcial (un solo SO) nunca emite un `latest.json` a medias.
 #
-#     Y se comprueba como lo hace «Comprobar que la app lo ve»:
+#   • **danil.ai/download/** sirve `Danil-Windows-Setup.exe`, `Danil-macOS.dmg`
+#     y `Danil-Linux-x86_64.AppImage` (ver `apps/desktop/docs/download-urls.md`).
+#     Son **nombres estables sin versión dentro**: este workflow sube una copia
+#     con ese nombre además del archivo versionado, y `promote-update.yml` copia
+#     el de cada SO promovido a `updater-stable`. Las copias `Terminus-*` se
+#     mantienen durante la transición para enlaces viejos.
 #
-#         curl -fsSL https://github.com/danil-labs/danil/releases/latest/download/latest.json | jq .version
-#
-#   • **danil.ai/download/** sirve `Danil-Windows-Setup.exe`, `Danil-macOS.dmg`,
-#     `Danil-macOS-Intel.dmg` y `Danil-Linux-x86_64.AppImage` redirigiendo a
-#     `releases/latest/download/<mismo nombre>` (ver
-#     `apps/desktop/docs/download-urls.md`). Es decir, a `releases/latest/download/Danil-Windows-Setup.exe`,
-#     `.../Danil-macOS.dmg`, `.../Danil-macOS-Intel.dmg` y
-#     `.../Danil-Linux-x86_64.AppImage`. Son **nombres estables sin versión
-#     dentro**: la página no se toca al publicar, y por eso este workflow sube
-#     una copia con ese nombre además del archivo versionado. Cambiarlos rompe
-#     el botón de descarga sin que nada avise. Desde la 0.3.0 la app se llama
-#     Danil; las copias `Terminus-*` se siguen subiendo durante la transición
-#     porque enlaces viejos (el README anterior, terminus.danil.ai mientras no
-#     redirija) apuntan a esos nombres en GitHub.
-#
-#   • **Las notas por idioma.** `latest.json` lleva `notes` (la nota en inglés,
-#     o en español si la versión no trae inglés: es el campo estándar del
-#     updater de Tauri) y, en la raíz, `notes_by_locale`: `{ "es": …, "en": … }`,
-#     para que la app muestre la del idioma de la persona. Y el cuerpo de la
-#     release de GitHub va bilingüe: primero inglés y después español, separados
-#     por una regla `---`.
+#   • **Las notas por idioma.** Cada `latest-<target>.json` lleva `notes` (la
+#     nota en inglés, o en español si la versión no trae inglés: es el campo
+#     estándar del updater de Tauri) y, en la raíz, `notes_by_locale`:
+#     `{ "es": …, "en": … }`. El cuerpo de la release de GitHub va bilingüe:
+#     inglés y después español, separados por una regla `---`.
 #
 # ## Firmar no es opcional, y no es una sola firma
 #
@@ -68,26 +65,36 @@
 name: publish
 
 on:
-  # A version tag publishes that version. The tag must match `tauri.conf.json`.
+  # A version tag stages all three platforms for that version. The tag must match `tauri.conf.json`.
   push:
     tags: ["v*"]
 
-  # By hand, from a maintainer:
+  # By hand, from a maintainer (staging per OS or all):
   #
-  #     gh workflow run publish.yml -R danil-labs/danil --ref v<version>
+  #     gh workflow run publish.yml -R danil-labs/danil --ref main -f platforms=macos
   #
   workflow_dispatch:
     inputs:
+      platforms:
+        description: "Plataformas a construir y subir a staging (v<versión>)"
+        type: choice
+        default: all
+        options:
+          - all
+          - macos
+          - windows
+          - linux
       rebuild:
-        description: "Volver a construir aunque la versión ya tenga release (la reemplaza)"
+        description: "Volver a construir las plataformas pedidas si aún no están promovidas en updater-stable"
         type: boolean
         default: false
       # Para probar un cambio a este archivo sin tocar lo publicado. Corre todo
-      # —build, firmas, pruebas, `latest.json`— y se detiene antes de crear la
-      # release: `publish` arma el manifiesto y lo deja como artefacto
-      # `dist-manifest`, pero no publica nada. Se lanza desde la rama del PR:
+      # —build, firmas, pruebas, manifiestos— y se detiene antes de crear o
+      # actualizar la release: `publish` arma los manifiestos y los deja como
+      # artefacto `dist-manifest`, pero no publica nada. Se lanza desde la rama
+      # del PR:
       #
-      #     gh workflow run publish.yml -R danil-labs/danil --ref <rama> -f dry_run=true
+      #     gh workflow run publish.yml -R danil-labs/danil --ref <rama> -f platforms=macos -f dry_run=true
       #
       # **Un ensayo no firma Windows.** El plan de eSigner cobra cada firma, y un
       # ensayo gastaba las de una release para un instalador que nadie baja. Sin
@@ -99,14 +106,9 @@ on:
         description: "Construir y comprobar sin publicar nada"
         type: boolean
         default: false
-      # Ver «Prerelease» arriba: el updater y la página no la ven hasta pasarla a latest.
-      prerelease:
-        description: "Publicar como prerelease, sin tocar releases/latest"
-        type: boolean
-        default: false
 
-# Dos corridas a la vez se pisarían creando el mismo tag. No se cancela la que
-# esté en curso: a mitad de un build cancelar deja el tag sin sus binarios.
+# Dos corridas a la vez se pisarían creando o subiendo al mismo tag. No se
+# cancela la que esté en curso: a mitad de un build cancelar deja el tag a medias.
 concurrency:
   group: publish
   cancel-in-progress: false
@@ -121,9 +123,10 @@ env:
 
   # ─── La identidad de la app, copiada aquí a propósito ───────────────────────
   #
-  # Estas tres cosas **no se pueden cambiar publicando**. Un cambio en cualquiera
-  # de ellas sale de un build que funciona, de un instalador que se ejecuta y de
-  # una corrida en verde — y rompe algo que nadie va a ver hasta semanas después:
+  # Estas cuatro cosas **no se pueden cambiar publicando**. Un cambio en
+  # cualquiera de ellas sale de un build que funciona, de un instalador que se
+  # ejecuta y de una corrida en verde — y rompe algo que nadie va a ver hasta
+  # semanas después:
   #
   #   • `PUBLIC_KEY` — la app instalada verifica lo que baja contra la llave
   #     que lleva **compilada dentro de su propio binario**. Una release firmada
@@ -132,6 +135,10 @@ env:
   #     llave son dos pasos y en este orden: primero una versión firmada con la
   #     llave VIEJA que ya lleve la NUEVA dentro, y solo después firmar con la
   #     nueva. Quien se salte esa versión puente reinstala a mano.
+  #
+  #   • `UPDATER_ENDPOINT` — la URL fija desde la que cada copia instalada busca
+  #     su manifiesto `latest-{{target}}.json`. Cambiarla por accidente deja a
+  #     esa versión mirando a otro lado.
   #
   #   • `IDENTIFIER` — es dónde viven los datos (sesiones, cuentas, consumo) y
   #     la llave del llavero. Cambiarlo no borra nada: deja los datos huérfanos y
@@ -148,12 +155,13 @@ env:
   # ya creen. Cambiarlas exige tocar este archivo, que es un PR que alguien lee —
   # en vez de un `tauri.conf.json` que se edita por otra razón.
   PUBLIC_KEY: dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5ODEzRDE1M0QwQ0RFQjgKUldTNDNndzlGVDJCT1hPSnp4ZzBIbkowOW9kVGFYb0YyRkZKZjNTT2N3eERXOXhuRi9UblY5d3EK
+  UPDATER_ENDPOINT: https://github.com/danil-labs/danil/releases/download/updater-stable/latest-{{target}}.json
   IDENTIFIER: ai.danil.terminus
   PRODUCT_NAME: Danil
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────────
-  # ¿Hay algo que publicar? Sale barato preguntarlo, y evita arrancar los runners de build.
+  # ¿Hay algo que construir? Sale barato preguntarlo, y evita arrancar runners.
   # ─────────────────────────────────────────────────────────────────────────────
   check:
     if: github.repository == 'danil-labs/danil'
@@ -167,12 +175,18 @@ jobs:
       sha: ${{ steps.compare.outputs.sha }}
       note_es: ${{ steps.compare.outputs.note_es }}
       note_en: ${{ steps.compare.outputs.note_en }}
+      platforms: ${{ steps.compare.outputs.platforms }}
+      matrix: ${{ steps.compare.outputs.matrix }}
     steps:
       - name: Traer la fuente
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
           fetch-depth: 1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
 
       # Lo que este paso protege no lo protege ninguna otra cosa: el build, el
       # instalador y la corrida salen todos en verde con la identidad cambiada.
@@ -196,6 +210,11 @@ jobs:
             "$(jq -r .plugins.updater.pubkey src-tauri/tauri.conf.json)" \
             "Publicar así deja varada en su versión, para siempre, a toda copia ya instalada. Se rota en dos pasos: primero una versión firmada con la llave vieja que lleve la nueva dentro."
 
+          compare_value "El endpoint del updater" \
+            "$UPDATER_ENDPOINT" \
+            "$(jq -r '.plugins.updater.endpoints[0] // ""' src-tauri/tauri.conf.json)" \
+            "Cambiar el endpoint rompe el canal updater-stable por SO para las copias nuevas."
+
           compare_value "El identificador del bundle" \
             "$IDENTIFIER" \
             "$(jq -r .identifier src-tauri/tauri.conf.json)" \
@@ -218,7 +237,7 @@ jobs:
             exit 1
           }
 
-          echo "Identidad intacta: misma llave, mismo identificador, mismo nombre."
+          echo "Identidad intacta: misma llave, mismo endpoint, mismo identificador, mismo nombre."
 
       # La ventana no trae motor: lo arranca desde el `danil-engine` empaquetado.
       # Publicar sin él deja a toda copia instalada con una ventana que no abre,
@@ -252,17 +271,17 @@ jobs:
         id: compare
         env:
           GH_TOKEN: ${{ github.token }}
+          PLATFORMS_INPUT: ${{ inputs.platforms || 'all' }}
           REBUILD: ${{ inputs.rebuild }}
           DRY_RUN: ${{ inputs.dry_run }}
-          PRERELEASE: ${{ inputs.prerelease }}
         run: |
           set -euo pipefail
 
           # La versión de la app la manda `tauri.conf.json`: es la que se compila
           # dentro del binario y la que el updater compara. `package.json` y
           # `Cargo.toml` la repiten y podrían desincronizarse, así que se
-          # comprueba que las tres digan lo mismo antes de publicar nada — una
-          # release cuyo binario dice otra versión que su `latest.json` deja a
+          # comprueba que las tres digan lo mismo antes de construir nada — una
+          # release cuyo binario dice otra versión que su manifiesto deja a
           # todo el mundo en bucle de actualizar.
           V=$(jq -r .version src-tauri/tauri.conf.json)
           VP=$(jq -r .version package.json)
@@ -276,10 +295,11 @@ jobs:
             exit 1
           fi
 
+          REQUESTED=$(node scripts/release-manifest.mjs platforms --platforms "$PLATFORMS_INPUT")
+
           # La nota es lo que lee una persona en la página de la release y en el
           # aviso de la app. Se revisa en el mismo PR que sube la versión. Hay una por
           # idioma: `release-notes/es.md` y `release-notes/en.md`.
-          #
           NOTE_ES=""
           NOTE_EN=""
           [ ! -f release-notes/es.md ] || NOTE_ES=$(cat release-notes/es.md)
@@ -300,34 +320,69 @@ jobs:
             echo "$DELIMITER"
           } >> "$GITHUB_OUTPUT"
 
-          # Rehacer como prerelease una versión que ya es latest la borraría, y
-          # `releases/latest` volvería a la anterior para todas las copias.
-          if [ "${PRERELEASE:-false}" = "true" ] \
-            && [ "$(gh release view "v$V" --repo "$GITHUB_REPOSITORY" --json isPrerelease -q .isPrerelease 2>/dev/null)" = "false" ]; then
-            echo "::error::v$V ya está publicada y no es prerelease. Una prerelease necesita una versión nueva."
+          # Una release ya marcada como final no se reescribe; crea una versión nueva.
+          if [ "${DRY_RUN:-false}" != "true" ] \
+            && [ "$(gh release view "v$V" --repo "$GITHUB_REPOSITORY" --json isPrerelease -q .isPrerelease 2>/dev/null || true)" = "false" ]; then
+            echo "::error::v$V ya está publicada como release final. Crea una versión nueva."
             exit 1
           fi
 
-          if [ "${DRY_RUN:-false}" = "true" ]; then
-            echo "Ensayo de v$V: se construye y se comprueba, no se publica."
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-          elif [ "${REBUILD:-false}" = "true" ]; then
-            echo "Se pidió rehacer v$V."
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
-          elif gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "v$V ya está publicada. No hay nada que hacer."
-            echo "should_build=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "v$V no está publicada. Se construye."
-            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          # Ninguna plataforma promovida en `updater-stable` puede reemplazarse in-place:
+          # cambiar sus bytes rompería la firma que ya leen las copias instaladas.
+          if [ "${DRY_RUN:-false}" != "true" ]; then
+            IFS=',' read -r -a req_arr <<< "$REQUESTED"
+            for plat in "${req_arr[@]}"; do
+              mf=$(node scripts/release-manifest.mjs manifest-files --platforms "$plat")
+              promoted_v=$(curl -fsSL "https://github.com/$GITHUB_REPOSITORY/releases/download/updater-stable/$mf" 2>/dev/null | jq -r '.version // ""' || true)
+              if [ "$promoted_v" = "$V" ]; then
+                echo "::error::v$V ya está promovida en updater-stable para $plat ($mf). No se reemplazan artefactos en producción; sube a una versión nueva."
+                exit 1
+              fi
+            done
           fi
 
+          if [ "${DRY_RUN:-false}" = "true" ]; then
+            TO_BUILD="$REQUESTED"
+            echo "Ensayo de v$V ($TO_BUILD): se construye y se comprueba, no se publica."
+          elif [ "${REBUILD:-false}" = "true" ]; then
+            TO_BUILD="$REQUESTED"
+            echo "Se pidió rehacer v$V para: $TO_BUILD."
+          else
+            existing_assets=$(gh release view "v$V" --repo "$GITHUB_REPOSITORY" --json assets -q '.assets[].name' 2>/dev/null || true)
+            missing=()
+            IFS=',' read -r -a req_arr <<< "$REQUESTED"
+            for plat in "${req_arr[@]}"; do
+              mf=$(node scripts/release-manifest.mjs manifest-files --platforms "$plat")
+              if printf '%s\n' "$existing_assets" | grep -qx "$mf"; then
+                echo "v$V ya tiene $mf staged ($plat); se omite (usa rebuild=true para rehacerla si no está promovida)."
+              else
+                missing+=("$plat")
+              fi
+            done
+            if [ "${#missing[@]}" -eq 0 ]; then
+              echo "v$V ya tiene todas las plataformas pedidas ($REQUESTED). No hay nada que construir."
+              echo "should_build=false" >> "$GITHUB_OUTPUT"
+              echo "platforms=" >> "$GITHUB_OUTPUT"
+              echo "matrix=[]" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            TO_BUILD=$(IFS=','; echo "${missing[*]}")
+            echo "Construyendo v$V para: $TO_BUILD."
+          fi
+
+          MATRIX=$(node scripts/release-manifest.mjs matrix --platforms "$TO_BUILD")
+          {
+            echo "should_build=true"
+            echo "platforms=$TO_BUILD"
+            echo "matrix=$MATRIX"
+          } >> "$GITHUB_OUTPUT"
+
   # ─────────────────────────────────────────────────────────────────────────────
-  # Un runner por plataforma. Cross-compilar Windows desde macOS no funciona —el
-  # target MSVC necesita el `link.exe` de Microsoft— así que no hay atajo. Linux
-  # se construye en Ubuntu 22.04 y no en la última: un AppImage lleva pegada la
-  # versión de glibc del runner donde se hizo, y solo corre en sistemas con esa
-  # versión o una posterior.
+  # Un runner por plataforma pedida. Cross-compilar Windows desde macOS no
+  # funciona —el target MSVC necesita el `link.exe` de Microsoft— así que no hay
+  # atajo. Linux se construye en Ubuntu 22.04 y no en la última: un AppImage
+  # lleva pegada la versión de glibc del runner donde se hizo, y solo corre en
+  # sistemas con esa versión o una posterior.
   # ─────────────────────────────────────────────────────────────────────────────
   build:
     needs: check
@@ -335,13 +390,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - so: windows-latest
-            name: windows
-          - so: macos-latest
-            name: macos
-          - so: ubuntu-22.04
-            name: linux
+        include: ${{ fromJson(needs.check.outputs.matrix) }}
     runs-on: ${{ matrix.so }}
     defaults:
       run:
@@ -365,7 +414,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
         with:
-          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # v2.8.1
         with:
@@ -383,8 +432,7 @@ jobs:
 
       # El motor fijado en `seldon-runtime.lock`, verificado por su SHA-256 y
       # copiado a `src-tauri/binaries/` para `bundle.externalBin`, que lo declara
-      # para las cuatro plataformas. En macOS también deja el universal (`lipo`
-      # de los dos) que pide `--target universal-apple-darwin`.
+      # para las tres plataformas.
       - name: Colocar el motor como sidecar
         shell: bash
         run: |
@@ -392,7 +440,7 @@ jobs:
           pnpm engine:sidecar
           case "${{ matrix.name }}" in
             windows) triples=(x86_64-pc-windows-msvc.exe) ;;
-            macos) triples=(aarch64-apple-darwin x86_64-apple-darwin universal-apple-darwin) ;;
+            macos) triples=(aarch64-apple-darwin) ;;
             linux) triples=(x86_64-unknown-linux-gnu) ;;
           esac
           expected=()
@@ -764,7 +812,7 @@ jobs:
           APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
         run: |
           python3 scripts/work-tools-macos.py --directory "$RUNNER_TEMP/work-tools-release/work-tools"
-          pnpm desktop:build --target universal-apple-darwin --config "$WORK_TOOLS_CONFIG"
+          pnpm desktop:build --target aarch64-apple-darwin --config "$WORK_TOOLS_CONFIG"
 
       # `tauri.linux.conf.json` vive en el repo del código y ajusta el bundle a
       # AppImage. Firma con la llave de minisign, como en las otras dos.
@@ -783,7 +831,7 @@ jobs:
           set -euo pipefail
           case "$RUNNER_OS" in
             macOS)
-              app=src-tauri/target/universal-apple-darwin/release/bundle/macos/Danil.app
+              app=src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Danil.app
               resources="$app/Contents/Resources/work-tools"
               engine="$app/Contents/MacOS/danil-engine"
               ;;
@@ -805,24 +853,23 @@ jobs:
           [ "$RUNNER_OS" != macOS ] || app_args=(--app "$app")
           python3 scripts/work-tools-runtime-smoke.py --engine "$engine" --resources "$(dirname "$resources")" --browser --clone "${app_args[@]}"
 
-      - name: Comprobar el bundle universal
+      - name: Comprobar el bundle arm64
         if: runner.os == 'macOS'
         run: |
           set -euo pipefail
-          APP=src-tauri/target/universal-apple-darwin/release/bundle/macos/Danil.app
-          lipo "$APP/Contents/MacOS/terminus" -verify_arch arm64 x86_64
-          # Las herramientas van en un árbol por arquitectura: cada uno con la suya.
+          APP=src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Danil.app
+          file -b "$APP/Contents/MacOS/terminus" | grep -q 'Mach-O 64-bit.*arm64'
           TOOLS="$APP/Contents/Resources/work-tools"
           while IFS= read -r f; do
-            file -b "$f" | grep -q 'Mach-O' || continue
-            lipo "$f" -verify_arch arm64 x86_64
+            info=$(file -b "$f")
+            echo "$info" | grep -q 'Mach-O' || continue
+            echo "$info" | grep -q 'arm64' || { echo "::error::$f no incluye arquitectura arm64: $info"; exit 1; }
           done < <(find "$APP" -type f -not -path "$TOOLS/*")
-          for pair in aarch64-apple-darwin:arm64 x86_64-apple-darwin:x86_64; do
-            while IFS= read -r f; do
-              file -b "$f" | grep -q 'Mach-O' || continue
-              lipo "$f" -verify_arch "${pair#*:}"
-            done < <(find "$TOOLS/${pair%%:*}" -type f)
-          done
+          while IFS= read -r f; do
+            info=$(file -b "$f")
+            echo "$info" | grep -q 'Mach-O' || continue
+            echo "$info" | grep -q 'arm64' || { echo "::error::$f no incluye arquitectura arm64: $info"; exit 1; }
+          done < <(find "$TOOLS/aarch64-apple-darwin" -type f)
 
       # Con `CI=true` Tauri arma el `.dmg` sin acomodar la ventana (`--skip-jenkins`)
       # y le pone al disco el ícono de la app: la gente abría la app desde el
@@ -836,7 +883,7 @@ jobs:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
           set -euo pipefail
-          B=src-tauri/target/universal-apple-darwin/release/bundle
+          B=src-tauri/target/aarch64-apple-darwin/release/bundle
           APP="$B/macos/Danil.app"
           DMG=$(find "$B" -type f -name '*.dmg' | head -1)
           [ -n "$DMG" ] || { echo "::error::No se construyó el .dmg."; exit 1; }
@@ -884,7 +931,7 @@ jobs:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
         run: |
           set -euo pipefail
-          DMG=$(find src-tauri/target/universal-apple-darwin/release/bundle -type f -name '*.dmg' | head -1)
+          DMG=$(find src-tauri/target/aarch64-apple-darwin/release/bundle -type f -name '*.dmg' | head -1)
           [ -n "$DMG" ] || { echo "::error::No se construyó el .dmg."; exit 1; }
           xcrun notarytool submit "$DMG"             --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER"             --wait
           xcrun stapler staple "$DMG"
@@ -893,7 +940,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           set -euo pipefail
-          B=src-tauri/target/universal-apple-darwin/release/bundle
+          B=src-tauri/target/aarch64-apple-darwin/release/bundle
           APP=$(find "$B" -name 'Danil.app' -type d | head -1)
           DMG=$(find "$B" -type f -name '*.dmg' | head -1)
           [ -n "$APP" ] || { echo "::error::No se construyó Danil.app."; exit 1; }
@@ -931,7 +978,7 @@ jobs:
           mkdir -p release-assets
           B=src-tauri/target/release/bundle
           if [ "${{ matrix.name }}" = "macos" ]; then
-            B=src-tauri/target/universal-apple-darwin/release/bundle
+            B=src-tauri/target/aarch64-apple-darwin/release/bundle
           fi
 
           require_file() {
@@ -958,9 +1005,9 @@ jobs:
           elif [ "${{ matrix.name }}" = "macos" ]; then
             require_file '*.app.tar.gz'     "Danil.app.tar.gz"
             require_file '*.app.tar.gz.sig' "Danil.app.tar.gz.sig"
-            require_file '*_universal.dmg'  "Danil_${V}_universal.dmg"
-            for name in Danil-macOS Danil-macOS-Intel Terminus-macOS Terminus-macOS-Intel; do
-              cp "release-assets/Danil_${V}_universal.dmg" "release-assets/$name.dmg"
+            require_file '*_aarch64.dmg'    "Danil_${V}_aarch64.dmg"
+            for name in Danil-macOS Terminus-macOS; do
+              cp "release-assets/Danil_${V}_aarch64.dmg" "release-assets/$name.dmg"
             done
           else
             # El AppImage es lo que el updater baja y lo que la página enlaza:
@@ -1065,16 +1112,16 @@ jobs:
           if-no-files-found: error
 
   # ─────────────────────────────────────────────────────────────────────────────
-  # Una sola release con Windows, macOS universal y Linux dentro, y el
-  # `latest.json` que la app consulta. Va en un job aparte porque **publicar
-  # media release es peor que no publicarla**: si macOS falla, aquí no se llega
-  # y Windows tampoco sale.
+  # Pruebas en máquina limpia por plataforma construida y publicación en staging
+  # (`v<versión>` como prerelease). Promover a `updater-stable` ocurre por SO en
+  # `.github/workflows/promote-update.yml`.
   # ─────────────────────────────────────────────────────────────────────────────
   test-macos:
     needs: [check, build]
+    if: ${{ always() && needs.check.result == 'success' && needs.build.result == 'success' && contains(format(',{0},', needs.check.outputs.platforms), ',macos,') }}
     strategy:
       matrix:
-        so: [macos-latest, macos-15-intel]
+        so: [macos-latest]
     runs-on: ${{ matrix.so }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -1088,16 +1135,16 @@ jobs:
         with:
           name: dist-macos
           path: release-assets
-      - name: Ejecutar el mismo universal en ambas arquitecturas
+      - name: Ejecutar el bundle en macOS Apple Silicon
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           tar xzf release-assets/Danil.app.tar.gz
-          lipo Danil.app/Contents/MacOS/terminus -verify_arch arm64 x86_64
+          file -b Danil.app/Contents/MacOS/terminus | grep -q 'Mach-O 64-bit.*arm64'
           codesign --verify --deep --strict Danil.app
           for engine in danil-engine seldon-runtime; do
-            lipo "Danil.app/Contents/MacOS/$engine" -verify_arch arm64 x86_64
+            file -b "Danil.app/Contents/MacOS/$engine" | grep -q 'Mach-O 64-bit.*arm64'
             codesign -dv "Danil.app/Contents/MacOS/$engine" 2>&1 | grep -qx 'Identifier=seldon-runtime' \
               || { echo "::error title=Motor con otro identificador::$engine no está firmado como seldon-runtime."; exit 1; }
           done
@@ -1116,6 +1163,7 @@ jobs:
   # depender de que FUSE funcione dentro del runner.
   test-linux:
     needs: [check, build]
+    if: ${{ always() && needs.check.result == 'success' && needs.build.result == 'success' && contains(format(',{0},', needs.check.outputs.platforms), ',linux,') }}
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -1159,212 +1207,150 @@ jobs:
 
   publish:
     needs: [check, build, test-macos, test-linux]
-    # En un ensayo también corre: arma el `latest.json` y lo deja como artefacto,
-    # pero los pasos que crean la release y la comprueban se saltan.
-    if: ${{ success() }}
+    # Cuando se construye un solo SO, los tests de los otros SO salen `skipped`.
+    # `!failure() && !cancelled()` garantiza que ningún fallo pase desapercibido.
+    if: >-
+      ${{ !failure() && !cancelled()
+          && needs.check.result == 'success'
+          && needs.check.outputs.should_build == 'true'
+          && needs.build.result == 'success'
+          && (needs.test-macos.result == 'success' || needs.test-macos.result == 'skipped')
+          && (needs.test-linux.result == 'success' || needs.test-linux.result == 'skipped') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: release-assets
           pattern: dist-*
           merge-multiple: true
 
-      # La firma no cubre solo los bytes: su comentario de confianza lleva el
-      # **nombre** del archivo que se firmó. Publicarlo con otro nombre deja una
-      # release que se instala en unos sitios y no en otros —el updater de Tauri
-      # mira los bytes, `npx` mira además el nombre y se niega— y eso no se ve
-      # aquí: se ve en la terminal de otro, tres canales más allá.
-      #
-      # Pasó con `Terminus.app.tar.gz`, renombrado a `Terminus_0.1.8_aarch64…`.
-      - name: Cada firma habla del archivo que se publica
-        id: verify-signature-names
-        run: |
-          set -euo pipefail
-          failed=0
-          for sig in release-assets/*.sig; do
-            file=$(basename "${sig%.sig}")
-            signed_name=$(base64 -d < "$sig" | grep -o 'file:[^[:space:]]*' | head -1 | cut -d: -f2-)
-            if [ "$signed_name" != "$file" ]; then
-              echo "::error title=Firma renombrada::$file lleva una firma que dice «$signed_name». Renombrar un artefacto firmado rompe la comprobación de nombre."
-              failed=1
-            else
-              echo "  $file ✓"
-            fi
-          done
-          [ "$failed" = 0 ]
-
-      - name: Armar latest.json
+      # Verifica que cada `.sig` habla del nombre exacto del archivo que se
+      # publica y genera `latest-<target>.json` para cada plataforma construida
+      # (y `latest.json` combinado solo cuando se construyeron las tres).
+      - name: Armar manifiestos por SO
         id: build-manifest
         env:
           V: ${{ needs.check.outputs.version }}
+          PLATFORMS: ${{ needs.check.outputs.platforms }}
           NOTE_ES: ${{ needs.check.outputs.note_es }}
           NOTE_EN: ${{ needs.check.outputs.note_en }}
         run: |
           set -euo pipefail
           ls -la release-assets
+          node apps/desktop/scripts/release-manifest.mjs build \
+            --assets-dir release-assets \
+            --version "$V" \
+            --repo "$GITHUB_REPOSITORY" \
+            --platforms "$PLATFORMS"
+          for f in release-assets/latest*.json; do
+            echo "=== $f ==="
+            cat "$f"
+          done
 
-          BASE="https://github.com/$GITHUB_REPOSITORY/releases/download/v$V"
-
-          # Las claves de plataforma las decide el plugin, no nosotros: la app
-          # busca **la suya** y, si no está, concluye que está al día. Sin ruido,
-          # sin error y sin actualizarse nunca — que es como estuvo `darwin` desde
-          # la primera release hasta hoy.
-          #
-          # `notes` es el campo estándar y lo lee el updater de Tauri: la nota
-          # en inglés, o en español si la versión no trae inglés. `notes_by_locale`
-          # es de la app, que elige la de su idioma y, si no está, cae a `notes`.
-          jq -n \
-            --arg v "$V" \
-            --arg notes_es "$NOTE_ES" \
-            --arg notes_en "$NOTE_EN" \
-            --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)" \
-            --arg win_sig "$(cat "release-assets/Danil_${V}_x64-setup.exe.sig")" \
-            --arg win_url "$BASE/Danil_${V}_x64-setup.exe" \
-            --arg mac_sig "$(cat "release-assets/Danil.app.tar.gz.sig")" \
-            --arg mac_url "$BASE/Danil.app.tar.gz" \
-            --arg linux_sig "$(cat "release-assets/Danil_${V}_amd64.AppImage.sig")" \
-            --arg linux_url "$BASE/Danil_${V}_amd64.AppImage" \
-            '{
-              version: $v,
-              notes: (if $notes_en != "" then $notes_en else $notes_es end),
-              notes_by_locale: { es: $notes_es, en: $notes_en },
-              pub_date: $pub_date,
-              platforms: {
-                "windows-x86_64": { signature: $win_sig, url: $win_url },
-                "darwin-aarch64": { signature: $mac_sig, url: $mac_url },
-                "darwin-x86_64": { signature: $mac_sig, url: $mac_url },
-                "linux-x86_64": { signature: $linux_sig, url: $linux_url }
-              }
-            }' > release-assets/latest.json
-
-          cat release-assets/latest.json
-
-      # En un ensayo no hay release donde mirarlo: el manifiesto se queda como
-      # artefacto, que es lo que se revisa para saber que salió bien armado.
+      # En un ensayo no hay release donde mirarlo: los manifiestos se quedan
+      # como artefacto para revisión.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: inputs.dry_run
         with:
           name: dist-manifest
-          path: release-assets/latest.json
+          path: release-assets/latest*.json
           if-no-files-found: error
 
-      # En un ensayo arma el cuerpo, escribe la orden que habría usado y para ahí.
-      - name: Publicar la release
+      # Sube los artefactos a la prerelease `v<versión>`. Si la prerelease ya
+      # existe (por otro SO), sube solo los archivos de esta corrida con
+      # `upload --clobber` sin borrar ni tocar los demás SO.
+      - name: Publicar en staging (prerelease)
         env:
           GH_TOKEN: ${{ github.token }}
           V: ${{ needs.check.outputs.version }}
+          PLATFORMS: ${{ needs.check.outputs.platforms }}
           NOTE_ES: ${{ needs.check.outputs.note_es }}
           NOTE_EN: ${{ needs.check.outputs.note_en }}
           SHA: ${{ needs.check.outputs.sha }}
           DRY_RUN: ${{ inputs.dry_run }}
-          PRERELEASE: ${{ inputs.prerelease }}
         run: |
           set -euo pipefail
 
-          # El cuerpo va bilingüe: primero inglés y después español, separados
-          # por una regla. Si la versión no trae nota en inglés (transición),
-          # la parte en inglés lleva una línea genérica en vez de la nota en
-          # español.
           [ -n "$NOTE_EN" ] || NOTE_EN="Improvements and fixes."
 
           # shellcheck disable=SC2016  # Los backticks son Markdown literal.
           BODY=$(
             printf '%s\n\n' "$NOTE_EN"
-            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · macOS Intel: `Danil-macOS-Intel.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
-            printf 'The two macOS files contain the same universal DMG. If you already have it installed there is nothing to download: the app notifies you on its own.\n\n'
+            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
+            printf 'If you already have it installed there is nothing to download: the app notifies you on its own.\n\n'
             printf 'Built from `%s` in run `%s`.\n\n---\n\n' "$SHA" "$GITHUB_RUN_ID"
             printf '%s\n\n' "$NOTE_ES"
-            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · macOS Intel: `Danil-macOS-Intel.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
-            printf 'Los dos archivos de macOS traen el mismo DMG universal. Quien ya la tenga instalada no necesita bajar nada: la app avisa sola.\n\n'
+            printf 'Windows: `Danil-Windows-Setup.exe` · macOS Apple Silicon: `Danil-macOS.dmg` · Linux x86_64: `Danil-Linux-x86_64.AppImage`\n\n'
+            printf 'Quien ya la tenga instalada no necesita bajar nada: la app avisa sola.\n\n'
             printf 'Construida desde `%s` en `%s`.\n' "$SHA" "$GITHUB_RUN_ID"
           )
 
-          # Rehacer una versión reemplaza la release entera. Borrarla y crearla de
-          # nuevo, y no `upload --clobber`, porque un asset que dejó de producirse
-          # se quedaría colgando de la anterior y el `latest.json` nuevo no lo
-          # menciona: un archivo que nadie referencia pero que la página sí
-          # enlaza por nombre estable.
-          # `--target`: sin tag previo, gh lo crearía sobre la rama por omisión.
-          # `--latest=false` explícito: sin él la marca la decide la API.
-          if [ "${PRERELEASE:-false}" = "true" ]; then
-            MODE=(--prerelease --latest=false)
-          else
-            MODE=(--latest)
-          fi
           ASSETS=(release-assets/*)
-          echo "gh release create v$V --repo $GITHUB_REPOSITORY --target $SHA --title v$V --notes <cuerpo> ${MODE[*]} ${ASSETS[*]}"
-          printf '### Release\n\n`gh release create v%s --target %s %s`\n' "$V" "$SHA" "${MODE[*]}" >> "$GITHUB_STEP_SUMMARY"
-
           if [ "${DRY_RUN:-false}" = "true" ]; then
-            echo "Ensayo: no se crea la release."
+            echo "Ensayo ($PLATFORMS): no se crea ni modifica v$V."
+            echo "Archivos listos: ${ASSETS[*]}"
+            printf '### Staging (dry-run)\n\nPlataformas: `%s` · Versión: `v%s`\n' "$PLATFORMS" "$V" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
           if gh release view "v$V" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Reemplazando v$V."
-            gh release delete "v$V" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag
+            echo "v$V ya existe en staging; subiendo artefactos de $PLATFORMS sin tocar otros SO."
+            gh release upload "v$V" --repo "$GITHUB_REPOSITORY" --clobber "${ASSETS[@]}"
+            printf '### Staging actualizado\n\n`gh release upload v%s --clobber` (%s)\n' "$V" "$PLATFORMS" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Creando prerelease v$V para $PLATFORMS."
+            gh release create "v$V" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$SHA" \
+              --title "v$V" \
+              --notes "$BODY" \
+              --prerelease \
+              --latest=false \
+              "${ASSETS[@]}"
+            printf '### Staging creado\n\n`gh release create v%s --target %s --prerelease --latest=false` (%s)\n' "$V" "$SHA" "$PLATFORMS" >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          gh release create "v$V" \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$SHA" \
-            --title "v$V" \
-            --notes "$BODY" \
-            "${MODE[@]}" \
-            "${ASSETS[@]}"
-
-      # Comprobar lo publicado desde fuera, por la misma URL que usan la app y la
-      # página. Que el paso anterior salga con 0 dice que GitHub aceptó los
-      # archivos; no dice que `releases/latest` resuelva a esta release ni que el
-      # `latest.json` que se sirve sea este. Es lo único que lo convierte en un
-      # hecho, y cuesta tres segundos.
-      - name: Comprobar que la app lo ve
-        if: ${{ !inputs.dry_run && !inputs.prerelease }}
-        env:
-          V: ${{ needs.check.outputs.version }}
-        run: |
-          set -euo pipefail
-          BASE="https://github.com/$GITHUB_REPOSITORY/releases/latest/download"
-
-          J=$(curl -fsSL "$BASE/latest.json")
-          echo "$J" | jq .
-
-          [ "$(echo "$J" | jq -r .version)" = "$V" ] \
-            || { echo "::error::releases/latest sirve otra versión"; exit 1; }
-          echo "$J" | jq -e '.notes_by_locale | has("es") and has("en")' >/dev/null \
-            || { echo "::error::latest.json se publicó sin notes_by_locale"; exit 1; }
-          for p in windows-x86_64 darwin-aarch64 darwin-x86_64 linux-x86_64; do
-            echo "$J" | jq -e --arg p "$p" '.platforms[$p].signature | length > 0' >/dev/null \
-              || { echo "::error::$p se publicó sin firma"; exit 1; }
-          done
-
-          # Todos los enlaces de descarga estables deben existir antes de dar
-          # esto por bueno.
-          for a in {Danil,Terminus}-Windows-Setup.exe {Danil,Terminus}-macOS.dmg {Danil,Terminus}-macOS-Intel.dmg {Danil,Terminus}-Linux-x86_64.AppImage; do
-            curl -fsSIL -o /dev/null "$BASE/$a" \
-              || { echo "::error::$a no se puede descargar — el botón de la página está roto"; exit 1; }
-          done
-
-          echo "v$V publicada, firmada para Windows, ambas arquitecturas de macOS y Linux x86_64, y descargable."
-
-      # Lo contrario: la prerelease tiene su `latest.json` y `releases/latest`
-      # sigue sirviendo otra versión a la app y a la página.
-      - name: Comprobar que la app no ve la prerelease
-        if: ${{ !inputs.dry_run && inputs.prerelease }}
+      # Comprobar desde fuera lo subido a `v<versión>` y que `releases/latest`
+      # sigue intacto (nadie recibe la actualización hasta correr `promote-update.yml`).
+      - name: Comprobar el staging en v<versión>
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
           V: ${{ needs.check.outputs.version }}
+          PLATFORMS: ${{ needs.check.outputs.platforms }}
         run: |
           set -euo pipefail
           [ "$(gh release view "v$V" --repo "$GITHUB_REPOSITORY" --json isPrerelease -q .isPrerelease)" = "true" ] \
             || { echo "::error::v$V no quedó como prerelease"; exit 1; }
-          J=$(curl -fsSL "https://github.com/$GITHUB_REPOSITORY/releases/download/v$V/latest.json")
-          [ "$(echo "$J" | jq -r .version)" = "$V" ] \
-            || { echo "::error::el latest.json de v$V no dice $V"; exit 1; }
-          LATEST=$(curl -fsSL "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/latest.json" | jq -r .version)
-          [ "$LATEST" != "$V" ] \
-            || { echo "::error::releases/latest ya sirve v$V: las copias instaladas la van a bajar"; exit 1; }
-          echo "v$V publicada como prerelease; releases/latest sigue en $LATEST."
+          [ "$(gh release view "v$V" --repo "$GITHUB_REPOSITORY" --json isLatest -q .isLatest)" = "false" ] \
+            || { echo "::error::v$V quedó marcada como Latest"; exit 1; }
+
+          BASE="https://github.com/$GITHUB_REPOSITORY/releases/download/v$V"
+          TMP=$(mktemp -d)
+          IFS=',' read -r -a built_arr <<< "$PLATFORMS"
+          for plat in "${built_arr[@]}"; do
+            mf=$(node apps/desktop/scripts/release-manifest.mjs manifest-files --platforms "$plat")
+            curl -fsSL "$BASE/$mf" -o "$TMP/$mf"
+            node apps/desktop/scripts/release-manifest.mjs verify \
+              --manifest "$TMP/$mf" \
+              --platform "$plat" \
+              --version "$V" \
+              --repo "$GITHUB_REPOSITORY"
+            while IFS= read -r stable; do
+              curl -fsSIL -o /dev/null "$BASE/$stable" \
+                || { echo "::error::$stable no responde en v$V"; exit 1; }
+            done < <(node apps/desktop/scripts/release-manifest.mjs stable-files --platforms "$plat")
+          done
+          rm -rf "$TMP"
+
+          echo "v$V lista en staging para: $PLATFORMS. Promueve por SO con promote-update.yml."

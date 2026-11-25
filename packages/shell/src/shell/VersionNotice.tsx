@@ -2,8 +2,8 @@ import { Show, createSignal, lazy, onCleanup, onMount } from "solid-js";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { Button } from "../../../ui/src/Button";
 import { Toast } from "../../../ui/src/Toast";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../engine-client/src/client.ts";
+import { t } from "../../../ui/src/lib/i18n";
+import { callShellViewEngine } from "../../../session/src/shell-view-queries.ts";
 import { waitingThen } from "./liveTurns";
 
 /** Elegir qué hacer con las tareas vivas solo hace falta con una versión lista: va aparte de la carga inicial. */
@@ -56,7 +56,7 @@ export default function AvisoDeVersion() {
   }
 
   function mirarInstalada() {
-    void invoke<boolean>("update_pending")
+    void callShellViewEngine<boolean>("update_pending")
       .then((si) => si && setInstalada(true))
       .catch(() => {});
   }
@@ -97,7 +97,7 @@ export default function AvisoDeVersion() {
       }
       setHay(reciente);
       // En Windows `downloadAndInstall` cierra la app; Rust instala sin cerrarla.
-      await invoke("update_install");
+      await callShellViewEngine("update_install");
       setEstado("listo");
     } catch {
       // Si falla la descarga, el aviso se queda: volver a intentarlo es del

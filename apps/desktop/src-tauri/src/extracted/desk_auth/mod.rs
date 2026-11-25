@@ -24,6 +24,8 @@ use tauri::Emitter;
 /// La única puerta: el borde `/v1`.
 const EDGE: &str = "https://edge.danil.ai";
 const LOGIN_WAIT: Duration = Duration::from_secs(600);
+const LOGIN_POLL: Duration = Duration::from_millis(250);
+const CANCEL_GRACE: Duration = Duration::from_secs(3);
 const KEYCHAIN_ACCOUNT: &str = "danil";
 
 /// `DANIL_EDGE_URL` cambia el borde solo en builds de depuración.
@@ -188,16 +190,20 @@ impl engine_session::Engine for WindowEngine<'_> {
     }
 }
 
-fn owner(app: &tauri::AppHandle) -> engine_session::Owner<WindowEngine<'_>> {
-    engine_session::owner(Some(WindowEngine(app)))
+fn owner_ready(app: &tauri::AppHandle) -> Result<engine_session::Owner<WindowEngine<'_>>, Value> {
+    match engine_session::resolve(super::proxy::engine_attached(app), Some(WindowEngine(app))) {
+        engine_session::Resolved::Engine(engine) => Ok(engine_session::Owner::Engine(engine)),
+        engine_session::Resolved::Desk => Ok(engine_session::Owner::Desk),
+        engine_session::Resolved::Waiting => Err(super::proxy::engine_down()),
+    }
 }
 
 #[tauri::command(async)]
-pub(super) fn danil_session_status(app: tauri::AppHandle) -> Value {
-    if let engine_session::Owner::Engine(engine) = owner(&app) {
-        return engine_session::status(&engine);
+pub(super) fn danil_session_status(app: tauri::AppHandle) -> Result<Value, Value> {
+    match owner_ready(&app)? {
+        engine_session::Owner::Engine(engine) => Ok(engine_session::status(&engine)),
+        engine_session::Owner::Desk => Ok(desk(&app).status()),
     }
-    desk(&app).status()
 }
 
 /// Abre el navegador del sistema en `identity`, espera la vuelta por loopback y
@@ -214,7 +220,7 @@ pub(super) fn danil_sign_in(
         return Err(coded("invalid_request"));
     }
     let add = mode.as_deref() == Some("add");
-    if let engine_session::Owner::Engine(engine) = owner(&app) {
+    if let engine_session::Owner::Engine(engine) = owner_ready(&app)? {
         return engine_sign_in(&app, &engine, add);
     }
     let d = desk(&app);
@@ -229,20 +235,31 @@ pub(super) fn danil_sign_in(
     let redirect_uri = pkce.redirect_uri();
     let url = d.authorize_url(&pkce.challenge, &pkce.state, &redirect_uri, add);
     let url = d.prepare_authorize(url, add).map_err(|fail| error(&fail))?;
-    let browser = login_browser::LoginBrowser::open(&app, url, add)?;
+    let mut browser = LiveBrowser::open(&app, url, add)?;
     let deadline = Instant::now() + LOGIN_WAIT;
+    let mut cancelled_at: Option<Instant> = None;
     let code = loop {
-        if browser.cancelled() || !d.is_signing_in(attempt) {
+        match pkce.poll().map_err(|_| coded("unavailable"))? {
+            Some(pkce::Returned::Code(code)) => break code,
+            Some(pkce::Returned::Denied(_)) => return Err(coded("access_denied")),
+            None => {}
+        }
+        if !d.is_signing_in(attempt) {
             return Err(coded("cancelled"));
+        }
+        if browser.failed() {
+            browser.fallback_to_system()?;
+            cancelled_at = None;
+        } else if browser.cancelled() {
+            let since = *cancelled_at.get_or_insert_with(Instant::now);
+            if since.elapsed() >= CANCEL_GRACE {
+                return Err(coded("cancelled"));
+            }
         }
         if Instant::now() > deadline {
             return Err(coded("timeout"));
         }
-        match pkce.poll().map_err(|_| coded("unavailable"))? {
-            Some(pkce::Returned::Code(code)) => break code,
-            Some(pkce::Returned::Denied(_)) => return Err(coded("access_denied")),
-            None => std::thread::sleep(Duration::from_millis(200)),
-        }
+        std::thread::sleep(Duration::from_millis(200));
     };
     drop(browser);
     let verifier = pkce.verifier.clone();
@@ -255,6 +272,88 @@ pub(super) fn danil_sign_in(
     Ok(value)
 }
 
+trait SignInBrowser {
+    fn cancelled(&self) -> bool;
+    fn failed(&self) -> bool;
+    fn fallback_to_system(&mut self) -> Result<(), Value>;
+}
+
+struct LiveBrowser {
+    browser: login_browser::LoginBrowser,
+    url: String,
+    fell_back: bool,
+}
+
+impl LiveBrowser {
+    fn open(app: &tauri::AppHandle, url: String, add: bool) -> Result<Self, Value> {
+        let browser = login_browser::LoginBrowser::open(app, url.clone(), add)?;
+        let fell_back = matches!(browser, login_browser::LoginBrowser::System);
+        Ok(Self {
+            browser,
+            url,
+            fell_back,
+        })
+    }
+}
+
+impl SignInBrowser for LiveBrowser {
+    fn cancelled(&self) -> bool {
+        self.browser.cancelled()
+    }
+    fn failed(&self) -> bool {
+        self.browser.failed()
+    }
+    fn fallback_to_system(&mut self) -> Result<(), Value> {
+        if self.fell_back {
+            return Err(coded("browser"));
+        }
+        self.fell_back = true;
+        log::warn!(
+            "desk_auth: sesión privada falló de forma asíncrona; cambiando al navegador del sistema"
+        );
+        let previous = std::mem::replace(&mut self.browser, login_browser::LoginBrowser::System);
+        drop(previous);
+        self.browser = login_browser::LoginBrowser::open_system(self.url.clone())?;
+        Ok(())
+    }
+}
+
+fn wait_engine_sign_in<E: engine_session::Engine, B: SignInBrowser>(
+    engine: &E,
+    browser: &mut B,
+    wait: Duration,
+    poll: Duration,
+    cancel_grace: Duration,
+) -> Result<Value, Value> {
+    let deadline = Instant::now() + wait;
+    let mut cancelled_at: Option<Instant> = None;
+    loop {
+        let value = engine_session::status(engine);
+        match engine_session::login_outcome(&value) {
+            Some(Ok(())) => return Ok(value),
+            Some(Err(fail)) => return Err(fail),
+            None => {}
+        }
+        if browser.failed() {
+            browser.fallback_to_system()?;
+            cancelled_at = None;
+        } else if browser.cancelled() {
+            let pending = value["login"]["state"].as_str() == Some("pending");
+            if !pending {
+                return Err(coded("cancelled"));
+            }
+            let since = *cancelled_at.get_or_insert_with(Instant::now);
+            if since.elapsed() >= cancel_grace {
+                return Err(coded("cancelled"));
+            }
+        }
+        if Instant::now() > deadline {
+            return Err(coded("timeout"));
+        }
+        std::thread::sleep(poll);
+    }
+}
+
 /// El motor da la liga y recibe la vuelta en su loopback; aquí solo se abre y se espera.
 fn engine_sign_in(
     app: &tauri::AppHandle,
@@ -262,25 +361,11 @@ fn engine_sign_in(
     add: bool,
 ) -> Result<Value, Value> {
     let url = engine_session::start_login(engine, add)?;
-    let browser = login_browser::LoginBrowser::open(app, url, add)?;
-    let deadline = Instant::now() + LOGIN_WAIT;
-    loop {
-        if browser.cancelled() {
-            return Err(coded("cancelled"));
-        }
-        if Instant::now() > deadline {
-            return Err(coded("timeout"));
-        }
-        let value = engine_session::status(engine);
-        match engine_session::login_outcome(&value) {
-            Some(Ok(())) => {
-                announce(app, &value);
-                return Ok(value);
-            }
-            Some(Err(fail)) => return Err(fail),
-            None => std::thread::sleep(Duration::from_millis(500)),
-        }
-    }
+    let mut browser = LiveBrowser::open(app, url, add)?;
+    let value = wait_engine_sign_in(engine, &mut browser, LOGIN_WAIT, LOGIN_POLL, CANCEL_GRACE)?;
+    drop(browser);
+    announce(app, &value);
+    Ok(value)
 }
 
 /// La dirección o el código que la persona pegó cuando la vuelta no llegó al loopback del
@@ -290,7 +375,7 @@ pub(super) fn danil_sign_in_complete(
     app: tauri::AppHandle,
     pasted: String,
 ) -> Result<Value, Value> {
-    let engine_session::Owner::Engine(engine) = owner(&app) else {
+    let engine_session::Owner::Engine(engine) = owner_ready(&app)? else {
         return Err(coded("not_available_yet"));
     };
     engine_session::complete_login(&engine, &pasted)?;
@@ -306,7 +391,7 @@ pub(super) fn danil_sign_out(
     family: Option<String>,
     context: Option<String>,
 ) -> Result<Value, Value> {
-    if let engine_session::Owner::Engine(engine) = owner(&app) {
+    if let engine_session::Owner::Engine(engine) = owner_ready(&app)? {
         let value = engine_session::sign_out(&engine, family.as_deref(), context.as_deref())?;
         announce(&app, &value);
         return Ok(value);
@@ -351,7 +436,7 @@ pub(super) fn danil_edge_fetch(
         }
         None => pkce::random(18).ok_or_else(|| coded("unavailable"))?,
     };
-    if let engine_session::Owner::Engine(engine) = owner(&app) {
+    if let engine_session::Owner::Engine(engine) = owner_ready(&app)? {
         return engine_session::fetch(
             &engine,
             &method,
@@ -407,5 +492,207 @@ fn forget_legacy_session(app: &tauri::AppHandle) {
     let service = format!("{}.agents-session", app.config().identifier);
     if let Ok(entry) = keyring::Entry::new(&service, "default") {
         let _ = entry.delete_credential();
+    }
+}
+
+#[cfg(test)]
+mod sign_in_tests {
+    use super::*;
+    use std::cell::RefCell;
+    use std::collections::VecDeque;
+
+    struct SequenceEngine {
+        replies: RefCell<VecDeque<Value>>,
+        last: Value,
+    }
+
+    impl SequenceEngine {
+        fn new(replies: Vec<Value>) -> Self {
+            let last = replies
+                .last()
+                .cloned()
+                .unwrap_or_else(|| json!({"state": "disconnected"}));
+            Self {
+                replies: RefCell::new(replies.into()),
+                last,
+            }
+        }
+    }
+
+    impl engine_session::Engine for SequenceEngine {
+        fn features(&self) -> Value {
+            json!([engine_session::FEATURE])
+        }
+        fn call(&self, _command: &str, _args: Value) -> Result<Value, Value> {
+            Ok(self
+                .replies
+                .borrow_mut()
+                .pop_front()
+                .unwrap_or_else(|| self.last.clone()))
+        }
+    }
+
+    struct FakeBrowser {
+        cancelled: bool,
+        failed: bool,
+        fallbacks: usize,
+        fallback_ok: bool,
+    }
+
+    impl SignInBrowser for FakeBrowser {
+        fn cancelled(&self) -> bool {
+            self.cancelled
+        }
+        fn failed(&self) -> bool {
+            self.failed
+        }
+        fn fallback_to_system(&mut self) -> Result<(), Value> {
+            self.fallbacks += 1;
+            if self.fallback_ok {
+                self.failed = false;
+                Ok(())
+            } else {
+                Err(coded("browser"))
+            }
+        }
+    }
+
+    #[test]
+    fn done_outcome_wins_even_if_browser_already_reported_cancelled() {
+        let engine = SequenceEngine::new(vec![json!({
+            "state": "connected",
+            "login": { "state": "done" }
+        })]);
+        let mut browser = FakeBrowser {
+            cancelled: true,
+            failed: false,
+            fallbacks: 0,
+            fallback_ok: true,
+        };
+        let result = wait_engine_sign_in(
+            &engine,
+            &mut browser,
+            Duration::from_secs(1),
+            Duration::from_millis(5),
+            Duration::from_millis(50),
+        );
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap()["state"], "connected");
+    }
+
+    #[test]
+    fn pending_login_completes_during_cancel_grace_window() {
+        let engine = SequenceEngine::new(vec![
+            json!({"state": "connected", "login": {"state": "pending"}}),
+            json!({"state": "connected", "login": {"state": "pending"}}),
+            json!({"state": "connected", "login": {"state": "done"}}),
+        ]);
+        let mut browser = FakeBrowser {
+            cancelled: true,
+            failed: false,
+            fallbacks: 0,
+            fallback_ok: true,
+        };
+        let result = wait_engine_sign_in(
+            &engine,
+            &mut browser,
+            Duration::from_secs(1),
+            Duration::from_millis(5),
+            Duration::from_millis(200),
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn pending_login_returns_cancelled_after_grace_expires() {
+        let engine = SequenceEngine::new(vec![json!({
+            "state": "connected",
+            "login": { "state": "pending" }
+        })]);
+        let mut browser = FakeBrowser {
+            cancelled: true,
+            failed: false,
+            fallbacks: 0,
+            fallback_ok: true,
+        };
+        let err = wait_engine_sign_in(
+            &engine,
+            &mut browser,
+            Duration::from_secs(1),
+            Duration::from_millis(5),
+            Duration::from_millis(25),
+        )
+        .unwrap_err();
+        assert_eq!(err["detail"], "cancelled");
+    }
+
+    #[test]
+    fn pending_login_surfaces_engine_error_during_cancel_grace() {
+        let engine = SequenceEngine::new(vec![
+            json!({"state": "connected", "login": {"state": "pending"}}),
+            json!({"state": "connected", "login": {"state": "error", "error": "too_many_contexts"}}),
+        ]);
+        let mut browser = FakeBrowser {
+            cancelled: true,
+            failed: false,
+            fallbacks: 0,
+            fallback_ok: true,
+        };
+        let err = wait_engine_sign_in(
+            &engine,
+            &mut browser,
+            Duration::from_secs(1),
+            Duration::from_millis(5),
+            Duration::from_millis(200),
+        )
+        .unwrap_err();
+        assert_eq!(err["detail"], "too_many_contexts");
+    }
+
+    #[test]
+    fn async_private_browser_failure_falls_back_once_and_completes() {
+        let engine = SequenceEngine::new(vec![
+            json!({"state": "connected", "login": {"state": "pending"}}),
+            json!({"state": "connected", "login": {"state": "done"}}),
+        ]);
+        let mut browser = FakeBrowser {
+            cancelled: false,
+            failed: true,
+            fallbacks: 0,
+            fallback_ok: true,
+        };
+        let result = wait_engine_sign_in(
+            &engine,
+            &mut browser,
+            Duration::from_secs(1),
+            Duration::from_millis(5),
+            Duration::from_millis(50),
+        );
+        assert!(result.is_ok());
+        assert_eq!(browser.fallbacks, 1);
+    }
+
+    #[test]
+    fn async_private_browser_failure_returns_browser_error_when_fallback_fails() {
+        let engine = SequenceEngine::new(vec![json!({
+            "state": "connected",
+            "login": { "state": "pending" }
+        })]);
+        let mut browser = FakeBrowser {
+            cancelled: false,
+            failed: true,
+            fallbacks: 0,
+            fallback_ok: false,
+        };
+        let err = wait_engine_sign_in(
+            &engine,
+            &mut browser,
+            Duration::from_secs(1),
+            Duration::from_millis(5),
+            Duration::from_millis(50),
+        )
+        .unwrap_err();
+        assert_eq!(err["detail"], "browser");
+        assert_eq!(browser.fallbacks, 1);
     }
 }

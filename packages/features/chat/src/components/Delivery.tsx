@@ -3,9 +3,9 @@ import { createRowSignal } from "../model/threadRow";
 import { Dynamic } from "solid-js/web";
 import FilePenLine from "lucide-solid/icons/file-pen-line";
 import FilePlus2 from "lucide-solid/icons/file-plus-2";
-import { peso } from "../../../../../apps/desktop/src/lib/format";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { peso } from "../../../../ui/src/lib/format";
+import { t } from "../../../../ui/src/lib/i18n";
+import { cn } from "../../../../ui/src/lib/utils";
 import { Pressable } from "../../../../ui/src/Pressable";
 
 /** Un artefacto que un turno dejó en la carpeta de trabajo, según `workspace/artifacts.rs`. */

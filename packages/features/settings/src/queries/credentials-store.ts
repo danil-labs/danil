@@ -14,25 +14,28 @@ import {
   type CredentialPut,
   type CredentialsListing,
   type CredentialSource,
-  canSeal,
   credentialHint,
+  credentialMachines,
   credentialsListingOf,
   deleteCredential,
   listCredentials,
   putCredential,
   removeCredentialMachine,
   restoreCredentialMachine,
-  sealForRecipients,
   sealRecipientsFor,
-} from "@terminus/computers";
+} from "../../../../platform-client/src/account-credentials.ts";
+import { canSeal, sealForRecipients } from "../../../../platform-client/src/seal.ts";
+export { credentialMachines };
 import { createRoot, createSignal } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { t } from "../../../../ui/src/lib/i18n";
+import { callEngine } from "../../../../engine-client/src/client.ts";
+import { isOwnMachine } from "../../../../host/src/machine";
 import { capabilities } from "../../../../host/src/platform";
 import { detalleDe, type Failure } from "../../../../ui/src/Failure";
+import type { MaquinasDeAjustes } from "../model/machines-port";
 import type { Startup } from "./workspaces-store";
 
-export type CredentialsView =
+type CredentialsView =
   | { kind: "loading" }
   /** El workspace no está en una cuenta de Danil, o el motor o el Worker no saben de credenciales. */
   | { kind: "none" }
@@ -54,7 +57,7 @@ export type CredentialsBackend = {
 };
 
 /** Una credencial por crear o rotar, sin el valor ni sus copias. */
-export type SealedDraft = Omit<CredentialPut, "hint" | "copies">;
+type SealedDraft = Omit<CredentialPut, "hint" | "copies">;
 
 /** Los códigos que el motor manda como `credentials.error.<código>` (el del Worker o uno propio), en palabras de la persona. */
 const ENGINE_CODES: Record<string, string> = {
@@ -62,11 +65,6 @@ const ENGINE_CODES: Record<string, string> = {
   unauthorized: "danil.credentials.failed.unauthorized",
   license_required: "danil.credentials.failed.license",
   invalid_recipient: "danil.credentials.failed.recipient",
-  env_secret_invalid_folder: "credentials.error.env_secret_invalid_folder",
-  env_secret_invalid_name: "credentials.error.env_secret_invalid_name",
-  env_secret_reserved: "credentials.error.env_secret_reserved",
-  env_secret_empty: "credentials.error.env_secret_empty",
-  env_secret_exists: "credentials.error.env_secret_exists",
   too_large: "credentials.error.too_large",
   storage: "credentials.error.storage",
   recipients_unsupported: "credentials.error.recipients_unsupported",
@@ -124,7 +122,6 @@ function workerBackend(source: CredentialSource): CredentialsBackend {
   async function sealAndPut(workspace: string, draft: SealedDraft, value: string, listing: CredentialsListing) {
     if (!(await canSeal())) throw { what: t("danil.credentials.rotate.no_webcrypto"), detail: "webcrypto_x25519" } satisfies Failure;
     const copies = await sealForRecipients(sealRecipientsFor(draft.kind, listing.recipients), workspace, draft.slot, value);
-    if (draft.kind === "env_secret" && !copies.length) throw { what: t("danil.secrets.no_recipients"), detail: "no_recipients" } satisfies Failure;
     await done(putCredential(source, workspace, { ...draft, hint: credentialHint(draft.kind, value), copies }));
   }
 }
@@ -134,17 +131,17 @@ const engineBackend: CredentialsBackend = {
   where: "engine",
   async list() {
     try {
-      return credentialsListingOf(await invoke<unknown>("account_credentials_list"));
+      return credentialsListingOf(await callEngine<unknown>("account_credentials_list"));
     } catch (e) {
       if (HIDDEN.test(JSON.stringify(e ?? null))) return null;
       throw e;
     }
   },
-  remove: async (_ws, credential) => void (await invoke("account_credential_delete", { credential })),
-  removeMachine: async (_ws, credential, computer) => void (await invoke("account_credential_remove_machine", { credential, computer })),
-  restoreMachine: async (_ws, credential, computer) => void (await invoke("account_credential_restore_machine", { credential, computer })),
+  remove: async (_ws, credential) => void (await callEngine("account_credential_delete", { credential })),
+  removeMachine: async (_ws, credential, computer) => void (await callEngine("account_credential_remove_machine", { credential, computer })),
+  restoreMachine: async (_ws, credential, computer) => void (await callEngine("account_credential_restore_machine", { credential, computer })),
   async upload(_ws, slots) {
-    const report = await invoke<{ uploaded?: string[]; failed?: { slot: string; error: string }[] } | null>("account_credentials_upload", { slots });
+    const report = await callEngine<{ uploaded?: string[]; failed?: { slot: string; error: string }[] } | null>("account_credentials_upload", { slots });
     const failed = report?.failed ?? [];
     if (failed.length) throw { what: { clave: failed[0]!.error }, detail: failed.map((f) => `${f.slot}: ${f.error}`).join("\n") };
   },
@@ -163,7 +160,7 @@ let readAt = 0;
 const FRESH_MS = 5_000;
 
 async function read(): Promise<void> {
-  const startup = await invoke<Startup>("list_workspaces").catch(() => null);
+  const startup = await callEngine<Startup>("list_workspaces").catch(() => null);
   const workspace = startup?.active ?? null;
   if (!workspace) {
     setView({ kind: "none" });
@@ -190,6 +187,12 @@ export function reloadCredentials(force = true): Promise<void> {
 }
 
 if (typeof window !== "undefined") window.addEventListener("harness:workspace", () => void reloadCredentials());
+
+/** Dónde corre el motor que contesta: esta máquina, salvo que el workspace viva en otra. */
+export function whereName({ machines, machineName }: MaquinasDeAjustes): string | null {
+  const lead = machines().find((m) => m.active);
+  return lead && !isOwnMachine(lead) ? machineName(lead.id, false) : null;
+}
 
 /** Corre una acción sobre la cuenta y vuelve a leer, haya salido bien o no. */
 export async function act(run: (backend: CredentialsBackend, workspace: string) => Promise<void>): Promise<Failure | null> {

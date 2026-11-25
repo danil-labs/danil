@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { sessionStorageScope, clearWebCaches } from '../../src/web/session-storage.ts';
+import { sessionStorageScope, clearWebCaches } from '../../../../packages/session/src/session-storage.ts';
 
 const memory = () => {
   const entries = new Map<string, string>();

@@ -1,14 +1,8 @@
 import { batch, createEffect, createSignal, on, untrack } from "solid-js";
 import { guardable, type Encolado } from "../../../../ui/src/lib/queue.ts";
-import { editMentions, type TaskMention } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
-export type QueueScope = { workspace: string | null; generation: number; session: string | null; project: string };
-type Saved = { project: string; items: Encolado[] };
-type Dependencies = {
-  scope: () => QueueScope;
-  readQueue: (scope: QueueScope & { session: string }) => Promise<Encolado[]>;
-  writeQueue: (scope: QueueScope & { session: string }, items: Encolado[]) => Promise<unknown>;
-  onSaveFailure: (error: unknown, scope: QueueScope & { session: string }) => void;
-};
+import { editMentions, type TaskMention } from "../../../../ui/src/lib/taskMentions.ts";
+import type { Saved, TaskQueuesDeps as Dependencies } from "../../../../ui/src/lib/queue.ts";
+import type { QueueScope } from "../model.ts"; export type { QueueScope };
 /** Owns the queue in hand and its per-task copies. Nothing here sends: the engine or the person does. */
 export function createTaskQueues(deps: Dependencies) {
   const [items, setItems] = createSignal<Encolado[]>([]);
@@ -16,7 +10,7 @@ export function createTaskQueues(deps: Dependencies) {
   const [editing, setEditing] = createSignal(false);
   const saved = new Map<string, Saved>();
   const writes = new Map<string, Promise<unknown>>();
-  let epoch = 0, readRevision = 0, disposed = false;
+  let epoch = 0, readRevision = 0, disposed = false, hydrating = false;
   const currentScope = () => untrack(deps.scope);
   const current = (scope: QueueScope) => {
     const now = currentScope();
@@ -36,13 +30,18 @@ export function createTaskQueues(deps: Dependencies) {
   }
   function write(scope: QueueScope & { session: string }, queued: Encolado[]) {
     if (disposed) return Promise.resolve();
-    return persist(scope, queued).catch(error => { if (current(scope)) deps.onSaveFailure(error, scope); });
+    const key = keyOf(scope);
+    const promise = persist(scope, queued);
+    return promise.catch(error => {
+      if (current(scope) && (!writes.has(key) || writes.get(key) === promise)) deps.onSaveFailure(error, scope);
+    });
   }
   createEffect(on([items, owner], ([queued, id], before) => {
     const scope = currentScope();
     if (disposed || !guardable(id, scope.session)) return;
     saved.set(id, { project: scope.project, items: queued });
-    if (before && before[0] === queued && queued.length === 0) return;
+    if (hydrating) return;
+    if (before && before[0].length === 0 && queued.length === 0) return;
     void write({ ...scope, session: id }, queued);
   }));
   async function openSession(session: string, project: string, isCurrent: () => boolean = () => true, fromEngine = false) {
@@ -55,7 +54,12 @@ export function createTaskQueues(deps: Dependencies) {
       const queued = cached?.items ?? await deps.readQueue(scope);
       if (!live() || (fromEngine && untrack(owner) === session && writes.has(keyOf(scope)))) return;
       const restored = fromEngine ? undefined : saved.get(session);
-      batch(() => { setItems(restored?.items ?? queued); setOwner(session); });
+      hydrating = true;
+      try {
+        batch(() => { setItems(restored?.items ?? queued); setOwner(session); });
+      } finally {
+        hydrating = false;
+      }
     } catch (error) {
       if (live()) setOwner(session);
       throw error;

@@ -2,16 +2,16 @@
  * «Solicita acceso a Danil»: lo que ve quien entra sin licencia (`license_required`).
  * El nuevo Danil se abre cuenta por cuenta: no hay prueba ni cobro aquí, solo la solicitud por correo.
  */
-import "../../../../../apps/desktop/src/locales/danilPhrases";
-import { ACCESS_CONTACT, accessMailto } from "@terminus/design";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import "../../../../ui/src/locales/danilPhrases";
+import { ACCESS_CONTACT, accessMailto } from "../../../../ui/src/index";
+import { t } from "../../../../ui/src/lib/i18n";
 import { openExternal } from "../queries/engine-open";
 import { Button } from "../../../../ui/src/Button";
 
 /** El código con que el plano de control (o el motor) dice que la cuenta no tiene Terminus. */
 export const LICENSE_REQUIRED = "license_required";
 
-export const accessRequestHref = () => accessMailto(t("danil.license.request_subject"));
+const accessRequestHref = () => accessMailto(t("danil.license.request_subject"));
 
 /** En la web, el cliente de correo del navegador. */
 export const requestAccessInPage = () => window.location.assign(accessRequestHref());

@@ -1,5 +1,5 @@
 import { type JSX, Match, Show, Switch } from "solid-js";
-import type { TaskSideMode } from "../../../../../apps/desktop/src/lib/taskFiles";
+import type { TaskSideMode } from "../../../../ui/src/lib/taskFiles";
 
 /** The files window frame. Search, usage and delegated tasks reuse it instead of a second box. */
 export function TaskSideShell(props: { mode: TaskSideMode; side: JSX.Element; children: JSX.Element }) {

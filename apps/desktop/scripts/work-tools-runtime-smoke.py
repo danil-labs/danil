@@ -30,11 +30,8 @@ def main():
     parser.add_argument("--resources", type=Path, required=True)
     parser.add_argument("--browser", action="store_true")
     parser.add_argument("--clone", action="store_true")
-    parser.add_argument("--architecture", choices=["arm64", "x86_64"])
     parser.add_argument("--app", type=Path, help="macOS: the .app whose strict signature must survive the run")
     args = parser.parse_args()
-    if args.architecture and platform.system() != "Darwin":
-        parser.error("--architecture requires macOS")
     engine, resources = args.engine.resolve(strict=True), args.resources.resolve(strict=True)
     spec = importlib.util.spec_from_file_location("smoke", Path(__file__).with_name("work-tools-smoke.py"))
     smoke = importlib.util.module_from_spec(spec)
@@ -50,8 +47,7 @@ def main():
                    XDG_CONFIG_HOME=str(home / "config"), XDG_DATA_HOME=str(home / "share"),
                    HARNESS_IGNORE_SYSTEM_GIT="1", HARNESS_IGNORE_SYSTEM_AGENTS="1", SELDON_PROJECTS_DIR=str(lab / "projects"))
         log = (lab / "engine.log").open("wb")
-        prefix = ["/usr/bin/arch", "-" + args.architecture] if args.architecture else []
-        process = subprocess.Popen(prefix + [str(engine), "--data-dir", str(data), "--resource-dir", str(resources),
+        process = subprocess.Popen([str(engine), "--data-dir", str(data), "--resource-dir", str(resources),
                                     "--identity", "ai.danil.seldon.dev"], env=env, stdout=log, stderr=log)
         try:
             endpoint = None
@@ -92,8 +88,6 @@ def main():
                 raise TimeoutError(command)
 
             target = smoke.native_target()
-            if args.architecture == "x86_64":
-                target = "x86_64-apple-darwin"
             directory = resources / "work-tools" / target
             manifest = smoke.tools.load_manifest(directory, target)
             workspace = invoke("add_workspace", {"name": "Package smoke"})["id"]
@@ -131,7 +125,7 @@ def main():
                 if not cloned or not cloned.get("project") or cloned.get("error"):
                     raise RuntimeError(f"Packaged Git could not clone over HTTPS: {cloned}")
             if args.browser:
-                print(json.dumps({"phase": "activate sandboxed browser", "architecture": args.architecture or platform.machine()}), flush=True)
+                print(json.dumps({"phase": "activate sandboxed browser", "architecture": platform.machine()}), flush=True)
                 invoke("install_tool", {"tool": "browser-navigation"}, workspace)
                 pin = json.loads((directory / "browser-navigation.json").read_text())["entry"]["executable"]
                 chrome = next((store / "browser-navigation").glob(f"versions/*/{pin}"), None)

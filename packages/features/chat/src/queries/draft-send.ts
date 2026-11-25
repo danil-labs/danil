@@ -1,7 +1,7 @@
-import { type OpcionDeModelo } from "../../../../../apps/desktop/src/lib/models";
-import { type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import { type OpcionDeModelo } from "../../../../ui/src/lib/models";
+import { type Tab } from "../../../../ui/src/lib/tabs.ts";
 import { createEffect, createSignal, on, type Accessor, type Setter } from "solid-js";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
@@ -14,7 +14,7 @@ export function createDraftSend(deps: DraftSendDeps) {
   const { activarPestana, cerrarPestanasYa, cierreSinGuardar, claveAbierta, pestanas, sessionId, setCierreSinGuardar } = deps;
   /** El cambio de CLI con el que se está a punto de mandar el siguiente turno. */
   const [traspasoPendiente, setTraspasoPendiente] = createSignal<
-    { clave: string; sesion: string; desde: string; opcion: OpcionDeModelo } | null
+    { clave: string; sesion: string; desde: string; desdeModelo: string | null; opcion: OpcionDeModelo } | null
   >(null);
   // Cambiar de tarea o de borrador cancela la confirmación: lo que se aplique
   // tiene que ser de la tarea que está delante.

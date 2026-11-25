@@ -1,4 +1,4 @@
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertLocalFileSrc } from "../../host/src/file-preview.ts";
 import Check from "lucide-solid/icons/check";
 import Copy from "lucide-solid/icons/copy";
 import TriangleAlert from "lucide-solid/icons/triangle-alert";
@@ -11,16 +11,16 @@ import {
   Show,
 } from "solid-js";
 import { copyText } from "../../host/src/clipboard";
-import { t } from "../../../apps/desktop/src/lib/i18n";
-import { imagenLocal } from "../../../apps/desktop/src/lib/links";
-import { cn } from "../../../apps/desktop/src/lib/utils";
+import { t } from "./lib/i18n";
+import { imagenLocal } from "./lib/chat/links";
+import { cn } from "./lib/utils";
 import { Button } from "./Button";
 import { prosaDe } from "./Failure";
 import { ITEM_DE_MENU } from "./Popover";
 
 export function fuenteLocal(src: unknown): string | null {
   const ruta = imagenLocal(src);
-  return ruta ? convertFileSrc(ruta, "terminus-image") || null : null;
+  return ruta ? convertLocalFileSrc(ruta, "terminus-image") || null : null;
 }
 
 // Solo la web lo usa: el escritorio pinta la imagen desde su disco.

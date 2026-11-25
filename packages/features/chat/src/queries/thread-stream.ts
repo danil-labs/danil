@@ -1,16 +1,16 @@
 
-import { lastRoster, rememberRoster } from "../../../../../apps/desktop/src/lib/handlerRoster";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { type MentionSources } from "../../../../../apps/desktop/src/lib/mentions";
-import { type HandlerDefinition, type HandlerList, type HandlerStatusRow } from "../../../../../apps/desktop/src/lib/model";
-import { type Project } from "../../../../../apps/desktop/src/lib/model.ts";
-import { recipientCandidatesOf, type RecipientCandidate } from "../../../../../apps/desktop/src/lib/recipients";
-import { type SenderTask } from "../../../../../apps/desktop/src/lib/recipients.ts";
-import { alHilo } from "../../../../../apps/desktop/src/lib/side-question";
-import { type PlaceCandidate, type TaskCandidate } from "../../../../../apps/desktop/src/lib/taskMentions";
-import { type TextEdit } from "../../../../../apps/desktop/src/lib/taskMentions.ts";
-import { type Ventana } from "../../../../../apps/desktop/src/lib/usage";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { lastRoster, rememberRoster } from "../../../../ui/src/lib/handlerRoster.ts";
+import { t } from "../../../../ui/src/lib/i18n";
+import { type MentionSources } from "../../../../ui/src/lib/mentions";
+import { type HandlerDefinition, type HandlerList, type HandlerStatusRow } from "../../../../ui/src/lib/model";
+import { type Project } from "../../../../ui/src/lib/model.ts";
+import { recipientCandidatesOf, type RecipientCandidate } from "../../../../ui/src/lib/recipients";
+import { type SenderTask } from "../../../../ui/src/lib/recipients.ts";
+import { alHilo } from "../../../../ui/src/lib/side-question";
+import { type PlaceCandidate, type TaskCandidate } from "../../../../ui/src/lib/taskMentions";
+import { type TextEdit } from "../../../../ui/src/lib/taskMentions.ts";
+import { type Ventana } from "../../../../ui/src/lib/usage";
+import { callEngine } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
 import { asFailure, prosaDe } from "../../../../ui/src/Failure";
 import { type Encolado } from "../components/MessageQueue";
@@ -21,25 +21,25 @@ import { type Session } from "../model/transcript.ts";
 import { type PermissionRequest } from "../screens/Chat";
 import { type ComandoQueNace, type TerminalLanzada } from "./sleepSession.ts";
 import { batch, createEffect, createMemo, createResource, createSignal, on, onCleanup, type Accessor } from "solid-js";
-import type { ConversationScope, MachineWait, SessionRow, createConversationHandoff, createEngineQueue, createTaskQueues, createThreadsStore, createWorkspaceStore, machines, watchProfiles } from "./types.js";
-import type { createTabs } from "../../../../../apps/desktop/src/lib/tabs.ts";
+import type { ConversationScope, CreateConversationHandoff, CreateEngineQueue, CreateTaskQueues, MachineWait, MachinesPort, SessionRow, WatchProfilesPort, WorkspaceContextPort, createThreadsStore } from "./types.ts";
+import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createResync } from "./resync.ts";
 import type { createShellCommand } from "./shell-command.ts";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type ThreadStreamDeps = { apagadas: Accessor<Readonly<Record<string, string>>>; claveAbierta: () => string; createConversationHandoff: typeof createConversationHandoff;
-  createEngineQueue: typeof createEngineQueue; createTaskQueues: typeof createTaskQueues; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
+export type ThreadStreamDeps = { apagadas: Accessor<Readonly<Record<string, string>>>; claveAbierta: () => string; createConversationHandoff: CreateConversationHandoff;
+  createEngineQueue: CreateEngineQueue; createTaskQueues: CreateTaskQueues; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
   enviarFiltro: ReturnType<typeof createResync>["enviarFiltro"]; filaDe: (id: string) => SessionRow | undefined; input: () => string;
   leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; lifecycleRevision: number;
   loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; machineName: (id: string, local?: boolean) => string;
   machineOf: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; machineWaits: Accessor<Readonly<Record<string, MachineWait>>>;
-  machineWakes: (id: string) => boolean; machines: typeof machines; mandarElegido: ReturnType<typeof createShellCommand>["mandarElegido"];
+  machineWakes: (id: string) => boolean; machines: MachinesPort; mandarElegido: ReturnType<typeof createShellCommand>["mandarElegido"];
   opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; pestanas: ReturnType<typeof createTabs>;
   project: Accessor<string>; projectList: Accessor<Project[]>; reconcileActiveTurns: ReturnType<typeof createResync>["reconcileActiveTurns"]; sesiones: Accessor<Record<string, SessionRow[]>>;
   sessionId: Accessor<string | null>; setInput: (value: string, inputType?: string, change?: TextEdit) => void; tareaDelRiel: (id: string) => SenderTask | null;
-  threads: ReturnType<typeof createThreadsStore>; watchHandlerStatuses: (project: string) => () => HandlerStatusRow[]; watchProfiles: typeof watchProfiles; workspaceActivo: Accessor<string | null>;
-  workspaceContext: ReturnType<typeof createWorkspaceStore>; };
+  threads: ReturnType<typeof createThreadsStore>; watchHandlerStatuses: (project: string) => () => HandlerStatusRow[]; watchProfiles: WatchProfilesPort; workspaceActivo: Accessor<string | null>;
+  workspaceContext: WorkspaceContextPort; };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 1131–1449, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createThreadStream(deps: ThreadStreamDeps) {
@@ -133,12 +133,12 @@ export function createThreadStream(deps: ThreadStreamDeps) {
       setDesdeDeTurno((d) => (id in d || desde === undefined ? d : { ...d, [id]: desde }));
       threads.beginActivity(id, desdeDeTurno()[id] ?? null, startConfirmed);
     });
-  const marcarQuieta = (id: string) =>
+  const marcarQuieta = (id: string, outcome: "done" | "failed" | "interrupted" = "done") =>
     batch(() => {
       const workspace = workspaceActivo();
       if (workspace) liveThreads.delete(liveThreadKey(workspace, id));
       enviarFiltro();
-      threads.finishActivity(id);
+      threads.finishActivity(id, undefined, outcome);
       setVivas((v) => v.filter((x) => x !== id));
       setDesdeDeTurno((d) => {
         if (!(id in d)) return d;
@@ -200,12 +200,12 @@ export function createThreadStream(deps: ThreadStreamDeps) {
   // el material que la tarea lee.
   const [ventana, setVentana] = createSignal<Ventana>(null);
 
-  const { engineCanDispatch, resumeQueue, stopTurn, turnClosed, turnStarted } = createEngineQueue({ invoke, machines, machineOf, nativeWindow: () => capabilities().nativeWindow, notStoppableYet: (id) => threads.appendLive(id, [{ role: "system", text: t("shell.turn.not_stoppable_yet"), meta: "aviso" }]) });
+  const { engineCanDispatch, resumeQueue, stopTurn, turnClosed, turnStarted } = createEngineQueue({ invoke: callEngine, machines, machineOf, nativeWindow: () => capabilities().nativeWindow, notStoppableYet: (id) => threads.appendLive(id, [{ role: "system", text: t("shell.turn.not_stoppable_yet"), meta: "aviso" }]) });
   const taskQueues = createTaskQueues({
     scope: () => ({ workspace: workspaceActivo(), generation: workspaceContext.generation(), session: sessionId(), project: project() }),
-    readQueue: (scope) => invoke<Encolado[]>("load_queue", { project: scope.project, session: scope.session }, opcionesDeLaTarea(scope.session, scope.workspace)),
+    readQueue: (scope) => callEngine<Encolado[]>("load_queue", { project: scope.project, session: scope.session }, opcionesDeLaTarea(scope.session, scope.workspace)),
     // Siempre: un motor que no lo conoce ignora el argumento, y el que sí no toma esta ventana por una vieja.
-    writeQueue: (scope, queued) => invoke("save_queue", { project: scope.project, session: scope.session, queued, engineDispatch: true }, opcionesDeLaTarea(scope.session, scope.workspace)),
+    writeQueue: (scope, queued) => callEngine("save_queue", { project: scope.project, session: scope.session, queued, engineDispatch: true }, opcionesDeLaTarea(scope.session, scope.workspace)),
     onSaveFailure: (error, scope) => threads.appendLive(scope.session, [{ role: "system", text: t("shell.queue.save_failed", { error: prosaDe(error) }), meta: "aviso" }]),
   });
   onCleanup(taskQueues.dispose);
@@ -220,7 +220,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
       const current = () => scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation();
       if (shell) detenidos.add(id);
       try {
-        const stopped = shell ? await invoke<boolean>("stop_shell_command", { session: id }, scope.route) : await stopTurn(scope);
+        const stopped = shell ? await callEngine<boolean>("stop_shell_command", { session: id }, scope.route) : await stopTurn(scope);
         if (current()) {
           if (shell && stopped === false) detenidos.delete(id);
           if (!shell) { void reconcileActiveTurns(); if (stopped !== false) setPermissions(ps => ps.filter(p => p.session !== id)); }
@@ -289,7 +289,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
     setAlMargen({ session, question, answer: null, failure: null });
     const vigente = () => turno === preguntasAlMargen && sessionId() === session;
     try {
-      const { answer } = await invoke<{ answer: string }>("ask_side_question", { project: project(), session, question }, deLaTarea(session));
+      const { answer } = await callEngine<{ answer: string }>("ask_side_question", { project: project(), session, question }, deLaTarea(session));
       if (vigente()) setAlMargen({ session, question, answer, failure: null });
     } catch (e) {
       if (vigente()) setAlMargen({ session, question, answer: null, failure: asFailure(e) });
@@ -312,7 +312,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
     const workspace = workspaceActivo();
     const session = sessionId();
     try {
-      const items = await invoke<TaskCandidate[]>("list_task_mentions");
+      const items = await callEngine<TaskCandidate[]>("list_task_mentions");
       if (request === taskCandidateRequest && workspace === workspaceActivo() && session === sessionId()) setTaskCandidates(items);
     } catch {
       if (request === taskCandidateRequest) setTaskCandidates([]);
@@ -326,7 +326,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
   const [rosterDelProyecto] = createResource(project, async (id) => {
     if (!id) return [] as HandlerDefinition[];
     try {
-      const listado = (await invoke<HandlerList>("list_agents", { project: id })).agents;
+      const listado = (await callEngine<HandlerList>("list_agents", { project: id })).agents;
       rememberRoster(id, listado);
       return listado;
     } catch {

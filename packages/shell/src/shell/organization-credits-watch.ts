@@ -1,5 +1,5 @@
 import { createSignal, onCleanup } from "solid-js";
-import { listen } from "../../../../apps/desktop/src/lib/serviceEvents";
+import { listen } from "../../../host/src/serviceEvents.ts";
 import { organizationCredits } from "./organization-credits";
 
 export function watchOrganizationCredits() {

@@ -1,12 +1,13 @@
 import { createSignal } from "solid-js";
-import { escribirPref, leerPref } from "../../../../apps/desktop/src/lib/prefs.ts";
+import { findLocalMachine, type MachineListEntry } from "../../../host/src/machine.ts";
+import { escribirPref, leerPref } from "../../../session/src/prefs.ts";
 import { adoptionTarget, adoptionTargetOf, adoptLocals, prefsAdoptionMemory, type AdoptionClaimed, type AdoptionFailure } from "./account-adoption.ts";
 import { applyMoves, movesFor, prefsPendingUnions, retryUnions } from "./account-transfers.ts";
 import { engineOwnsAdoption } from "./engine-adoption.ts";
 import { engineFeatures } from "./engine-features.ts";
 import type { AdoptionProgress } from "./first-login.ts";
 import type { PersonalOpener, PersonalOutcome } from "./personal-open.ts";
-import { workspacesPagePath } from "../../../platform-client/src/workspaces.ts";
+import { workspaceCatalog, workspacesPagePath, type WorkspaceList } from "../../../platform-client/src/workspaces.ts";
 
 export type AccountWorkspace = { id: string; name: string; account: { org: string; account_id: string } };
 export type FreeWorkspace = { id: string; name: string; account_id: string };
@@ -34,26 +35,9 @@ export function accountWorkspaces(value: unknown): AccountWorkspace[] {
   });
 }
 
-/** Las filas del catálogo de una organización, página a página. Un error corta y devuelve lo leído. */
-async function catalog(send: Send, context: string) {
-  const items: unknown[] = [];
-  const seen = new Set<string>();
-  let cursor: string | null = null;
-  do {
-    const reply = await send(context, "GET", workspacesPagePath(cursor)).catch(() => null);
-    if (!reply || reply.status !== 200) break;
-    const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
-    items.push(...(body.items ?? []));
-    cursor = typeof body.next_cursor === "string" ? body.next_cursor : null;
-    if (cursor && seen.has(cursor)) break;
-    if (cursor) seen.add(cursor);
-  } while (cursor);
-  return items;
-}
-
 /** El destino local se fija explícitamente: abrir un workspace remoto no puede desviar la creación. */
 /** `features`: lo que anuncia el motor de esta ventana; si no contesta, la fila de `machine_list`, que por la flota puede venir sin rasgos. */
-export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed: () => void, features: () => Promise<readonly string[] | null> = engineFeatures) {
+export function createAccountWorkspaces(rpc: Invoke, native: boolean, changed: () => void, features: () => Promise<readonly string[] | null> = engineFeatures) {
   let local: string | null = null;
   let extension = false;
   let transfer = false;
@@ -87,7 +71,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
     // Con el servidor diciendo que hoy no adopta, no se insiste: el aviso ofrece reintentar.
     if (!native || !extension || !adoption || engineAdopts || adoptionUnavailable) return false;
     try {
-      return (await invoke<{ adoptable?: boolean }[]>("adoption_candidates", header())).some((candidate) => candidate.adoptable !== false);
+      return (await rpc<{ adoptable?: boolean }[]>("adoption_candidates", header())).some((candidate) => candidate.adoptable !== false);
     } catch {
       return false;
     }
@@ -123,8 +107,8 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
       free = new Map();
       failed = false;
       try {
-        const machines = await invoke<{ id: string; local?: boolean; features?: string[] }[]>("machine_list");
-        const self = machines.find((m) => m.local);
+        const machines = await rpc<MachineListEntry[]>("machine_list");
+        const self = findLocalMachine(machines);
         const announced = self && features ? await features().catch(() => null) : null;
         if (self && announced) self.features = [...announced];
         engineAdopts ||= engineOwnsAdoption(announced);
@@ -149,7 +133,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         if (adoption && !engineAdopts && !held && personal && !adopting && adoptionUnavailable !== personal.context_id) {
           adopting = true;
           try {
-            const done = await adoptLocals(invoke, header(), send, personal, adoptions, pending, personOf(personal.context_id), step(personal.org));
+            const done = await adoptLocals(rpc, header(), send, personal, adoptions, pending, personOf(personal.context_id), step(personal.org));
             setAdoptionProgress((now) => now && now.org === personal.org ? { ...now, finished: true, rows: now.rows.map((r) => r.step === "done" ? r : { ...r, step: "later" }) } : now);
             for (const f of [...done.refused, ...done.failed]) console.warn("[adoption] local not linked", { id: f.id, reason: f.reason });
             if (done.attempted > 0) await opener?.adopted();
@@ -166,7 +150,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
             }
           } finally { adopting = false; }
         }
-        const value = await invoke("list_workspaces", header());
+        const value = await rpc("list_workspaces", header());
         if (epoch !== version) return;
         rows = accountWorkspaces(value);
         changed();
@@ -174,14 +158,14 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         if (transfer && rows.length) {
           let moved = 0;
           for (const group of groups) {
-            const items = await catalog(send, group.context_id);
+            const items = await workspaceCatalog(send, group.context_id);
             if (epoch !== version) return;
-            moved += await applyMoves(invoke, header(), movesFor(rows, group.org, group.context_id, items), pending);
+            moved += await applyMoves(rpc, header(), movesFor(rows, group.org, group.context_id, items), pending);
           }
-          if (moved && epoch === version) { rows = accountWorkspaces(await invoke("list_workspaces", header())); changed(); }
+          if (moved && epoch === version) { rows = accountWorkspaces(await rpc("list_workspaces", header())); changed(); }
         }
         // La unión del Free router va aparte del traslado: si falló, el repaso la vuelve a pedir.
-        if (transfer || adoption) await retryUnions(invoke, header(), pending, personOf);
+        if (transfer || adoption) await retryUnions(rpc, header(), pending, personOf);
         const next = new Map<string, FreeWorkspace>();
         if (extension) for (const group of groups.filter((g) => g.plan === "free")) {
           let cursor: string | null = null;
@@ -190,7 +174,7 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
             const reply = await send(group.context_id, "GET", workspacesPagePath(cursor));
             if (epoch !== version) return;
             if (reply.status !== 200) { failed = true; break; }
-            const body = reply.body as { items?: { id?: unknown; org?: unknown; name?: unknown; engine_workspace_id?: unknown }[]; next_cursor?: string | null };
+            const body = reply.body as WorkspaceList;
             const row = body.items?.find((w) => w.org === group.org && typeof w.id === "string" && typeof w.engine_workspace_id === "string" && !!w.engine_workspace_id);
             if (row) { next.set(group.context_id, { id: row.engine_workspace_id as string, name: typeof row.name === "string" ? row.name : row.engine_workspace_id as string, account_id: row.id as string }); break; }
             cursor = typeof body.next_cursor === "string" ? body.next_cursor : null;
@@ -202,15 +186,14 @@ export function createAccountWorkspaces(invoke: Invoke, native: boolean, changed
         changed();
       } catch { failed = true; /* Un motor anterior conserva su riel; no ofrece crear sin capacidad anunciada. */ }
     },
-    /** Lo que el servidor creó para esta computadora (una petición de la CLI) queda sellado aquí. */
-    async createHere(org: string, accountId: string, id: string, name: string) {
-      if (!native || !extension || !local) return;
-      await invoke("create_account_workspace", { ...header(), id, name, account: { org, account_id: accountId } });
+    async materialize(org: string, accountId: string, id: string, name: string) {
+      if (!native || !extension || !local) throw { detail: "not_available_yet" };
+      await rpc("create_account_workspace", { ...header(), id, name, account: { org, account_id: accountId } });
     },
     async create(group: Group, refresh: () => Promise<void>) {
       const row = free.get(group.context_id);
       if (!native || !extension || !local || !row || group.plan !== "free") throw { detail: "not_available_yet" };
-      await invoke("create_account_workspace", { ...header(), id: row.id, name: row.name, account: { org: group.org, account_id: row.account_id } });
+      await rpc("create_account_workspace", { ...header(), id: row.id, name: row.name, account: { org: group.org, account_id: row.account_id } });
       await refresh();
       return row.id;
     },

@@ -11,7 +11,6 @@
       "POST /v1/machines/m1/tickets": 1
     },
     "rpc": {
-      "agentsview_status": 1,
       "list_workspaces": 1,
       "list_workspace_attention": 1,
       "list_permission_modes": 3,
@@ -42,7 +41,6 @@
       "POST /v1/machines/m1/tickets": 1
     },
     "rpc": {
-      "agentsview_status": 0,
       "list_workspaces": 2,
       "list_workspace_attention": 2,
       "list_permission_modes": 0,

@@ -1,22 +1,23 @@
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createSignal, For, Match, Show, Switch } from "solid-js";
 import { createRowSignal } from "../model/threadRow";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { flechaDeLista } from "../../../../../apps/desktop/src/lib/shortcuts";
+import { t } from "../../../../ui/src/lib/i18n";
+import { flechaDeLista } from "../../../../ui/src/lib/shortcuts";
 import {
   agrupar,
   type Detalle,
   type Fila,
   type Paso,
   rotuloDeFila,
-} from "../../../../../apps/desktop/src/lib/steps";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+} from "../../../../ui/src/lib/steps";
+import { cn } from "../../../../ui/src/lib/utils";
 import { AnsiText } from "../../../../ui/src/AnsiText";
 import BloqueDeDiff from "./DiffBlock";
 import { balance, comparado } from "../model/diff";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { Glifo, HUECO_DE_GLIFO } from "./StepGlyph";
-import { carpetaDe, desplegable, salidaDe, tituloDeFila, verboVisible } from "../../../../../apps/desktop/src/lib/stepRow";
+import { carpetaDe, desplegable, salidaDe, tituloDeFila, verboVisible } from "../../../../ui/src/lib/stepRow";
+import { narrateStep } from "../model/activityNarration";
 import { Pressable } from "../../../../ui/src/Pressable";
 
 /**
@@ -124,6 +125,7 @@ function FilaDePaso(props: {
 }) {
   const resumido = () => rotuloDeFila(props.fila);
   const corriendo = () => props.active !== false && props.fila.pasos.some((p) => p.corriendo);
+  const narrado = () => props.fila.pasos.length === 1 ? narrateStep(props.fila.pasos[0], { live: corriendo() }) : null;
   // Sin presentación que fuerce el cuerpo abierto: con ella la fila perdía la
   // flecha y el comando salía dos veces sin poder cerrarse.
   const abre = () => desplegable(props.fila);
@@ -179,21 +181,38 @@ function FilaDePaso(props: {
         )}
       </Show>
       {/* En avisos, gasto y fin, resumen() coloca el mensaje entero en verbo y deja sujeto vacío. Impedir que verbo encoja o envuelva sacaría la prosa del ancho del hilo. */}
-      {/* Un comando no pinta su verbo: el tramo ya dice «Ejecutó N comandos».
-          El lector de pantalla sí lo dice. */}
-      <span
-        class={cn(
-          "font-medium",
-          !verboVisible(props.fila) ? "sr-only" : abre() ? "shrink-0" : "min-w-0 break-words",
-          "text-neutral-700",
-        )}
+      {/* Un comando con narración humana muestra esa frase; si no, mantiene el verbo en sr-only. */}
+      <Show
+        when={narrado()}
+        fallback={
+          <>
+            <span
+              class={cn(
+                "font-medium",
+                !verboVisible(props.fila) ? "sr-only" : abre() ? "shrink-0" : "min-w-0 break-words",
+                "text-neutral-700",
+              )}
+            >
+              {/* El espacio separa el verbo oculto del comando en el nombre accesible. */}
+              {verboVisible(props.fila) ? resumido().verbo : `${resumido().verbo} `}
+            </span>
+            <Show when={resumido().sujeto}>
+              {(s) => (
+                <span class="min-w-0 truncate font-mono text-neutral-500">{s()}</span>
+              )}
+            </Show>
+          </>
+        }
       >
-        {/* El espacio separa el verbo oculto del comando en el nombre accesible. */}
-        {verboVisible(props.fila) ? resumido().verbo : `${resumido().verbo} `}
-      </span>
-      <Show when={resumido().sujeto}>
-        {(s) => (
-          <span class="min-w-0 truncate font-mono text-neutral-500">{s()}</span>
+        {(frase) => (
+          <>
+            <span class="shrink-0 font-medium text-neutral-700">{frase()}</span>
+            <Show when={props.fila.clase === "ejecutar" && resumido().sujeto ? resumido().sujeto : null}>
+              {(s) => (
+                <span class="min-w-0 truncate font-mono text-neutral-500">{s()}</span>
+              )}
+            </Show>
+          </>
         )}
       </Show>
       <Marcas fila={props.fila} />

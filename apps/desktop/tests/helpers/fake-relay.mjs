@@ -42,7 +42,7 @@ const INTENT = new Set(["send_message", "inject_message", "create_project", "cre
  * `delay`: milliseconds before an online computer answers.
  * `contract`: the engine's, from its last `hello`; a session that sent other `contracts` gets `version_mismatch`.
  */
-export function relay({ state: initial = "online", wakeAfter = 300, cachedAt = null, table = engine, outdated = false, notStartable = false, delay: initialDelay = 0, contract: initialContract = null } = {}) {
+export function relay({ state: initial = "online", wakeAfter = 300, cachedAt = null, table = engine, outdated = false, notStartable = false, delay: initialDelay = 0, contract: initialContract = null, serviceFeatures } = {}) {
   let delay = initialDelay;
   let contract = initialContract;
   const auths = [];
@@ -61,7 +61,7 @@ export function relay({ state: initial = "online", wakeAfter = 300, cachedAt = n
         this.readyState = 1;
         this.onopen?.({});
         push({ type: "state", state });
-        if (contract) this.onmessage?.({ data: JSON.stringify({ type: "engine", contract, host_version: null }) });
+        if (contract || serviceFeatures) this.onmessage?.({ data: JSON.stringify({ type: "engine", contract, host_version: null, service_features: serviceFeatures }) });
       }, 0);
     }
     send(data) {

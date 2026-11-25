@@ -1,7 +1,6 @@
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { isMac, isWindows } from "../../../../host/src/window";
 import {
-  INCLUIDAS,
   type Motivo,
   type Falla,
   esIncluida,
@@ -9,14 +8,11 @@ import {
 } from "../../../../ui/src/lib/bundled";
 
 export {
-  INCLUIDAS,
   type Motivo,
   type Falla,
   esIncluida,
   fallasIncluidas,
 };
-
-const MOTIVOS = new Set<string>(["missing", "version_mismatch", "import_failed", "timed_out", "damaged"]);
 
 /** La función que deja de servir, no el nombre del programa. */
 export function funcion(id: string | null): string {
@@ -37,9 +33,6 @@ export function funcion(id: string | null): string {
       return t("setup.functions.environment");
   }
 }
-
-/** Un motivo que no se conoce cuenta como faltante. */
-export const motivoConocido = (valor?: string): Motivo => (valor && MOTIVOS.has(valor) ? (valor as Motivo) : "missing");
 
 export function motivo(reason: Motivo): string {
   switch (reason) {

@@ -6,7 +6,7 @@ import {
   offsetOnZoom,
   ZOOM_MAX,
   ZOOM_MIN,
-} from "../../src/features/viewers/zoom.ts";
+} from "../../../../packages/ui/src/lib/zoom.ts";
 
 test("el zoom no sale de sus topes", () => {
   assert.equal(clampZoom(0), ZOOM_MIN);

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { test } from "node:test";
-import { type Fetch, powerOf } from "../../computers/src/index.ts";
+import { listComputers, type Fetch } from "../src/api.ts";
+import { powerOf } from "../src/machine.ts";
 import { machinesClient, machineToComputer } from "../src/machines.ts";
 
 type Call = { url: string; method: string; headers: Record<string, string>; body?: string };
@@ -54,6 +55,13 @@ test("kind: la personal se lista junto a la de la organización y no se ofrece d
   // Sin kind o con uno desconocido cuenta como de organización.
   assert.equal(machineToComputer({ ...mac, kind: undefined }).wakeable, true);
   assert.equal(machineToComputer({ ...mac, kind: "shared" }).wakeable, true);
+  // `machine-provisioning` devuelve `hosted | connected`; se normalizan a `organization | personal`.
+  const hosted = machineToComputer({ ...machine, machine_id: "cmp_vm", state: "stopped", connection: "disconnected", kind: "hosted", person_id: null });
+  assert.equal(hosted.kind, "organization");
+  assert.equal(hosted.wakeable, true);
+  const connected = machineToComputer({ ...machine, machine_id: "cmp_conn", state: "running", connection: "connected", kind: "connected", person_id: "user_1" });
+  assert.equal(connected.kind, "personal");
+  assert.equal(connected.wakeable, false);
 });
 
 test("404 y 501 son «no disponible», no un error; 401 sigue siendo 401", async () => {
@@ -327,4 +335,12 @@ test("the machines list aborts a slow edge read at the caller's deadline", async
   deadline.abort();
   assert.equal((await pending).kind, "error");
   assert.equal(canceled, true);
+});
+
+test("the retired machine service and alias never receive inventory requests", async () => {
+  const { fetch, calls } = edge({});
+  for (const endpoint of ["https://machines.danil.ai", "https://computers.danil.ai", "wss://machines.danil.ai./old"]) {
+    assert.deepEqual(await listComputers(endpoint, "tok", fetch), { kind: "error", status: null, code: "service_retired" });
+  }
+  assert.deepEqual(calls, []);
 });

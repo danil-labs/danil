@@ -6,8 +6,8 @@ Apache-2.0); the manifest was regenerated on
 `b40d34999d140d30a0e1192ba752b2fdb860dc90`. The generator reads the engine
 source and is not part of this repository.
 
-`commands.json`: 553 entries: 370 invocations, 146 CLI routes, 12 RPC routes,
-three channels and twenty-two window/bridge functions; 37 events. Names, camelCase parameters, reference Rust
+`commands.json`: 547 entries: 366 invocations, 146 CLI routes, 12 RPC routes,
+three channels and twenty window/bridge functions; 36 events. Names, camelCase parameters, reference Rust
 types and literal events are kept.
 
 On 2026-10-19 the contract renamed its two concepts (317 commands, 27 events):
@@ -20,7 +20,7 @@ repositories, and `GitHostInfo`. Files on disk keep their keys; the types that
 are stored and also travel cross the contract wrapped in `Wire`, which renames
 their keys. There are no aliases. This copy is byte-identical to the engine's.
 SHA-256:
-`46798e8630db16622e62b79747cde5b02073681ca602d92adc6fdae559d802e5`.
+`3aa165a22b88d4c99d30f93776c37468e9f017d201477019eaa1bba2717ccdad`.
 
 seldon-host `4e21caf` (#66) added the Danil account (321 commands, 28 events):
 `danil_connect_start`, `danil_connect_status`, `danil_connect_options`,
@@ -108,10 +108,8 @@ announce this same hash as its `contract`; the `contract` guard
 (`scripts/guards/contract.mjs`) compares the three.
 
 `phrase-keys.json`: the catalog keys the engine sends as `Frase` values, taken
-from the engine source at `fdf4dd9863a80363a0dd7b15ea21fd6b69e1f4bd`. The 24
-`providers.*` keys for GitLab, `providers.error.other_host`, and each host's
-`summary` and `vocabulary` come from seldon-host `34ebefa`
-(`feat/gitlab-git-host`). The eleven `danil.error.*` keys come from seldon-host
+from the engine source at `fdf4dd9863a80363a0dd7b15ea21fd6b69e1f4bd`. The `providers.*` keys for `providers.error.other_host` and each host's
+`summary` and `vocabulary` come from seldon-host `34ebefa`. The eleven `danil.error.*` keys come from seldon-host
 `4e21caf`; `danil.error.not_connected`, `image_too_large`,
 `unsupported_image`, `unauthorized` and `unsupported` from `cb4ae57` ([connector.md](https://github.com/danil-labs/danil-engine/blob/dev/docs/connector.md)).
 `settings.appearance.background.workspace_missing` comes from `1687dbf`, where
@@ -246,7 +244,21 @@ copy is `git show b8e7fcd:crates/engine-manifest/commands.json` byte for byte; n
 danil-engine `85335139` (release 0.3.1, `seldon-runtime-v0.3.1-85335139`) keeps
 553 entries and 37 events. Since #355 the CLI route `skill list` accepts the flag
 `agent`, which changes the hash to `46798e86…`. The window invokes no CLI route.
-This copy is `git show 85335139:crates/engine-manifest/commands.json` byte for byte.
+That revision matches `git show 85335139:crates/engine-manifest/commands.json` byte for byte.
+
+danil-engine `51b36933` (`chore/retira-comandos-configuracion-legados`, #541)
+retires the legacy Settings commands left without callers after removing
+Machines and Project Secrets: `list_dependencies`, `service_prepare_update` and
+`service_cancel_update` leave `commands.json` (547 entries, 36 events; SHA-256
+`3aa165a22b88d4c99d30f93776c37468e9f017d201477019eaa1bba2717ccdad`). Outside
+the hash, `extensions/secrets_v1.json` is retired completely (`env_secret_set`,
+`env_secret_remove`, `env_secrets_list`, `secret run`, feature `secrets_v1`)
+while active MCP secrets (`${secret:mcp/...}`) remain intact, and
+`extensions/orchestrators.json` drops `local_orchestrators_v1`
+(`local_orchestrator_connect`, `list_local_orchestrators`,
+`local_orchestrator_disconnect`) while keeping `external_connections_v1` and
+`task_result_v1`. This copy is `git show 51b36933:crates/engine-manifest/commands.json`
+byte for byte.
 
 Handler and peer error keys come from the CLI catalogs at seldon-host
 `437a280` (`crates/terminus-cli/src/messages.{es,en}.json`); the window completes
@@ -262,20 +274,17 @@ commands). `commands.json` and its SHA-256 do not change when an extension does.
 The window dispatches extension commands like contract ones; an engine without
 them answers that the command is unknown, and only that feature turns off.
 
-- `orchestrators.json`: external orchestrators (remote connections, `task result`)
-  and orchestrators on this machine (`local_orchestrator_connect`,
-  `list_local_orchestrators`, `local_orchestrator_disconnect`), from
-  seldon-host PR #239.
+- `orchestrators.json`: external orchestrators (remote connections, `task result`,
+  features `external_connections_v1` and `task_result_v1`), originally from
+  seldon-host PR #239 and updated from danil-engine PR #541 (`51b36933`) to
+  retire `local_orchestrators_v1`, SHA-256
+  `1ce6b50b9ca02ea45f884c5c2cd6db20a45901f2fb60ac746bc6844ecbf9e507`.
 - `engine_update_v1.json`: remote engine update (`engine_update_status`,
   `engine_update`), feature `engine_update_v1`, from seldon-host PR #252
   (`feat/engine-update` 7318646).
 - `machine_usage_v1.json`: usage per task (`stop_task_processes`, the
   `machine-usage` event and the additive `machine_resources` fields), feature
   `machine_usage_v1`, from seldon-host PR #255 (`feat/machine-usage` 8c2ad2b).
-- `secrets_v1.json`: generic secrets (`env_secret_set`, `env_secret_remove`,
-  `env_secrets_list`, `secret run`), from seldon-host PR #240 at
-  `30b22f9c` (unchanged at `5a1b1d8e`), SHA-256
-  `2ae19484093d481df8ded327eff1a2504bee138bca4a5109a0ec7baae3239c11`.
 - `artifact_parts_v1.json`: `artifact_read_part`, the bytes of a sealed artifact
   version in parts, so a window downloads a document from a task on another
   machine (seldon-host `feat/artifact-read-part`).
@@ -322,3 +331,5 @@ them answers that the command is unknown, and only that feature turns off.
   SHA-256 `c9fe6c5231d7367319baef17eb42219c5c1d92d8b7bfc0a23f97a30504d0b678`.
 - `engine_adoption_v1.json`: `engine_adoption_status`, `engine_adoption_retry` and the `engine-adoption` event: the engine adopts its local workspaces into the personal organization (danil-engine#504), copied from danil-engine `feat/maquinas-conectadas` `1e96f512`,
   SHA-256 `67bbaf7c85962e7d19275dcf40310bfe98eb257355951e1e1dbb05f0c7ad510f`.
+- `account_rename_v1.json`: `rename_account` (`custom_label` persisted in `meta.json` so user-chosen names survive identity discovery, danil-engine#533), copied from danil-engine `feat/antigravity-identity-and-account-rename` `0f0cf070`,
+  SHA-256 `6e13ca78f685db33cfa5e9f7cfccc19e0a59aeda233d0d5d7626f52b1b9ef991`.

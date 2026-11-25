@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { type ContextInvoke, contextGroups, createSessionContexts, type SessionStatus } from "../../src/features/shell/session-contexts.ts";
-import { freeSessionRow, sessionStartTarget, sessionVisible } from "../../src/features/shell/session-rail-view.ts";
+import { type ContextInvoke, contextGroups, createSessionContexts, type SessionStatus } from "../../../../packages/shell/src/shell/session-contexts.ts";
+import { freeSessionRow, sessionStartTarget, sessionVisible } from "../../../../packages/shell/src/shell/session-rail-view.ts";
 
 const context = (id: string, org = id) => ({ context_id: id, org, org_name: org, plan: "paid" });
 const status: SessionStatus = { state: "connected", sessions: [{ family: "one", email: "one@example.com", contexts: [context("a"), context("b"), context("free")] }, { family: "two", email: "two@example.com", contexts: [context("c")] }] };
@@ -40,7 +40,7 @@ test("missing echo discards multi-session mode and does not return a response bo
   assert.equal(sessions.groups(), null);
 });
 
-test("closing one context keeps its siblings, another family, local rows and local hidden state", async () => {
+test("closing one context keeps its siblings and another family; the rail has no local rows", async () => {
   let current = structuredClone(status);
   const invoke: ContextInvoke = async <T>(command: string, args?: Record<string, unknown>) => {
     if (command === "danil_sign_out") current.sessions![0].contexts = current.sessions![0].contexts.filter((c) => c.context_id !== args?.context);
@@ -51,10 +51,7 @@ test("closing one context keeps its siblings, another family, local rows and loc
   await sessions.close({ context: "a" });
   assert.deepEqual(sessions.groups()!.map((g) => g.context_id), ["b", "free", "c"]);
   const groups = sessions.groups()!.map((g) => ({ ...g, person: "person", available: [{ id: g.org, name: g.org }], added: new Set([g.org]) }));
-  const rows = ["a", "local", "hidden"].map((id) => ({ id, name: id, logo: null }));
-  const hidden = new Set(["hidden"]);
-  assert.deepEqual(sessionVisible(rows, "a", hidden, groups, new Set(["a", "b", "free", "c"])).map((w) => w.id), ["local", "b", "free", "c"]);
-  assert.deepEqual([...hidden], ["hidden"]);
+  assert.deepEqual(sessionVisible(null, groups).map((w) => w.id), ["b", "free", "c"]);
 });
 
 test("a late status read cannot undo a newer set", async () => {
@@ -101,8 +98,8 @@ test("an edge response arriving after logout never reaches its old group", async
 });
 
 test("two preference synchronizers keep person/org records and their own IPC context", async () => {
-  const { createAddedSync } = await import("../../src/features/shell/workspace-added-sync.ts");
-  const { edgeAddedTransport, prefsAddedStore } = await import("../../src/features/shell/workspace-added-transport.ts");
+  const { createAddedSync } = await import("../../../../packages/shell/src/shell/workspace-added-sync.ts");
+  const { edgeAddedTransport, prefsAddedStore } = await import("../../../../packages/shell/src/shell/workspace-added-transport.ts");
   const calls: string[] = [];
   const invoke: ContextInvoke = async <T>(command: string, args?: Record<string, unknown>) => {
     if (command === "danil_session_status") return status as T;
@@ -157,8 +154,8 @@ test("A8: signing out an email closes all its local families, without treating f
 });
 
 test("A8: all seeds only a settled nonempty machine source; later and old replies keep the prior seed", async () => {
-  const { sessionSeedInputs } = await import("../../src/features/shell/session-seeding.ts");
-  const { seedOf } = await import("../../src/features/shell/workspace-added-sync.ts");
+  const { sessionSeedInputs } = await import("../../../../packages/shell/src/shell/session-seeding.ts");
+  const { seedOf } = await import("../../../../packages/shell/src/shell/workspace-added-sync.ts");
   const source = [{ id: "machine-one" }, { id: "machine-two" }];
   const previous = new Set(["machine-one"]);
   const hidden = new Set(["machine-two"]);
@@ -199,7 +196,7 @@ test("identity without mode=add falls back to the previous login only for 404/50
 });
 
 test("returning focus and visibility together shares one status read", async () => {
-  const { coalesceSessionReturn } = await import("../../src/features/shell/session-return.ts");
+  const { coalesceSessionReturn } = await import("../../../../packages/shell/src/shell/session-return.ts");
   const queued: (() => void)[] = [];
   let reads = 0;
   const returned = coalesceSessionReturn(async () => { reads++; }, (run) => queued.push(run));
@@ -214,7 +211,7 @@ test("returning focus and visibility together shares one status read", async () 
 });
 
 test("all retries when an empty machine listing gains rows, without rereading for added-only changes", async () => {
-  const { sessionSyncKey } = await import("../../src/features/shell/session-seeding.ts");
+  const { sessionSyncKey } = await import("../../../../packages/shell/src/shell/session-seeding.ts");
   const group = { context_id: "a", person: "person", workspaces: "all" as const, available: [] as { id: string }[], added: new Set<string>() };
   const empty = sessionSyncKey([group]);
   const populated = sessionSyncKey([{ ...group, available: [{ id: "new-workspace" }] }]);
@@ -223,9 +220,9 @@ test("all retries when an empty machine listing gains rows, without rereading fo
 });
 
 test("A8 later neither seeds prior rail evidence nor adds unchosen workspaces on the first choice", async () => {
-  const { createAddedSync } = await import("../../src/features/shell/workspace-added-sync.ts");
-  const { prefsAddedStore } = await import("../../src/features/shell/workspace-added-transport.ts");
-  const { sessionSeedInputs } = await import("../../src/features/shell/session-seeding.ts");
+  const { createAddedSync } = await import("../../../../packages/shell/src/shell/workspace-added-sync.ts");
+  const { prefsAddedStore } = await import("../../../../packages/shell/src/shell/workspace-added-transport.ts");
+  const { sessionSeedInputs } = await import("../../../../packages/shell/src/shell/session-seeding.ts");
   for (const initialVersion of [0, 1]) {
     const available = [{ id: "chosen" }, { id: "unchosen" }];
     let preferences: unknown = {};
@@ -255,7 +252,7 @@ test("A8 later neither seeds prior rail evidence nor adds unchosen workspaces on
 });
 
 test("organization selection stays in the legacy menu only without a session set", async () => {
-  const { organizationMenuReady } = await import("../../src/features/shell/organization-menu-state.ts");
+  const { organizationMenuReady } = await import("../../../../packages/shell/src/shell/organization-menu-state.ts");
   const state = { kind: "ready" as const, active: "org", busy: false, error: null, items: [{ id: "org", name: "Organization" }] };
   assert.equal(organizationMenuReady(state, true), null);
   assert.equal(organizationMenuReady(state, false), state);
@@ -263,7 +260,7 @@ test("organization selection stays in the legacy menu only without a session set
 });
 
 test("unscoped or mismatched machine data never enters a context group", async () => {
-  const { availableInContext, contextSourceMatches } = await import("../../src/features/machines/context-source.ts");
+  const { availableInContext, contextSourceMatches } = await import("../../../../packages/features/machines/src/model/context-source.ts");
   let context: string | undefined;
   let reads = 0;
   const rows = [{ id: "private-workspace", name: "Private" }];
@@ -295,7 +292,7 @@ test("the context limit preserves its cause and the other sessions without retry
   assert.equal(sessions.groups()!.length, 4);
 });
 
-test("a context removed by a status refresh loses its Danil tiles while the others and hidden locals stay", async () => {
+test("a context removed by a status refresh loses its Danil tiles while the others stay", async () => {
   let current = structuredClone(status);
   const invoke: ContextInvoke = async <T>() => current as T;
   const sessions = createSessionContexts(invoke, () => {});
@@ -303,15 +300,12 @@ test("a context removed by a status refresh loses its Danil tiles while the othe
   current.sessions![0].contexts = current.sessions![0].contexts.filter((c) => c.context_id !== "a");
   await sessions.refresh();
   const groups = sessions.groups()!.map((g) => ({ ...g, available: [{ id: g.context_id, name: g.org }], added: new Set([g.context_id]), person: "person" }));
-  const index = ["a", "local", "hidden"].map((id) => ({ id, name: id, logo: null }));
-  const hidden = new Set(["hidden"]);
-  const rows = sessionVisible(index, "a", hidden, groups, new Set(["a", "b", "free", "c"]));
-  assert.deepEqual(rows.map((w) => w.id), ["local", "b", "free", "c"]);
-  assert.deepEqual([...hidden], ["hidden"]);
+  const rows = sessionVisible("a", groups);
+  assert.deepEqual(rows.map((w) => w.id), ["b", "free", "c"]);
 });
 
 test("empty reasons from native status, web headers or bodies are empty states, including future values", async () => {
-  const { createSessionEmptyState, emptyReasonKey, normalizeEmptyReason, replyEmptyReason } = await import("../../src/features/shell/session-empty.ts");
+  const { createSessionEmptyState, emptyReasonKey, normalizeEmptyReason, replyEmptyReason } = await import("../../../../packages/shell/src/shell/session-empty.ts");
   for (const [value, key] of [
     ["no_organization", "shell.workspaces.empty_no_org"],
     ["organization_access_denied", "shell.workspaces.empty_no_access"],
@@ -345,3 +339,31 @@ test("403 becomes an empty state and D1's removed status drops only that context
   await sessions.refresh();
   assert.equal(sessions.removed().length, 1, "repeated status does not duplicate a removal notice");
 });
+
+test("transient refresh failure or connected status without sessions preserves loaded groups until real sign-out", async () => {
+  let reply: SessionStatus = structuredClone(status);
+  const invoke: ContextInvoke = async <T>() => reply as T;
+  const sessions = createSessionContexts(invoke, () => {});
+  await sessions.refresh();
+  assert.deepEqual(sessions.groups()!.map((g) => g.context_id), ["a", "b", "free", "c"]);
+  assert.equal(sessions.connected(), true);
+
+  // Connected status temporarily missing sessions array (e.g. offline / sessions endpoint hiccup)
+  reply = { state: "connected" };
+  await sessions.refresh();
+  assert.deepEqual(sessions.groups()!.map((g) => g.context_id), ["a", "b", "free", "c"]);
+  assert.equal(sessions.connected(), true);
+
+  // Engine IPC hiccup returned as disconnected with error and no sessions array
+  reply = { state: "disconnected", error: "engine_down" } as SessionStatus;
+  await sessions.refresh();
+  assert.deepEqual(sessions.groups()!.map((g) => g.context_id), ["a", "b", "free", "c"]);
+  assert.equal(sessions.connected(), true);
+
+  // Genuine sign-out returns disconnected with empty sessions array and clears groups
+  reply = { state: "disconnected", sessions: [] };
+  await sessions.refresh();
+  assert.deepEqual(sessions.groups(), []);
+  assert.equal(sessions.connected(), false);
+});
+

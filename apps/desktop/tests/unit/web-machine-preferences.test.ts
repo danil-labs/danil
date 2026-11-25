@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRoot } from 'solid-js';
-import { capabilities, setCapabilities } from '../../src/lib/platform.ts';
+import { capabilities, setCapabilities } from '../../../../packages/host/src/platform.ts';
 import { createPref } from '../../src/lib/prefs.ts';
 
 test('the selected machine follows the person even when the preference was created before web mounted', () => {

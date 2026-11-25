@@ -1,5 +1,5 @@
 export { modoInicial, modoRecordado, recordarModo } from "./model/modes.ts";
-export type { HandoverPending } from "./model/handover.ts";
+export { handoverProviderLabel, type HandoverPending } from "./model/handover.ts";
 export { guardable, type Encolado } from "../../../ui/src/lib/queue.ts";
 export type { Msg } from "./screens/Chat.tsx";
 export { lotesDeDeltas, type Programar } from "./model/deltaFrames.ts";
@@ -24,3 +24,6 @@ export { createAttachmentsMount } from "./queries/attachments-mount.ts";
 export { createAttachments } from "./queries/attachments.ts";
 export { createThreadSide } from "./queries/thread-side.ts";
 export { createThreadStream } from "./queries/thread-stream.ts";
+export { createChatEvents } from "./queries/chat-events.ts";
+export { createThreadsStore } from "./queries/threads-store.ts";
+export { createActivityProjection, activityElapsed, type TurnActivity } from "./model/activity.ts";

@@ -71,6 +71,7 @@ tokio = { version = "1", features = ["sync", "macros"] }
 tempfile = "3"
 terminus-engine-client = { path = "crates/engine-client" }
 terminus-engine-protocol = { path = "crates/engine-protocol" }
+tauri-plugin-deep-link = "2"
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import { type CallResult, type DeferredFrame, type EventsPage, INTENT_COMMANDS, isDeferrable, type MachineState } from "../../computers/src/index.ts";
+import { type CallResult, type DeferredFrame, type EngineInfo, type EventsPage, INTENT_COMMANDS, isDeferrable, type MachineState } from "../../computers/src/index.ts";
 import { classOf, encodeEvent, Fleet, type FleetError, type Link, type MachineInfo, memberKey, PASSIVE, SLICES_KEY, type Slice, SliceBook } from "../src/index.ts";
 
 type Answer = unknown | ((args: Record<string, unknown>) => unknown);
@@ -18,15 +18,15 @@ function fakeLink(options: FakeOptions = {}) {
   const calls: { id: string; command: string; workspace: string | null; args: Record<string, unknown>; timeout?: number }[] = [];
   const stateListeners = new Set<(s: MachineState) => void>();
   const eventListeners = new Set<(p: EventsPage) => void>();
-  const engineListeners = new Set<(e: { contract: string | null; host_version: string | null }) => void>();
-  const blockedListeners = new Set<(b: "license_required" | null) => void>();
-  let stopped: "license_required" | null = null;
+  const engineListeners = new Set<(e: EngineInfo) => void>();
+  const blockedListeners = new Set<(b: "license_required" | "machine_stopped" | null) => void>();
+  let stopped: "license_required" | "machine_stopped" | null = null;
   let retries = 0;
   let closed = false;
   const subscribed: (number | null)[] = [];
   const deferredListeners = new Set<(f: DeferredFrame) => void>();
   let queue: DeferredFrame = { actions: [], done: [] };
-  const link: Link & { calls: typeof calls; setState(s: MachineState): void; push(p: EventsPage): void; hello(contract: string): void; block(b: "license_required" | null): void; retries(): number; closed(): boolean; subscribed: typeof subscribed; options: FakeOptions; queueFrame(f: DeferredFrame): void } = {
+  const link: Link & { calls: typeof calls; setState(s: MachineState): void; push(p: EventsPage): void; hello(contract: string): void; block(b: "license_required" | "machine_stopped" | null): void; retries(): number; closed(): boolean; subscribed: typeof subscribed; options: FakeOptions; queueFrame(f: DeferredFrame): void } = {
     calls,
     deferred: () => queue,
     onDeferred(l) {
@@ -47,8 +47,8 @@ function fakeLink(options: FakeOptions = {}) {
     push(p) {
       for (const l of eventListeners) l(p);
     },
-    hello(contract) {
-      for (const l of engineListeners) l({ contract, host_version: null });
+    hello(contract, service_features?: string[]) {
+      for (const l of engineListeners) l({ contract, host_version: null, service_features });
     },
     onEngine(l) {
       engineListeners.add(l);
@@ -531,6 +531,58 @@ test("without a Terminus license a machine keeps its slice with a named state, a
   assert.equal((await fleet.read(envelope)).status, "ok");
 });
 
+/** Como el canal con ticket de `/v1/machines`: apagada, el borde contesta `409 machine_stopped` y la sesión se detiene sin encender nada (#883). */
+function stoppedChannel(answers: Record<string, Answer>) {
+  let starts = 0;
+  const online: string[] = [];
+  const { fleet, link } = setup({ cmp_vm: { state: "stopped", answers } }, [VM], {
+    wake: async (machine) => {
+      starts += 1;
+      // Como `POST /start` mientras otro sigue en curso: `409 operation_in_progress`.
+      if (starts > 1) return false;
+      await new Promise((done) => setTimeout(done, 20));
+      setTimeout(() => link(machine).setState("online"), 10);
+      return true;
+    },
+  });
+  link("cmp_vm").block("machine_stopped");
+  const seen = (command: string) => () => (online.push(`${command}:${link("cmp_vm").state()}`), `${command}-ok`);
+  return { fleet, link, seen, online, starts: () => starts };
+}
+
+for (const command of ["send_message", "add_account"]) {
+  test(`${command} to a machine whose ticket said machine_stopped starts it through the control plane first, then delivers it once`, async () => {
+    const m = stoppedChannel({});
+    m.link("cmp_vm").options.answers = { [command]: m.seen(command) };
+    await m.fleet.call({ machine: "cmp_vm", workspace: "w", command, args: { project: "p1", session: null } });
+    assert.equal(m.starts(), 1, "the channel cannot start it: the control plane does, before the call");
+    assert.equal(m.link("cmp_vm").retries(), 1, "once started, the session asks for a new ticket");
+    assert.deepEqual(m.online, [`${command}:online`], "delivered once, already online");
+    assert.equal(m.fleet.power("cmp_vm"), "on");
+  });
+}
+
+test("two intents to a stopped machine share one start and are each delivered once", async () => {
+  const m = stoppedChannel({});
+  m.link("cmp_vm").options.answers = { add_account: m.seen("add_account"), send_message: m.seen("send_message") };
+  await Promise.all([
+    m.fleet.call({ machine: "cmp_vm", workspace: "w", command: "add_account", args: {} }),
+    m.fleet.call({ machine: "cmp_vm", workspace: "w", command: "send_message", args: { project: "p1", session: null } }),
+  ]);
+  assert.equal(m.starts(), 1, "one start per machine while one is in flight");
+  assert.deepEqual(m.online.sort(), ["add_account:online", "send_message:online"]);
+});
+
+test("a read, or what the window asks alone, to a stopped machine starts nothing", async () => {
+  const m = stoppedChannel({ list_live_sessions: [] });
+  await assert.rejects(m.fleet.call({ machine: "cmp_vm", workspace: "w", command: "list_live_sessions", args: { project: "p1" } }), (e: FleetError) => e.code === "machine_stopped");
+  for (const command of PASSIVE) {
+    await assert.rejects(m.fleet.call({ machine: "cmp_vm", workspace: "w", command, args: {} }));
+  }
+  assert.equal(m.starts(), 0);
+  assert.equal(m.link("cmp_vm").calls.length, 0);
+});
+
 test("a space shared with the account keeps its id on every machine; one of a single machine keeps its prefix", async () => {
   const { fleet, link } = setup({
     cmp_vm: {
@@ -698,6 +750,27 @@ test("AI credentials keep their machine even when their email matches", () => {
   assert.equal(merged.active, "cmp_vm~a1");
   assert.equal(merged.accounts[1].label, "Sin correo · Danil VM", "without an email it is named with its machine");
   assert.deepEqual(merged.accounts[2].machines, [{ machine: "cmp_mac", id: "cmp_mac~b1", on: false }]);
+});
+
+test("local desktop accounts never append '· local', custom_label is never suffixed, and fleet.name(self) uses selfName", () => {
+  const { fleet } = setup({ cmp_vm: { state: "online" } }, [VM], { self: "local", selfName: () => "MacBook Pro" });
+  assert.equal(fleet.name("local"), "MacBook Pro");
+  const slice = (machine: string, value: unknown): Slice => ({ machine, status: "ok", has: true, value, at: 0 });
+  const merged = fleet.merge("list_accounts", [
+    slice("local", { active: "a1", accounts: [{ id: "a1", label: "Cuenta 1", identity: null }] }),
+    slice("cmp_vm", { active: null, accounts: [
+      { id: "v1", label: "Trabajo", custom_label: true, identity: null },
+      { id: "v2", label: "Cuenta 2", identity: null },
+    ] }),
+  ]) as { active: string; accounts: { id: string; label?: string }[] };
+  assert.deepEqual(
+    merged.accounts.map((a) => [a.id, a.label]),
+    [
+      ["a1", "Cuenta 1"],
+      ["cmp_vm~v1", "Trabajo"],
+      ["cmp_vm~v2", "Cuenta 2 · Danil VM"],
+    ],
+  );
 });
 
 test("the active account comes from the first machine that has one: a hosted machine without accounts, answering first, does not hide the Mac's", () => {
@@ -876,7 +949,7 @@ test("what the window asks on its own (mark seen, watch the tree, probes) never 
     },
   });
   try {
-    for (const command of ["mark_task_seen", "watch_task_tree", "unwatch_task_tree", "kn_pending", "source_freshness", "tree_read_part", "list_storage"]) {
+    for (const command of ["mark_task_seen", "watch_task_tree", "unwatch_task_tree", "kn_pending", "source_freshness", "sync_workspace_context", "tree_read_part", "list_storage"]) {
       await assert.rejects(off.fleet.call({ machine: VM.id, workspace: "w", command, args: { project: "p1" } }), (e: FleetError) => e.code === "machine_off", command);
     }
     assert.equal(wakes, 0, "opening or focusing the web does not start the VM");
@@ -1316,4 +1389,33 @@ test("continuation follows each machine and stops when that machine is removed",
   assert.equal(fleet.canContinue("cmp_mac"), true);
   fleet.setMachines([VM]);
   assert.equal(fleet.canContinue("cmp_mac"), false);
+});
+
+/** front-req-1: el 409 `machine_stopped` del ticket avisa con el contexto de la máquina; sin él, la ventana lo cuenta como otra máquina y vuelve a pedir la lista. */
+test("a blocked session reports its change with the member's context", () => {
+  const links = new Map<string, ReturnType<typeof fakeLink>>();
+  const changes: [string, string | undefined][] = [];
+  const fleet = new Fleet({
+    connect: (info) => { const link = fakeLink({ state: "stopped" }); links.set(info.context!, link); return link; },
+    onChange: (machine, context) => void changes.push([machine, context]),
+  });
+  fleet.setMachines([{ id: "cmp_vm", name: "VM", wakes: true, kind: "personal", context: "a" }]);
+  changes.length = 0;
+  links.get("a")!.block("machine_stopped");
+  assert.deepEqual(changes, [["cmp_vm", "a"]]);
+  assert.equal(fleet.power("cmp_vm", changes[0][1]), "off");
+});
+
+test("live engine capabilities survive an inventory refresh and belong to their context", () => {
+  const incoming = fakeLink(), other = fakeLink();
+  const fleet = new Fleet({ connect: info => info.context === "a" ? incoming : other });
+  const inventory = ["a", "b"].map(context => ({ id: "machine", name: "Machine", wakes: false, context }));
+  fleet.setMachines(inventory);
+  incoming.hello("revision", ["task_lifecycle_v1"]);
+  fleet.setMachines(inventory);
+  assert.deepEqual(fleet.info("machine", "a")?.features, ["task_lifecycle_v1"]);
+  assert.equal(fleet.info("machine", "b")?.features, undefined);
+  incoming.hello("revision", []);
+  assert.deepEqual(fleet.info("machine", "a")?.features, []);
+  fleet.close();
 });

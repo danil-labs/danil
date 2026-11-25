@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { screenConnection, type Phase } from "../../src/features/screen/connection.ts";
-import { capabilities, openMachineScreen, setCapabilities } from "../../src/lib/platform.ts";
+import { screenConnection, type Phase } from "../../../../packages/features/screen/src/queries/connection.ts";
+import { capabilities, openMachineScreen, setCapabilities } from "../../../../packages/host/src/platform.ts";
 import { createScreenAccess } from "@terminus/computers";
 
 function deferred<T>() {

@@ -1,7 +1,7 @@
 import { Index, Show } from "solid-js";
-import { claseDelTramo, type TaskMention, tramosDelMensaje } from "../../../../../apps/desktop/src/lib/taskMentions";
+import { claseDelTramo, type TaskMention, tramosDelMensaje } from "../../../../ui/src/lib/taskMentions";
 import { Markdown } from "../../../../ui/src/Markdown";
-import { WithMentions } from "./WithMentions";
+import { WithMentions } from "../../../../ui/src/WithMentions";
 
 type Marcas = {
   taskMentions?: TaskMention[];
@@ -59,12 +59,12 @@ export function MessageText(props: Marcas & { text: string; searchBlock: number;
     <Show
       when={props.incoming}
       fallback={
-        <p data-thread-search-text={props.searchBlock} class="m-0 leading-[1.5] break-words whitespace-pre-wrap">
+        <p data-thread-search-text={props.searchBlock} class="m-0 min-w-0 max-w-full leading-[1.5] [overflow-wrap:anywhere] whitespace-pre-wrap">
           <Tramos text={props.text} commands={props.commands} skills={props.skills} taskMentions={props.taskMentions} onOpenTask={props.onOpenTask} />
         </p>
       }
     >
-      <div data-thread-search-text={props.searchBlock}>
+      <div data-thread-search-text={props.searchBlock} class="min-w-0 max-w-full">
         <Markdown texto={texto}>{props.text}</Markdown>
       </div>
     </Show>

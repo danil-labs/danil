@@ -5,7 +5,8 @@
  * cuando es owner o admin allí. Si no, la solicitud queda para que un admin la
  * apruebe en Harness.
  */
-import { workspacesPagePath, workspaceTransferAcceptPath, workspaceTransfersPath } from "../../../platform-client/src/workspaces.ts";
+import { workspaceCatalog, workspaceTransferAcceptPath, workspaceTransfersPath } from "../../../platform-client/src/workspaces.ts";
+import type { Workspace } from "../../../platform-client/src/workspaces.ts";
 import { sendIdentityMe } from "../../../platform-client/src/identity.ts";
 export type MoveGroup = { context_id: string; org: string; org_name?: string | null; role?: string | null };
 export type MoveDestination = { org: string; name: string; context: string | null; immediate: boolean };
@@ -21,32 +22,15 @@ const TRANSFER_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/;
 const ADMIN = new Set(["owner", "admin"]);
 
 /** La causa que el servidor dio, sin inventarla. */
-export function moveCause(reply: Reply): string {
+function moveCause(reply: Reply): string {
   const code = (reply.body as { code?: unknown } | null | undefined)?.code;
   return typeof code === "string" && code ? code : `http_${reply.status}`;
 }
 
-/** Las cuentas del catálogo de una organización, página a página. */
-export async function catalog(send: Send, context: string): Promise<unknown[]> {
-  const items: unknown[] = [];
-  const seen = new Set<string>();
-  let cursor: string | null = null;
-  do {
-    const reply = await send(context, "GET", workspacesPagePath(cursor)).catch(() => null);
-    if (!reply || reply.status !== 200) break;
-    const body = reply.body as { items?: unknown[]; next_cursor?: string | null };
-    items.push(...(body.items ?? []));
-    cursor = typeof body.next_cursor === "string" ? body.next_cursor : null;
-    if (cursor && seen.has(cursor)) break;
-    if (cursor) seen.add(cursor);
-  } while (cursor);
-  return items;
-}
-
 /** La cuenta de plataforma de un workspace local, por su id de motor. */
 export async function accountOfEngine(send: Send, context: string, engine: string): Promise<MoveAccount | null> {
-  for (const raw of await catalog(send, context)) {
-    const row = raw as { id?: unknown; engine_workspace_id?: unknown; version?: unknown };
+  for (const raw of await workspaceCatalog(send, context)) {
+    const row = raw as Workspace;
     if (row.engine_workspace_id !== engine) continue;
     const id = accountId(row.id), value = version(row.version);
     return id && value !== null ? { id, version: value } : null;

@@ -1,14 +1,17 @@
-import type { InvokeArgs, InvokeOptions } from "@tauri-apps/api/core";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine, type InvokeArgs, type InvokeOptions } from "../../../../engine-client/src/client.ts";
 
 export function deleteAgent<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
-  return invoke<res>("delete_agent", args, options);
+  return callEngine<res>("delete_agent", args, options);
 }
 
 export function listMachineAgents<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
-  return invoke<res>("list_machine_agents", args, options);
+  return callEngine<res>("list_machine_agents", args, options);
+}
+
+export function savePastedImage<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
+  return callEngine<res>("guardar_imagen_pegada", args, options);
 }
 
 export function setAgentAvatar<res = unknown>(args?: InvokeArgs, options?: InvokeOptions): Promise<res> {
-  return invoke<res>("set_agent_avatar", args, options);
+  return callEngine<res>("set_agent_avatar", args, options);
 }

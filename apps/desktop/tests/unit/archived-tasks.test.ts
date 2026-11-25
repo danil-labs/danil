@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { descendientes: descendants, esChatDeAgente: isAgentChat, taskTree } = await import("../../src/features/projects/taskTree.ts");
+const { descendientes: descendants, esChatDeAgente: isAgentChat, taskTree } = await import("../../../../packages/features/projects/src/model/taskTree.ts");
 
 test("archivar una hija no archiva a su padre ni a sus hermanas", () => {
   const parent = { id: "parent", parent: null, archived: false };
@@ -73,7 +73,7 @@ test("los historiales antiguos siguen disponibles y las tareas con arquetipo son
   ]);
 });
 
-const { canFinishTask, effectiveTaskGit, UNKNOWN_GIT } = await import("../../src/features/projects/taskGit.ts");
+const { canFinishTask, effectiveTaskGit, UNKNOWN_GIT } = await import("../../../../packages/features/projects/src/queries/taskGit.ts");
 const merged = {
   ...UNKNOWN_GIT,
   kind: "branch" as const,
@@ -148,7 +148,7 @@ test("si el padre kn ya guardó, la hija se puede finalizar aunque su copia est�
   assert.equal(canFinishTask({}, effectiveTaskGit(parent, rootDraft, [parent]), false), false);
 });
 
-const { buildTaskTree, taskIdentity, taskParent, withTaskAncestors, taskDescendants } = await import("../../../../packages/tasks/src/tree.ts");
+const { buildTaskTree, taskIdentity, taskParent, withTaskAncestors, taskDescendants } = await import("../../../../packages/ui/src/lib/tasks/tree.ts");
 
 test("parent prevalece y unavailable corta únicamente launched_by", () => {
   const root = { id: "root" };

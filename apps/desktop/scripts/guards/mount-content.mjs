@@ -239,73 +239,60 @@ assert.deepEqual(unstarted.failures, []);
 
 unstarted.w.close();
 
-for (const settings of [true, false]) {
-  for (const available of [true, false]) {
-    let latest = { rid: 276, currentVersion: "0.2.76", version: "0.2.77", rawJson: {} };
-    const installed = [];
-    let checks = 0;
-    let finishDownload;
-    const updater = await boot("listo", `update-latest-${settings}-${available}`, {
-      ...RESPONSES,
-      "plugin:updater|check": () => { checks++; return latest; },
-      // Rust vuelve a preguntar y baja la última; en Windows el plugin cerraría la app.
-      update_install: () => {
-        installed.push(latest.rid);
-        return new Promise(resolve => { finishDownload = resolve; });
-      },
-      service_prepare_update: null,
-      service_cancel_update: null,
-      list_language_packs: [],
-      list_bundled_language_packs: [],
-      "plugin:app|version": "0.2.76",
-    });
-    const doc = updater.w.document;
-    if (settings) {
-      [...doc.querySelectorAll("button")].find(b => b.textContent.trim() === "Ahora no").click();
-      doc.querySelector('button[aria-label="Configuraci\u00f3n"]').click();
-      await sleep(100);
-      doc.querySelector("#cfg-tab-machines").click();
-      await sleep(50);
-      doc.querySelector("#cfg-sub-entorno").click();
-      await sleep(100);
-    }
-    latest = available ? { ...latest, rid: 278, version: "0.2.78" } : null;
-    const install = [...doc.querySelectorAll("button")].find(b => b.textContent.trim() === "Actualizar");
-    assert.ok(install, `update action is visible (settings=${settings})`);
-    install.click();
-    await sleep(100);
-    if (available) {
-      latest = { ...latest, rid: 279, version: "0.2.79" };
-      const before = checks;
-      const clock = Date.now;
-      Date.now = () => clock() + 31 * 60 * 1000;
-      try {
-        updater.w.dispatchEvent(new updater.w.Event("focus"));
-        await sleep(20);
-        if (!settings) assert.equal(checks, before, "downloading skips background checks");
-        assert.ok(doc.body.textContent.includes("0.2.78"), "downloading keeps the selected release");
-      } finally { Date.now = clock; }
-      finishDownload();
+for (const available of [true, false]) {
+  let latest = { rid: 276, currentVersion: "0.2.76", version: "0.2.77", rawJson: {} };
+  const installed = [];
+  let checks = 0;
+  let finishDownload;
+  const updater = await boot("listo", `update-latest-${available}`, {
+    ...RESPONSES,
+    "plugin:updater|check": () => { checks++; return latest; },
+    // Rust vuelve a preguntar y baja la última; en Windows el plugin cerraría la app.
+    update_install: () => {
+      installed.push(latest.rid);
+      return new Promise(resolve => { finishDownload = resolve; });
+    },
+    list_language_packs: [],
+    list_bundled_language_packs: [],
+    "plugin:app|version": "0.2.76",
+  });
+  const doc = updater.w.document;
+  latest = available ? { ...latest, rid: 278, version: "0.2.78" } : null;
+  const install = [...doc.querySelectorAll("button")].find(b => b.textContent.trim() === "Actualizar");
+  assert.ok(install, "update action is visible");
+  install.click();
+  await sleep(100);
+  if (available) {
+    latest = { ...latest, rid: 279, version: "0.2.79" };
+    const before = checks;
+    const clock = Date.now;
+    Date.now = () => clock() + 31 * 60 * 1000;
+    try {
+      updater.w.dispatchEvent(new updater.w.Event("focus"));
       await sleep(20);
-    }
-    assert.deepEqual(installed, available ? [278] : [], `installs the latest release (settings=${settings})`);
-    assert.ok(doc.body.textContent.includes(available ? "0.2.78" : "Tienes la versi\u00f3n m\u00e1s reciente."), "shows the latest check result");
-    if (available) {
-      const before = checks;
-      const clock = Date.now;
-      Date.now = () => clock() + 31 * 60 * 1000;
-      try {
-        updater.w.dispatchEvent(new updater.w.Event("focus"));
-        doc.dispatchEvent(new updater.w.Event("visibilitychange"));
-        await sleep(20);
-        if (!settings) assert.equal(checks, before, "ready to restart skips background checks");
-        assert.ok(doc.body.textContent.includes("0.2.78"), "ready to restart keeps the installed version");
-        assert.deepEqual(installed, [278], "does not chain downloads");
-      } finally { Date.now = clock; }
-    }
-    assert.deepEqual(updater.failures, []);
-    updater.w.close();
+      assert.equal(checks, before, "downloading skips background checks");
+      assert.ok(doc.body.textContent.includes("0.2.78"), "downloading keeps the selected release");
+    } finally { Date.now = clock; }
+    finishDownload();
+    await sleep(20);
   }
+  assert.deepEqual(installed, available ? [278] : [], "installs the latest release");
+  assert.ok(doc.body.textContent.includes(available ? "0.2.78" : "Tienes la versi\u00f3n m\u00e1s reciente."), "shows the latest check result");
+  if (available) {
+    const before = checks;
+    const clock = Date.now;
+    Date.now = () => clock() + 31 * 60 * 1000;
+    try {
+      updater.w.dispatchEvent(new updater.w.Event("focus"));
+      doc.dispatchEvent(new updater.w.Event("visibilitychange"));
+      await sleep(20);
+      assert.equal(checks, before, "ready to restart skips background checks");
+      assert.ok(doc.body.textContent.includes("0.2.78"), "ready to restart keeps the installed version");
+      assert.deepEqual(installed, [278], "does not chain downloads");
+    } finally { Date.now = clock; }
+  }
+  assert.deepEqual(updater.failures, []);
+  updater.w.close();
 }
 
 let release = { rid: 277, currentVersion: "0.2.76", version: "0.2.77", rawJson: {} };

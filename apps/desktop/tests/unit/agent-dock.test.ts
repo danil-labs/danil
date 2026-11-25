@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { agentFolder, type DockAgent, dockCapacity, dockSources, orderDockAgents, planDock } from "../../src/features/shell/dockLayout.ts";
+import { agentFolder, type DockAgent, dockCapacity, dockSources, orderDockAgents, planDock } from "../../../../packages/ui/src/lib/tasks/index.ts";
 
 const agente = (name: string, status?: DockAgent["status"]): DockAgent => ({ name, status, liveTasks: 0 });
 const nombres = (lista: { name: string }[]) => lista.map((a) => a.name);

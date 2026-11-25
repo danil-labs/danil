@@ -1,18 +1,18 @@
-import type { AgentProfile as AgentProfileData } from "../../../../../apps/desktop/src/lib/model.ts";
-import type { MentionSources } from "../../../../../apps/desktop/src/lib/mentions.ts";
-import { escritorioDeFila } from "../../../../../apps/desktop/src/lib/spaces.ts";
-import { esProvisional, sameSources, unirFuentes } from "../../../../../apps/desktop/src/lib/taskDraft.ts";
-import { isTaskTab, type Tab } from "../../../../../apps/desktop/src/lib/tabs.ts";
-import { t } from "../../../../../apps/desktop/src/lib/i18n.ts";
-import { type SessionUsage, ventanaDe } from "../../../../../apps/desktop/src/lib/usage.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
-import { canonicalAgentId } from "../../../../tasks/src/agents.ts";
-import { chipModel as modeloDeSubtarea } from "../../../../tasks/src/surfaces.ts";
+import type { AgentProfile as AgentProfileData } from "../../../../ui/src/lib/model.ts";
+import type { Session } from "../../../../ui/src/lib/project-block-types.ts";
+import type { MentionSources } from "../../../../ui/src/lib/mentions.ts";
+import { escritorioDeFila } from "../../../../ui/src/lib/spaces.ts";
+import { esProvisional, sameSources, unirFuentes } from "../../../../ui/src/lib/taskDraft.ts";
+import { isTaskTab, type Tab } from "../../../../ui/src/lib/tabs.ts";
+import { t } from "../../../../ui/src/lib/i18n.ts";
+import { type SessionUsage, ventanaDe } from "../../../../ui/src/lib/usage.ts";
+import { callEngine } from "../../../../engine-client/src/client.ts";
+import { canonicalAgentId } from "../../../../ui/src/lib/tasks/agents.ts";
+import { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surfaces.ts";
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
+import type { Startup } from "../../../../ui/src/lib/workspace-startup.ts";
 import { batch, createEffect, createMemo, on, onCleanup } from "solid-js";
 
-type Startup = any;
-type Session = any;
 type Deps = {
   adjuntas: () => string[];
   excludedSourceIds: () => string[];
@@ -49,7 +49,7 @@ export function createContextSource(deps: Deps) {
       onCleanup(() => {
         current = false;
       });
-      invoke<MentionSources>("list_mentions", {
+      callEngine<MentionSources>("list_mentions", {
         project: p,
         sources: fs,
         excludedSources: excluidas,
@@ -68,11 +68,11 @@ export function createContextSource(deps: Deps) {
   // se guarda en la sesión ni se acumula: manda el último turno registrado.
   createEffect(
     on([sessionId, project], ([id, p]) => {
-      if (!id || !p) {
+      if (!id) {
         setVentana(null);
         return;
       }
-      invoke<SessionUsage>("session_usage", { project: p, session: id }, deLaTarea(id))
+      callEngine<SessionUsage>("session_usage", { project: p, session: id }, deLaTarea(id))
         .then((s) => setVentana(ventanaDe(s.records)))
         .catch(() => setVentana(null));
     }),
@@ -83,8 +83,8 @@ export function createContextSource(deps: Deps) {
     const r = await open({ directory: true, multiple: false });
     if (typeof r !== "string") return;
     try {
-      await invoke("set_workspace_source", { kind: "folder", locator: r });
-      await aplicar(await invoke<Startup>("list_workspaces"));
+      await callEngine("set_workspace_source", { kind: "folder", locator: r });
+      await aplicar(await callEngine<Startup>("list_workspaces"));
     } catch (e) {
       setError(prosaDe(e));
     }
@@ -252,7 +252,7 @@ export function createContextSource(deps: Deps) {
       // corrió — sin tocar los turnos ya escritos, solo la caja.
       if (s.chat_de_agente && s.agent) {
         try {
-          const perfiles = await invoke<Record<string, AgentProfileData>>(
+          const perfiles = await callEngine<Record<string, AgentProfileData>>(
             "list_agent_profiles",
             { project: proyecto },
           );
@@ -276,7 +276,7 @@ export function createContextSource(deps: Deps) {
     } catch (e) {
       if (!current()) return;
       try {
-        const state = await invoke<Session>("load_session", {
+        const state = await callEngine<Session>("load_session", {
           project: proyecto, id, history_request: { version: 1, kind: "state" },
         }, deLaTarea(id));
         if (!current()) return;
@@ -299,7 +299,10 @@ export function createContextSource(deps: Deps) {
     try {
       await taskQueues.openSession(id, proyecto, current, engineCanDispatch(id));
       // Lo que ya esperaba cuando se le pide al motor queda retenido por él: se relee tras pedírselo.
-      if (engineCanDispatch(id) && sessionId() === id) void taskQueues.persist(id, proyecto, cola()).then(() => releerCola(id), () => {});
+      if (engineCanDispatch(id) && sessionId() === id) {
+        const hadQueued = cola().length > 0;
+        void taskQueues.persist(id, proyecto, cola()).then(() => { if (hadQueued) void releerCola(id); }, () => {});
+      }
     } catch (e) {
       if (!current()) return;
       // Sin esto la cola queda sin dueño: no es «no pude leerla», es que

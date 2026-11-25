@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
-import { tipoDeCarpeta } from "../../../../../apps/desktop/src/lib/folderKinds";
-import { cn } from "../../../../../apps/desktop/src/lib/utils";
+import { tipoDeCarpeta } from "../../../../ui/src/lib/folderKinds";
+import { cn } from "../../../../ui/src/lib/utils";
 import WorkdirIcon from "../../../../ui/src/WorkdirIcon";
 
 /** El icono de una carpeta: dice si es repositorio, nube o documentos. */

@@ -1,7 +1,7 @@
 import { fromMarkdown } from "mdast-util-from-markdown";
-import { MAX_CHAT_VISUALS, parseVisualDirective } from "@terminus/chat/visual";
+import { MAX_CHAT_VISUALS, parseVisualDirective } from "../../../../ui/src/lib/chat/visual.ts";
+export { MAX_CHAT_VISUALS } from "../../../../ui/src/lib/chat/visual.ts";
 
-export { MAX_CHAT_VISUALS };
 
 export type ChatVisual = { kind: "visual"; file: string; title: string; id: string };
 export type VisualPart = ChatVisual | { kind: "markdown"; markdown: string };

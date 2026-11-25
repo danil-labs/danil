@@ -1,9 +1,9 @@
-import { SEP } from "@terminus/fleet";
-import { REMOTE_CHILD_FEATURE, type RemoteScope } from "@terminus/tasks";
+import { SEP } from "../model/fleet/index.ts";
+import { REMOTE_CHILD_FEATURE, type RemoteScope } from "../../../../ui/src/lib/tasks/index.ts";
 import { createRoot, createSignal } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import { createPref, escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
+import { callEngine } from "../../../../engine-client/src/client";
+import { t } from "../../../../ui/src/lib/i18n";
+import { createPref, escribirPref, leerPref } from "../../../../session/src/prefs";
 import { knownMachineName } from "../../../../session/src/known-machine-names";
 import { isMac } from "../../../../host/src/window";
 import { capabilities } from "../../../../host/src/platform";
@@ -12,8 +12,7 @@ import { runsWorkspace } from "../model/runs-workspace"; export { runsWorkspace 
 
 import type { Machine } from "../../../../ui/src/lib/machine"; export type { Machine };
 
-/** Lo que el picker sabe del proyecto de la tarea nueva: las máquinas con su carpeta y su remoto. */
-export type ProjectPlace = { name: string; machines?: string[]; remote_url?: string | null } | null | undefined;
+import type { ProjectPlace } from "../../../../ui/src/lib/machine"; export type { ProjectPlace };
 
 /**
  * Por qué una máquina no puede correr la tarea nueva, o `null` si puede. Un
@@ -30,10 +29,7 @@ export function unavailable(m: Machine, project: ProjectPlace, all: Machine[] = 
 }
 
 export const removeMachineAccount = (provider: string, id: string, machine: string) =>
-  invoke("remove_account", { provider, id }, { headers: { "x-terminus-machine": machine } });
-
-export const getAccountRelayToken = (account?: string | null) =>
-  invoke<{ token: string; endpoint: string }>("account_relay_token", account ? { account } : {});
+  callEngine("remove_account", { provider, id }, { headers: { "x-terminus-machine": machine } });
 
 // Una sola lista para toda la ventana. Señal y no `createResource`, que
 // suspendería la vista entera mientras contestan.
@@ -44,7 +40,7 @@ export { machines, cloudInventory, setCloudInventory };
 let machinesRead = 0;
 export const refetchMachines = () => {
   const read = ++machinesRead;
-  return invoke<Machine[]>("machine_list")
+  return callEngine<Machine[]>("machine_list")
     .then((rows) => { if (read === machinesRead) setMachines(rows); })
     .catch(() => setMachines([]));
 };
@@ -81,7 +77,7 @@ export function runOnOptions(workspace: string | null, project?: ProjectPlace) {
 }
 
 /**
- * Cómo lee la ventana las hijas remotas (`@terminus/tasks`): solo si la máquina
+ * Cómo lee la ventana las hijas remotas (`packages/ui/src/lib/tasks/index.ts`): solo si la máquina
  * de la fila anuncia `remote_child_v1`; la de la ventana es la de las filas sin
  * `machine`. El coordinador va con el id de panel: suelto si es de esta máquina.
  */

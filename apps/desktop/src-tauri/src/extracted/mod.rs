@@ -16,6 +16,7 @@ mod legacy;
 #[cfg(target_os = "linux")]
 mod linux_engine;
 mod local_image;
+mod loopback_login;
 #[cfg(target_os = "macos")]
 mod master_handoff;
 mod page_preview;
@@ -284,7 +285,12 @@ async fn guest_call(
                 .and_then(|a| a["id"].as_str().map(String::from))
                 .or(workspace.clone())
                 .unwrap_or_default();
-            guests::child::ensure_workspace(&entry, &id, &id)?;
+            let name = args
+                .as_ref()
+                .and_then(|a| a["name"].as_str())
+                .filter(|n| !n.trim().is_empty())
+                .unwrap_or(&id);
+            guests::child::ensure_workspace(&entry, &id, name)?;
             return Ok(serde_json::Value::Null);
         }
         guests::child::invoke(
@@ -469,6 +475,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
                 page_preview::atender(ctx.app_handle().clone(), request, responder)
             },
         )
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -499,8 +506,6 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             proxy::service_filter,
             proxy::load_history,
             handler_policy::handler_action,
-            proxy::service_prepare_update,
-            proxy::service_cancel_update,
             sites::site_sweep,
             sites::site_open,
             sites::site_place,
@@ -537,7 +542,9 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
             guest_call,
             guest_copy_folder,
             guest_sync_spaces,
-            guest_events
+            guest_events,
+            loopback_login::loopback_login_listen,
+            loopback_login::loopback_login_cancel
         ]))
         .build(context)
         .expect("tauri extracted client")
@@ -556,6 +563,7 @@ fn start(client: Option<Arc<Client>>, autostart: bool, launcher: launcher::Launc
                 tray::show_window(app);
             }
             if matches!(event, tauri::RunEvent::Exit) {
+                loopback_login::cancel_all();
                 instance::exiting();
                 placement::write(&placed_on_exit);
                 if let Some(state) = app.try_state::<Arc<proxy::State>>() {

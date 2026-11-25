@@ -4,11 +4,11 @@
  * recupera con `project_clone_status` tras recargar o perder la conexión
  * (seldon-host `docs/connector.md`, «Clonar desde el relay»).
  */
-import { invoke } from "../../../../engine-client/src/client";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
-import type { Project } from "../../../../../apps/desktop/src/lib/model";
-import { borrarPref, escribirPref, leerPref } from "../../../../../apps/desktop/src/lib/prefs";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
+import { callEngine } from "../../../../engine-client/src/client";
+import { t } from "../../../../ui/src/lib/i18n";
+import type { Project } from "../../../../ui/src/lib/model";
+import { borrarPref, escribirPref, leerPref } from "../../../../session/src/prefs";
+import { listen } from "../../../../host/src/serviceEvents.ts";
 import type { Failure } from "../../../../ui/src/Failure";
 import { REMOTE_CLONES, type RemoteClone } from "../screens/AddWorkdir";
 
@@ -59,14 +59,14 @@ export async function followClone(clone: RemoteClone, start: Record<string, unkn
     if (start) {
       remember(clone);
       try {
-        await invoke("start_project_clone", start, on(clone.machine));
+        await callEngine("start_project_clone", start, on(clone.machine));
       } catch (error) {
         forget(clone.operation);
         throw error;
       }
     }
     const ask = async () => {
-      const last = await invoke<CloneEvent | null>("project_clone_status", { operation: clone.operation, workspace: clone.workspace }, on(clone.machine)).catch(() => undefined);
+      const last = await callEngine<CloneEvent | null>("project_clone_status", { operation: clone.operation, workspace: clone.workspace }, on(clone.machine)).catch(() => undefined);
       if (last === null && !ended) settle({ done: true, error: lost() });
       else seen(last);
     };
@@ -83,5 +83,5 @@ export async function followClone(clone: RemoteClone, start: Record<string, unkn
 }
 
 export function cancelClone(clone: RemoteClone) {
-  return invoke("cancel_project_clone", { operation: clone.operation, workspace: clone.workspace }, on(clone.machine));
+  return callEngine("cancel_project_clone", { operation: clone.operation, workspace: clone.workspace }, on(clone.machine));
 }

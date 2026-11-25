@@ -1,8 +1,9 @@
 import { type JSX, onMount, Show } from "solid-js";
-import { t } from "../../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../../ui/src/lib/i18n";
 import { Badge } from "../../../../ui/src/Badge";
 import { Button } from "../../../../ui/src/Button";
 import { FailureNote } from "../../../../ui/src/Failure";
+import { freeModelPolicyAvailable } from "../../../../session/src/free-model-policy.ts";
 import { createFreeRouterConsent } from "./free-router-consent";
 import { SettingsRow } from "../../../../ui/src/SettingsLayout";
 
@@ -46,6 +47,7 @@ export function ModelosGratuitos(props: {
     despues: () => props.preparar?.(),
   });
   const { routeAvailable, aceptado, guardando, fallo, texto, preguntando, preguntar, cambiar } = consent;
+  const disponible = () => freeModelPolicyAvailable(texto()?.policy);
   onMount(() => void consent.cargar());
 
   return (
@@ -67,7 +69,7 @@ export function ModelosGratuitos(props: {
       <>
       {/* Omitir el proveedor o alejar el aviso oculta el destino de los datos al activar. */}
       <Show
-        when={!aceptado() || props.falta || !texto()?.policy.enabled}
+        when={!aceptado() || props.falta || !disponible()}
         fallback={<p class="m-0">{t("settings.accounts.free.warning_short")}</p>}
       >
         <p class="m-0">
@@ -96,7 +98,7 @@ export function ModelosGratuitos(props: {
             size="sm"
             // Sin el texto no se puede pedir el sí, y tampoco se ofrece
             // activar: aceptar sin ver qué se acepta no es un consentimiento.
-            disabled={guardando() || props.preparando || !texto()?.policy.enabled}
+            disabled={guardando() || props.preparando || !disponible()}
             onClick={() => void preguntar()}
           >
             {props.preparando
@@ -120,7 +122,7 @@ export function ModelosGratuitos(props: {
               superficies lo tienen. */}
           <Show
             when={props.falta}
-            fallback={<Badge tone={texto()?.policy.enabled && routeAvailable() ? "success" : "neutral"}>{texto()?.policy.enabled && routeAvailable() ? t("settings.accounts.free.active") : t("settings.accounts.free.consented")}</Badge>}
+            fallback={<Badge tone={disponible() && routeAvailable() ? "success" : "neutral"}>{disponible() && routeAvailable() ? t("settings.accounts.free.active") : t("settings.accounts.free.consented")}</Badge>}
           >
             <Badge tone="danger">{t("settings.accounts.free.missing")}</Badge>
           </Show>

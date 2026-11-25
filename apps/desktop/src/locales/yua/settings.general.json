@@ -1,0 +1,33 @@
+{
+  "settings.general.error_name": "Maʼ páajchaj u kanáantaʼal le kʼaabaʼoʼ.",
+  "settings.general.extra.check": "Ilej wa yaan baʼax túumben",
+  "settings.general.extra.check_title": "Ku kʼáatik tiʼ le náachiloʼob wa yaan túumben commitoʼob. Maʼ tu yéensik mix baʼal.",
+  "settings.general.extra.checking": "Táan u yilaʼal wa yaan baʼax túumben",
+  "settings.general.extra.checking_title": "Táan u yilaʼal…",
+  "settings.general.extra.no_match": "Mix jumpʼéel beey u kʼaabaʼoʼ.",
+  "settings.general.extra.search": "Kaxtej",
+  "settings.general.name": "Kʼaabaʼ",
+  "settings.general.name_hint": "Bix a kʼáat ka aʼalaʼak teech.",
+  "settings.general.root.empty": "Minaʼan baʼalil xook. Le ajmeyajoʼ ku núukik yéetel baʼax u yojel ka yéetel baʼax ka tsʼáaik tiʼ le tʼaanoʼ.",
+  "settings.general.root.pick": "Yéeyej baʼalil xook",
+  "settings.general.root.title": "U chuunil baʼalil xook",
+  "settings.general.source.behind": {
+    "other": "{count} commit utiʼal u taasaʼal"
+  },
+  "settings.general.source.behind_unknown": "yaan baʼax túumben",
+  "settings.general.source.check_failed": "maʼ páajchaj u yilaʼal",
+  "settings.general.source.delete": "Lukʼsej {name}",
+  "settings.general.source.delete_title": "Ku lukʼsik le baʼalil xook tiʼ le computadoraaʼ. Maʼ tu beetik wa yaan jumpʼéel noj meyaj xokik.",
+  "settings.general.source.fetch": "Taasej baʼax túumben",
+  "settings.general.source.fetch_title": "Ku taasik baʼax túumben tiʼ u kʼab. Maʼ tu beetik wa yaan jumpʼéel meyaj xokik.",
+  "settings.general.source.fetching": "Táan u taasaʼal baʼax túumben",
+  "settings.general.source.missing": "minaʼaniʼ",
+  "settings.general.source.remote_failed": "maʼ páajchaj u yilaʼal le náachiloʼ",
+  "settings.general.source.shallow": "minaʼan u tsoolil úuchben tiʼ utiʼal u xoʼokol u jelaʼanil",
+  "settings.general.source.unused": "maʼ meyajnajiʼ",
+  "settings.general.source.updated_on": "túumbenkíintaʼab {when}",
+  "settings.general.source.uptodate": "tu kʼiinil",
+  "settings.general.source.used": {
+    "other": "meyajnaj tiʼ {count} meyaj"
+  }
+}

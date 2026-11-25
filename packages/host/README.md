@@ -9,10 +9,10 @@ Exporta interfaces y funciones desde sus módulos en `src/`:
 - Capacidades de plataforma: `Capabilities`, `getPlatform`, `setHost`, `host`, `LocalHost`, `DeskAuthHost` en `platform.ts`.
 - Portapapeles y descargas: `readClipboardText`, `writeClipboardText` en `clipboard.ts`, y `downloadUrl` en `downloads.ts`.
 - Ventana y diálogo: `minimizeWindow`, `maximizeWindow`, `closeWindow` en `window.ts`, `pickImage` en `pick-image.ts`.
+- Red y máquinas: `openWebSocket` en `socket.ts`; `findLocalMachine`, `isOwnMachine`, `MachineListEntry`, `LocalMachineEntry`, `machineOf` y `setTaskRowMachine` en `machine.ts`.
 
 ## Qué consume
 - `@tauri-apps/api` (en entorno de escritorio).
-- `@terminus/computers` y `apps/desktop/src/lib/prefs.ts` (en proceso de desacoplamiento).
 
 ## Qué contratos toca
 - Rutas `/v1` del borde: ninguna.

@@ -1,20 +1,19 @@
 /** El motor y el borde que usa el cliente del Free router de plataforma, en Desk (Rust) y en la web (cookie). */
-import { EdgeError, type EdgeTransport } from "@terminus/computers";
-import type { InvokeOptions } from "@tauri-apps/api/core";
+import { EdgeError, type EdgeTransport } from "../../../../platform-client/src/edge.ts";
 import { edgeFetch } from "../../../../platform-client/src/client.ts";
-import { invoke } from "../../../../engine-client/src/client.ts";
+import { callEngine, type InvokeOptions } from "../../../../engine-client/src/client.ts";
 import type { EdgeSend, EngineCall } from "./free-router-platform.ts";
 
 /** Las órdenes RPC1 del pase y la lista de workspaces, cada una por su nombre, al motor (`options` lleva su ámbito). */
 export function freeRouterEngine(options?: InvokeOptions): EngineCall {
   const orders: Record<string, (args: Record<string, unknown>) => Promise<unknown>> = {
-    set_free_router_union: (args) => invoke("set_free_router_union", args, options),
-    free_router_binding: (args) => invoke("free_router_binding", args, options),
-    prove_free_router_binding: (args) => invoke("prove_free_router_binding", args, options),
-    set_free_router_grant: (args) => invoke("set_free_router_grant", args, options),
-    clear_free_router_grant: (args) => invoke("clear_free_router_grant", args, options),
-    release_free_router_owner: (args) => invoke("release_free_router_owner", args, options),
-    list_workspaces: () => invoke("list_workspaces", undefined, options),
+    set_free_router_union: (args) => callEngine("set_free_router_union", args, options),
+    free_router_binding: (args) => callEngine("free_router_binding", args, options),
+    prove_free_router_binding: (args) => callEngine("prove_free_router_binding", args, options),
+    set_free_router_grant: (args) => callEngine("set_free_router_grant", args, options),
+    clear_free_router_grant: (args) => callEngine("clear_free_router_grant", args, options),
+    release_free_router_owner: (args) => callEngine("release_free_router_owner", args, options),
+    list_workspaces: () => callEngine("list_workspaces", undefined, options),
   };
   return (command, args) => orders[command]?.(args) ?? Promise.reject("free_router.invalid_request");
 }

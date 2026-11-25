@@ -1,8 +1,9 @@
-import { createResource, createSignal, For, onCleanup, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
-import { ITEM_DE_MENU } from "../../../ui/src/Popover";
-import type { PickerOrg, PickerRow, WorkspacePicker } from "../../../../apps/desktop/src/web/workspace-picker";
 import { Pressable } from "../../../ui/src/Pressable";
+import type { WorkspaceAddLink } from "../../../session/src/workspace-add-link";
+import { createEffect, createResource, createSignal, For, onCleanup, Show } from "solid-js";
+import { t } from "../../../ui/src/lib/i18n";
+import { RAIL_MENU_ITEM } from "./rail-menu";
+import type { PickerOrg, PickerRow, WorkspacePicker } from "../../../session/src/workspace-picker";
 
 /**
  * Una sola lista (plan modelo Slack § 20): los workspaces de Danil que la persona ya puede abrir,
@@ -10,7 +11,7 @@ import { Pressable } from "../../../ui/src/Pressable";
  * No hay una segunda pantalla de organizaciones: elegir una fila de organización admite solo esa y
  * la lista se relee. `catalog_state` separa «sin workspaces accesibles» de «no se pudo comprobar».
  */
-export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () => void; add: (row: PickerRow) => Promise<void> }) {
+export function WebWorkspacePicker(props: { picker: WorkspacePicker; fromHarness?: WorkspaceAddLink | null; onHarnessAttempt?: () => void; close: () => void; add: (row: PickerRow) => Promise<void> }) {
   const [data, { refetch }] = createResource(() => props.picker.catalog());
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal("");
@@ -35,6 +36,15 @@ export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () =
     } catch { setError(row ? "shell.workspaces.add_failed" : "shell.workspaces.connect_failed"); void refetch(); }
     finally { setBusy(false); }
   }
+  createEffect(() => {
+    const target = props.fromHarness;
+    const result = data();
+    if (!target || !result) return;
+    props.onHarnessAttempt?.();
+    const matches = result.rows.filter((row) => row.org === target.organization && row.account_id === target.accountId
+      && (!target.person || row.sub === target.person) && (!target.workspace || row.engine_workspace_id === target.workspace));
+    if (matches.length === 1 && matches[0].engine_workspace_id) void choose(matches[0]);
+  });
   async function admit(org: PickerOrg) {
     if (busy()) return;
     setError(""); setBusy(true);
@@ -47,7 +57,7 @@ export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () =
     <Show when={data.loading}><p role="status">{t("shell.workspaces.danil_loading")}</p></Show>
     <Show when={data.error || (!data.loading && data()?.partial)}>
       <p role="alert">{t("shell.workspaces.catalog_error")}</p>
-      <Pressable role="menuitem" class={ITEM_DE_MENU} onClick={() => void refetch()}>{t("common.part.retry")}</Pressable>
+      <Pressable role="menuitem" class={RAIL_MENU_ITEM} onClick={() => void refetch()}>{t("common.part.retry")}</Pressable>
     </Show>
     <Show when={!data.loading && !data.error && data()}>{result => <>
       <Show when={!result().organizations.length}><p role="status">{t("shell.workspaces.no_accessible")}</p></Show>
@@ -58,14 +68,14 @@ export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () =
               <p data-picker-state={org.catalog_state} class="m-0 px-2 py-1.5 text-caption text-neutral-500">{nameOf(org)}<span class="block truncate">{stateOf(org)}</span></p>
             }>
               <For each={rowsOf(org)}>{row =>
-                <Pressable role="menuitem" data-picker-workspace="" data-picker-org={org.org} disabled={busy()} class={ITEM_DE_MENU} onClick={() => void choose(row)}>
+                <Pressable role="menuitem" data-picker-workspace="" data-picker-org={org.org} disabled={busy()} class={RAIL_MENU_ITEM} onClick={() => void choose(row)}>
                   <span class="flex min-w-0 flex-col text-left"><span class="truncate">{row.name}</span>
                     <span class="truncate text-caption text-neutral-500">{subtitleOf(org)}</span></span>
                 </Pressable>
               }</For>
             </Show>
           }>
-            <Pressable role="menuitem" data-picker-organization={org.org} aria-label={t("shell.workspaces.admit") + " " + nameOf(org)} disabled={busy()} class={ITEM_DE_MENU} onClick={() => void admit(org)}>
+            <Pressable role="menuitem" data-picker-organization={org.org} aria-label={t("shell.workspaces.admit") + " " + nameOf(org)} disabled={busy()} class={RAIL_MENU_ITEM} onClick={() => void admit(org)}>
               <span class="flex min-w-0 flex-col text-left"><span class="truncate">{nameOf(org)}</span>
                 <span class="truncate text-caption text-neutral-500">{t("shell.workspaces.admission_required")}{stateOf(org) ? " · " + stateOf(org) : ""}</span></span>
             </Pressable>
@@ -74,6 +84,6 @@ export function WebWorkspacePicker(props: { picker: WorkspacePicker; close: () =
       </div>
     </>}</Show>
     <Show when={error()}>{key => <p role="alert">{t(key())}</p>}</Show>
-    <Show when={props.picker.canConnect}><Pressable role="menuitem" data-picker-account="" disabled={busy()} class={ITEM_DE_MENU} onClick={() => void choose()}>{t("shell.workspaces.connect_account")}</Pressable></Show>
+    <Show when={props.picker.canConnect}><Pressable role="menuitem" data-picker-account="" disabled={busy()} class={RAIL_MENU_ITEM} onClick={() => void choose()}>{t("shell.workspaces.connect_account")}</Pressable></Show>
   </div>;
 }

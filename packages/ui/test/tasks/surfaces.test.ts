@@ -1,0 +1,123 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { chipModel, defaultSurfaceModel, menuSurfaces, type Surface, surfaceHas, surfaceOf } from "../../src/lib/tasks/index.ts";
+
+const zen: Surface = { id: "opencode-zen", provider: "opencode-zen", label: "OpenCode", catalogo: "de_pago", usable: true, marca: null, porque: null };
+const free: Surface = { id: "opencode-zen:free", provider: "opencode-zen", label: "Modelos Free", catalogo: "gratuitos", usable: false, marca: "sin activar", porque: null };
+const claude: Surface = { id: "claude", provider: "claude", label: "Claude Code", catalogo: "todo", usable: true, marca: null, porque: null };
+const catalog = [{ id: "zen/big", gratis: false }, { id: "danil-free/reflection/beam-free", gratis: true }];
+
+test("el chip sigue el orden de la ventana: elegido, observado y, en una subtarea, su último turno", () => {
+  const turns = [{ role: "agent", model: "old" }, { role: "user", model: null }, { role: "agent", model: "last-turn" }];
+  assert.equal(chipModel({ model: "chosen", observed_model: "seen", turns }), "chosen");
+  assert.equal(chipModel({ model: null, observed_model: "seen", turns }), "seen");
+  // Una tarea normal no toma el del último turno: lo observado manda, y sin él el CLI usa el suyo.
+  assert.equal(chipModel({ model: null, observed_model: null, turns }), null);
+  assert.equal(chipModel({ model: null, observed_model: "seen", parent: "p1", turns }), "last-turn");
+  assert.equal(chipModel({ model: null, subagent: { id: "x" }, turns: [{ role: "user", model: "u" }] }), null);
+});
+
+test("cada superficie enseña su mitad del catálogo, y la que no parte enseña todo", () => {
+  assert.equal(surfaceHas(zen, catalog[0]), true);
+  assert.equal(surfaceHas(zen, catalog[1]), false);
+  assert.equal(surfaceHas(free, catalog[1]), true);
+  assert.equal(surfaceHas(free, catalog[0]), false);
+  assert.equal(surfaceHas(claude, catalog[1]), true);
+  assert.equal(surfaceHas(undefined, catalog[0]), true);
+});
+
+test("el login único de OpenCode solo ofrece Go: el saldo de Zen ya no aparece", () => {
+  assert.equal(surfaceHas(zen, { id: "opencode/deepseek-v4.1-flash", gratis: false }), false);
+  assert.equal(surfaceHas(zen, { id: "opencode/claude-opus-5", gratis: false }), false);
+  assert.equal(surfaceHas(zen, { id: "opencode-go/deepseek-v4.1-flash", gratis: false }), true);
+  assert.equal(surfaceHas(claude, { id: "opencode/deepseek-v4.1-flash", gratis: false }), true);
+  assert.equal(surfaceOf([zen], "opencode-zen", "opencode/deepseek-v4.1-flash", [{ id: "opencode/deepseek-v4.1-flash", gratis: false }], undefined), "opencode-zen");
+});
+
+test("el menú deja fuera lo no utilizable salvo la superficie de la tarea abierta", () => {
+  assert.deepEqual(menuSurfaces([zen, free, claude], undefined).map((s) => s.id), ["opencode-zen", "claude"]);
+  assert.deepEqual(menuSurfaces([zen, free, claude], "opencode-zen:free").map((s) => s.id), ["opencode-zen", "opencode-zen:free", "claude"]);
+});
+
+test("la superficie se deriva del modelo: una tarea de un modelo gratuito abre en los gratuitos", () => {
+  const on = { ...free, usable: true };
+  assert.equal(surfaceOf([zen, on], "opencode-zen", "danil-free/reflection/beam-free", catalog, undefined), "opencode-zen:free");
+  assert.equal(surfaceOf([zen, on], "opencode-zen", "zen/big", catalog, "opencode-zen:free"), "opencode-zen");
+  // Sin modelo, la que ya estaba se queda.
+  assert.equal(surfaceOf([zen, on], "opencode-zen", "", catalog, "opencode-zen:free"), "opencode-zen:free");
+  assert.equal(surfaceOf([zen, on], "codex", "", catalog, undefined), undefined);
+});
+
+
+test("la superficie gratuita rechaza modelos anteriores y la variante de pago aunque digan gratis", () => {
+  for (const id of ["zen/free", "opencode/big-pickle", "reflection/beam", "danil-free/reflection/beam"]) {
+    assert.equal(surfaceHas(free, { id, gratis: true }), false);
+  }
+  assert.equal(surfaceHas(free, { id: "danil-free/reflection/beam-free", gratis: false }), false);
+});
+
+test("Credits es una partición exacta con disponibilidad independiente", () => {
+  const credits: Surface = { ...zen, id: "danil-credits", label: "Danil Credits", catalogo: "todo" };
+  const model = { id: "danil-credits/danil/equilibrado", gratis: false };
+  const tiers = [
+    model,
+    { id: "danil-credits/danil/ligero", gratis: false },
+    { id: "danil-credits/danil/avanzado", gratis: false },
+  ];
+  for (const other of [...catalog, { id: "danil-credits/alias" }, { id: "danil-credits/deepseek/deepseek-v4.1-flash", gratis: false }]) {
+    assert.equal(surfaceHas(credits, other), false);
+  }
+  for (const tier of tiers) {
+    assert.equal(surfaceHas(credits, tier), true);
+    for (const other of [zen, free, claude, undefined]) assert.equal(surfaceHas(other, tier), false);
+    assert.equal(surfaceHas({ ...credits, provider: "other" }, tier), false);
+    assert.equal(surfaceHas(credits, { ...tier, gratis: true }), false);
+  }
+  const mixed = [model, ...catalog];
+  assert.equal(surfaceOf([credits, { ...zen, usable: false }, free], "opencode-zen", catalog[0].id, mixed, "danil-credits"), zen.id);
+  assert.equal(surfaceOf([{ ...credits, usable: false }, zen, free], "opencode-zen", model.id, mixed, zen.id), "danil-credits");
+});
+
+test("con el motor nuevo, OpenCode y el Free Router son dos filas de una superficie cada una", () => {
+  const opencode: Surface = { id: "opencode", provider: "opencode", label: "OpenCode", catalogo: "todo", usable: true, marca: null, porque: null };
+  const router: Surface = { id: "free-router-opencode", provider: "free-router-opencode", label: "Free Router · OpenCode", catalogo: "gratuitos", usable: true, marca: null, porque: null };
+  assert.equal(surfaceHas(opencode, { id: "opencode-go/deepseek-v4.1-flash", gratis: false }), true);
+  assert.equal(surfaceHas(opencode, { id: "opencode/deepseek-v4.1-flash", gratis: false }), false);
+  assert.equal(surfaceHas(router, catalog[1]), true);
+  assert.equal(surfaceHas(router, catalog[0]), false);
+  // Una tarea guardada con el id viejo abre en la fila que le toca según su modelo.
+  assert.equal(surfaceOf([opencode, router], "opencode-zen", "danil-free/reflection/beam-free", catalog, undefined), "free-router-opencode");
+  assert.equal(surfaceOf([opencode, router], "opencode-zen", "opencode-go/x", [{ id: "opencode-go/x", gratis: false }], undefined), "opencode");
+  // Un modelo local retirado no tiene superficie.
+  assert.equal(surfaceOf([opencode, router], "opencode-local", "llamacpp/qwen", [], undefined), undefined);
+  const credits: Surface = { ...opencode, id: "danil-credits", label: "Danil Credits" };
+  assert.equal(surfaceHas(credits, { id: "danil-credits/danil/equilibrado", gratis: false }), true);
+});
+
+test("Danil Credits elige Equilibrado por omisión aunque Ligero aparezca primero", () => {
+  const credits: Surface = { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
+  const tiers = [
+    { id: "danil-credits/danil/ligero", gratis: false },
+    { id: "danil-credits/danil/equilibrado", gratis: false },
+    { id: "danil-credits/danil/avanzado", gratis: false },
+  ];
+  assert.equal(defaultSurfaceModel(credits, tiers)?.id, "danil-credits/danil/equilibrado");
+  assert.equal(defaultSurfaceModel(credits, [tiers[0], tiers[2]])?.id, "danil-credits/danil/ligero");
+  const claude: Surface = { id: "claude", provider: "claude", label: "Claude", catalogo: "todo", usable: true, marca: null, porque: null };
+  assert.equal(defaultSurfaceModel(claude, [{ id: "sonnet" }, { id: "opus" }])?.id, "sonnet");
+});
+
+test("una tarea de Danil Credits no cae en OpenCode mientras carga o falta el catálogo", () => {
+  const opencode: Surface = { id: "opencode", provider: "opencode", label: "OpenCode", catalogo: "todo", usable: true, marca: null, porque: null };
+  const credits: Surface = { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
+  // El motor devuelve opencode antes que danil-credits; con catálogo vacío el modelo de Credits
+  // sigue perteneciendo a danil-credits y no debe saltar a opencode.
+  assert.equal(surfaceOf([opencode, credits], "opencode", "danil-credits/danil/avanzado", [], undefined), "danil-credits");
+  assert.equal(surfaceOf([opencode, credits], "opencode", "danil-credits/danil/avanzado", [], "opencode"), "danil-credits");
+  assert.equal(
+    surfaceOf([opencode, { ...credits, usable: false }], "opencode", "danil-credits/danil/equilibrado", [{ id: "opencode-go/deepseek-v4.1-flash", gratis: false }], "opencode"),
+    "danil-credits",
+  );
+  // Y un modelo de OpenCode Go con catálogo vacío tampoco queda atrapado en danil-credits.
+  assert.equal(surfaceOf([opencode, credits], "opencode", "opencode-go/deepseek-v4.1-flash", [], "danil-credits"), "opencode");
+});

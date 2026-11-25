@@ -1,5 +1,15 @@
 export { contextAttentionStale } from "./queries/context-attention.ts";
 export { createContextRelayPool } from "./queries/context-relay-pool.ts";
+export { createRemoteGuestManager } from "./queries/remoteGuestLink.ts";
 export { danilAvailable, danilAvailableContext, danilMachines, isDanilWorkspace, machinesListed, readDanil, readDanilContext } from "./queries/danil-source.ts";
-export { contextMachinesQuery, machinesQuery, type MachinesQuery } from "./queries/machines-query.ts";
-export { type MachineOrganization, type MergedMachineRow, type SessionMachineRow, mergeByMachineId } from "./model/merge-by-machine.ts";
+export { mergeByMachineId } from "./model/merge-by-machine.ts";
+export { isRemoteGuestMachine, parseRemoteGuestMachineId } from "./model/wsl.ts";
+export {
+  DESKTOP_AVAILABILITY,
+  deriveMachineAvailability,
+  hasNoMachines,
+  isNoMachineError,
+  type AvailabilityInput,
+  type AvailabilityMachine,
+  type MachineAvailability,
+} from "./model/availability.ts";

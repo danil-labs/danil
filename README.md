@@ -19,12 +19,11 @@ repository and is downloaded pinned by version and SHA-256.
 Download the latest installer from [danil.ai/download](https://danil.ai/download/):
 
 - **[Danil-Windows-Setup.exe](https://danil.ai/download/Danil-Windows-Setup.exe)** — Windows 10 or 11, 64-bit
-- **[Danil-macOS.dmg](https://danil.ai/download/Danil-macOS.dmg)** — macOS, Apple Silicon and Intel
+- **[Danil-macOS.dmg](https://danil.ai/download/Danil-macOS.dmg)** — macOS (Apple Silicon)
 - **[Danil-Linux-x86_64.AppImage](https://danil.ai/download/Danil-Linux-x86_64.AppImage)** — Linux x86_64 (Ubuntu 22.04 or later)
 
-The macOS DMG is universal. `Danil-macOS-Intel.dmg` is an alias with the
-same file. Until 0.2.x the app was called Terminus; a copy installed with that
-name updates in place and keeps its folder.
+Until 0.2.x the app was called Terminus; a copy installed with that name updates
+in place and keeps its folder.
 
 On Linux there is nothing to install: the AppImage is a portable executable.
 
@@ -121,18 +120,17 @@ apps/desktop/             the window (this is what the installers ship)
   src-tauri/              Tauri window (Rust)
     crates/engine-client    RPC client for the engine, no Tauri dependency
     crates/engine-protocol  contract: commands, events, phrase keys
-  plugins/languages/      bundled language packs
   scripts/                guards, tests and dev tooling (pnpm verify)
   npx/                    the npx installer
 apps/mobile/              the iOS and Android app (Expo) and its dev bridge
-packages/design           task states, marks, words, colors and the type scale both apps share
-packages/tasks            the task list both apps derive: flat list, filter, two-line card, agents dock
-packages/chat             how every client reads an agent message: links, visuals, next steps, tool steps
-packages/attention        Inbox, channels, customization and support access from any client
+packages/design           shim for apps/mobile only; the tokens live in packages/ui
+packages/tasks            shim for apps/mobile: re-exports packages/ui/src/lib/tasks/index.ts
+packages/chat             shim for apps/mobile: re-exports packages/ui/src/lib/chat and engine-client history
+packages/attention        Inbox, channels and customization of the phone
 packages/computers        Danil Machines client: control-plane API, relay session, wake rules
 packages/fleet            several machines behind one panel: envelope, per-machine slices, merge
-packages/carry            carrying work between machines: what travels, parts, base of the new task
-packages/protocol         the commands the mobile app may send to a machine, and their answers
+packages/carry            shim for apps/mobile only; carry lives in packages/features/machines
+packages/protocol         shim for apps/mobile only; the protocol lives in packages/engine-client
 ```
 
 `pnpm <script>` at the root runs the desktop's script (`apps/desktop/package.json`).

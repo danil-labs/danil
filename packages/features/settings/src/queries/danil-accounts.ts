@@ -5,9 +5,9 @@
  * `sessions()` es `undefined` mientras lee y `null` con un motor anterior.
  */
 import { createEffect, createSignal, on, onCleanup, onMount } from "solid-js";
-import { invoke } from "../../../../engine-client/src/client";
-import { listen } from "../../../../../apps/desktop/src/lib/serviceEvents";
-import { listenDanilConnectionChange } from "../../../../../apps/desktop/src/lib/danilConnectionEvents";
+import { callEngine } from "../../../../engine-client/src/client";
+import { listen } from "../../../../host/src/serviceEvents.ts";
+import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
 import { failureCode } from "./danil-account";
 import type { MaquinasDeAjustes } from "../model/machines-port";
 import {
@@ -141,7 +141,7 @@ export function createDanilAccounts(options: { workspace?: (() => string | null 
     signOut: (account: string) => run(() => signOutAccount(account), () => void reload()),
     reopen: () => {
       const url = pendingSession(sessions())?.verification_uri_complete;
-      if (url) void invoke("open_external", { target: url }).catch(() => {});
+      if (url) void callEngine("open_external", { target: url }).catch(() => {});
     },
   };
 }

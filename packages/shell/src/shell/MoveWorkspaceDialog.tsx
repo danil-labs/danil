@@ -1,10 +1,9 @@
 import { createSignal, For, onMount, Show } from "solid-js";
-import { t } from "../../../../apps/desktop/src/lib/i18n";
+import { t } from "../../../ui/src/lib/i18n";
 import { capabilities } from "../../../host/src/platform";
 import { Button } from "../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../ui/src/Dialog";
-import { accountOfEngine, moveDestinations, moveWorkspace, type MoveAccount, type MoveDestination } from "./account-move";
-import type { sessionRail } from "./session-groups";
+import { accountOfEngine, moveDestinations, moveWorkspace, type MoveAccount, type MoveDestination, type MoveGroup, type Send } from "./account-move";
 
 const HARNESS = "https://harness.danil.ai/workspaces";
 
@@ -13,14 +12,17 @@ async function openHarness() {
     window.open(HARNESS, "_blank", "noopener,noreferrer");
     return;
   }
-  const { invoke } = await import("../../../engine-client/src/client.ts");
-  await invoke("open_external", { target: HARNESS }).catch(() => {});
+  const { callShellViewEngine } = await import("../../../session/src/shell-view-queries.ts");
+  await callShellViewEngine("open_external", { target: HARNESS }).catch(() => {});
 }
 
 type Source = { context_id: string; org: string };
 
+/** Lo del riel de sesiones que usa el diálogo: el riel entero lo cumple, y también el puerto de Configuración. */
+type MoveSessions = { sessions: { send: Send }; groups: () => readonly MoveGroup[] | null | undefined; refresh: () => void };
+
 /** El contexto donde el catálogo de la organización tiene el workspace, si se llama desde fuera del aviso. */
-async function sourceOf(send: ReturnType<typeof sessionRail>["sessions"]["send"], groups: readonly Source[], engine: string, known: Source | undefined) {
+async function sourceOf(send: Send, groups: readonly Source[], engine: string, known: Source | undefined) {
   if (known) {
     const account = await accountOfEngine(send, known.context_id, engine).catch(() => null);
     return account ? { source: known, account } : null;
@@ -34,7 +36,7 @@ async function sourceOf(send: ReturnType<typeof sessionRail>["sessions"]["send"]
 
 /** Mover un workspace adoptado: se pide con el contexto de origen y, si aquí se es admin del destino, se acepta con el suyo. */
 export default function MoveWorkspaceDialog(props: {
-  sessions: ReturnType<typeof sessionRail>;
+  sessions: MoveSessions;
   workspace: { id: string; name: string };
   source?: Source;
   onClose: () => void;

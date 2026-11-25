@@ -69,16 +69,14 @@ test("the workspace scope is written and edited like the project scope, without 
   const app = await boot("listo", "memory-workspace-scope", e.table);
   const { w } = app;
   await sleep(900);
-  // Ajustes → Carpetas → «Material que lee» abre la vista del proyecto, con su memoria.
-  w.dispatchEvent(new w.CustomEvent("harness:open-settings", { detail: "proyectos" }));
-  await sleep(900);
-  const actions = w.document.querySelector('[aria-label="Acciones de «terminus»"]');
-  assert.ok(actions, w.document.body.textContent.slice(0, 400));
-  actions.click();
-  await sleep(300);
-  const material = [...w.document.querySelectorAll("[role=menuitem]")].find((b) => b.textContent.trim() === "Material que lee");
-  assert.ok(material, "the folder menu offers its view");
-  material.click();
+  // Desde la barra lateral, abrir la carpeta y su pestaña «Configuración» muestra su memoria.
+  const folderOpen = w.document.querySelector('[data-folder-group="p1"] [data-folder-open]');
+  assert.ok(folderOpen, w.document.body.textContent.slice(0, 400));
+  folderOpen.click();
+  await sleep(400);
+  const settingsTab = [...w.document.querySelectorAll('[role="tab"]')].find((b) => b.textContent.trim() === "Configuración");
+  assert.ok(settingsTab, "the project view offers its settings tab");
+  settingsTab.click();
   await sleep(900);
 
   const section = memory(w);

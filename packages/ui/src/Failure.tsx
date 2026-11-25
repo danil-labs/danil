@@ -1,9 +1,9 @@
 import { Show } from "solid-js";
-import { t } from "../../../apps/desktop/src/lib/i18n";
-import { prosa } from "../../../apps/desktop/src/lib/prose";
-import type { Failure } from "../../../apps/desktop/src/lib/failure";
+import { t } from "./lib/i18n";
+import { prosa } from "./lib/prose.ts";
+import type { Failure } from "./lib/failure.ts";
 
-export { asFailure, claveDe, detalleDe, prosaDe, type Failure } from "../../../apps/desktop/src/lib/failure";
+export { asFailure, claveDe, detalleDe, prosaDe, type Failure } from "./lib/failure.ts";
 
 export function FailureNote(props: { f: Failure }) {
   return (
