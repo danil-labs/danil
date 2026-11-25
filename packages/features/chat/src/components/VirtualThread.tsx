@@ -1,6 +1,7 @@
 import { createVirtualizer, defaultRangeExtractor, observeElementRect, type Range } from "@tanstack/solid-virtual";
-import { createEffect, createMemo, createSignal, mapArray, onCleanup, onMount, untrack, type Accessor, type JSX } from "solid-js";
+import { batch, createEffect, createMemo, createSignal, mapArray, onCleanup, onMount, untrack, type Accessor, type JSX } from "solid-js";
 import { ThreadRowContext } from "../model/threadRow";
+import { shouldAlignVirtualOffset } from "../model/threadRows";
 
 const THREAD_GAP = 6;
 // En hilos cortos/medios (<= 80 bloques) se montan todas las filas para que el scroll sea
@@ -39,8 +40,6 @@ export function VirtualThread(props: {
   const indexOf = createMemo(() => new Map(props.keys().map((key, index) => [key, index])));
   const rowState = new Map<string, Map<string, unknown>>();
   const [held, setHeld] = createSignal<ReadonlyMap<string, number>>(new Map());
-  // Lo que pidió TanStack antes de que los márgenes crecieran: el navegador lo acotó y se repite.
-  let wanted: number | null = null;
   const virtualizer = createVirtualizer<HTMLElement, HTMLElement>({
     get count() { return props.keys().length; },
     get getItemKey() {
@@ -54,10 +53,11 @@ export function VirtualThread(props: {
     initialOffset: FROM_THE_END,
     anchorTo: "end",
     followOnAppend: false,
-    scrollToFn: (offset, { adjustments = 0 }) => {
-      // Las correcciones de alto las lleva `seguirElFondo`; aceptar `adjustments` aquí pelea al subir.
-      if (adjustments !== 0) return;
-      wanted = offset;
+    // `seguirElFondo` es el único dueño de `scrollTop`: TanStack nunca escribe la barra
+    // por su cuenta (evita saltos a estimaciones viejas al anteponer o cambiar el conteo).
+    scrollToFn: () => {},
+    onChange: (instance) => {
+      if (instance.range) props.onRange?.(instance.range.startIndex);
     },
     // Una pestaña escondida mide cero: aceptarlo desmontaría lo que se lee.
     observeElementRect: (instance, callback) => observeElementRect(instance, (rect) => {
@@ -85,8 +85,11 @@ export function VirtualThread(props: {
       };
     },
   });
-  // La lectura la devuelve `seguirElFondo`: dos correcciones del mismo cambio de alto se sumarían.
-  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false;
+  // `scrollToFn` es no-op, pero alinea el `scrollOffset` interno de TanStack cuando
+  // cambia el alto de una fila por encima de la vista: sin esto, `calculateRange()`
+  // lee el offset viejo tras `resizeItem` y monta filas hacia arriba en cascada.
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, _delta, instance) =>
+    shouldAlignVirtualOffset(item.end, instance.scrollOffset);
 
   const placed = createMemo<Placed[]>(() => {
     const items = virtualizer.getVirtualItems();
@@ -105,14 +108,6 @@ export function VirtualThread(props: {
     equals: (a, b) => a.length === b.length && a.every((key, at) => key === b[at]),
   });
   const byKey = createMemo(() => new Map(placed().map((row) => [row.key, row])));
-
-  createMemo(() => {
-    const list = placed();
-    if (!list.length) return;
-    // Reporta la primera fila realmente visible (`range.startIndex`), no `list[0]`:
-    // con todas las filas montadas (`<= VIRTUALIZE_ABOVE`), `list[0]` sería 0 al abrir.
-    props.onRange?.(virtualizer.range?.startIndex ?? list[0]!.index);
-  });
 
   const rowOf = (key: string) => props.scroller.querySelector<HTMLElement>(`[data-thread-key="${CSS.escape(key)}"]`);
   const nextFrame = () => new Promise(requestAnimationFrame);
@@ -185,13 +180,11 @@ export function VirtualThread(props: {
   }) as unknown as Accessor<HTMLElement[]>;
 
   // Conserva los nodos y solo mueve los que cambiaron de lugar al reconciliar sus claves.
-  // Mide las filas recién montadas de forma síncrona ANTES de `settled()`: `measureElement`
-  // omite medir mientras `isScrolling` es true y, con la estimación vieja, `restaurarAncla`
-  // movía `scrollTop` haciendo que TanStack desmontara y remontara la fila en bucle al subir.
+  // Compensa el ancla contra los altos reales recién insertados ANTES de actualizar
+  // las medidas en TanStack, evitando cascadas de rango con `scrollOffset` atrasado.
   const end = document.createComment("");
   let mounted = new Set<HTMLElement>();
-  let prevBefore = 0;
-  let prevAfter = 0;
+  let prevMargins = "";
   createEffect(() => {
     const list = placed();
     const next = rows();
@@ -217,32 +210,28 @@ export function VirtualThread(props: {
     }
     mounted = kept;
     if (removed) virtualizer.measureElement(null);
-    for (const row of added) {
-      if (!row.isConnected) continue;
-      const index = Number(row.dataset.index);
-      const key = row.dataset.threadKey;
-      const height = row.getBoundingClientRect().height;
-      virtualizer.measureElement(row);
-      if (height > 0 && Number.isInteger(index) && key !== undefined) {
-        const known = virtualizer.itemSizeCache.get(key) ?? virtualizer.measurementsCache[index]?.size;
-        if (known === undefined || Math.abs(height - known) >= 0.5) {
-          virtualizer.resizeItem(index, height);
+    const nextMargins = list.map((item) => `${item.before}:${item.after}`).join(",");
+    const layoutChanged = added.length > 0 || removed || nextMargins !== prevMargins;
+    prevMargins = nextMargins;
+    if (layoutChanged) props.settled();
+    if (added.length > 0) {
+      batch(() => {
+        for (const row of added) {
+          if (!row.isConnected) continue;
+          const index = Number(row.dataset.index);
+          const key = row.dataset.threadKey;
+          const height = row.getBoundingClientRect().height;
+          virtualizer.measureElement(row);
+          if (height > 0 && Number.isInteger(index) && key !== undefined) {
+            const known = virtualizer.itemSizeCache.get(key) ?? virtualizer.measurementsCache[index]?.size;
+            if (known === undefined || Math.abs(height - known) >= 0.5) {
+              virtualizer.resizeItem(index, height);
+            }
+          }
         }
-      }
+      });
     }
-    const nextBefore = list[0]?.before ?? 0;
-    const nextAfter = list.at(-1)?.after ?? 0;
-    const layoutChanged = added.length > 0 || removed || nextBefore !== prevBefore || nextAfter !== prevAfter;
-    prevBefore = nextBefore;
-    prevAfter = nextAfter;
-    if (wanted !== null) {
-      const target = wanted;
-      wanted = null;
-      if (Math.abs(props.scroller.scrollTop - target) >= 1) props.write(target);
-      else if (layoutChanged) props.settled();
-    } else if (layoutChanged) {
-      props.settled();
-    }
+    if (virtualizer.range) props.onRange?.(virtualizer.range.startIndex);
   });
   onCleanup(() => {
     for (const row of mounted) row.remove();
