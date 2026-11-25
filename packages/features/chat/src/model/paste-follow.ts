@@ -59,6 +59,14 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
    */
   let escritoPorNosotros: number | undefined;
   let ultimoScrollTop: number | undefined;
+  let ultimaRuedaArriba = 0;
+  let ruedaPendiente = false;
+  let finDeRueda: ReturnType<typeof setTimeout> | undefined;
+  const limpiarRueda = () => {
+    ruedaPendiente = false;
+    clearTimeout(finDeRueda);
+    finDeRueda = undefined;
+  };
 
   const scrollTop = () => caja?.scrollTop ?? 0;
 
@@ -75,8 +83,9 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
     // lanza ahí en vez de contestar vacío como en el navegador.
     const previo = caja.isConnected ? getComputedStyle(caja).scrollBehavior : "auto";
     if (previo !== "auto") caja.style.scrollBehavior = "auto";
+    const antes = caja.scrollTop;
     caja.scrollTop = valor;
-    escritoPorNosotros = caja.scrollTop;
+    if (caja.scrollTop !== antes) escritoPorNosotros = caja.scrollTop;
     if (previo !== "auto") caja.style.scrollBehavior = previo;
   };
 
@@ -142,6 +151,7 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
    */
   const alScrollear = (e: Event) => {
     if (e.target !== caja) return;
+    limpiarRueda();
 
     const ahora = scrollTop();
     const ignorado = escritoPorNosotros;
@@ -156,20 +166,12 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
 
     ponCerca(estaCerca());
 
-    /**
-     * Un gesto que se va lejos del final se atiende ya, sin esperar el tic de
-     * abajo. Ese tic existe para el caso en que un `scroll` por cambio de
-     * tamaño llega antes que el aviso que lo explica; el precio es un cuadro de
-     * retraso, que con el muelle se ve como que arrastrar hacia arriba «tira»
-     * hacia atrás. Este caso se resuelve sin esperar: el único movimiento
-     * hacia arriba que no es nuestro es el acotado del navegador cuando el
-     * contenido encoge, y ese deja la barra EN el fondo, nunca lejos de él —
-     * subir más allá del margen es siempre de la persona.
-     */
+    // Cualquier ascenso por debajo del fondo es de la persona (el acotado del navegador
+    // al encoger siempre deja la barra en `fondo()`); se suelta ya sin esperar un tic.
     if (
       ahora < previo &&
       ahora !== ignorado &&
-      !estaCerca() &&
+      ahora < fondo() &&
       !animacionActual()?.ignorarEscapes
     ) {
       soltar();
@@ -228,24 +230,28 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
 
   /**
    * La rueda hacia arriba suelta el hilo aquí y no por la posición: el
-   * navegador cancela el desplazamiento de la rueda si el script mueve la
-   * barra durante el gesto, y con el agente escribiendo la movemos varias
-   * veces por segundo. Soltando en el propio evento, el primer `deltaY`
-   * negativo ya para la animación y el gesto llega entero.
-   *
-   * Sube por el árbol buscando quién se lleva el gesto: el `target` es el nodo
-   * bajo el puntero —un `<code>`, una celda de diff—. Un bloque de código o una
-   * tabla tienen `overflow: auto` y solo desplazan en horizontal: la rueda
-   * hacia arriba sobre ellos sube el hilo, y parar en el primer `overflow`
-   * dejaba el hilo pegado al fondo bajo el gesto. Solo se lo lleva quien
-   * todavía puede subir.
+   * navegador cancela la rueda si el script mueve la barra durante el gesto.
+   * Solo se lleva el gesto un ancestro que todavía puede subir por dentro.
    */
   const alRodar = (e: WheelEvent) => {
     if (!caja || e.deltaY >= 0 || animacionActual()?.ignorarEscapes) return;
     for (let el = e.target as Element | null; el && el !== caja; el = el.parentElement) {
       if (subePorDentro(el)) return;
     }
-    if (caja.scrollHeight > caja.clientHeight) soltar();
+    if (caja.scrollHeight <= caja.clientHeight) return;
+    ultimaRuedaArriba = performance.now();
+    if (caja.scrollTop > 0) {
+      ruedaPendiente = true;
+      clearTimeout(finDeRueda);
+      finDeRueda = setTimeout(limpiarRueda, 80);
+    }
+    // Solo se suelta la primera vez y sin tomar el ancla antes de que el navegador
+    // mueva `scrollTop`; si no, `restaurarAncla` deshace la rueda hacia abajo.
+    if (sigue() || !escapado()) {
+      ponEscapado(true);
+      ponSigue(false);
+      olvidarAncla();
+    }
   };
 
 
@@ -264,7 +270,7 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   // Más de un tercio de la caja en blanco se lee peor que el salto que evita.
   const topeDeRelleno = () => Math.round((caja?.clientHeight ?? 0) / 3);
 
-  const { observador, diferenciaActual, olvidarAlto, sumarAntepuesto } = crearObservador({ cajaActual: () => caja, sigue, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual: () => relleno, ponRelleno, topeDeRelleno });
+  const { observador, diferenciaActual, olvidarAlto, sumarAntepuesto } = crearObservador({ cajaActual: () => caja, sigue, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual: () => relleno, ponRelleno, topeDeRelleno, ruedaArribaActiva: () => performance.now() - ultimaRuedaArriba < 250, ruedaPendiente: () => ruedaPendiente });
 
   /**
    * Los dos `ref` sueltan lo anterior antes de tomar lo nuevo: la caja de una
@@ -276,14 +282,11 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
    * anterior. Una nueva más corta da diferencia negativa, el observador lo
    * trata como «encogió» y la conversación abre a media altura. Lo fija
    * `tests/unit/paste.test.ts`.
-   *
-   * `disconnect` y los `removeEventListener` son el contrato del módulo, no un
-   * fallo observado: un observador mira un contenido, un contenedor tiene un
-   * juego de oyentes, y el elemento viejo se desprende y deja de reportar.
    */
   const contenedor = (el: HTMLElement) => {
     caja?.removeEventListener("scroll", alScrollear);
     caja?.removeEventListener("wheel", alRodar);
+    limpiarRueda();
     caja = el;
     ultimoScrollTop = undefined;
     escritoPorNosotros = undefined;
@@ -336,12 +339,14 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
     // Siguiendo manda `pegar`: la posición que recuerda un virtualizador ya quedó atrás del fondo.
     if (!lectura && sigue()) return;
     ponScrollTop(valor);
-    if (lectura && !sigue()) tomarAncla();
+    if (!sigue()) tomarAncla();
     ponCerca(estaCerca());
   };
 
   const sostener = () => {
-    if (!sigue()) restaurarAncla();
+    if (sigue() || ruedaPendiente) return;
+    restaurarAncla();
+    tomarAncla();
   };
 
   // Quitar el padding no cambia `contentRect`: el observador no avisaría del cierre.
@@ -361,22 +366,14 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   onCleanup(() => {
     caja?.removeEventListener("scroll", alScrollear);
     caja?.removeEventListener("wheel", alRodar);
+    limpiarRueda();
     observador?.disconnect();
   });
 
-  /**
-   * «Sigue» o «ya está viendo el final»: los dos casos quieren lo mismo del
-   * consumidor, no ofrecer un botón para bajar. Separarlos obligaría a cada
-   * llamador a repetir la misma unión.
-   */
+  // «Sigue» o «ya está viendo el final»: en ambos casos no hace falta botón de bajar.
   const alFondo = () => sigue() || cerca();
 
-  /**
-   * Es una medida y no la decisión. `alFondo` une las dos: el botón de bajar
-   * no tiene nada que ofrecer en ninguno de los dos casos. El aviso de
-   * mensajes nuevos sí distingue: se pregunta por `sigue()`, no por la
-   * distancia, para saber si entró algo mientras alguien leía arriba.
-   */
+  // Aviso de mensajes nuevos: pregunta por `sigue()`, no por distancia.
   const hayNuevos = () => nuevos() && !alFondo();
 
   return {

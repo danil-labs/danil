@@ -48,6 +48,8 @@ export type Paso = {
   nombre: string;
   /** Sobre qué actuó: la ruta, el comando, el patrón. */
   objetivo: string | null;
+  /** Descripción breve humana cuando el motor o la herramienta la entrega. */
+  summary?: string;
   detalle: Detalle | null;
   mcpApp?: {
     server: string;
