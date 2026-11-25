@@ -55,7 +55,7 @@ export function createPanelDeChatCell(deps: PanelDeChatCellDeps) {
     soloLectura?: boolean;
   }) => {
     const estado = estadoDePanelDeChat(pp);
-    const { visualWorkspace, esperandoAqui, proyectoDeLaCelda, clavePanel, estadoDelTrabajo, refreshWork, delegation, delegationData, delegatedRows, delegatedList, coordinatingTask, recuperable, origenArchivada, esRepositorio, encargadoDeLaCelda, bloqueoDeTraspaso, motivoDeTraspaso, identidadVisualDeLaCelda, estadoDelEncargado, profiles, cellProfile, declared, viewingProfile, setViewingProfile, lecturaDeLaCelda, preguntasDeLaCelda, vistaDeLaCelda, mensajes, historialAnteriorEnReposo, soloPorSerAnterior, seguirConElAgente } = estado;
+    const { visualWorkspace, claveDelHilo, esperandoAqui, proyectoDeLaCelda, clavePanel, estadoDelTrabajo, refreshWork, delegation, delegationData, delegatedRows, delegatedList, coordinatingTask, recuperable, origenArchivada, esRepositorio, encargadoDeLaCelda, bloqueoDeTraspaso, motivoDeTraspaso, identidadVisualDeLaCelda, estadoDelEncargado, profiles, cellProfile, declared, viewingProfile, setViewingProfile, lecturaDeLaCelda, preguntasDeLaCelda, vistaDeLaCelda, mensajes, historialAnteriorEnReposo, soloPorSerAnterior, seguirConElAgente } = estado;
     const ubicacion = ubicacionDePanelDeChat(pp, estado);
     return (
     <Show
@@ -136,7 +136,7 @@ export function createPanelDeChatCell(deps: PanelDeChatCellDeps) {
           </Show>
         </>}
         machine={pp.sesion ? filaDe(pp.sesion)?.machine : undefined}
-        activities={threads.activities(pp.sesion ?? "", mensajes())}
+        activities={threads.activities(claveDelHilo(), mensajes())}
         msgs={mensajes()}
         /* Identidad de lo que tiene delante, no ids de proyecto/tarea: es lo
            único con lo que distingue «entró un mensaje» de «otra
@@ -144,7 +144,7 @@ export function createPanelDeChatCell(deps: PanelDeChatCellDeps) {
            sin esto el fondo del hilo anterior quedaría puesto. */
         conversacion={pp.sesion ?? ""}
         /* Sin fila todavía es la que acaba de nacer vacía (`crearEnTareaVacia`). */
-        sinEmpezar={!!pp.sesion && (filaDe(pp.sesion)?.turns ?? 0) === 0 && !filaDe(pp.sesion)?.chat_de_agente
+        sinEmpezar={!!pp.sesion && !esProvisional(pp.sesion) && (filaDe(pp.sesion)?.turns ?? 0) === 0 && !filaDe(pp.sesion)?.chat_de_agente
           && !vivas().includes(pp.sesion) && cargandoHilo() !== pp.sesion}
         lectura={lecturaDeLaCelda()}
         onLectura={(lectura) => guardarLectura(pp.sesion, lectura)}
@@ -285,7 +285,7 @@ export function createPanelDeChatCell(deps: PanelDeChatCellDeps) {
         enFondo={enFondo().includes(pp.sesion ?? "")}
         machineWait={esperaMaquinaEn(pp.sesion)}
         inicioDelTurno={desdeDeTurno()[pp.sesion ?? ""] ?? null}
-        terminal={terminales()[pp.sesion ?? ""] ?? null}
+        terminal={terminales()[claveDelHilo()] ?? null}
         carpetaDeTerminal={carpetasDeTerminal()[pp.sesion ?? ""] ?? null}
         onEntradaDeComando={(texto, eco) => teclearAlComando(pp.sesion, texto, eco)}
         models={models()}

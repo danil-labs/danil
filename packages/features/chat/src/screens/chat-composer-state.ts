@@ -11,6 +11,7 @@ import { seMandaSinSuperficie } from "../../../../ui/src/lib/queue.ts";
 import { taskChatPresentation } from "../components/TaskChatPresentation";
 import type { RespuestaRapida } from "../components/thread/AgentAnswer";
 import type { Msg } from "../model/messageTypes";
+import { computeComposerLayout } from "../model/composerLayout";
 import { seguirElFondo } from "../model/paste";
 import { createVisualBudget } from "../model/visualBudget";
 import type { ChatProps } from "./chat-props";
@@ -168,13 +169,23 @@ export function createChatComposerState(props: ChatProps, deps: ChatComposerStat
 
   // Memo y no accesor: `props.msgs` se rehace con cada evento del turno, y un
   // accesor hace correr a `on(vacia, …)` en cada uno con el mismo booleano.
-  const vacia = createMemo(() => props.msgs.length === 0);
-
-  /**
-   * Si la caja va centrada: hilo vacío de una tarea que todavía no existe o
-   * que nació sin mensajes. Centrar solo con agente dejaba «Nueva tarea» a secas al pie.
-   */
-  const centrada = createMemo(() => vacia() && (props.conversacion === "" || !!props.sinEmpezar));
+  // Una sola decisión pura controla vacío, centrado y selector de carpetas para
+  // que al enviar el primer mensaje desaparezcan juntos en el mismo cuadro.
+  const composerLayout = createMemo(() => computeComposerLayout({
+    messageCount: props.msgs.length,
+    conversation: props.conversacion,
+    unstarted: Boolean(props.sinEmpezar),
+    busy: Boolean(props.busy),
+    stopping: Boolean(props.stopping),
+    loading: Boolean(props.cargando),
+    hasActivity: Boolean(props.activities?.length),
+    hasTerminal: Boolean(props.terminal),
+    hasMachineWait: Boolean(props.machineWait),
+    hasHandoff: Boolean(props.handoff),
+  }));
+  const vacia = createMemo(() => composerLayout().empty);
+  const centrada = createMemo(() => composerLayout().centered);
+  const mostrarProyecto = createMemo(() => composerLayout().showProjectPicker);
 
   /** El saludo de una tarea nueva se elige al abrirla: una de las frases o la de la hora. */
   const SALUDOS = 10;
@@ -349,5 +360,5 @@ export function createChatComposerState(props: ChatProps, deps: ChatComposerStat
     // A mitad de frase el CLI no corre comandos: solo las skills que carga.
     return slashSuggestions(props.skills, d.inline ? [] : props.commands, d.query);
   });
-  return { actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, centrada, commandNames, copiado, copiando, dirigido, dismissed, efforts, elegido, esElVivo, escribible, esperaVisible, faltaUnanime, fieldSpans, forkeando, hasHighlight, hilo, listo, margenDelHilo, opciones, pick, preguntaPlegada, preguntasPlegadas, presentation, pulsoDeModo, razonamientos, respuestaRapida, saludo, setAttachmentFailure, setCaret, setCopiado, setCopiando, setDismissed, setForkeando, setPick, setPlegadaEn, setPreguntasPlegadas, setPreparingAttachments, reservarCajas, cajasVisibles, cancelarCaja, ordenesOcultas, setRazonamientos, setSoltando, setTrabajos, skillNames, slashGroups, soltando, tomarCampo, trabajos, trigger, vacia, visualBudget };
+  return { actual, attachmentFailure, bloqueoDeSuperficie, cambiarModo, centrada, commandNames, copiado, copiando, dirigido, dismissed, efforts, elegido, esElVivo, escribible, esperaVisible, faltaUnanime, fieldSpans, forkeando, hasHighlight, hilo, listo, margenDelHilo, mostrarProyecto, opciones, pick, preguntaPlegada, preguntasPlegadas, presentation, pulsoDeModo, razonamientos, respuestaRapida, saludo, setAttachmentFailure, setCaret, setCopiado, setCopiando, setDismissed, setForkeando, setPick, setPlegadaEn, setPreguntasPlegadas, setPreparingAttachments, reservarCajas, cajasVisibles, cancelarCaja, ordenesOcultas, setRazonamientos, setSoltando, setTrabajos, skillNames, slashGroups, soltando, tomarCampo, trabajos, trigger, vacia, visualBudget };
 }

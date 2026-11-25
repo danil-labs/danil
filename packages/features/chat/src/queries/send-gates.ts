@@ -14,7 +14,7 @@ import { mergeGates } from "../model/permissionGates";
 import { comandoDeTerminal } from "../model/terminalIndent";
 import { type Turn } from "../model/transcript";
 import { type Session } from "../model/transcript.ts";
-import { createSignal, type Accessor, type Setter } from "solid-js";
+import { batch, createSignal, type Accessor, type Setter } from "solid-js";
 import type { CarryCheck, CarryPort, Draft, DraftsPort, MachinesPort, RunOnPort, SessionRow, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createAttachments } from "./attachments.ts";
 import type { createHandover } from "./handover.ts";
@@ -331,20 +331,24 @@ export function createSendGates(deps: SendGatesDeps) {
     const generation = workspaceContext.generation();
     if (hojaDeLlevar()?.key === draftKey) return false;
     const llevar = !sessionId() && !!carryModule()?.carries()[draftKey];
-    setInput("");
-    // Salen con el texto: el globo los pinta antes de que `send_message` vuelva.
-    drafts.takeFiles(draftKey, attachments);
-    const sent = await enviar({
-      text: prompt,
-      task_mentions: message.task_mentions,
-      recipients: message.recipients,
-      provider: agent(),
-      model: model() || null,
-      effort: effortDelTurno(),
-      permission_mode: modo() || null,
-      attachments,
-      space: escritorio(),
-    }, undefined, undefined, llevar ? (clave) => (carryModule() as CarryPort).runCarry(clave) : undefined);
+    // En un solo lote junto con el arranque de `enviar`: limpiar el campo y pasar
+    // al hilo provisional ocurren a la vez, sin un cuadro intermedio con la caja vacía centrada.
+    const sent = await batch(() => {
+      setInput("");
+      // Salen con el texto: el globo los pinta antes de que `send_message` vuelva.
+      drafts.takeFiles(draftKey, attachments);
+      return enviar({
+        text: prompt,
+        task_mentions: message.task_mentions,
+        recipients: message.recipients,
+        provider: agent(),
+        model: model() || null,
+        effort: effortDelTurno(),
+        permission_mode: modo() || null,
+        attachments,
+        space: escritorio(),
+      }, undefined, undefined, llevar ? (clave) => (carryModule() as CarryPort).runCarry(clave) : undefined);
+    });
     if (!sent && generation === workspaceContext.generation()) {
       drafts.restoreFailed(draftKey, message, attachments);
     }

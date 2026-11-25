@@ -126,7 +126,7 @@ export function createPanelDeChat<Usage, Delegated>(deps: PanelDeChatDeps<Usage>
     // la rejilla a su hijo más ancho —el aviso «sin fuente de contexto»,
     // 416 px— y la franja del proyecto (`w-full`) queda a esos 416 px bajo
     // una caja de 856: control suelto y centrado, lo que `ProjectPicker` evita.
-    <div class="grid w-full max-w-[860px] gap-1">
+    <div class="grid w-full max-w-[860px] gap-1" data-project-picker="">
         <ProjectPicker
           branch={props.branch}
           locked={props.locked}
