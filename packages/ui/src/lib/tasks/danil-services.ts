@@ -16,6 +16,14 @@ const DANIL_CREDITS_TIER_LABELS: Record<DanilCreditsTierId, string> = {
   "danil-credits/danil/avanzado": "Avanzado",
 };
 
+/** Superficies del motor que sirven Danil Credits (`opencode` histórica y `claude`). */
+export const DANIL_CREDITS_SURFACE = "danil-credits";
+export const DANIL_CREDITS_CLAUDE_SURFACE = "danil-credits-claude";
+
+export function isDanilCreditsSurface(surfaceId: string | null | undefined): boolean {
+  return surfaceId === DANIL_CREDITS_SURFACE || surfaceId === DANIL_CREDITS_CLAUDE_SURFACE;
+}
+
 /** Modelo predeterminado de Danil Credits; el motor solo anuncia los niveles vigentes del servicio. */
 export const DANIL_CREDITS_MODEL: DanilCreditsTierId = "danil-credits/danil/equilibrado";
 

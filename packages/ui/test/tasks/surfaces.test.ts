@@ -105,6 +105,11 @@ test("Danil Credits elige Equilibrado por omisión aunque Ligero aparezca primer
   assert.equal(defaultSurfaceModel(credits, [tiers[0], tiers[2]])?.id, "danil-credits/danil/ligero");
   const claude: Surface = { id: "claude", provider: "claude", label: "Claude", catalogo: "todo", usable: true, marca: null, porque: null };
   assert.equal(defaultSurfaceModel(claude, [{ id: "sonnet" }, { id: "opus" }])?.id, "sonnet");
+  const creditsClaude: Surface = { id: "danil-credits-claude", provider: "claude", label: "Danil Credits", catalogo: "todo", usable: true, marca: null, porque: null };
+  assert.equal(surfaceHas(creditsClaude, tiers[0]), true);
+  assert.equal(surfaceHas(creditsClaude, { id: "sonnet", gratis: false }), false);
+  assert.equal(surfaceHas(claude, tiers[0]), false);
+  assert.equal(defaultSurfaceModel(creditsClaude, tiers)?.id, "danil-credits/danil/equilibrado");
 });
 
 test("una tarea de Danil Credits no cae en OpenCode mientras carga o falta el catálogo", () => {
