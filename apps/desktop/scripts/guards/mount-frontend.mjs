@@ -135,9 +135,10 @@ if (!broken) {
   treeButton.click();
   await sleep(300);
   const filesPanel = normal.w.document.querySelector("[data-task-files]");
-  const replacesChat = filesPanel?.getAttribute("data-task-layout") === "replace";
-  if (!filesPanel || !replacesChat || normal.failures.length > 0) {
-    console.error(`El panel de archivos de la tarea no montó: tarjeta=${!!filesPanel}, layout=${filesPanel?.getAttribute("data-task-layout")}.`);
+  const filesHandle = normal.w.document.querySelector('[role="separator"][aria-label="Ancho del panel de archivos"]');
+  const filesSplit = filesPanel?.getAttribute("data-task-layout") === "files-split";
+  if (!filesPanel || !filesHandle || !filesSplit || normal.failures.length > 0) {
+    console.error(`El panel de archivos de la tarea no montó: tarjeta=${!!filesPanel}, tirador=${!!filesHandle}, layout=${filesPanel?.getAttribute("data-task-layout")}.`);
     for (const f of normal.failures.slice(0, 3)) {
       for (const l of String(f).split("\n").slice(0, 6)) console.error(`      ${l}`);
     }

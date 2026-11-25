@@ -40,6 +40,7 @@ export default function SearchPanel(props: { surface: SearchSurface }) {
         <Button variant="chrome" size="iconCompact" class="size-6" disabled={!props.surface.cards().length} title={t("chat.search.next")} aria-label={t("chat.search.next")} onClick={() => props.surface.move(1)}><ArrowDown size={14} /></Button>
         <Button variant="ghost" size="iconCompact" class="size-6 text-neutral-500" title={t("chat.delegation.close_panel")} aria-label={t("chat.delegation.close_panel")} onClick={() => props.surface.close()}><X size={14} /></Button>
       </div>
+      <Show when={props.surface.query() || props.surface.cards().length > 0}>
       <div ref={list} class="min-h-0 flex-1 overflow-y-auto p-2 pb-3">
         <Show when={props.surface.query() && props.surface.cards().length === 0}>
           <p class="m-0 px-2 py-3 text-xs text-neutral-500">{t("chat.search.empty")}</p>
@@ -73,6 +74,7 @@ export default function SearchPanel(props: { surface: SearchSurface }) {
           </section>
         )}</For>
       </div>
+      </Show>
     </>
   );
 }

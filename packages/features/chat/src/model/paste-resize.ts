@@ -1,7 +1,8 @@
 /** El observador de tamaño de [`seguirElFondo`] y lo que solo él escribe. */
 import type { Accessor, Setter } from "solid-js";
+import { MARGEN_DE_FONDO } from "./paste-spring.ts";
 
-export function crearObservador({ cajaActual, sigue, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual, ponRelleno, topeDeRelleno, ruedaArribaActiva }: { cajaActual: () => HTMLElement | undefined; sigue: Accessor<boolean>; enTurno: () => boolean; encogidoArriba: () => number; ponScrollTop: (valor: number) => void; fondo: () => number; scrollTop: () => number; ponCerca: Setter<boolean>; estaCerca: () => boolean; ponNuevos: Setter<boolean>; restaurarAncla: (modo?: "contenido" | "vista") => void; pegar: () => void; tomarAncla: () => void; ponEscapado: Setter<boolean>; ponSigue: Setter<boolean>; rellenoActual: () => number; ponRelleno: (valor: number) => void; topeDeRelleno: () => number; ruedaArribaActiva: () => boolean }) {
+export function crearObservador({ cajaActual, sigue, escapado, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual, ponRelleno, topeDeRelleno, ruedaArribaActiva, interaccionActual }: { cajaActual: () => HTMLElement | undefined; sigue: Accessor<boolean>; escapado: Accessor<boolean>; enTurno: () => boolean; encogidoArriba: () => number; ponScrollTop: (valor: number) => void; fondo: () => number; scrollTop: () => number; ponCerca: Setter<boolean>; estaCerca: () => boolean; ponNuevos: Setter<boolean>; restaurarAncla: (modo?: "contenido" | "vista") => void; pegar: () => void; tomarAncla: () => void; ponEscapado: Setter<boolean>; ponSigue: Setter<boolean>; rellenoActual: () => number; ponRelleno: (valor: number) => void; topeDeRelleno: () => number; ruedaArribaActiva: () => boolean; interaccionActual: () => "abrir" | "cerrar" | null }) {
   /**
    * Cuánto acaba de crecer o encoger el contenido, mientras dura el tic en que
    * eso se confunde con un gesto. Ver el `setTimeout` de [`alScrollear`].
@@ -38,9 +39,10 @@ export function crearObservador({ cajaActual, sigue, enTurno, encogidoArriba, po
 
           // Ver [`relleno`]. Solo lo que encoge por debajo de lo primero que se
           // ve: lo de arriba, como el recorte de tramos, lo devuelve el ancla.
+          // Un colapso manual de un desplegable nunca inyecta blanco artificial.
           const cubierto = diferencia < 0 && sigue();
           // Sin turno nada ocupa el relleno: se quedaría en blanco bajo el último renglón.
-          if (cubierto && enTurno()) ponRelleno(Math.min(rellenoActual() + Math.max(0, -diferencia - encogidoArriba()), topeDeRelleno()));
+          if (cubierto && enTurno() && interaccionActual() !== "cerrar") ponRelleno(Math.min(rellenoActual() + Math.max(0, -diferencia - encogidoArriba()), topeDeRelleno()));
           else if (diferencia > 0 && rellenoActual()) ponRelleno(Math.max(0, rellenoActual() - diferencia));
 
           // El navegador puede dejar la barra pasada del final cuando el
@@ -49,9 +51,9 @@ export function crearObservador({ cajaActual, sigue, enTurno, encogidoArriba, po
           ponCerca(estaCerca());
 
           // Entró algo con alguien mirando arriba: es lo único que distingue
-          // el aviso de mensajes nuevos del botón de bajar. Va antes del
-          // `bajar` de abajo, que no mueve nada mientras el hilo está suelto.
-          if (diferencia > antepuesto && !sigue()) ponNuevos(true);
+          // el aviso de mensajes nuevos del botón de bajar. Abrir un desplegable
+          // propio no es un mensaje nuevo del agente.
+          if (diferencia > antepuesto && !sigue() && interaccionActual() !== "abrir") ponNuevos(true);
           antepuesto = 0;
 
           // Cualquier mecanismo que persiga el fondo con retraso lo recupera
@@ -59,6 +61,11 @@ export function crearObservador({ cajaActual, sigue, enTurno, encogidoArriba, po
           // rígido movía 458 px de más y uno blando se quedaba 32 px corto.
           // Pegar de un corte con holgura mueve exactamente lo que el
           // contenido creció.
+          const distanciaAntes = fondo() - diferencia - scrollTop();
+          const fondoAlcanzoLaVista =
+            estaCerca() &&
+            !ruedaArribaActiva() &&
+            (scrollTop() >= fondo() || !escapado() || distanciaAntes > MARGEN_DE_FONDO);
           if (diferencia >= 0 || cubierto) {
             // Cubierto, el acotado del navegador ya bajó `scrollTop`: el ancla
             // lo devuelve antes de pintar.
@@ -67,10 +74,10 @@ export function crearObservador({ cajaActual, sigue, enTurno, encogidoArriba, po
             // Sin seguir, se compensa solo el cambio de layout por encima del ancla:
             // en espacio de contenido, jamás revierte una rueda o inercia en vuelo.
             else restaurarAncla();
-          } else if (estaCerca() && !ruedaArribaActiva()) {
-            // Encogió tanto que el fondo vino a buscarnos: eso no es un gesto
-            // de nadie, y quedarse suelto ahí sería quedarse suelto mirando el
-            // final. Si la persona acaba de rodar hacia arriba, no se re-engancha.
+          } else if (fondoAlcanzoLaVista) {
+            // Encogió tanto que el fondo vino a buscarnos desde lejos (o tocó el tope):
+            // quedarse suelto mirando el final no tiene sentido. En cambio, un encogimiento
+            // pequeño cuando la persona se acaba de subir pocos píxeles nunca re-engancha.
             ponEscapado(false);
             ponSigue(true);
             ponNuevos(false);

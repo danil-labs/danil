@@ -235,30 +235,32 @@ export function createFilas(
           <Show
             when={proyecto()}
             fallback={
-              <div
-                data-destino={g().kind === "folder" ? "" : undefined}
-                class={cn("rounded-sm", g().kind === "folder" && (props.dragFolder ?? destinoEnVuelo()) === "" && RECIBE_LA_TAREA)}
-              >
-                <Rotulo
-                  tono={necesita() ? "need" : undefined}
-                  accion={g().kind === "folder" && !g().key ? (
-                    <Pressable
-                      class="mr-1 grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 opacity-0 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:opacity-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary group-hover:opacity-100 group-focus-within:opacity-100"
-                      data-loose-task=""
-                      aria-label={t("shell.sidebar.new_loose_task")}
-                      title={t("shell.sidebar.new_loose_task")}
-                      onClick={() => { props.onNuevaTareaEn(""); setDesplegado(false); }}
-                    >
-                      <Plus size={15} aria-hidden="true" />
-                    </Pressable>
-                  ) : undefined}
+              <Show when={g().kind !== "section"}>
+                <div
+                  data-destino={g().kind === "folder" ? "" : undefined}
+                  class={cn("rounded-sm", g().kind === "folder" && (props.dragFolder ?? destinoEnVuelo()) === "" && RECIBE_LA_TAREA)}
                 >
-                  <Show when={g().kind === "agent" && g().key}>
-                    <AstroAvatar name={g().key} status="asleep" size={14} />
-                  </Show>
-                  <span class="min-w-0 truncate">{titulo()}</span>
-                </Rotulo>
-              </div>
+                  <Rotulo
+                    tono={necesita() ? "need" : undefined}
+                    accion={g().kind === "folder" && !g().key ? (
+                      <Pressable
+                        class="mr-1 grid size-6 shrink-0 place-items-center rounded-sm text-neutral-500 opacity-0 outline-none hover:bg-surface-muted hover:text-neutral-950 focus-visible:opacity-100 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary group-hover:opacity-100 group-focus-within:opacity-100"
+                        data-loose-task=""
+                        aria-label={t("shell.sidebar.new_loose_task")}
+                        title={t("shell.sidebar.new_loose_task")}
+                        onClick={() => { props.onNuevaTareaEn(""); setDesplegado(false); }}
+                      >
+                        <Plus size={15} aria-hidden="true" />
+                      </Pressable>
+                    ) : undefined}
+                  >
+                    <Show when={g().kind === "agent" && g().key}>
+                      <AstroAvatar name={g().key} status="asleep" size={14} />
+                    </Show>
+                    <span class="min-w-0 truncate">{titulo()}</span>
+                  </Rotulo>
+                </div>
+              </Show>
             }
           >
             {(proj) => (

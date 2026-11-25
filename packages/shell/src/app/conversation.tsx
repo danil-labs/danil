@@ -157,7 +157,7 @@ export function createConversacion(deps: ConversacionDeps) {
         const visible = () => (Boolean(task()) || (paneles.activeTabAt(site()) === null && !paginaDeAgente())) && !tapadoPorElProyecto(site());
         // Barra fija a la derecha de `TaskLocation` (38 px): nunca se mueve al abrir archivos, buscador o hilo dividido.
         return <Show when={visible()}>
-          <div class="z-30 min-w-0 max-w-full self-start justify-self-end pt-2 pr-3" style={estiloDeLaCelda(site())}
+          <div data-task-toolbar="" class="z-30 min-w-0 max-w-full self-start justify-self-end pt-2 pr-3" style={estiloDeLaCelda(site())}
             classList={{ "mt-[30px]": llevaTiraInterior(site()) }} onPointerDown={() => mandarVentana(site())}>
             <Show when={task()} fallback={toolbarForDraft(site, visible)}>
               {(tTab) => toolbarForTask(() => tTab().session, site, visible)}
