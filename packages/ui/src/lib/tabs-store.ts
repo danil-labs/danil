@@ -236,8 +236,8 @@ export function createTabs(options: { transient?: boolean } = {}) {
               : p;
           return copy;
         }
-        // Un navegador sin sesión no debe agruparse con archivos de una tarea aún sin crear.
-        if (p.clase === "sitio" && p.navegador) return [...list, p];
+        // Un navegador o plugin sin sesión no debe agruparse con archivos de una tarea aún sin crear.
+        if ((p.clase === "sitio" && p.navegador) || p.clase === "plugin") return [...list, p];
         let end = -1;
         for (let n = 0; n < list.length; n++) {
           if (list[n].session === p.session) end = n;
@@ -245,7 +245,7 @@ export function createTabs(options: { transient?: boolean } = {}) {
         if (end < 0) return [...list, p];
         return [...list.slice(0, end + 1), p, ...list.slice(end + 1)];
       });
-      if (!options.transient) pin(p.id);
+      if (!options.transient || p.clase === "plugin") pin(p.id);
       activateAndPersist(p.id);
     },
     activate: activateAndPersist,
@@ -309,6 +309,7 @@ export function createTabs(options: { transient?: boolean } = {}) {
         // Validarlas contra él cerraría sus pestañas durante la sincronización.
         if (
           p.clase === "pantalla" ||
+          p.clase === "plugin" ||
           p.session === "" ||
           esProvisional(p.session)
         ) {

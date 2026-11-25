@@ -606,5 +606,7 @@
   "shell.rail_organizer.move_down": "Bajar «{name}»",
   "shell.rail_organizer.plugin_badge": "Plugin",
   "shell.rail_organizer.all_hidden": "Todas las secciones están ocultas.",
-  "shell.rail_organizer.show_all": "Mostrar secciones"
+  "shell.rail_organizer.show_all": "Mostrar secciones",
+  "shell.rail.messaging": "Mensajería",
+  "shell.plugin.loading": "Cargando {name}…"
 }

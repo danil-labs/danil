@@ -225,3 +225,38 @@ test("reactive registry and store persist changes and notify memos immediately",
     [CORE_RAIL_SECTION_IDS.AGENTS, CORE_RAIL_SECTION_IDS.TASKS],
   );
 });
+
+test("button-kind rail plugins integrate with ordering and visibility in the organizer", () => {
+  store.clear();
+  const key = "sidebar.rail.layout.test-button-plugin";
+  saveRailLayout(DEFAULT_RAIL_LAYOUT, key);
+
+  let activated = 0;
+  const dispose = registerRailSection({
+    id: "plugin:messaging",
+    label: () => "Mensajería",
+    defaultOrder: 5,
+    defaultVisible: true,
+    hideable: true,
+    source: "plugin",
+    kind: "button",
+    onActivate: () => { activated += 1; },
+  });
+
+  try {
+    const initial = resolvedRailSections(key);
+    assert.deepEqual(initial.map((s) => s.id), ["plugin:messaging", "agents", "tasks"]);
+    assert.equal(initial[0]?.descriptor.kind, "button");
+    initial[0]?.descriptor.onActivate?.();
+    assert.equal(activated, 1);
+
+    moveRailSection("plugin:messaging", "down", key);
+    toggleRailSectionVisible("plugin:messaging", key);
+    const updated = resolvedRailSections(key);
+    assert.deepEqual(updated.map((s) => s.id), ["agents", "plugin:messaging", "tasks"]);
+    assert.equal(updated[1]?.visible, false);
+  } finally {
+    dispose();
+    setRailLayout(DEFAULT_RAIL_LAYOUT, key);
+  }
+});

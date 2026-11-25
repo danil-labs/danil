@@ -160,7 +160,7 @@ export function createTabDrag(deps: TabDragDeps) {
     const p = pestanasEnPantalla().find((x) => x.id === id);
     if (!p) return railDrag?.row.id === id ? railDrag.row.title : "";
     if (isTaskTab(p)) return p.titulo;
-    if (p.clase === "pantalla") return p.titulo;
+    if (p.clase === "pantalla" || p.clase === "plugin") return p.titulo;
     if (p.clase === "sitio" && !p.url) return t("sites.new_tab");
     const r = p.clase === "archivo" ? p.ruta : p.clase === "artefacto" ? p.rel : p.url;
     return r.slice(r.lastIndexOf("/") + 1);

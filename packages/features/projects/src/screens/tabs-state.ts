@@ -46,8 +46,8 @@ export function createTabStrip(props: TabStripProps) {
     const name = (r: string) => r.slice(r.lastIndexOf("/") + 1);
     const count = new Map<string, number>();
     for (const p of props.tabs) {
-      // Los sitios quedan fuera del recuento: no deben desambiguar nombres de archivo.
-      if (isTaskTab(p) || p.clase === "sitio") continue;
+      // Los sitios, pantallas y plugins quedan fuera del recuento: no deben desambiguar nombres de archivo.
+      if (isTaskTab(p) || p.clase === "sitio" || p.clase === "pantalla" || p.clase === "plugin") continue;
       const n = name(path(p));
       count.set(n, (count.get(n) ?? 0) + 1);
     }
@@ -57,6 +57,8 @@ export function createTabStrip(props: TabStripProps) {
         .map((p) => {
           if (p.clase === "sitio")
             return [p.id, p.url ? corta(p.url) : t("sites.new_tab")] as const;
+          if (p.clase === "plugin" || p.clase === "pantalla")
+            return [p.id, p.titulo] as const;
           const r = path(p);
           const n = name(r);
           if ((count.get(n) ?? 0) < 2) return [p.id, n] as const;

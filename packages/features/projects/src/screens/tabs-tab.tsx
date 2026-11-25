@@ -1,4 +1,6 @@
+import AppWindow from "lucide-solid/icons/app-window";
 import Globe from "lucide-solid/icons/globe";
+import MessageSquare from "lucide-solid/icons/message-square";
 import Monitor from "lucide-solid/icons/monitor";
 import X from "lucide-solid/icons/x";
 import { type Accessor, Show } from "solid-js";
@@ -46,7 +48,7 @@ export function createRenderTab(props: TabStripProps, deps: { gitRows: Accessor<
           ? t("projects.threads.heading", { name: displayName(agent, profiles()[agent]), title: threadTitle(row()) })
           : displayName(agent, profiles()[agent]);
       }
-      return isTaskTab(p) || p.clase === "pantalla"
+      return isTaskTab(p) || p.clase === "pantalla" || p.clase === "plugin"
         ? (isTaskTab(p) && props.session(p.session)?.subagent ? readableSessionTitle(p.titulo) : p.titulo)
         : (labels().get(p.id) ?? "");
     };
@@ -97,7 +99,7 @@ export function createRenderTab(props: TabStripProps, deps: { gitRows: Accessor<
           }}
           class={cn(
             "group flex h-[30px] shrink-0 touch-none items-center rounded-sm pr-1 select-none",
-            task() ? "w-[220px] text-ui" : "w-[180px] text-label",
+            task() ? "w-[220px] text-ui" : p.clase === "plugin" ? "w-[180px] text-ui" : "w-[180px] text-label",
             active()
               ? "tab-active font-semibold text-neutral-950 [[data-title-bar]_&]:h-full [[data-title-bar]_&]:pb-1.5"
               : "font-medium text-neutral-500 hover:bg-neutral-950/5 hover:text-neutral-950 [[data-title-bar]_&]:mb-1.5",
@@ -146,7 +148,7 @@ export function createRenderTab(props: TabStripProps, deps: { gitRows: Accessor<
             }}
             class={cn(
               "flex h-full min-w-0 flex-1 cursor-default items-center gap-1.5 rounded-sm outline-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-              task() ? "pl-2" : "pl-1.5 font-mono",
+              task() || p.clase === "plugin" ? "pl-2" : "pl-1.5 font-mono",
               transient() && "font-normal italic",
             )}
           >
@@ -154,10 +156,22 @@ export function createRenderTab(props: TabStripProps, deps: { gitRows: Accessor<
               when={isTaskTab(p)}
               fallback={
               <Show
-                  when={p.clase !== "sitio" && p.clase !== "pantalla"}
+                  when={p.clase !== "sitio" && p.clase !== "pantalla" && p.clase !== "plugin"}
                   fallback={
-                    <Show when={p.clase === "pantalla"} fallback={<Globe size={12} class="shrink-0 text-neutral-500" aria-hidden={true} />}>
-                      <Monitor size={12} class="shrink-0 text-neutral-500" aria-hidden={true} />
+                    <Show
+                      when={p.clase === "plugin"}
+                      fallback={
+                        <Show when={p.clase === "pantalla"} fallback={<Globe size={12} class="shrink-0 text-neutral-500" aria-hidden={true} />}>
+                          <Monitor size={12} class="shrink-0 text-neutral-500" aria-hidden={true} />
+                        </Show>
+                      }
+                    >
+                      <Show
+                        when={p.clase === "plugin" && p.pluginId === "messaging"}
+                        fallback={<AppWindow size={12} class="shrink-0 text-neutral-500" aria-hidden={true} />}
+                      >
+                        <MessageSquare size={12} class="shrink-0 text-neutral-500" aria-hidden={true} />
+                      </Show>
                     </Show>
                   }
                 >

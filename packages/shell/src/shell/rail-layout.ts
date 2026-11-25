@@ -4,6 +4,7 @@ import { t } from "../../../ui/src/lib/i18n.ts";
 
 export type RailSectionId = string;
 export type RailSectionSource = "core" | "plugin";
+export type RailSectionKind = "section" | "button";
 
 /**
  * Definición declarativa de una sección del riel izquierdo.
@@ -11,6 +12,7 @@ export type RailSectionSource = "core" | "plugin";
  * Las secciones de núcleo (`agents`, `tasks`) las pinta `Sidebar.tsx` con sus
  * props de negocio; los plugins futuros registran aquí su sección con
  * `registerRailSection` aportando `render` (y opcionalmente `renderActions`),
+ * o `kind: "button"` con `onActivate` (acceso directo en una sola fila),
  * y heredan orden, visibilidad, plegado, persistencia y presencia en el
  * organizador sin tocar la barra.
  */
@@ -22,6 +24,10 @@ export interface RailSectionDescriptor {
   readonly defaultCollapsed?: boolean;
   readonly hideable?: boolean;
   readonly source?: RailSectionSource;
+  readonly kind?: RailSectionKind;
+  readonly renderIcon?: () => JSX.Element;
+  readonly onActivate?: () => void;
+  readonly isActive?: () => boolean;
   readonly render?: () => JSX.Element;
   readonly renderActions?: () => JSX.Element;
 }
