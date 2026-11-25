@@ -47,6 +47,7 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
   olvidarPestana: ReturnType<typeof createPanelDeChat>["olvidarPestana"];
   opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; };
   pendingStarts: ReturnType<typeof createThreadStream>["pendingStarts"]; pestanas: ReturnType<typeof createTabs>; pintarNaciendo: ReturnType<typeof createHandover>["pintarNaciendo"];
+  paneles: { showDraft(): void };
   project: Accessor<string>; reconcileActiveTurns: ReturnType<typeof createResync>["reconcileActiveTurns"]; refetchMachines: () => Promise<void | never[]>;
   refreshSessions: (proyectos: string[]) => Promise<void>; retirarNaciendo: (id: string) => { project: string; row: SessionRow; }[]; sessionId: Accessor<string | null>;
   setArrancando: ReturnType<typeof createThreadStream>["setArrancando"]; setError: Setter<string | null>; setHablandoCon: Setter<{ project: string; name: string; } | null>;
@@ -58,7 +59,7 @@ export type SendDeps = { adoptarNacida: ReturnType<typeof createHandover>["adopt
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 4892–5203, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createSend(deps: SendDeps) {
-  const { adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, taskSpaceCreate, threads, traspasos, workspaceActivo, workspaceContext } = deps;
+  const { adoptarNacida, advanceTurn, agents, apagadas, attachmentsFor, catalogos, claveAbierta, conversationScope, deLaTarea, draftBases, draftOptions, drafts, excludedSourceIds, filaDe, finishedTurns, firmas, grupos, hablandoCon, handoff, leerTarea, loadResult, machineWaits, machines, marcarQuieta, marcarViva, modelosEnVivo, opcionesDeLaTarea, pendingStarts, pestanas, pintarNaciendo, paneles, project, reconcileActiveTurns, refetchMachines, refreshSessions, retirarNaciendo, sessionId, setArrancando, setError, setHablandoCon, setSessionId, settleTurn, sourceIds, taskQueues, taskSources, taskSpaceCreate, threads, traspasos, workspaceActivo, workspaceContext } = deps;
   const carryModule: SendDeps["carryModule"] = (...a: Parameters<SendDeps["carryModule"]>) => deps.carryModule(...a);
   const olvidarPestana: SendDeps["olvidarPestana"] = (...a: Parameters<SendDeps["olvidarPestana"]>) => deps.olvidarPestana(...a);
   /**
@@ -340,7 +341,15 @@ export function createSend(deps: SendDeps) {
       // pintaron contando con que Rust aceptara el turno.
       if (provisional && !enviado) {
         retirarNaciendo(provisional);
-        pestanas.close(provisional);
+        // Cerrar la pestaña provisional con `close` deja delante a su vecina
+        // (la tarea anterior) y la vista volvía a lo que se estaba mirando.
+        // Se vuelve al blanco en el mismo lote: el fallo se pinta en la celda
+        // vacía y el texto vuelve a la caja (`mandar` lo repone con `false`).
+        batch(() => {
+          pestanas.close(provisional);
+          pestanas.activate(null);
+          paneles.showDraft();
+        });
         olvidarPestana(provisional);
       }
       if (generation !== workspaceContext.generation()) {
@@ -380,7 +389,7 @@ export function createSend(deps: SendDeps) {
                   meta: "fallo",
                 }]);
       if (respuestas) throw e;
-      return true;
+      return false;
     } finally {
       if (abierta && pendingStarts.get(abierta) === start) pendingStarts.delete(abierta);
       void reconcileActiveTurns();

@@ -1,4 +1,4 @@
-import { Show, type JSX } from "solid-js";
+import { createSignal, Show, type JSX } from "solid-js";
 import { createPref } from "../../../session/src/prefs";
 import { cn } from "../../../ui/src/lib/utils";
 
@@ -35,7 +35,14 @@ export default function ColumnaLateral(props: {
   etiqueta: string;
   children: JSX.Element;
 }) {
-  const [ancho, setAncho] = createPref(props.clave, props.ancho);
+  const [recordado, recordar] = createPref(props.clave, props.ancho);
+  /** Los topes los pone quien monta: solo su contenido sabe cuándo deja de caber. */
+  const acotar = (px: number) => Math.min(props.max, Math.max(props.min, Math.round(px)));
+  const inicial = acotar(recordado());
+  // El ancho en vivo no escribe la preferencia. Hacerlo en cada pixel del
+  // arrastre mete `localStorage` en el frame y el desliz se traba.
+  const [ancho, setAncho] = createSignal(inicial);
+  const [arrastrando, setArrastrando] = createSignal(false);
 
   /**
    * **Lo recordado se acota a los topes de hoy, al montar.**
@@ -46,20 +53,7 @@ export default function ColumnaLateral(props: {
    * seguía abriendo en 900, tapando la conversación, y la única forma de
    * arreglarla era arrastrarla sin saber por qué.
    */
-  if (ancho() < props.min || ancho() > props.max) {
-    setAncho(Math.min(props.max, Math.max(props.min, ancho())));
-  }
-
-  /**
-   * **El arrastre puede fijar el ancho porque la columna no está en el grupo.**
-   * Dentro de él, arrastrar solo proponía un reparto que la ventana rehacía.
-   * Fuera, el ancho es un número nuestro.
-   *
-   * Los topes los pone quien monta: cuál es el ancho por debajo del cual su
-   * contenido deja de caber solo lo sabe ese contenido.
-   */
-  const redimensionar = (px: number) =>
-    setAncho(Math.min(props.max, Math.max(props.min, Math.round(px))));
+  if (inicial !== recordado()) recordar(inicial);
 
   /**
    * A la derecha el gesto va al revés: arrastrar hacia la izquierda ensancha.
@@ -88,19 +82,50 @@ export default function ColumnaLateral(props: {
         aria-valuemin={props.min}
         aria-valuemax={props.max}
         aria-valuenow={ancho()}
-        class="group absolute inset-y-0 -left-1.5 flex w-3 cursor-col-resize items-center justify-center bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-500"
+        class="group absolute inset-y-0 -left-1.5 flex w-3 cursor-col-resize touch-none items-center justify-center bg-transparent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-500"
         onPointerDown={(e) => {
+          if (e.button !== 0) return;
           e.preventDefault();
+          // El ancho sigue al cursor en el mismo frame. Una transición de width
+          // lo deja 200 ms atrás, y guardar la preferencia en cada movimiento
+          // bloquea el hilo con localStorage.
+          const tirador = e.currentTarget;
+          tirador.setPointerCapture(e.pointerId);
           const inicio = e.clientX;
           const desde = ancho();
-          const mover = (ev: PointerEvent) =>
-            redimensionar(desde + signo() * (ev.clientX - inicio));
-          const soltar = () => {
-            window.removeEventListener("pointermove", mover);
-            window.removeEventListener("pointerup", soltar);
+          const direccion = signo();
+          const cursor = document.body.style.cursor;
+          const seleccion = document.body.style.userSelect;
+          let x = inicio;
+          let marco = 0;
+          setArrastrando(true);
+          document.body.style.cursor = "col-resize";
+          document.body.style.userSelect = "none";
+          const mover = (ev: PointerEvent) => {
+            x = ev.clientX;
+            if (marco) return;
+            marco = requestAnimationFrame(() => {
+              marco = 0;
+              setAncho(acotar(desde + direccion * (x - inicio)));
+            });
           };
-          window.addEventListener("pointermove", mover);
-          window.addEventListener("pointerup", soltar);
+          const soltar = (ev: PointerEvent) => {
+            if (marco) cancelAnimationFrame(marco);
+            marco = 0;
+            x = ev.clientX;
+            const final = acotar(desde + direccion * (x - inicio));
+            setAncho(final);
+            recordar(final);
+            setArrastrando(false);
+            document.body.style.cursor = cursor;
+            document.body.style.userSelect = seleccion;
+            tirador.removeEventListener("pointermove", mover);
+            tirador.removeEventListener("pointerup", soltar);
+            tirador.removeEventListener("pointercancel", soltar);
+          };
+          tirador.addEventListener("pointermove", mover);
+          tirador.addEventListener("pointerup", soltar);
+          tirador.addEventListener("pointercancel", soltar);
         }}
       >
         <span
@@ -123,7 +148,10 @@ export default function ColumnaLateral(props: {
 
       <div
         class={cn(
-          "min-h-0 shrink-[1000] transition-[width] duration-200",
+          "min-h-0 shrink-[1000]",
+          // Abrir y cerrar sí se anima. Durante el arrastre la transición
+          // perseguiría el cursor y el desliz se siente lento.
+          !arrastrando() && "transition-[width] duration-200 ease-out motion-reduce:transition-none",
           // **Recortado también abierta.** `overflow-visible` dejaba que el
           // contenido se saliera de los 260 px: los títulos largos llegaban al
           // borde sin puntos suspensivos y empujaban fuera de cuadro lo que

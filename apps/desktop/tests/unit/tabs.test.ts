@@ -1205,3 +1205,21 @@ test("saved tabs for the same workspace belong to their session context", async 
     setDisplayWorkspaceContext("bea"); tabs.load("same-context-workspace"); assert.deepEqual(tabs.open().map((tab) => tab.id), ["bea-task"]);
   } finally { setDisplayWorkspaceContext(null); }
 });
+
+// La tarea nueva nace como pestaña provisional y su id real llega en la misma
+// pasada: la retirada de la provisional no puede dejar delante la tarea de
+// antes. Se veía como «no se creó la tarea y me devolvió a lo que tenía abierto».
+test("replacing the draft tab with the task in one pass keeps the new task in front", async () => {
+  const { createPanels } = await import("../../../../packages/ui/src/lib/panels.ts");
+  const panels = createPanels();
+  const at = { col: 0, fila: 0 };
+  panels.sync(["vieja"]);
+  panels.activate("vieja");
+  panels.showDraft();
+  panels.sync(["vieja", "naciendo:1"]);
+  panels.activate("naciendo:1");
+  assert.equal(panels.activeTabAt(at), "naciendo:1");
+  panels.sync(["vieja", "nueva"]);
+  assert.equal(panels.activeTabAt(at), "nueva");
+  assert.deepEqual(panels.tabsAt(at), ["vieja", "nueva"]);
+});

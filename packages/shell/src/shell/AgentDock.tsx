@@ -4,7 +4,7 @@ import FileText from "lucide-solid/icons/file-text";
 import Folder from "lucide-solid/icons/folder";
 import LayoutGrid from "lucide-solid/icons/layout-grid";
 import Plus from "lucide-solid/icons/plus";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { t } from "../../../ui/src/lib/i18n";
 import type { AgentProfile } from "../../../ui/src/lib/model";
@@ -16,7 +16,7 @@ import { SignalDot } from "../../../ui/src/SignalDot";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import { displayName } from "../../../features/projects/src/queries/profiles";
 import { agentFolder, type DockAgent, orderDockAgents } from "./dockLayout";
-import { pageDock } from "./dockPagination";
+import { DOCK_CELL, DOCK_CELL_GAP, dockColumns, pageDock } from "./dockPagination";
 
 export type { DockAgent } from "./dockLayout";
 type DockFolder = { id: string; name: string };
@@ -68,7 +68,19 @@ export default function AgentDock(props: {
   ] : props.agents.map(agent => agent.name)));
   const agents = createMemo(() => orderDockAgents(props.agents.filter(agent => allowed().has(agent.name)), agent => label(agent.name), agent => props.profileOf?.(agent.name)?.hidden === true));
   const filtered = createMemo(() => agents().filter(agent => !navigation().level || levels().get(agent.name) === navigation().level));
-  const page = createMemo(() => pageDock(filtered(), navigation().page));
+  // El hueco entre caras es fijo. Si el sidebar crece, caben más agentes; no se separan.
+  const [medido, setMedido] = createSignal(0);
+  let fila: HTMLDivElement | undefined;
+  onMount(() => {
+    const nodo = fila;
+    if (!nodo || typeof ResizeObserver === "undefined") return;
+    const obs = new ResizeObserver((entries) => setMedido(entries[0]?.contentRect.width ?? 0));
+    obs.observe(nodo);
+    onCleanup(() => obs.disconnect());
+  });
+  const columnas = () => dockColumns(medido());
+  const pista = () => ({ "grid-template-columns": `repeat(${columnas()}, ${DOCK_CELL}px)`, gap: `${DOCK_CELL_GAP}px` });
+  const page = createMemo(() => pageDock(filtered(), navigation().page, columnas()));
   const workingIn = (level: DockLevel) => agents().filter(agent => levels().get(agent.name) === level && agent.status === "working");
   const levelTitle = (level: DockLevel) => {
     const names = workingIn(level).map(agent => label(agent.name));
@@ -89,9 +101,9 @@ export default function AgentDock(props: {
       <span class="text-caption font-medium text-neutral-700">{t("shell.agent_dock.team")}</span>
       <Pressable class={cn(ICON_BUTTON, "border-0")} aria-label={t("projects.agents.new_open")} title={t("projects.agents.new_open")} disabled={!props.onNewAgent} onClick={() => props.onNewAgent?.()}><Plus size={14} aria-hidden="true" /></Pressable>
     </div>
-    <div class="flex h-[62px] min-w-0 items-center" aria-busy={props.loading}>
+    <div ref={fila} class="flex h-[62px] min-w-0 items-center" aria-busy={props.loading}>
       <Show when={agents().length} fallback={<Show when={props.loading} fallback={<span class="text-caption text-neutral-500">{t("shell.agent_dock.empty")}</span>}>
-        <div class="grid w-full grid-cols-5 justify-items-center" data-dock-loading=""><For each={[0, 1, 2, 3, 4]}>{() => <span class="size-7 rounded-full bg-neutral-200 motion-safe:animate-pulse" />}</For></div>
+        <div class="grid w-full justify-start justify-items-center" style={pista()} data-dock-loading=""><For each={Array.from({ length: columnas() }, (_, i) => i)}>{() => <span class="size-7 rounded-full bg-neutral-200 motion-safe:animate-pulse" />}</For></div>
       </Show>}>
         <ContextMenu>
           <ContextMenuTrigger class="w-full" onContextMenu={(event: MouseEvent) => {
@@ -99,7 +111,7 @@ export default function AgentDock(props: {
             if (!name) event.preventDefault();
             setMenu(name ?? null);
           }}>
-            <div class="grid h-[62px] w-full grid-cols-5 items-center gap-1" data-dock-page={page().page + 1}>
+            <div class="grid h-[62px] w-full items-center justify-start" style={pista()} data-dock-page={page().page + 1} data-dock-columns={columnas()}>
               <KeyedList each={page().shown} by={agent => agent.name}>{agent => <Pressable
                 data-dock-agent={agent().name}
                 aria-label={agentTitle(agent())}
@@ -114,7 +126,7 @@ export default function AgentDock(props: {
                 </span>
                 <span class="w-full truncate text-center text-2xs leading-tight text-neutral-500">{label(agent().name)}</span>
               </Pressable>}</KeyedList>
-              <Show when={filtered().length === 0}><span class="col-span-5 text-caption text-neutral-500">{t("shell.agent_dock.filter_empty")}</span></Show>
+              <Show when={filtered().length === 0}><span class="text-caption text-neutral-500" style={{ "grid-column": "1 / -1" }}>{t("shell.agent_dock.filter_empty")}</span></Show>
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent><Show when={menu()}>{name => <>

@@ -833,6 +833,7 @@ const steps = [
   ["Closed or paused activity cannot animate late tools and preserves inspection", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/completed-tool-activity.test.mjs")], root],
   ["Late start delivery retains one activity and resumes thinking labels", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/activity-start-order.test.mjs")], root],
   ["«Stop and send» stops the turn and lets the queued message out instead of keeping it retained", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/chat-stop-and-send.test.mjs")], root],
+  ["The first send of a new task opens that task, not the one that was open before", process.execPath, ["--test", "--test-force-exit", join(root, "tests/unit/new-task-first-send.test.mjs")], root],
   ["Opening a long task stays under its ceiling", process.execPath, [join(root, "tests/perf/open-task-cost.mjs")], root],
   ["Rereading an open task does not remount its thread", process.execPath, [join(root, "tests/perf/reread-thread.mjs")], root],
   ["A long session leaves no memory behind", process.execPath, ["--expose-gc", join(root, "tests/perf/long-session.mjs")], root],

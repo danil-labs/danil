@@ -241,9 +241,20 @@ export function createPanels(restorable?: () => readonly string[]) {
       if (removed.length === 0 && missing.length === 0) return false;
       // Sin batch se pintaría una tira vacía antes de retirar su ventana.
       batch(() => {
-        for (const id of removed) removeTab(id);
+        const position = activeSite();
+        for (const id of removed) {
+          // Pestaña que se sustituye por otra en la misma pasada (el borrador
+          // que nace como tarea): retirar la activa con `removeTab` pone delante
+          // a su vecina, y la pestaña nueva entraba detrás de una activa vieja.
+          // La vista volvía a la tarea anterior. Aquí la activa queda vacía y
+          // la nueva ocupa su lugar unas líneas abajo.
+          const site = siteOf(id);
+          const replacing = missing.length > 0 && site && sameSite(site, position);
+          if (replacing && groupAt(site!)?.activa === id) {
+            updateGroup(site!, (g) => ({ pestanas: g.pestanas.filter((x) => x !== id), activa: null }));
+          } else removeTab(id);
+        }
         if (missing.length > 0) {
-          const position = activeSite();
           updateGroup(position, (g) => ({
             pestanas: [...g.pestanas, ...missing],
             activa: g.activa ?? missing[missing.length - 1],
