@@ -721,3 +721,143 @@ test("sostener actualiza el ancla tras compensar un cambio por encima", async ()
   await cuadros(2);
   assert.equal(el.scrollTop, 740, "el observador no debe corregir dos veces tras sostener()");
 });
+
+test("crecer por encima durante una rueda hacia arriba compensa el salto en vez de llevar la vista arriba", async () => {
+  // Síntoma: `ruedaPendiente` saltaba `restaurarAncla()` durante una rueda hacia arriba;
+  // si en esa ventana se montaban o crecían filas por encima, `scrollTop` no compensaba
+  // y la vista saltaba de golpe hacia arriba en el hilo.
+  const { el, emitir } = contenedorFalso(400, 2000);
+  const p = createRoot(() => seguirElFondo());
+  const c = contenidoFalso(el, Array(10).fill(200));
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 2000);
+  await cuadros(3);
+
+  // Suelto leyendo el bloque 4 (inicia en y=800, asomando en top=-100).
+  el.scrollTop = 900;
+  await cuadros(1);
+
+  // Rueda hacia arriba (-120 px) mientras una fila por encima crece +300 px antes del evento `scroll`.
+  emitir("wheel", { target: el, deltaY: -120 });
+  el.scrollTop = 780;
+  c.crecer(1, 300);
+  el.scrollHeight += 300;
+  p.sostener();
+
+  // Debe preservar el paso de rueda (-120) Y compensar el crecimiento arriba (+300): 780 + 300 = 1080.
+  assert.equal(el.scrollTop, 1080, "debe compensar el crecimiento arriba sin perder el paso de rueda");
+  assert.equal(c.children[4]!.getBoundingClientRect().top, 20, "el bloque leído solo bajó los 120 px de la rueda");
+
+  // El ResizeObserver posterior no debe volver a compensar.
+  disparar!(c, el.scrollHeight);
+  await cuadros(2);
+  assert.equal(el.scrollTop, 1080, "el observador posterior no debe duplicar la compensación");
+});
+
+test("scrollear hacia arriba sin rueda (inercia o barra) no se revierte ni pierde compensación por encima", async () => {
+  const { el } = contenedorFalso(400, 2000);
+  const p = createRoot(() => seguirElFondo());
+  const c = contenidoFalso(el, Array(10).fill(200));
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 2000);
+  await cuadros(3);
+
+  el.scrollTop = 900;
+  await cuadros(1);
+
+  // Scroll hacia arriba sin `wheel` (inercia / barra / teclado), antes de que llegue el evento `scroll`.
+  el.scrollTop = 700;
+  p.sostener();
+  assert.equal(el.scrollTop, 700, "sostener sin cambios de layout no debe revertir el scroll");
+
+  // Sigue subiendo y simultáneamente crece un bloque arriba +250 px.
+  el.scrollTop = 500;
+  c.crecer(0, 250);
+  el.scrollHeight += 250;
+  p.sostener();
+  assert.equal(el.scrollTop, 750, "debe sumar solo el delta de contenido arriba (+250) sobre el scroll actual");
+  await cuadros(2);
+  assert.equal(el.scrollTop, 750);
+});
+
+test("no ancla a un hijo fuera de pantalla debajo de la vista al subir rápido dentro de margen virtual", async () => {
+  // Simula `VirtualThread`: el primer hijo montado tiene un `margin-top` virtual de 2000 px.
+  const { el } = contenedorFalso(400, 4000);
+  const p = createRoot(() => seguirElFondo());
+  let margenSuperior = 2000;
+  const hijos = [0, 1, 2].map((i) => ({
+    isConnected: true,
+    getBoundingClientRect() {
+      const inicio = margenSuperior + i * 200;
+      return { top: inicio - el.scrollTop, bottom: inicio + 200 - el.scrollTop };
+    },
+  }));
+  const c = { children: Object.assign(hijos, { length: hijos.length }) };
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 4000);
+  await cuadros(3);
+
+  // Suelto viendo los hijos montados.
+  el.scrollTop = 2100;
+  await cuadros(1);
+
+  // Subida rápida dentro del margen virtual aún sin montar: el primer hijo queda en top=1500 >= 400.
+  el.scrollTop = 500;
+  await cuadros(1);
+
+  // El margen virtual encoge -1000 px al reemplazarse por filas más cortas que lo estimado.
+  margenSuperior = 1000;
+  p.sostener();
+  assert.equal(el.scrollTop, 500, "no debe arrastrar `scrollTop` a 0 por un hijo que estaba fuera de pantalla");
+});
+
+test("anteponer filas virtuales con alto real mayor al estimado conserva la lectura exacta", async () => {
+  const { el } = contenedorFalso(400, 2000);
+  const p = createRoot(() => seguirElFondo());
+  const bloqueAlturas = Array(10).fill(200);
+  let margenSuperior = 0;
+  const makeChild = (idx: () => number) => ({
+    isConnected: true,
+    getBoundingClientRect() {
+      const i = idx();
+      const inicio = margenSuperior + bloqueAlturas.slice(0, i).reduce((a, b) => a + b, 0);
+      return { top: inicio - el.scrollTop, bottom: inicio + bloqueAlturas[i]! - el.scrollTop };
+    },
+  });
+  const hijos = bloqueAlturas.map((_, i) => makeChild(() => i));
+  const c = { children: hijos };
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 2000);
+  await cuadros(3);
+
+  // Leyendo bloque 2 (y=400, top=-50).
+  el.scrollTop = 450;
+  await cuadros(1);
+  const anclaEl = hijos[2]!;
+  assert.equal(anclaEl.getBoundingClientRect().top, -50);
+
+  // Se anteponen 10 filas con alto real 300 px cada una (+3000 px reales), más 1000 px de margen virtual.
+  bloqueAlturas.unshift(...Array(10).fill(300));
+  margenSuperior = 1000;
+  // Actualiza índices de los hijos conservando los mismos nodos DOM existentes.
+  const nuevos = Array.from({ length: 10 }, (_, k) => makeChild(() => k));
+  const desplazados = hijos.map((node, oldIdx) =>
+    Object.assign(node, {
+      getBoundingClientRect() {
+        const inicio = margenSuperior + bloqueAlturas.slice(0, oldIdx + 10).reduce((a, b) => a + b, 0);
+        return { top: inicio - el.scrollTop, bottom: inicio + bloqueAlturas[oldIdx + 10]! - el.scrollTop };
+      },
+    }),
+  );
+  c.children = [...nuevos, ...desplazados];
+  el.scrollHeight += 4000;
+
+  // `VirtualThread` llama a `sostener()` sin sobrescribir `scrollTop` con estimaciones.
+  p.sostener();
+  assert.equal(el.scrollTop, 4450, "debe compensar los +4000 px reales exactos");
+  assert.equal(anclaEl.getBoundingClientRect().top, -50, "el mensaje leído no debe saltar ni un píxel");
+});
