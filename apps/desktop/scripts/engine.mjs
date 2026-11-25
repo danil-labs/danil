@@ -3,8 +3,8 @@
  * Downloads the Seldon engine (`seldon-runtime`) pinned in `seldon-runtime.lock`
  * and runs the Terminus window against it with throwaway data.
  *
- *   node scripts/engine.mjs download [--from <seldon-runtime>]
- *   node scripts/engine.mjs sidecar   places the pinned engine in src-tauri/binaries/ for `bundle.externalBin` (danil-engine and its alias)
+ *   node scripts/engine.mjs download [--from <seldon-runtime>] [--cli-from <danil>] [--kn-from <kn>]
+ *   node scripts/engine.mjs sidecar  [--from <seldon-runtime>] [--cli-from <danil>] [--kn-from <kn>] [--target <triple>]
  *   node scripts/engine.mjs start    [--window <terminus>] [--lab <dir>]
  *   node scripts/engine.mjs engine | select | window | status | stop  [--lab <dir>]
  *
@@ -12,8 +12,9 @@
  *
  * The engine is a proprietary binary by Danil; its source is not in this
  * repository; its terms are linked from the lock (`terms`). A download is
- * accepted only when its SHA-256 matches the lock.
- * `--from` copies a local build instead and says that it is not the pinned one.
+ * accepted only when its SHA-256 (and size, if pinned) matches the lock.
+ * `--from`, `--cli-from` and `--kn-from` copy local builds instead and say that
+ * they are not the pinned ones.
  *
  * Everything lives under `.engine/` (ignored by git). The lab never touches the
  * data, keychain or accounts of an installed Terminus: the engine gets its own
@@ -21,7 +22,7 @@
  */
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { chmodSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, copyFileSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createConnection } from "node:net";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -34,11 +35,22 @@ const WINDOWS = process.platform === "win32";
 const EXE = WINDOWS ? ".exe" : "";
 const ARCH = { x64: "x86_64", arm64: "aarch64" }[process.arch] ?? process.arch;
 const PLATFORM = `${ARCH}-${{ win32: "pc-windows-msvc", darwin: "apple-darwin", linux: "unknown-linux-gnu" }[process.platform] ?? process.platform}`;
+const SHA256_RE = /^[0-9a-f]{64}$/;
+const ARCHIVE_RE = /\.(zip|tar\.gz|tgz)$/;
+
+export const COMPANION_BINARIES = [
+  { key: "cli", name: "danil", flag: "cli-from" },
+  { key: "kn", name: "kn", flag: "kn-from" },
+];
 
 const [command = "help", ...rest] = process.argv.slice(2);
 const option = (name, fallback) => {
   const i = rest.indexOf(`--${name}`);
   return i >= 0 && rest[i + 1] ? resolve(rest[i + 1]) : fallback;
+};
+const rawOption = (name, fallback) => {
+  const i = rest.indexOf(`--${name}`);
+  return i >= 0 && rest[i + 1] ? rest[i + 1] : fallback;
 };
 
 const ENGINE_DIR = join(ROOT, ".engine");
@@ -52,11 +64,40 @@ const HOME = join(LAB, "home");
 const TMP = join(LAB, "tmp");
 
 function fail(message) {
-  console.error(message);
-  process.exit(1);
+  throw new Error(message);
 }
 
 const sha256 = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+const sha256Bytes = (bytes) => createHash("sha256").update(bytes).digest("hex");
+
+function validatePinnedSpec(label, spec) {
+  if (!spec || typeof spec !== "object" || typeof spec.url !== "string" || !spec.url.trim()) {
+    fail(`${label} in seldon-runtime.lock is missing a valid url.`);
+  }
+  if (typeof spec.sha256 !== "string" || !SHA256_RE.test(spec.sha256)) {
+    fail(`${label} in seldon-runtime.lock must declare a 64-char hex sha256.`);
+  }
+  if (spec.size !== undefined && (!Number.isInteger(spec.size) || spec.size <= 0)) {
+    fail(`${label} in seldon-runtime.lock must declare a positive integer size.`);
+  }
+}
+
+function verifyPinnedBytes(label, bytes, spec) {
+  const got = sha256Bytes(bytes);
+  if (got !== spec.sha256) {
+    fail(`SHA-256 mismatch for ${label}: expected ${spec.sha256}, got ${got}. Nothing was placed.`);
+  }
+  if (spec.size !== undefined && bytes.length !== spec.size) {
+    fail(`Size mismatch for ${label}: expected ${spec.size} bytes, got ${bytes.length}. Nothing was placed.`);
+  }
+  return got;
+}
+
+function matchesPinnedFile(path, spec) {
+  if (!existsSync(path)) return false;
+  if (spec.size !== undefined && statSync(path).size !== spec.size) return false;
+  return sha256(path) === spec.sha256;
+}
 
 /** Only the current user may read it: the window rejects anything wider. */
 function makePrivate(path, folder = false) {
@@ -105,46 +146,109 @@ function labEnvironment(extra = {}) {
   return env;
 }
 
-async function download() {
-  const from = option("from");
-  mkdirSync(dirname(ENGINE), { recursive: true });
-  if (from) {
-    copyFileSync(from, ENGINE);
-    if (!WINDOWS) chmodSync(ENGINE, 0o755);
-    console.log(`Copied ${from} (sha256 ${sha256(ENGINE)}). This is a local build, not the one pinned in seldon-runtime.lock.`);
-    return;
-  }
-  const pinned = LOCK.platforms[PLATFORM];
-  if (!pinned?.url || !pinned?.sha256) {
-    fail(
-      `No seldon-runtime has been published for ${PLATFORM} yet (release ${LOCK.release}).\n` +
-        `The Danil window cannot run on this platform until it is. If you have an engine binary,\n` +
-        `use it with: node scripts/engine.mjs download --from <path-to-seldon-runtime${EXE}>`,
-    );
-  }
-  console.log(`Downloading ${pinned.url}`);
-  const response = await fetch(pinned.url, { redirect: "follow" });
-  if (!response.ok) fail(`Download failed: HTTP ${response.status}`);
-  const bytes = Buffer.from(await response.arrayBuffer());
-  const got = createHash("sha256").update(bytes).digest("hex");
-  if (got !== pinned.sha256) fail(`SHA-256 mismatch: expected ${pinned.sha256}, got ${got}. Nothing was installed.`);
-  const archive = join(ENGINE_DIR, "download", pinned.url.split("/").pop());
+function ensureLocalFile(flag, sourcePath) {
+  if (!existsSync(sourcePath)) fail(`--${flag} file does not exist: ${sourcePath}`);
+}
+
+async function installBinaryFromSpec({ label, target, binaryName, spec, downloadDir, exe, fetcher, log }) {
+  validatePinnedSpec(label, spec);
+  const bytes = await fetcher(spec.url);
+  const got = verifyPinnedBytes(label, bytes, spec);
+  const archive = join(downloadDir, spec.url.split("/").pop() || `${binaryName}${exe}`);
   mkdirSync(dirname(archive), { recursive: true });
   writeFileSync(archive, bytes);
-  if (/\.(zip|tar\.gz|tgz)$/.test(archive)) {
-    const out = join(ENGINE_DIR, "download", "unpacked");
+  if (ARCHIVE_RE.test(archive)) {
+    const out = join(downloadDir, `unpacked-${binaryName}`);
     rmSync(out, { recursive: true, force: true });
     mkdirSync(out, { recursive: true });
     const result = spawnSync("tar", ["-xf", archive, "-C", out], { stdio: "inherit" });
     if (result.status !== 0) fail(`Could not unpack ${archive}.`);
-    const found = findFile(out, `seldon-runtime${EXE}`);
-    if (!found) fail(`${archive} does not contain seldon-runtime${EXE}.`);
-    copyFileSync(found, ENGINE);
+    const found = findFile(out, `${binaryName}${exe}`);
+    if (!found) fail(`${archive} does not contain ${binaryName}${exe}.`);
+    copyFileSync(found, target);
   } else {
-    copyFileSync(archive, ENGINE);
+    copyFileSync(archive, target);
   }
-  if (!WINDOWS) chmodSync(ENGINE, 0o755);
-  console.log(`seldon-runtime ${LOCK.engine_version} (${LOCK.release}) installed at ${ENGINE} (sha256 verified).`);
+  if (!exe) chmodSync(target, 0o755);
+  log(`${label} installed at ${target} (sha256 ${got} verified).`);
+  return target;
+}
+
+export async function downloadBinaries({
+  lock = LOCK,
+  platform = PLATFORM,
+  engineDir = ENGINE_DIR,
+  from = null,
+  cliFrom = null,
+  knFrom = null,
+  fetcher = fetchRetrying,
+  log = console.log,
+} = {}) {
+  const exe = platform.includes("windows") ? ".exe" : "";
+  const binDir = join(engineDir, "bin");
+  const engineTarget = join(binDir, `seldon-runtime${exe}`);
+  const downloadDir = join(engineDir, "download");
+  const pinned = lock.platforms?.[platform];
+  mkdirSync(binDir, { recursive: true });
+
+  if (from) {
+    ensureLocalFile("from", from);
+    copyExecutable(from, engineTarget);
+    log(`Copied ${from} (sha256 ${sha256(engineTarget)}). This is a local build, not the one pinned in seldon-runtime.lock.`);
+  } else {
+    if (!pinned?.url || !pinned?.sha256) {
+      fail(
+        `No seldon-runtime has been published for ${platform} yet (release ${lock.release}).\n` +
+          `The Danil window cannot run on this platform until it is. If you have an engine binary,\n` +
+          `use it with: node scripts/engine.mjs download --from <path-to-seldon-runtime${exe}>`,
+      );
+    }
+    await installBinaryFromSpec({
+      label: `seldon-runtime ${lock.engine_version} (${lock.release})`,
+      target: engineTarget,
+      binaryName: "seldon-runtime",
+      spec: pinned,
+      downloadDir,
+      exe,
+      fetcher,
+      log,
+    });
+  }
+
+  const localCompanions = { cli: cliFrom, kn: knFrom };
+  const companions = {};
+  for (const { key, name, flag } of COMPANION_BINARIES) {
+    const target = join(binDir, `${name}${exe}`);
+    const localPath = localCompanions[key];
+    if (localPath) {
+      ensureLocalFile(flag, localPath);
+      copyExecutable(localPath, target);
+      log(`Copied ${localPath} to ${target} (sha256 ${sha256(target)}). This is a local build, not the one pinned in seldon-runtime.lock.`);
+      companions[key] = target;
+      continue;
+    }
+    const spec = pinned?.[key];
+    if (!spec) continue;
+    companions[key] = await installBinaryFromSpec({
+      label: `${name} (${platform})`,
+      target,
+      binaryName: name,
+      spec,
+      downloadDir,
+      exe,
+      fetcher,
+      log,
+    });
+  }
+  return { engine: engineTarget, companions };
+}
+
+async function download() {
+  await downloadBinaries({
+    from: option("from"),
+    cliFrom: option("cli-from"),
+    knFrom: option("kn-from"),
+  });
 }
 
 /**
@@ -155,11 +259,16 @@ async function download() {
 const SIDECAR_NAMES = ["danil-engine", "seldon-runtime"];
 
 async function sidecar() {
-  const triple = process.platform === "darwin" ? "aarch64-apple-darwin" : PLATFORM;
-  await placeSidecar(triple);
+  const triple = rawOption("target", process.platform === "darwin" ? "aarch64-apple-darwin" : PLATFORM);
+  await placeSidecar(triple, {
+    from: option("from"),
+    cliFrom: option("cli-from"),
+    knFrom: option("kn-from"),
+  });
 }
 
 function copyExecutable(from, to) {
+  mkdirSync(dirname(to), { recursive: true });
   copyFileSync(from, to);
   if (!to.endsWith(".exe")) chmodSync(to, 0o755);
 }
@@ -167,9 +276,15 @@ function copyExecutable(from, to) {
 async function fetchRetrying(url, attempts = 3) {
   for (let attempt = 1; ; attempt++) {
     console.log(`Downloading ${url}`);
+    let response;
     try {
-      const response = await fetch(url, { redirect: "follow" });
-      if (!response.ok) fail(`Download failed: HTTP ${response.status}`);
+      response = await fetch(url, { redirect: "follow" });
+    } catch (error) {
+      if (attempt >= attempts) fail(`Download failed: ${error.message}`);
+      continue;
+    }
+    if (!response.ok) fail(`Download failed: HTTP ${response.status}`);
+    try {
       return Buffer.from(await response.arrayBuffer());
     } catch (error) {
       if (attempt >= attempts) fail(`Download failed: ${error.message}`);
@@ -177,32 +292,76 @@ async function fetchRetrying(url, attempts = 3) {
   }
 }
 
-const sidecarPath = (triple, name = SIDECAR_NAMES[0]) =>
-  join(ROOT, "src-tauri", "binaries", `${name}-${triple}${triple.includes("windows") ? ".exe" : ""}`);
+export const sidecarPath = (triple, name = SIDECAR_NAMES[0], root = ROOT) =>
+  join(root, "src-tauri", "binaries", `${name}-${triple}${triple.includes("windows") ? ".exe" : ""}`);
 
-/** One pinned engine under every name, downloaded only when a copy in place does not match the lock. */
-async function placeSidecar(triple) {
-  const pinned = LOCK.platforms[triple];
-  if (!pinned?.url || !pinned?.sha256) fail(`seldon-runtime.lock does not pin ${triple}: the bundle cannot carry the engine.`);
-  if (/\.(zip|tar\.gz|tgz)$/.test(pinned.url)) fail(`The sidecar takes a bare executable; ${triple} is pinned as an archive.`);
-  const targets = SIDECAR_NAMES.map((name) => sidecarPath(triple, name));
-  const source = targets.find((target) => existsSync(target) && sha256(target) === pinned.sha256);
-  if (source) {
-    for (const target of targets) {
-      if (target !== source && !(existsSync(target) && sha256(target) === pinned.sha256)) copyExecutable(source, target);
+async function placeCompanionSidecar(triple, { name, flag }, { spec, localPath, root, fetcher, log }) {
+  const target = sidecarPath(triple, name, root);
+  if (localPath) {
+    ensureLocalFile(flag, localPath);
+    copyExecutable(localPath, target);
+    log(`Companion sidecar ready (local): ${target} (sha256 ${sha256(target)}).`);
+    return target;
+  }
+  if (!spec) return null;
+  validatePinnedSpec(`${name} (${triple})`, spec);
+  if (ARCHIVE_RE.test(spec.url)) fail(`The ${name} sidecar takes a bare executable; ${triple} is pinned as an archive.`);
+  if (matchesPinnedFile(target, spec)) {
+    log(`Companion sidecar in place: ${target} (sha256 matches the lock).`);
+    return target;
+  }
+  const bytes = await fetcher(spec.url);
+  const got = verifyPinnedBytes(`${name} (${triple})`, bytes, spec);
+  mkdirSync(dirname(target), { recursive: true });
+  writeFileSync(target, bytes);
+  if (!triple.includes("windows")) chmodSync(target, 0o755);
+  log(`Companion sidecar ready: ${target} (sha256 ${got}).`);
+  return target;
+}
+
+/** One pinned engine under every name, plus optional `danil`/`kn` companion sidecars when pinned or passed locally. */
+export async function placeSidecar(
+  triple,
+  { lock = LOCK, root = ROOT, from = null, cliFrom = null, knFrom = null, fetcher = fetchRetrying, log = console.log } = {},
+) {
+  const pinned = lock.platforms?.[triple];
+  const targets = SIDECAR_NAMES.map((name) => sidecarPath(triple, name, root));
+  if (from) {
+    ensureLocalFile("from", from);
+    for (const target of targets) copyExecutable(from, target);
+    log(`Sidecar ready (local): ${targets.join(", ")} (sha256 ${sha256(targets[0])}).`);
+  } else {
+    if (!pinned?.url || !pinned?.sha256) fail(`seldon-runtime.lock does not pin ${triple}: the bundle cannot carry the engine.`);
+    validatePinnedSpec(`engine (${triple})`, pinned);
+    if (ARCHIVE_RE.test(pinned.url)) fail(`The sidecar takes a bare executable; ${triple} is pinned as an archive.`);
+    const source = targets.find((target) => matchesPinnedFile(target, pinned));
+    if (source) {
+      for (const target of targets) {
+        if (target !== source && !matchesPinnedFile(target, pinned)) copyExecutable(source, target);
+      }
+      log(`Sidecar in place: ${targets.join(", ")} (sha256 matches the lock).`);
+    } else {
+      const bytes = await fetcher(pinned.url);
+      const got = verifyPinnedBytes(triple, bytes, pinned);
+      mkdirSync(dirname(targets[0]), { recursive: true });
+      for (const target of targets) {
+        writeFileSync(target, bytes);
+        if (!triple.includes("windows")) chmodSync(target, 0o755);
+      }
+      log(`Sidecar ready: ${targets.join(", ")} (sha256 ${got}).`);
     }
-    console.log(`Sidecar in place: ${targets.join(", ")} (sha256 matches the lock).`);
-    return targets[0];
   }
-  const bytes = await fetchRetrying(pinned.url);
-  const got = createHash("sha256").update(bytes).digest("hex");
-  if (got !== pinned.sha256) fail(`SHA-256 mismatch for ${triple}: expected ${pinned.sha256}, got ${got}. Nothing was placed.`);
-  mkdirSync(dirname(targets[0]), { recursive: true });
-  for (const target of targets) {
-    writeFileSync(target, bytes);
-    if (!triple.includes("windows")) chmodSync(target, 0o755);
+
+  const localCompanions = { cli: cliFrom, kn: knFrom };
+  for (const companion of COMPANION_BINARIES) {
+    await placeCompanionSidecar(triple, companion, {
+      spec: pinned?.[companion.key],
+      localPath: localCompanions[companion.key],
+      root,
+      fetcher,
+      log,
+    });
   }
-  console.log(`Sidecar ready: ${targets.join(", ")} (sha256 ${got}).`);
   return targets[0];
 }
 
@@ -374,8 +533,15 @@ const commands = {
   },
 };
 
-if (!commands[command]) {
-  console.log(readFileSync(fileURLToPath(import.meta.url), "utf8").split("*/")[0].replace(/^#!.*\n\/\*\*\n/, "").replace(/^ \* ?/gm, ""));
-  process.exit(command === "help" ? 0 : 1);
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  if (!commands[command]) {
+    console.log(readFileSync(fileURLToPath(import.meta.url), "utf8").split("*/")[0].replace(/^#!.*\n\/\*\*\n/, "").replace(/^ \* ?/gm, ""));
+    process.exit(command === "help" ? 0 : 1);
+  }
+  try {
+    await commands[command]();
+  } catch (error) {
+    console.error(error?.message ?? error);
+    process.exit(1);
+  }
 }
-await commands[command]();

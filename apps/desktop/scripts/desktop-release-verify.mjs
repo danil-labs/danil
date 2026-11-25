@@ -10,10 +10,21 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 // Igual que ENGINE_NAMES en src-tauri/src/extracted/engine.rs (guarda `engine-names`).
 export const ENGINE_NAMES = ["danil-engine", "seldon-runtime"];
+export const COMPANION_BINARIES = [
+  { key: "cli", name: "danil" },
+  { key: "kn", name: "kn" },
+];
+const SHA256_RE = /^[0-9a-f]{64}$/;
 export const TARGETS = {
   win32: ["x86_64-pc-windows-msvc"],
   linux: ["x86_64-unknown-linux-gnu"],
   darwin: ["aarch64-apple-darwin"],
+};
+
+const PLATFORM_LAYOUTS = {
+  linux: { resources: "squashfs-root/usr/share/Danil/work-tools", engines: "squashfs-root/usr/bin", suffix: "" },
+  win32: { resources: "work-tools", engines: "", suffix: ".exe" },
+  darwin: { resources: "Contents/Resources/work-tools", engines: "Contents/MacOS", suffix: "" },
 };
 
 /** Qué plataforma es el artefacto y dónde quedan sus herramientas una vez abierto. */
@@ -24,13 +35,19 @@ export function artifactPlan(artifact, host = process.platform) {
   if (platform !== host) {
     throw new Error(`${name} se verifica en ${platform}: su motor tiene que correr y el inventario se lee con las reglas de esa plataforma`);
   }
-  const layout = {
-    linux: { resources: "squashfs-root/usr/share/Danil/work-tools", engines: "squashfs-root/usr/bin", suffix: "" },
-    win32: { resources: "work-tools", engines: "", suffix: ".exe" },
-    darwin: { resources: "Contents/Resources/work-tools", engines: "Contents/MacOS", suffix: "" },
-  }[platform];
+  const layout = PLATFORM_LAYOUTS[platform];
   const engines = ENGINE_NAMES.map((name) => (layout.engines ? `${layout.engines}/${name}${layout.suffix}` : `${name}${layout.suffix}`));
   return { platform, targets: TARGETS[platform], resources: layout.resources, engine: engines[0], engines };
+}
+
+/** Rutas relativas de los binarios hermanos delgados (`danil`, `kn`) dentro del paquete abierto. */
+export function companionPaths(plan) {
+  const layout = PLATFORM_LAYOUTS[plan.platform];
+  return COMPANION_BINARIES.map(({ key, name }) => ({
+    key,
+    name,
+    rel: layout.engines ? `${layout.engines}/${name}${layout.suffix}` : `${name}${layout.suffix}`,
+  }));
 }
 
 const sha256 = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -56,6 +73,30 @@ export function checkEngines(paths, accepted) {
   return problems;
 }
 
+/** Verifica existencia, SHA-256 (y tamaño si aplica) de cada binario hermano fijado en el lock. */
+export function checkCompanions(entries) {
+  const problems = [];
+  for (const { name, path, accepted, pinnedSha256, expectedSize } of entries) {
+    if (!existsSync(path)) {
+      problems.push(`el paquete no trae ${basename(path)}`);
+      continue;
+    }
+    if (!accepted) continue;
+    const hash = sha256(path);
+    if (!accepted.has(hash)) {
+      problems.push(`${basename(path)} (sha256 ${hash}) no es el binario ${name} fijado en seldon-runtime.lock`);
+      continue;
+    }
+    if (expectedSize !== undefined && hash === pinnedSha256) {
+      const actualSize = statSync(path).size;
+      if (actualSize !== expectedSize) {
+        problems.push(`${basename(path)} mide ${actualSize} bytes; seldon-runtime.lock fija ${expectedSize}`);
+      }
+    }
+  }
+  return problems;
+}
+
 /** En macOS los dos se firman con el identificador `seldon-runtime` que exige la ventana. */
 export function checkEngineIdentifiers(paths, describe = codesignDetails) {
   return paths
@@ -63,6 +104,16 @@ export function checkEngineIdentifiers(paths, describe = codesignDetails) {
     .flatMap((path) => {
       const identifier = /^Identifier=(.+)$/m.exec(describe(path))?.[1];
       return identifier === "seldon-runtime" ? [] : [`${basename(path)} está firmado como ${identifier ?? "nada"}, no como seldon-runtime`];
+    });
+}
+
+/** En macOS `danil` y `kn` se firman con su propio nombre, no como `seldon-runtime`. */
+export function checkCompanionIdentifiers(entries, describe = codesignDetails) {
+  return entries
+    .filter(({ path }) => existsSync(path))
+    .flatMap(({ name, path }) => {
+      const identifier = /^Identifier=(.+)$/m.exec(describe(path))?.[1];
+      return identifier === name ? [] : [`${basename(path)} está firmado como ${identifier ?? "nada"}, no como ${name}`];
     });
 }
 
@@ -93,6 +144,50 @@ function acceptedEngines(plan, scratch) {
   run(patchelf, ["--set-rpath", "$ORIGIN/../lib", expected]);
   accepted.add(sha256(expected));
   return accepted;
+}
+
+/** Binarios hermanos esperados en este paquete según `seldon-runtime.lock` (vacío en locks sin `cli`/`kn`). */
+export function resolveCompanions(
+  plan,
+  base,
+  scratch,
+  {
+    lock = JSON.parse(readFileSync(join(ROOT, "seldon-runtime.lock"), "utf8")),
+    binariesDir = join(ROOT, "src-tauri/binaries"),
+    patchelf = process.env.TERMINUS_REAL_PATCHELF || "patchelf",
+    runCommand = run,
+  } = {},
+) {
+  const [target] = plan.targets;
+  const platformPin = lock.platforms?.[target];
+  if (!platformPin) throw new Error(`seldon-runtime.lock no fija ${target}`);
+  const resolved = [];
+  for (const { key, name, rel } of companionPaths(plan)) {
+    const spec = platformPin[key];
+    if (!spec) continue;
+    if (typeof spec.sha256 !== "string" || !SHA256_RE.test(spec.sha256)) {
+      throw new Error(`seldon-runtime.lock declara ${target}.${key} con sha256 inválido`);
+    }
+    if (spec.size !== undefined && (!Number.isInteger(spec.size) || spec.size <= 0)) {
+      throw new Error(`seldon-runtime.lock declara ${target}.${key} con size inválido`);
+    }
+    let accepted = null;
+    if (plan.platform !== "darwin") {
+      accepted = new Set([spec.sha256]);
+      if (plan.platform === "linux") {
+        const sidecar = join(binariesDir, `${name}-${target}`);
+        if (!existsSync(sidecar) || sha256(sidecar) !== spec.sha256) {
+          throw new Error(`falta ${sidecar} con el binario ${name} del lock: corre node scripts/engine.mjs sidecar`);
+        }
+        const expected = join(scratch, `expected-${name}`);
+        copyFileSync(sidecar, expected);
+        runCommand(patchelf, ["--set-rpath", "$ORIGIN/../lib", expected]);
+        accepted.add(sha256(expected));
+      }
+    }
+    resolved.push({ key, name, path: join(base, rel), pinnedSha256: spec.sha256, expectedSize: spec.size, accepted });
+  }
+  return resolved;
 }
 
 /** Cada árbol que el paquete tiene que traer, con un manifiesto de esta generación. */
@@ -163,6 +258,12 @@ export function verify(artifact) {
     const engineProblems = checkEngines(engines, acceptedEngines(plan, scratch));
     if (plan.platform === "darwin") engineProblems.push(...checkEngineIdentifiers(engines));
     if (engineProblems.length) throw new Error(engineProblems.join("; "));
+    const companions = resolveCompanions(plan, opened.base, scratch);
+    if (companions.length) {
+      const companionProblems = checkCompanions(companions);
+      if (plan.platform === "darwin") companionProblems.push(...checkCompanionIdentifiers(companions));
+      if (companionProblems.length) throw new Error(companionProblems.join("; "));
+    }
     const python = process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
     run(python, [join(ROOT, "scripts/work-tools-release.py"), "verify", "--directory", resources]);
     const app = plan.platform === "darwin" ? ["--app", opened.base] : [];
