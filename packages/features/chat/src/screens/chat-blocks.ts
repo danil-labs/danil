@@ -2,7 +2,7 @@ import type { ObservedTurnActivity as TurnActivity } from "../model/activityObse
 import { t } from "../../../../ui/src/lib/i18n";
 import { stripNextSteps } from "../../../../ui/src/lib/chat/nextSteps";
 import { pasoDe, pasoDePermiso, pasoDeSistema } from "../../../../ui/src/lib/steps";
-import { coalesceLiveActivity, isActivityOnlyMessage, placeActivities, visibleActivityMessages } from "../model/activityBlocks";
+import { coalesceLiveActivity, consolidateTurnActivities, isActivityOnlyMessage, placeActivities, visibleActivityMessages } from "../model/activityBlocks";
 import { cupoResuelveElFallo } from "../model/failures";
 import { freeMcpNoticeAt } from "../model/free-mcp-notice.ts";
 import { esFilaDeLaBandeja } from "../model/inboxRows";
@@ -155,7 +155,9 @@ export function createChatBlocks(props: ChatProps, deps: ChatBlocksDeps) {
       else out.push({ tipo: "pasos", pasos: [paso], i });
     });
 
-    return placeActivities(props.activities?.length ? out : coalesceLiveActivity(out, Boolean(props.busy)), props.activities ?? []);
+    return consolidateTurnActivities(
+      placeActivities(props.activities?.length ? out : coalesceLiveActivity(out, Boolean(props.busy)), props.activities ?? []),
+    );
   });
   const searchMessages = () => bloques().flatMap((block, index) => {
     const messages = visibleActivityMessages(block).filter(message => ["user", "agent"].includes(message.role) && !message.shell && !message.permission);
@@ -174,7 +176,10 @@ export function createChatBlocks(props: ChatProps, deps: ChatBlocksDeps) {
       at: typeof message.at === "number" ? message.at : undefined,
     }];
   });
-  const esLaTiraViva = (bloque: Bloque) => Boolean(props.busy) && bloque === bloques().at(-1);
+  // Cuando ya hay un `TurnActivity` activo en la proyección semántica, él es el único dueño
+  // del indicador vivo: una tira heredada de `pasos` jamás debe girar a la vez como «Preparando…».
+  const hasActiveActivity = () => Boolean(props.activities?.some((a) => a.active));
+  const esLaTiraViva = (bloque: Bloque) => Boolean(props.busy) && !hasActiveActivity() && bloque === bloques().at(-1);
   // Pasos que llegan tras la respuesta abren otro tramo, y el de la respuesta deja de correr.
   const registroCorre = (bloque: Bloque) => fromWork(bloque, (t) => esElVivo(t.msg), false) && esLaTiraViva(bloque);
 

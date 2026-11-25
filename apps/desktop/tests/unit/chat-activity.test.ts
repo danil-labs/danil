@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { coalesceLiveActivity, visibleActivityMessages, placeActivities, isActivityOnlyMessage, type ActivityBlock } from "../../../../packages/features/chat/src/model/activityBlocks.ts";
+import { coalesceLiveActivity, consolidateTurnActivities, visibleActivityMessages, placeActivities, isActivityOnlyMessage, type ActivityBlock, type PresentedActivityBlock } from "../../../../packages/features/chat/src/model/activityBlocks.ts";
+import { pasoDe } from "../../../../packages/ui/src/lib/steps.ts";
 type Message = { nativeMessageId?: string; turno?: string; duration_ms?: number; text: string; preguntas?: unknown[] };
 const work = (i: number, msg: Message): ActivityBlock<Message> => ({ tipo: "trabajo", i, msg, pasos: [] });
 
@@ -83,4 +84,107 @@ test("empty active turns and settled rows keep the supplied activity identity wi
 test("manual shell output remains a separate card even when it carries a tool step", () => {
   assert.equal(isActivityOnlyMessage({ role: "system", meta: "usó", paso: {}, shell: { output: "manual command result" } }), false);
   assert.equal(isActivityOnlyMessage({ role: "system", meta: "usó", paso: {} }), true);
+});
+
+test("consolidateTurnActivities absorbs unowned mid-turn steps and thinking segments into the single active TurnActivity", () => {
+  const step1 = pasoDe("read_file", "a.ts", { id: "t1", ok: true });
+  const step2 = pasoDe("edit_file", "b.ts", { id: "t2", ok: true });
+  const step3 = pasoDe("run_command", "pnpm test", { id: "t3", corriendo: true });
+  const liveActivity = {
+    key: "ws:s:activity:1",
+    anchor: null,
+    anchorIndex: 1,
+    active: true,
+    startedAt: 1_000,
+    durationMs: null,
+    messages: [
+      { role: "agent", text: "", razonamiento: [{ text: "Target elements render identical child content" }] },
+      { role: "system", text: "a.ts", meta: "usó", paso: step1 },
+    ],
+  };
+  const blocks: PresentedActivityBlock<Record<string, unknown>>[] = [
+    { tipo: "msg", i: 0, msg: { role: "user", text: "revisa" } },
+    { tipo: "pasos", i: 1, pasos: [], activity: liveActivity },
+    // Unowned reloaded segments that previously rendered duplicate "Trabajo >", "Trabajo >", and "Preparando… >"
+    { tipo: "trabajo", i: 2, pasos: [step1, step2], msg: { role: "agent", text: "", razonamiento: [{ text: "Checking second segment" }] } },
+    { tipo: "pasos", i: 3, pasos: [step3] },
+  ];
+  const consolidated = consolidateTurnActivities(blocks);
+  assert.equal(consolidated.length, 2, "only user message + one single active TurnActivity remain");
+  assert.equal(consolidated[0].tipo, "msg");
+  assert.equal(consolidated[1].activity?.key, "ws:s:activity:1");
+  // step1 was already in liveActivity so it must not be duplicated; step2 and step3 are merged cleanly
+  const mergedSteps = consolidated[1].activity!.messages.filter((m) => Boolean(m.paso));
+  assert.equal(mergedSteps.length, 3, "deduplicates overlapping step1 and keeps step2 + step3");
+});
+
+test("consolidateTurnActivities merges settled TurnActivity with unowned final duration_ms answer into one header", () => {
+  const step1 = pasoDe("read_file", "deploy.ts", { ok: true });
+  const settledActivity = {
+    key: "ws:s:activity:2",
+    anchor: null,
+    anchorIndex: 1,
+    active: false,
+    startedAt: 1_000,
+    durationMs: null,
+    messages: [{ role: "system", text: "deploy.ts", meta: "usó", paso: step1 }],
+  };
+  const blocks: PresentedActivityBlock<Record<string, unknown>>[] = [
+    { tipo: "msg", i: 0, msg: { role: "user", text: "ya se ve?" } },
+    { tipo: "pasos", i: 1, pasos: [], activity: settledActivity },
+    {
+      tipo: "trabajo",
+      i: 2,
+      pasos: [step1],
+      msg: { role: "agent", text: "Todavía no se ve porque el build sigue en curso", duration_ms: 43_000 },
+    },
+  ];
+  const consolidated = consolidateTurnActivities(blocks);
+  assert.equal(consolidated.length, 3, "user + one activity header + responseOnly answer");
+  assert.equal(consolidated[1].activity?.durationMs, 43_000, "lifts 43s duration into the single activity header");
+  assert.equal(consolidated[2].tipo, "trabajo");
+  assert.equal(consolidated[2].responseOnly, true, "suppresses duplicate Trabajó durante 43s header on the answer block");
+  assert.equal(consolidated[2].tipo === "trabajo" && consolidated[2].pasos.length, 0);
+});
+
+test("consolidateTurnActivities collapses consecutive historical work-only segments into the following answer", () => {
+  const s1 = pasoDe("read_file", "1.ts", { ok: true });
+  const s2 = pasoDe("read_file", "2.ts", { ok: true });
+  const blocks: PresentedActivityBlock<Record<string, unknown>>[] = [
+    { tipo: "msg", i: 0, msg: { role: "user", text: "hola" } },
+    { tipo: "trabajo", i: 1, pasos: [s1], msg: { role: "agent", text: "", razonamiento: [{ text: "p1" }] } },
+    { tipo: "pasos", i: 2, pasos: [s2] },
+    { tipo: "trabajo", i: 3, pasos: [], msg: { role: "agent", text: "Listo", duration_ms: 12_000 } },
+  ];
+  const consolidated = consolidateTurnActivities(blocks);
+  assert.equal(consolidated.length, 2, "collapses all consecutive work-only segments into the final answer block");
+  assert.equal(consolidated[1].tipo, "trabajo");
+  if (consolidated[1].tipo === "trabajo") {
+    assert.equal(consolidated[1].pasos.length, 2);
+    assert.equal(consolidated[1].msg.text, "Listo");
+    assert.equal(consolidated[1].msg.duration_ms, 12_000);
+  }
+});
+
+test("consolidateTurnActivities never crosses a new user message boundary", () => {
+  const step = pasoDe("read_file", "a.ts", { ok: true });
+  const activity = {
+    key: "ws:s:activity:1",
+    anchor: null,
+    anchorIndex: 1,
+    active: false,
+    startedAt: 1_000,
+    durationMs: 5_000,
+    messages: [{ role: "system", text: "a.ts", meta: "usó", paso: step }],
+  };
+  const blocks: PresentedActivityBlock<Record<string, unknown>>[] = [
+    { tipo: "msg", i: 0, msg: { role: "user", text: "turno 1" } },
+    { tipo: "pasos", i: 1, pasos: [], activity },
+    { tipo: "trabajo", i: 2, pasos: [], msg: { role: "agent", text: "resp 1" }, responseOnly: true },
+    { tipo: "msg", i: 3, msg: { role: "user", text: "turno 2" } },
+    { tipo: "trabajo", i: 4, pasos: [step], msg: { role: "agent", text: "resp 2", duration_ms: 9_000 } },
+  ];
+  const consolidated = consolidateTurnActivities(blocks);
+  assert.equal(consolidated.length, 5);
+  assert.equal(consolidated[4].responseOnly, undefined, "turn 2 keeps its own work header");
 });
