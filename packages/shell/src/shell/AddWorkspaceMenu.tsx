@@ -34,6 +34,7 @@ export default function AddWorkspaceMenu(props: {
   tasksOf: (id: string) => TaskAttention[];
   badge: Component<{ state: AttentionState; class?: string }>;
   labelOf: (state: AttentionState) => string;
+  onOpenChange?: (open: boolean) => void;
   onOpen: (id: string, context?: string) => void;
   onShow: (workspace: RailWorkspaceTarget) => void;
   onRemove: (workspace: RailWorkspaceTarget) => void;
@@ -44,6 +45,8 @@ export default function AddWorkspaceMenu(props: {
   const [fromHarness, setFromHarness] = createSignal(picker?.takeHarnessWorkspace());
   if (picker?.resume() || fromHarness()) { setStep("danil"); setOpen(true); }
   createEffect(() => openRequestedSessionMenu(props.sessions, { context: setContext, step: setStep, open: setOpen }));
+  createEffect(() => props.onOpenChange?.(open()));
+  onCleanup(() => props.onOpenChange?.(false));
   function connect() {
     close();
     void props.sessions.sessions.addAccount().catch(() => {});
@@ -91,7 +94,7 @@ export default function AddWorkspaceMenu(props: {
         <Plus size={16} aria-hidden="true" />
         <Show when={waiting()}>{(s) => <Dynamic component={props.badge} state={s()} class="absolute -top-1 -right-1" />}</Show>
       </PopoverTrigger>
-      <PopoverContent role="menu" class="w-64 p-1" onKeyDown={menuArrows}>
+      <PopoverContent role="menu" class={step() !== "menu" && picker ? "w-76 p-0" : "w-64 p-1"} onKeyDown={menuArrows}>
         <Show when={step() === "menu"} fallback={picker
           ? <WebWorkspacePicker picker={picker} fromHarness={fromHarness()} onHarnessAttempt={() => setFromHarness(null)} close={close} add={addPicked} />
           : <SessionAddStep sessions={props.sessions} context={context()} query={query()} onQuery={setQuery} onClose={close} onOpen={props.onOpen} onConnect={connect} />}>

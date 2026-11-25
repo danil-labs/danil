@@ -58,6 +58,19 @@ test("cookie session reads profile and all workspace pages, selects with CSRF an
   };
   const api = platformSession({ origin: "https://api.danil.ai", timeoutMs: 1000 }, request);
   assert.equal(new URL(api.loginUrl("https://app.danil.ai/")).searchParams.get("return_to"), "https://app.danil.ai/");
+  const returnTo = "https://app.danil.ai/";
+  assert.deepEqual(Object.fromEntries(new URL(api.loginUrl(returnTo, "org_A")).searchParams), {
+    return_to: returnTo, organization_id: "org_A",
+  });
+  assert.deepEqual(Object.fromEntries(new URL(api.loginUrl(returnTo, "org_A", "select_account")).searchParams), {
+    return_to: returnTo, organization_id: "org_A", prompt: "select_account",
+  });
+  assert.deepEqual(Object.fromEntries(new URL(api.loginUrl(returnTo, "org_A", undefined, "add")).searchParams), {
+    return_to: returnTo, organization_id: "org_A", mode: "add",
+  });
+  assert.deepEqual(Object.fromEntries(new URL(api.loginUrl(returnTo, undefined, undefined, "add")).searchParams), {
+    return_to: returnTo, mode: "add",
+  });
   assert.equal((await api.me()).id, "user_A");
   assert.deepEqual((await api.workspaces()).map(w => w.id), ["11", "9007199254740993"]);
   await api.logout();
