@@ -200,7 +200,12 @@ export function createPanelDeChatCell(deps: PanelDeChatCellDeps) {
            creíble y equivocado. */
         ventana={pp.sesion === sessionId() ? ventana() : null}
         busy={pp.sesion === sessionId() ? busy() : esProvisional(pp.sesion) ? arrancando() : vivas().includes(pp.sesion ?? "")}
-        stopping={handoffAt(pp.sesion, proyectoDeLaCelda()?.id)?.stopping ?? false}
+        stopping={(() => {
+          const view = handoffAt(pp.sesion, proyectoDeLaCelda()?.id);
+          if (!view?.stopping) return false;
+          const cellBusy = pp.sesion === sessionId() ? busy() : esProvisional(pp.sesion) ? arrancando() : vivas().includes(pp.sesion ?? "");
+          return cellBusy || Boolean(view.pending);
+        })()}
         handoff={pp.sesion ? handoff.presentation(conversationScope(pp.sesion, proyectoDeLaCelda()?.id)) : null}
         agents={agents()}
         proyecto={

@@ -267,7 +267,14 @@ export function createShellCommand(deps: ShellCommandDeps) {
     const id = sessionId();
     if (!busy() || !id || stopping()) return;
     setPermissionError(null);
-    await handoff.requestStop(conversationScope(id));
+    const scope = conversationScope(id);
+    const hadPending = Boolean(handoffAt(id)?.pending);
+    const shell = Boolean(terminales()[id] || lanzados.has(id));
+    const stopPromise = handoff.requestStop(scope);
+    // Actúa al instante en el frente sin esperar el viaje al backend: quita `busy` y el spinner
+    // de «Pensando… / Dándole vueltas…» de inmediato; `handoff` sigue cuidando la barrera con el motor.
+    if (!hadPending && !shell) marcarQuieta(id, "interrupted");
+    await stopPromise;
   }
 
   /**

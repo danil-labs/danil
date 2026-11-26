@@ -17,17 +17,24 @@ export type TaskFilesSide = "files" | "changes";
 /** Toolbar button identifier for task tools. */
 export type TaskSideMode = "files" | "search" | "usage" | "delegated";
 
-/** Right-hand docked panel beside the main chat: Files OR Subtask chat, mutually exclusive. */
-export type TaskDockMode = "none" | "files" | "subtask";
+/** Right-hand docked panel beside the main chat (mutually exclusive, pushes the main chat smoothly). */
+export type TaskDockMode = "none" | "files" | "search" | "subtasks" | "subtask" | "usage";
 
-/** Compact floating popover below the fixed top-right toolbar buttons (never full height). */
+/** Legacy popover type retained as `"none"` now that all task panels dock beside the main chat. */
 export type TaskPopoverMode = "none" | "search" | "subtasks" | "usage";
 
-/** Logical ownership group of a right-hand panel or popover. */
+/** Logical ownership group of a right-hand panel. */
 export type TaskSidePanelKind = "files-search" | "subtasks" | "usage";
 
 /** Presentation geometry of the docked side pane below the fixed top bar. */
-export type TaskSideLayout = "closed" | "files-split" | "files-expanded" | "subtask-split" | "subtask-full";
+export type TaskSideLayout =
+  | "closed"
+  | "files-split"
+  | "files-expanded"
+  | "subtask-split"
+  | "subtask-full"
+  | "panel-split"
+  | "panel-full";
 
 export type SubtaskTarget = {
   project: string;
@@ -40,23 +47,23 @@ export function taskSidePanelKind(mode: TaskSideMode): TaskSidePanelKind {
   return "files-search";
 }
 
-function popoverForMode(mode: Exclude<TaskSideMode, "files">): Exclude<TaskPopoverMode, "none"> {
+function dockForMode(mode: TaskSideMode): Exclude<TaskDockMode, "none" | "subtask"> {
   if (mode === "delegated") return "subtasks";
   return mode;
 }
 
-/** Whether a toolbar trigger is currently active for its corresponding dock or popover. */
+/** Whether a toolbar trigger is currently active for its corresponding docked panel. */
 export function isTaskToolActive(panel: Pick<TaskFilesPanel, "dock" | "popover">, mode: TaskSideMode): boolean {
-  if (mode === "files") return panel.dock === "files";
-  return panel.popover === popoverForMode(mode);
+  if (mode === "delegated") return panel.dock === "subtasks" || panel.dock === "subtask";
+  return panel.dock === dockForMode(mode);
 }
 
 /**
  * Single owner of the docked right-hand panel geometry below the fixed top bar:
- * - Files docks side-by-side beside the main chat ("files-split"), and only takes full width
- *   when the user expands a file viewer ("files-expanded") or the window is narrow/split.
- * - A selected Subtask docks side-by-side with a full-height vertical divider ("subtask-split",
- *   or "subtask-full" when narrow). Files and Subtask are mutually exclusive.
+ * - Every task panel (Files, Search, Subtasks list, Subtask chat) docks side-by-side beside the
+ *   main chat and smoothly pushes it (never floating over the chat content).
+ * - Files only takes full width when explicitly expanded (`expanded`) or on narrow/split windows.
+ * - Subtask chat and tool panels dock side-by-side (`*-split`) or full width when narrow (`*-full`).
  */
 export function taskSideLayout(
   panel: Pick<TaskFilesPanel, "dock" | "expanded" | "subtask">,
@@ -64,6 +71,9 @@ export function taskSideLayout(
 ): TaskSideLayout {
   if (panel.dock === "files") return narrow || panel.expanded ? "files-expanded" : "files-split";
   if (panel.dock === "subtask" && panel.subtask !== null) return narrow ? "subtask-full" : "subtask-split";
+  if (panel.dock === "search" || panel.dock === "subtasks" || panel.dock === "usage") {
+    return narrow ? "panel-full" : "panel-split";
+  }
   return "closed";
 }
 
@@ -107,16 +117,16 @@ const emptyPanel = (): TaskFilesPanel => ({
 });
 
 function syncSummary(p: TaskFilesPanel) {
-  p.open = p.dock !== "none" || p.popover !== "none";
+  p.popover = "none";
+  p.open = p.dock !== "none";
   if (p.dock === "files") p.mode = "files";
-  else if (p.dock === "subtask") p.mode = "delegated";
-  else if (p.popover === "search") p.mode = "search";
-  else if (p.popover === "usage") p.mode = "usage";
-  else if (p.popover === "subtasks") p.mode = "delegated";
+  else if (p.dock === "subtask" || p.dock === "subtasks") p.mode = "delegated";
+  else if (p.dock === "search") p.mode = "search";
+  else if (p.dock === "usage") p.mode = "usage";
   else p.mode = "files";
 }
 
-/** Per-task state of the right-side dock and compact popovers, in memory; only the widths persist (`lib/prefs.ts`). */
+/** Per-task state of the right-side dock, in memory; only the widths persist (`lib/prefs.ts`). */
 export function createTaskFiles() {
   const [panels, setPanels] = createStore<Record<string, TaskFilesPanel>>({});
   const panel = (task: string): TaskFilesPanel => panels[task] ?? emptyPanel();
@@ -128,23 +138,18 @@ export function createTaskFiles() {
     }));
 
   /**
-   * Toggles a toolbar tool:
-   * - "files" toggles the docked Files panel (mutually exclusive with Subtask chat).
-   * - "search", "delegated", and "usage" toggle their compact floating popover without closing the docked pane.
+   * Toggles a right-hand docked panel beside the main chat (all mutually exclusive):
+   * clicking the active tool closes the dock; clicking another smoothly switches panels.
    */
   const present = (task: string, mode: TaskSideMode) => edit(task, (p) => {
-    if (mode === "files") {
-      if (p.dock === "files") {
-        p.dock = "none";
-        p.expanded = false;
-      } else {
-        p.dock = "files";
-        p.expanded = false;
-      }
-      return;
+    const next = dockForMode(mode);
+    if (p.dock === next) {
+      p.dock = "none";
+      p.expanded = false;
+    } else {
+      p.dock = next;
+      p.expanded = false;
     }
-    const next = popoverForMode(mode);
-    p.popover = p.popover === next ? "none" : next;
   });
 
   return {
@@ -164,18 +169,21 @@ export function createTaskFiles() {
       p.subtask = null;
     }),
     closePopover: (task: string) => edit(task, (p) => {
-      p.popover = "none";
+      if (p.dock === "search" || p.dock === "subtasks" || p.dock === "usage") {
+        p.dock = "none";
+        p.expanded = false;
+      }
     }),
     present,
     toggle: (task: string) => present(task, "files"),
     openSubtask: (task: string, target: SubtaskTarget) => edit(task, (p) => {
       p.dock = "subtask";
-      p.popover = "none";
       p.expanded = false;
       p.subtask = { project: target.project, session: target.session };
     }),
     showSubtaskList: (task: string) => edit(task, (p) => {
-      p.popover = "subtasks";
+      p.dock = "subtasks";
+      p.expanded = false;
     }),
     clearSubtask: (task: string) => edit(task, (p) => {
       p.subtask = null;

@@ -4,13 +4,13 @@ import { type Layout, type PanelGroup, type PanelSite as SitioDePanel, type Side
 import { type DragPoint } from "../../../ui/src/lib/pointer-drag.ts";
 import { moviendoHueco } from "../../../ui/src/lib/sites";
 import { type TaskTab } from "../../../ui/src/lib/tabs-types.ts";
-import { taskSideLayout, taskSideUsesSplitWidth, type TaskFiles, type TaskPopoverMode } from "../../../ui/src/lib/taskFiles.ts";
+import { taskSideLayout, taskSideUsesSplitWidth, type TaskFiles } from "../../../ui/src/lib/taskFiles.ts";
 import { cn } from "../../../ui/src/lib/utils";
 import SearchPanel from "../../../features/chat/src/components/SearchPanel";
 import { DelegatedPanel, type DelegatedPanelModel } from "../../../features/projects/src/screens/DelegatedTasks";
 import { type SearchSurface } from "../../../features/chat/src/screens/ThreadSearch.tsx";
 import { taskFilesWidth } from "../../../features/code/src/screens/TaskFilesRow";
-import { TaskPopoverShell, TaskSide, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
+import { createDockMotion, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions.tsx";
 import { DragOverlay } from "../../../features/tabs/src";
 import { BELOW_LOCATION } from "../../../host/src/window";
@@ -91,7 +91,7 @@ export function createCeldasDeTareas(deps: CeldasDeTareasDeps) {
         }}
       </For>
 
-      {/* Layer 1 (Docked side pane) + Layer 2 (Compact floating popover) below the fixed top bar. */}
+      {/* Unified docked side panel below the fixed top bar: smoothly pushes the main chat (zero overlays). */}
       <For each={tareasEnVentanas()}>
         {(p) => {
           const sitio = () => paneles.siteOf(p.id);
@@ -102,26 +102,39 @@ export function createCeldasDeTareas(deps: CeldasDeTareasDeps) {
           createEffect(() => { if (panel().dock !== "none") setUsado(true); });
           const narrow = () => paneles.isSplit() || compacta();
           const layout = () => taskSideLayout(panel(), narrow());
-          const visible = () => layout() !== "closed" && celda() !== undefined && !tapadoPorElProyecto(sitio());
-          const isSubtask = () => layout() === "subtask-split" || layout() === "subtask-full";
-          const isFullWidth = () => layout() === "files-expanded" || layout() === "subtask-full";
-          const ancho = () => (isFullWidth() ? undefined : taskFilesWidth(taskSideUsesSplitWidth(panel()), anchoDeArchivos(), anchoDelArbol()));
-          const popover = () => panel().popover;
-          const popoverVisible = () => popover() !== "none" && celda() !== undefined && !tapadoPorElProyecto(sitio());
+          const tabVisible = () => celda() !== undefined && !tapadoPorElProyecto(sitio());
+          const visible = () => layout() !== "closed" && tabVisible();
+          const renderedDock = createDockMotion(() => panel().dock, visible);
+          const isFiles = () => renderedDock() === "files";
+          const isFullWidth = () => layout() === "files-expanded" || layout() === "subtask-full" || layout() === "panel-full";
+          const ancho = () => {
+            if (!visible()) return "0px";
+            if (isFullWidth()) return "100%";
+            return taskFilesWidth(taskSideUsesSplitWidth(panel()), anchoDeArchivos(), anchoDelArbol());
+          };
           const delegatedModel = () => delegatedPanels().get(`${workspaceActivo()}/${p.session}`)?.();
           return (
-            <>
+            <div
+              data-task-side-drawer=""
+              data-open={visible() ? "true" : "false"}
+              aria-hidden={!visible() ? "true" : undefined}
+              class={cn(
+                "pointer-events-none z-10 flex min-h-0 min-w-0 justify-self-end overflow-hidden",
+                isFiles() ? BELOW_LOCATION : "pt-[38px]",
+                visible() ? "translate-x-0 opacity-100 *:pointer-events-auto" : "translate-x-3 opacity-0",
+                !tabVisible() && "hidden",
+                llevaTiraInterior(sitio()) && "mt-[30px]",
+                !moviendoHueco() && "transition-[width,opacity,transform] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+              )}
+              style={{ ...placement(), width: ancho() }}
+              onPointerDown={() => { const d = sitio(); if (d) mandarVentana(d); }}
+            >
               <Show when={usado()}>
-                <div class={cn(
-                  "pointer-events-none flex min-h-0 min-w-0 justify-self-end *:pointer-events-auto",
-                  isSubtask()
-                    ? cn("z-10 pt-[38px]", isFullWidth() && "w-full")
-                    : cn(BELOW_LOCATION, "z-10 pb-3", isFullWidth() ? "w-full px-2" : "pr-2"),
-                )}
-                  classList={{ hidden: !visible(), "mt-[30px]": llevaTiraInterior(sitio()), "transition-[width] duration-200 ease-out": !moviendoHueco() }}
-                  style={{ ...placement(), width: ancho() }}
-                  onPointerDown={() => { const d = sitio(); if (d) mandarVentana(d); }}>
-                  <TaskSideShell dock={panel().dock} layout={layout()} subtaskSlot={
+                <TaskSideShell
+                  dock={renderedDock()}
+                  layout={layout()}
+                  onDismiss={() => archivosDeTarea.closeDock(p.session)}
+                  subtaskSlot={
                     <SubtaskSidePanel
                       model={delegatedModel}
                       subtask={panel().subtask}
@@ -130,40 +143,34 @@ export function createCeldasDeTareas(deps: CeldasDeTareasDeps) {
                       onClose={() => archivosDeTarea.closeDock(p.session)}
                       renderThread={(target) => <PanelDeChat sesion={target.session} proyecto={target.project} inline />}
                     />
-                  }>
-                    <Suspense fallback={null}>
-                      <TaskFilesCard visores={visoresDeCodigo} project={proyectoDePestana(p.id)} session={p.session} files={archivosDeTarea}
-                        visible={visible() && panel().dock === "files"} readOnly={editorDeletionLocked(p.session)}
-                        expandedOnly={narrow()}
-                        onSaved={() => window.dispatchEvent(new CustomEvent("harness:copia"))}
-                        onExportChat={() => exportarChat(p.session, proyectoDePestana(p.id))}
-                        onMoved={archivoMovido} onRemoved={archivoBorrado} />
-                    </Suspense>
-                  </TaskSideShell>
-                </div>
+                  }
+                  searchSlot={searchSurfaces().get(p.session) ? <SearchPanel surface={searchSurfaces().get(p.session)!} /> : undefined}
+                  delegatedSlot={
+                    <DelegatedPanel
+                      model={delegatedModel}
+                      onOpenSubtask={(folder, id) => archivosDeTarea.openSubtask(p.session, { project: folder, session: id })}
+                    />
+                  }
+                  usageSlot={
+                    <UsagePanel
+                      usage={consumo}
+                      agent={sameSite(paneles.siteOf(p.id) ?? null, paneles.activeSite()) ? agent() : (filaDe(p.session)?.agent ?? agent())}
+                      onManage={() => { archivosDeTarea.closeDock(p.session); setSettings("proveedores-ia"); }}
+                      onClose={() => archivosDeTarea.closeDock(p.session)}
+                    />
+                  }
+                >
+                  <Suspense fallback={null}>
+                    <TaskFilesCard visores={visoresDeCodigo} project={proyectoDePestana(p.id)} session={p.session} files={archivosDeTarea}
+                      visible={visible() && panel().dock === "files"} readOnly={editorDeletionLocked(p.session)}
+                      expandedOnly={narrow()}
+                      onSaved={() => window.dispatchEvent(new CustomEvent("harness:copia"))}
+                      onExportChat={() => exportarChat(p.session, proyectoDePestana(p.id))}
+                      onMoved={archivoMovido} onRemoved={archivoBorrado} />
+                  </Suspense>
+                </TaskSideShell>
               </Show>
-              <Show when={popoverVisible()}>
-                <div class={cn(
-                  "pointer-events-none z-30 flex max-h-[min(468px,calc(100%-16px))] min-h-0 min-w-0 self-start justify-self-end pr-2 *:pointer-events-auto",
-                  BELOW_LOCATION,
-                )}
-                  classList={{ "mt-[30px]": llevaTiraInterior(sitio()) }}
-                  style={{ ...placement(), width: `min(${Math.max(300, anchoDelArbol())}px, calc(100% - 16px))` }}
-                  onPointerDown={() => { const d = sitio(); if (d) mandarVentana(d); }}>
-                  <TaskPopoverShell popover={popover() as Exclude<TaskPopoverMode, "none">} onDismiss={() => archivosDeTarea.closePopover(p.session)}>
-                    <TaskSide popover={popover()}
-                      searchSlot={searchSurfaces().get(p.session) ? <SearchPanel surface={searchSurfaces().get(p.session)!} /> : undefined}
-                      usageSlot={<UsagePanel usage={consumo} agent={sameSite(paneles.siteOf(p.id) ?? null, paneles.activeSite()) ? agent() : (filaDe(p.session)?.agent ?? agent())} onManage={() => { archivosDeTarea.closePopover(p.session); setSettings("proveedores-ia"); }} onClose={() => archivosDeTarea.closePopover(p.session)} />}
-                      delegatedSlot={
-                        <DelegatedPanel
-                          model={delegatedModel}
-                          onOpenSubtask={(folder, id) => archivosDeTarea.openSubtask(p.session, { project: folder, session: id })}
-                        />
-                      } />
-                  </TaskPopoverShell>
-                </div>
-              </Show>
-            </>
+            </div>
           );
         }}
       </For>

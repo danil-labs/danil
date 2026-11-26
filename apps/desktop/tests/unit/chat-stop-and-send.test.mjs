@@ -107,3 +107,59 @@ test("«detener y enviar» corta el turno y deja salir lo encolado, sin perderlo
     app.w.close();
   }
 });
+
+test("«Detener» en Pensando apaga el turno al instante en el frente antes de que responda el backend", async () => {
+  let paradas = 0;
+  let resolverStop = null;
+  let vivos = ["t1"];
+  const app = await boot("listo", "chat-optimistic-stop", responses({
+    list_active_turns: () => vivos,
+    stop_turn: () => {
+      paradas += 1;
+      return new Promise((resolve) => { resolverStop = resolve; });
+    },
+  }));
+  try {
+    await sleep(600);
+    const fila = app.w.document.querySelector('[data-sesion="t1"]');
+    assert.ok(fila, "no está la fila de t1");
+    fila.click();
+    await sleep(400);
+
+    app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+    await sleep(200);
+
+    const btnDetener = porTitulo(app, "Detener turno");
+    assert.ok(btnDetener, "debe mostrarse el botón Detener turno mientras el turno está pensando");
+
+    // Clic en Detener con `stop_turn` deliberadamente colgado (sin resolver aún):
+    btnDetener.click();
+    await sleep(30);
+
+    assert.equal(paradas, 1, "se disparó stop_turn en segundo plano");
+    assert.equal(porTitulo(app, "Detener turno"), null, "el botón Detener desaparece al instante sin esperar al backend");
+    assert.equal(porTitulo(app, "Deteniendo…"), null, "no se queda atorado en «Deteniendo…»");
+    assert.ok(porTitulo(app, "Preguntar"), "el botón vuelve a Preguntar de inmediato");
+    assert.equal(
+      app.w.document.querySelector("[data-activity-slot]:not(.activity-dots-exited)"),
+      null,
+      "el indicador de Pensando/Dándole vueltas se detiene al instante",
+    );
+
+    // Eventos rezagados del turno moribundo antes de `done` no resucitan el spinner ni el botón Detener:
+    app.emit("chat", { kind: "reasoning", session: "t1", workspace: "w", text: "pensamiento rezagado" });
+    app.emit("chat", { kind: "delta", session: "t1", workspace: "w", text: "texto rezagado" });
+    await sleep(50);
+    assert.equal(porTitulo(app, "Detener turno"), null, "un evento rezagado del turno moribundo no revive Detener");
+
+    // Cuando finalmente responde el backend y llega `done`, cierra limpio sin errores:
+    vivos = [];
+    resolverStop(null);
+    app.emit("chat", { kind: "done", session: "t1", workspace: "w", ok: false });
+    await sleep(200);
+    assert.equal(porTitulo(app, "Detener turno"), null);
+    assert.ok(porTitulo(app, "Preguntar"));
+  } finally {
+    app.w.close();
+  }
+});

@@ -44,22 +44,23 @@ test("subtask split panel renders side-by-side live thread with two aligned comp
     const delegatedBtn = doc.querySelector('[data-delegated-trigger="toolbar"]');
     assert.ok(delegatedBtn, "los botones superiores siguen fijos en su barra original");
 
-    // 3. Open Subtasks popover -> compact floating popover (never full height), NOT splitting yet
+    // 3. Open Subtasks panel -> docks side-by-side pushing the main chat with smooth animation (NO overlay popover)
     delegatedBtn.click();
-    assert.ok(await until(() => doc.querySelector('[data-task-popover="subtasks"]')));
-    const subtasksPopover = doc.querySelector('[data-task-popover="subtasks"]');
-    assert.equal(subtasksPopover.getAttribute("data-task-layout"), "popover", "el botón de rama abre un popover compacto");
-    assert.ok(subtasksPopover.className.includes("rounded-lg"), "el popover conserva la tarjeta nativa de Danil");
-    assert.ok(subtasksPopover.parentElement?.className.includes("self-start"), "el popover no ocupa toda la altura");
+    assert.ok(await until(() => doc.querySelector('[data-task-dock="subtasks"]')));
+    const subtasksPanel = doc.querySelector('[data-task-dock="subtasks"]');
+    assert.equal(subtasksPanel.getAttribute("data-task-layout"), "panel-split", "el botón de rama abre un panel acoplado junto al chat");
+    assert.ok(subtasksPanel.className.includes("border-l"), "el panel acoplado separa con borde vertical");
+    assert.equal(doc.querySelector('[data-task-popover]'), null, "ya no hay popovers flotando sobre el contenido");
+    assert.ok(doc.querySelector('[data-task-side-drawer]')?.className.includes("transition-[width,opacity,transform]"), "el drawer anima su apertura de forma fluida");
+    assert.ok(doc.querySelector('[data-panel-spacer]')?.className.includes("transition-[width]"), "el espaciador anima el desplazamiento del chat");
 
-    // 4. Switch to "Todas" and click the subtask -> closes popover and docks subtask thread beside main chat
-    assert.ok(await until(() => [...subtasksPopover.querySelectorAll("button")].find((b) => b.textContent === "Todas")));
-    [...subtasksPopover.querySelectorAll("button")].find((b) => b.textContent === "Todas").click();
-    assert.ok(await until(() => subtasksPopover.querySelector('[data-delegated-list] [data-sesion="sub-1"]')));
-    subtasksPopover.querySelector('[data-delegated-list] [data-sesion="sub-1"]').click();
+    // 4. Switch to "Todas" and click the subtask -> switches dock smoothly to subtask live thread beside main chat
+    assert.ok(await until(() => [...subtasksPanel.querySelectorAll("button")].find((b) => b.textContent === "Todas")));
+    [...subtasksPanel.querySelectorAll("button")].find((b) => b.textContent === "Todas").click();
+    assert.ok(await until(() => subtasksPanel.querySelector('[data-delegated-list] [data-sesion="sub-1"]')));
+    subtasksPanel.querySelector('[data-delegated-list] [data-sesion="sub-1"]').click();
 
     assert.ok(await until(() => doc.querySelector('[data-subtask-thread="sub-1"]')));
-    assert.equal(doc.querySelector('[data-task-popover="subtasks"]'), null, "al abrir una subtarea se cierra el popover de la lista");
     const splitThread = doc.querySelector('[data-subtask-thread="sub-1"]');
     const dockPanel = doc.querySelector('[data-task-files]');
     assert.equal(dockPanel?.getAttribute("data-task-layout"), "subtask-split", "al picar una subtarea se divide en dos columnas");
@@ -101,24 +102,25 @@ test("subtask split panel renders side-by-side live thread with two aligned comp
     assert.ok(doc.querySelector('[role="separator"][aria-label="Ancho del panel de archivos"]'), "archivos tiene separador deslizable junto al chat");
     assert.equal(doc.querySelector('[data-subtask-thread="sub-1"]'), null, "archivos y subhilo nunca aparecen al mismo tiempo");
 
-    // 7. Search opens as a compact floating popover without closing Files
+    // 7. Search docks side-by-side pushing the main chat (NO floating overlay)
     const searchBtn = doc.querySelector('button[aria-label="Buscar en esta tarea"]');
     searchBtn.click();
-    assert.ok(await until(() => doc.querySelector('[data-task-popover="search"]')), "el buscador abre como popover flotante compacto");
-    assert.ok(doc.querySelector('[data-task-popover="search"]')?.parentElement?.className.includes("self-start"), "el buscador no ocupa toda la altura");
-    assert.equal(doc.querySelector('[data-task-files]')?.getAttribute("data-task-layout"), "files-split", "el buscador no cierra el panel de archivos");
+    assert.ok(await until(() => doc.querySelector('[data-task-dock="search"]')), "el buscador abre acoplado empujando el chat");
+    assert.equal(doc.querySelector('[data-task-dock="search"]')?.getAttribute("data-task-layout"), "panel-split", "el buscador recorre el chat principal");
+    assert.equal(doc.querySelector('[data-task-popover]'), null, "el buscador ya no flota sobre el chat");
 
-    // 8. Clicking the branch button again opens the compact subtasks popover; picking sub-1 reopens it and close button dismisses it
+    // 8. Clicking the branch button again opens the subtasks panel; picking sub-1 reopens it and close button animates it closed
     delegatedBtn.click();
-    assert.ok(await until(() => doc.querySelector('[data-task-popover="subtasks"]')));
-    const pop2 = doc.querySelector('[data-task-popover="subtasks"]');
-    assert.ok(await until(() => [...pop2.querySelectorAll("button")].find((b) => b.textContent === "Todas")));
-    [...pop2.querySelectorAll("button")].find((b) => b.textContent === "Todas").click();
-    assert.ok(await until(() => pop2.querySelector('[data-delegated-list] [data-sesion="sub-1"]')));
-    pop2.querySelector('[data-delegated-list] [data-sesion="sub-1"]').click();
+    assert.ok(await until(() => doc.querySelector('[data-task-dock="subtasks"]')));
+    const panel2 = doc.querySelector('[data-task-dock="subtasks"]');
+    assert.ok(await until(() => [...panel2.querySelectorAll("button")].find((b) => b.textContent === "Todas")));
+    [...panel2.querySelectorAll("button")].find((b) => b.textContent === "Todas").click();
+    assert.ok(await until(() => panel2.querySelector('[data-delegated-list] [data-sesion="sub-1"]')));
+    panel2.querySelector('[data-delegated-list] [data-sesion="sub-1"]').click();
     assert.ok(await until(() => doc.querySelector('[data-subtask-thread="sub-1"]')));
     doc.querySelector('[data-subtask-close]').click();
-    assert.ok(await until(() => !doc.querySelector('[data-subtask-thread="sub-1"]')), "cerrar el subhilo lo cierra directamente");
+    assert.ok(await until(() => doc.querySelector('[data-task-side-drawer]')?.getAttribute("data-open") === "false"), "cerrar el subhilo inicia la animación de cierre de inmediato");
+    assert.ok(await until(() => !doc.querySelector('[data-subtask-thread="sub-1"]')), "tras la transición se desmonta el subhilo");
 
     assert.deepEqual(app.failures, []);
   } finally {
