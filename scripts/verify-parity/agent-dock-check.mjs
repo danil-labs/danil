@@ -1,0 +1,43 @@
+import assert from "node:assert/strict";
+import { chromium } from "playwright";
+// Servir: pnpm -C apps/desktop exec vite --config tests/integration/agent-dock.config.ts --port 4173
+const browser = await chromium.launch({headless:true, executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, args:["--no-zygote", "--use-gl=angle", "--use-angle=swiftshader"]});
+const page = await browser.newPage();
+const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+try {
+ await page.goto('http://127.0.0.1:4173/tests/integration/agent-dock.html');
+ await page.waitForSelector('[data-dock-agent="agent-12"]');
+ const names=()=>page.locator('[data-dock-agent]').evaluateAll(nodes=>nodes.map(n=>n.dataset.dockAgent));
+ assert.equal(await page.locator('[data-dock-level]').count(),0);
+ assert.deepEqual(await names(),Array.from({length:13},(_,i)=>`agent-${i}`));
+ await page.evaluate(()=>window.qa.activate());
+ await page.evaluate(()=>window.qa.switchFolder());
+ assert.deepEqual(await names(),Array.from({length:13},(_,i)=>`agent-${i}`));
+ const viewport=page.locator('.scroll-visible');
+ const dimensions=await viewport.evaluate(n=>({width:n.clientWidth,scrollWidth:n.scrollWidth,overflow:getComputedStyle(n).overflowX}));
+ assert(dimensions.scrollWidth>dimensions.width,JSON.stringify(dimensions));
+ assert.equal(dimensions.overflow,'auto');
+ await page.locator('[data-dock-agent="agent-0"]').click();
+ assert.equal(await page.evaluate(()=>window.qa.clicks()),1);
+ const box=await viewport.boundingBox();
+ await page.mouse.move(box.x+box.width-15,box.y+20);
+ await page.mouse.down();
+ await page.mouse.move(box.x+15,box.y+20,{steps:10});
+ await page.mouse.up();
+ assert((await viewport.evaluate(n=>n.scrollLeft))>100);
+ assert.equal(await page.evaluate(()=>window.qa.clicks()),1,'drag must not activate an agent');
+ const buttons=page.locator('[data-agent-dock] [role="group"] button');
+ await buttons.last().click();
+ await buttons.last().click();
+ await page.waitForFunction(() => document.querySelector('[data-agent-dock] [role=group] button:last-child').disabled);
+ assert.equal(await buttons.last().isDisabled(),true);
+ await buttons.first().click();
+ await page.waitForFunction(() => !document.querySelector('[data-agent-dock] [role=group] button:last-child').disabled);
+ assert.equal(await buttons.last().isDisabled(),false);
+ await viewport.evaluate(n=>n.scrollLeft=0);
+ await page.locator('[data-dock-agent="agent-0"]').focus();
+ await page.keyboard.press('Enter');
+ assert.equal(await page.evaluate(()=>window.qa.clicks()),2);
+ assert.deepEqual(errors,[]);
+ console.log('PASS: flat roster, stable order on context/activity changes, native overflow, click, drag without activation, pagination and keyboard');
+} finally { await browser.close(); }

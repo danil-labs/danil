@@ -15,23 +15,18 @@ const RELECTURA_DE_AGENTES_MS = 10_000;
 
 /** Los agentes del dock y el filtro del riel que la franja personaliza. */
 export function createDockDelRiel(props: SidebarProps, tareas: TareasDelRiel) {
-  const { carpetaDe, relacionadas, nombreDe, todas, vistaEfectiva, cambiarVista, carpetasDelFiltro, variasMaquinas } = tareas;
-  /**
-   * Los agentes del dock: los de la carpeta que se está mirando, con su
-   * presencia. Un mismo agente propio sale en cada carpeta y se junta por
-   * nombre; manda el estado más despierto y se suman sus tareas vivas.
-   */
-  /** La carpeta de lo que se mira ahora: sus agentes son los del panel. */
+  const { carpetaDe, nombreDe, todas, vistaEfectiva, cambiarVista, carpetasDelFiltro, variasMaquinas } = tareas;
+  /** La carpeta activa solo decide dónde abrir el chat, no qué agentes mostrar. */
   const carpetaActual = () => (props.current ? carpetaDe(props.current) : props.proyectoAbierto ?? props.carpetaDelBorrador) || null;
-  const carpetasConTareas = createMemo(
-    () => {
-      const actual = carpetaActual();
-      const machine = props.current ? relacionadas().find(row => row.id === props.current)?.machine ?? "" : "";
-      return [`${actual ?? ""}\n${machine}`];
-    },
-    [],
-    { equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]) },
-  );
+  const carpetasConTareas = createMemo(() => {
+    const sources = new Set<string>(["\n"]);
+    for (const project of props.projects) sources.add(`${project.id}\n`);
+    for (const { project, row } of todas()) {
+      sources.add(`${project}\n${row.machine ?? ""}`);
+      sources.add(`\n${row.machine ?? ""}`);
+    }
+    return [...sources];
+  }, [], { equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]) });
   const [altas, setAltas] = createSignal(0);
   // Hasta la primera respuesta del motor, un dock vacío es «cargando», no «sin agentes».
   // Listo es que TODAS las carpetas ya tienen su lista a la vista. Lo decide el
@@ -103,30 +98,6 @@ export function createDockDelRiel(props: SidebarProps, tareas: TareasDelRiel) {
     }
     return undefined;
   };
-  /** De dónde viene cada agente: workspace, proyecto o repositorio. */
-  const nivelDe = createMemo<Record<string, "workspace" | "project" | "repo">>(() => {
-    const out: Record<string, "workspace" | "project" | "repo"> = {};
-    for (const c of porCarpeta()) {
-      for (const a of c.roster()) {
-        if (a.name in out) continue;
-        out[a.name] = !a.own ? "repo" : a.own_scope?.kind === "workspace" ? "workspace" : "project";
-      }
-    }
-    return out;
-  });
-  /** El panel del dock: los del workspace, y los instalados y del repositorio de la carpeta abierta. */
-  const gruposDelDock = createMemo(() => {
-    const niveles = nivelDe();
-    const workspace = Object.keys(niveles).filter((name) => niveles[name] === "workspace");
-    const actual = carpetaActual();
-    const deLaCarpeta = actual ? porCarpeta().find((c) => c.project === actual)?.roster() ?? [] : [];
-    const propia = (a: { own: boolean; own_scope: { kind: string } | null }) => a.own && a.own_scope?.kind !== "workspace";
-    return {
-      workspace,
-      project: deLaCarpeta.filter(propia).map((a) => a.name),
-      repo: deLaCarpeta.filter((a) => !a.own).map((a) => a.name),
-    };
-  });
   /** Carpetas donde está el agente, en el orden del riel. */
   const carpetasDelAgente = (name: string) => {
     const orden = (id: string) => { const i = props.projects.findIndex((p) => p.id === id); return i === -1 ? props.projects.length : i; };
@@ -148,5 +119,5 @@ export function createDockDelRiel(props: SidebarProps, tareas: TareasDelRiel) {
     get machines() { return variasMaquinas(); },
   };
 
-  return { carpetaActual, agentesDelDock, carpetasDelAgente, gruposDelDock, rosterListo, perfilDe, filtro };
+  return { carpetaActual, agentesDelDock, carpetasDelAgente, rosterListo, perfilDe, filtro };
 }

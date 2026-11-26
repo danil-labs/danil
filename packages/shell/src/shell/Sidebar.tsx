@@ -92,7 +92,7 @@ export default function Sidebar(props: SidebarProps) {
 
   const tareas = createTareasDelRiel(props);
   const { vista, cambiarVista, todas, grupos, hayCarpetasVacias } = tareas;
-  const { carpetaActual, agentesDelDock, carpetasDelAgente, gruposDelDock, rosterListo, perfilDe, filtro } = createDockDelRiel(props, tareas);
+  const { carpetaActual, agentesDelDock, carpetasDelAgente, rosterListo, perfilDe, filtro } = createDockDelRiel(props, tareas);
   const { FilaDeClon, Grupo } = createFilas(props, tareas, { setDesplegado, setCreatingAgentIn });
   const seccionesVisibles = createMemo(() => resolvedRailSections().filter((section) => section.visible));
   const algunAgenteTrabajando = createMemo(() => agentesDelDock().some((a) => a.status === "working"));
@@ -284,8 +284,6 @@ export default function Sidebar(props: SidebarProps) {
                               selected={vista().agent}
                               foldersOf={carpetasDelAgente}
                               currentFolder={carpetaActual()}
-                              contextKey={props.viewKey}
-                              groups={gruposDelDock()}
                               loading={!rosterListo()}
                               onTalk={props.onHablarCon}
                               onShowTasks={(agent) => cambiarVista({ ...vista(), agent })}
