@@ -137,11 +137,17 @@ export function edgeControlPlane(deployment: EdgeDeployment, options: EdgeOption
       }
     },
     async wake(id: string): Promise<boolean | "not_startable"> {
-      return wokeOf(await machines.start(id));
+      return wokeOf(await machines.wake(id));
     },
     async admit(id: string): Promise<MachineAdmission> {
       const answer = await machines.admission(id);
-      if (answer.kind !== "ok") throw new Error(answer.kind === "error" ? (answer.code ?? "machine_unreachable") : answer.kind);
+      if (answer.kind !== "ok") {
+        const code = answer.kind === "error" ? (answer.code ?? "machine_unreachable") : answer.kind;
+        const error = new Error(code) as Error & { code?: string; status?: number | null };
+        error.code = code;
+        if (answer.kind === "error" || answer.kind === "unavailable") error.status = answer.status;
+        throw error;
+      }
       return answer.value;
     },
   };

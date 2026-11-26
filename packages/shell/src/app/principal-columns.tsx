@@ -7,6 +7,7 @@ import { sidebarViewKey } from "../../../ui/src/lib/sidebarView";
 import { spaceName } from "../../../ui/src/lib/spaces";
 import { type Space } from "../../../ui/src/lib/spaces.ts";
 import { type Superficie } from "../../../ui/src/lib/surfaces.ts";
+import { esProvisional } from "../../../ui/src/lib/taskDraft";
 import { type TextEdit } from "../../../ui/src/lib/taskMentions.ts";
 import { type PermissionRequest } from "../../../features/chat/src/screens/Chat.tsx";
 import { machines } from "../../../features/machines/src/queries/store";
@@ -170,8 +171,8 @@ export function createColumnasDePrincipal(deps: ColumnasDePrincipalDeps) {
               onMoveToSpace={(p, id, i) => void moveToSpace(p, id, i)}
               onBringHere={(p, id) => void abrirTraer(p, id)}
               onCarryFolder={machines().length > 1 ? (id, machine) => void abrirLlevarCarpeta(id, machine) : undefined}
-              current={sessionId()}
-              vivas={vivas()}
+              current={sessionId() ?? (pestanaActiva() && esProvisional(pestanaActiva()) ? pestanaActiva() : null)}
+              vivas={pestanaActiva() && esProvisional(pestanaActiva()) && !vivas().includes(pestanaActiva()!) ? [...vivas(), pestanaActiva()!] : vivas()}
         /* Qué tareas esperan que apruebes algo, aparte de `vivas`: pesa
            más, una que trabaja no necesita nada de ti, y una parada
            esperando tu aprobación no avanza hasta que vayas. */

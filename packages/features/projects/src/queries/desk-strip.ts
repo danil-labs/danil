@@ -242,6 +242,7 @@ export function createDeskStrip(deps: DeskStripDeps) {
       if (ws !== settledWorkspace || actuales.length === 0) return;
       const desk = escritorio();
       if (desk !== null && actuales.some((i) => i.id === desk)) return;
+      if (esProvisional(pestanas.active())) return;
       migrateLegacyStrip(ws, actuales[0].id);
       const guardado = leerPref<string | null>(`space.${ws}`, null);
       const next = guardado && actuales.some((i) => i.id === guardado) ? guardado : actuales[0].id;

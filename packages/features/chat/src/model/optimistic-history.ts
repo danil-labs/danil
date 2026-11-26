@@ -110,9 +110,12 @@ export function createOptimisticHistory<T extends HistoryState>(deps: {
   }
   function reconcile(previous: T | undefined, incoming: Msg[], persistedIds: ReadonlySet<string>, prepend: boolean, readRevision?: number) {
     const overtaken = (known: ReadonlySet<string>) => [...persistedIds].some(id => !known.has(id));
+    // Una lectura vacía (antes de que el motor escriba el primer turno en disco) no
+    // puede borrar el globo optimista del primer mensaje del usuario.
+    const hasDurableTurns = incoming.length > 0 || persistedIds.size > 0;
     const optimistic = (previous?.optimistic ?? []).filter(entry =>
       !(entry.row.turno && persistedIds.has(entry.row.turno)) &&
-      !(entry.acknowledged !== undefined && readRevision !== undefined && readRevision > entry.acknowledged && (!entry.persisted || overtaken(entry.persisted))));
+      !(entry.acknowledged !== undefined && readRevision !== undefined && readRevision > entry.acknowledged && (!entry.persisted ? (entry.row.role !== "user" || hasDurableTurns) : overtaken(entry.persisted))));
     const read = (prepend ? conservarPorClave : conservarEnOrden)(previous?.base ?? [], incoming);
     return { base: keepConfirmed(previous?.base ?? [], read, optimistic), optimistic,
       readRevision: readRevision ?? previous?.readRevision };
