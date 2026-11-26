@@ -1,10 +1,13 @@
 import { ALPHA_DEMO } from "./alpha-mode";
+import { useAccount } from "./account";
+import type { WorkspaceSpaceCatalog } from "./edge-spaces";
+import type { EdgeWorkspace } from "./edge-workspaces";
 import { t } from "./i18n";
 import type { ProviderInfo, Workspace } from "@terminus/protocol";
 import { DEFAULT_SIDEBAR_VIEW, type SidebarView, sanitizeSidebarView } from "@terminus/tasks";
 import { store } from "./store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { type Agent, type Folder, type HostSnapshot, type MergedSpace, type Task, type WorkspaceEntry, mergeSnapshots, snapshotOf, taskKey, withAccountFolders, workspaceEntries, workspacesOf } from "./engine";
+import { type Agent, type Folder, type HostSnapshot, type MergedSpace, type Task, type WorkspaceEntry, mergeSnapshots, snapshotOf, taskKey, withAccountFolders, withSpaceCatalog, workspaceEntries, workspacesOf } from "./engine";
 import type { Host } from "./hosts";
 import { useMachines } from "./machines";
 import { keepSame } from "./reconcile";
@@ -41,6 +44,10 @@ type Workspaces = {
   /** El filtro de la lista (`@terminus/tasks`), por workspace y space como en el escritorio. */
   view: SidebarView;
   setView: (view: SidebarView) => void;
+  /** Si el catálogo del borde (`/v1/workspaces/{id}/spaces`) gobierna los espacios de este workspace. */
+  spaceCatalogManaged: boolean;
+  /** Registra el espacio elegido en Workspaces tras crear una tarea nueva. */
+  recordTaskSpace: (taskId: string, spaceId: string | null) => Promise<void>;
   /** Las máquinas que tienen el workspace actual. */
   hostsOfCurrent: Host[];
   /** Relee el workspace; con el gesto de la lista enseña que carga. */
@@ -74,10 +81,11 @@ function DemoWorkspacesProvider({ children }: { children: ReactNode }) {
   const alternate: MergedSpace = { id: "demo-space-alt", name: t("alpha.folder_demo"), folders: [], on: {"demo-host":"demo-space-alt"} };
   const space = spaceId === firstSpace.id ? firstSpace : alternate;
   const snapshot: Snapshot = { folders: [{id:"demo-folder",name:t("alpha.folder_demo"),key:"demo-host/demo-folder",host:"demo-host",kind:"folder"}], spaces:[firstSpace,alternate], tasks:[{id:"demo-task",title:t("alpha.task_demo"),last_message:t("alpha.answer_demo"),provider:"codex",model:"gpt-5.6",created_at:0,updated_at:0,esperando:false,agent:null,space:firstSpace.id,host:"demo-host",workspace:entry.id,folder:"demo-folder",folderKey:"demo-host/demo-folder"}], delegated:[], agents:[{name:"atencion-demo",description:t("alpha.agent"),status:"asleep",liveTasks:0,minutesSinceLastTurn:null,places:[{host:"demo-host",folder:"demo-folder"}]}], live:new Set(), providers:{}, cachedAt:null };
-  return <Context.Provider value={{list:[entry],current:entry,snapshot,loading:false,selectionReady:true,select:()=>{},space,selectSpace:setSpaceId,view,setView,hostsOfCurrent:hosts,reload:async()=>{}}}>{children}</Context.Provider>;
+  return <Context.Provider value={{list:[entry],current:entry,snapshot,loading:false,selectionReady:true,select:()=>{},space,selectSpace:setSpaceId,view,setView,spaceCatalogManaged:false,recordTaskSpace:async()=>{},hostsOfCurrent:hosts,reload:async()=>{}}}>{children}</Context.Provider>;
 }
 
 function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
+  const { plane } = useAccount();
   const { hosts, registry, subscribe, rememberTitles, tick } = useMachines();
   const [perHost, setPerHost] = useState<Record<string, Workspace[] | null>>({});
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -94,8 +102,15 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
   const shown = useRef(0);
   // Lo último que contestó cada máquina del workspace abierto: hasta que vuelva a contestar, su parte se queda.
   const parts = useRef<{ entry: string | null; byHost: Map<string, HostSnapshot> }>({ entry: null, byHost: new Map() });
+  const catalogs = useRef<{ scope: string | null; byEntry: Map<string, WorkspaceSpaceCatalog> }>({ scope: plane.scope, byEntry: new Map() });
+  const [spaceCatalogs, setSpaceCatalogs] = useState<Record<string, WorkspaceSpaceCatalog>>({});
   const hasSnapshot = useRef(false);
   hasSnapshot.current = snapshot !== null;
+
+  useEffect(() => {
+    catalogs.current = { scope: plane.scope, byEntry: new Map() };
+    setSpaceCatalogs({});
+  }, [plane.scope]);
 
   useEffect(() => {
     void store.get(KEY).then((saved) => {
@@ -121,7 +136,9 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
     // Cada máquina se pinta al contestar: una lenta o sin conexión no detiene la lista. Una recarga más nueva que ya pintó manda.
     // Mientras tanto, y si no contesta, vale lo último que dijo: sus tareas no se van de la lista para volver un momento después.
     const loadEntry = async (entry: WorkspaceEntry) => {
+      if (catalogs.current.scope !== plane.scope) catalogs.current = { scope: plane.scope, byEntry: new Map() };
       const having = hosts.filter((h) => entry.members.has(h.id));
+      const hostIds = having.map((h) => h.id);
       const before = parts.current.entry === entry.id ? parts.current.byHost : new Map<string, HostSnapshot>();
       const answered = having.map((h) => before.get(h.id) ?? null);
       const show = () => {
@@ -129,19 +146,31 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
         shown.current = mine;
         parts.current = { entry: entry.id, byHost: new Map(answered.flatMap((p, i) => (p ? [[having[i].id, p] as const] : []))) };
         // Lo que ninguna máquina contestó lo pone el registro de la cuenta: un workspace dormido abre con sus carpetas.
-        const merged = withAccountFolders(mergeSnapshots(answered.filter((p) => p !== null), tag), registry, entry.id, having.map((h) => h.id));
+        const base = withAccountFolders(mergeSnapshots(answered.filter((p) => p !== null), tag), registry, entry.id, hostIds);
+        const merged = withSpaceCatalog(base, catalogs.current.byEntry.get(entry.id) ?? null, hostIds);
         rememberTitles(merged.tasks.map((task) => [taskKey(task), task.title]));
         // Solo cambia lo que cambió: las filas iguales conservan su objeto y sus tarjetas no se repintan.
         setSnapshot((old) => (old ? keepSame<Snapshot>(old, merged) : merged));
         setSnapshotScope(JSON.stringify([entry.id,having.map(host=>host.id).sort()]));
       };
-      await Promise.all(
-        having.map(async (host, i) => {
+      const accountId = (registry?.find((row) => row.id === entry.id) as EdgeWorkspace | undefined)?.account_id ?? null;
+      const catalogWork =
+        plane.workspaceSpaces && accountId
+          ? plane.workspaceSpaces(accountId).then((catalog) => {
+              if (!catalog || catalogs.current.scope !== plane.scope) return;
+              catalogs.current.byEntry.set(entry.id, catalog);
+              setSpaceCatalogs((old) => (old[entry.id] === catalog ? old : { ...old, [entry.id]: catalog }));
+              show();
+            }).catch(() => {})
+          : Promise.resolve();
+      await Promise.all([
+        catalogWork,
+        ...having.map(async (host, i) => {
           const part = await snapshotOf(host, entry.members.get(host.id) as string).catch(() => null);
           if (part) answered[i] = part;
           show();
         }),
-      );
+      ]);
       if (!having.length) show();
     };
     const pick = (groups: WorkspaceEntry[]) => groups.find((g) => g.id === currentNow.current) ?? groups[0] ?? null;
@@ -171,7 +200,7 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
         setEnumeratedScope(JSON.stringify(hosts.map(host=>host.id).sort()));
       }
     }
-  }, [hosts, registry, rememberTitles, machineCount]);
+  }, [hosts, registry, rememberTitles, machineCount, plane]);
   const reload = useCallback(() => load(false), [load]);
   const refresh = useCallback(() => load(true), [load]);
 
@@ -225,7 +254,25 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
   );
   const spaces = snapshot?.spaces ?? [];
   const chosen = currentId ? spaceIds[currentId] : undefined;
-  const space = spaces.find((s) => chosen !== undefined && Object.values(s.on).includes(chosen)) ?? spaces[0] ?? null;
+  const space = spaces.find((s) => chosen !== undefined && (s.id === chosen || Object.values(s.on).includes(chosen))) ?? spaces[0] ?? null;
+
+  const recordTaskSpace = useCallback(
+    async (taskId: string, spaceId: string | null) => {
+      const entryId = currentNow.current;
+      if (!entryId || !plane.assignTaskSpace) return;
+      const accountId = (registry?.find((row) => row.id === entryId) as EdgeWorkspace | undefined)?.account_id ?? null;
+      if (!accountId) return;
+      const updated = await plane.assignTaskSpace(accountId, taskId, spaceId).catch(() => null);
+      if (!updated || catalogs.current.scope !== plane.scope) return;
+      catalogs.current.byEntry.set(entryId, updated);
+      setSpaceCatalogs((old) => ({ ...old, [entryId]: updated }));
+      const activeEntry = list.find((w) => w.id === entryId);
+      const hostIds = hosts.filter((h) => activeEntry?.members.has(h.id)).map((h) => h.id);
+      setSnapshot((old) => (old ? withSpaceCatalog(old, updated, hostIds) : old));
+    },
+    [plane, registry, hosts, list],
+  );
+  const spaceCatalogManaged = Boolean(currentId && spaceCatalogs[currentId]?.spaces.length);
 
   const [view, setViewState] = useState<SidebarView>(DEFAULT_SIDEBAR_VIEW);
   const currentViewKey = currentId ? viewKey(currentId, space?.id ?? null) : null;
@@ -248,8 +295,8 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
 
   const selectionReady=spacePreferenceReady && enumeratedScope===JSON.stringify(hosts.map(host=>host.id).sort()) && (!current || snapshotScope===JSON.stringify([current.id,[...current.hosts].sort()]));
   const value = useMemo<Workspaces>(
-    () => ({ list, current, snapshot, loading, selectionReady, select, space, selectSpace, view, setView, hostsOfCurrent, reload }),
-    [list, current, snapshot, loading, selectionReady, select, space, selectSpace, view, setView, hostsOfCurrent, reload],
+    () => ({ list, current, snapshot, loading, selectionReady, select, space, selectSpace, view, setView, spaceCatalogManaged, recordTaskSpace, hostsOfCurrent, reload }),
+    [list, current, snapshot, loading, selectionReady, select, space, selectSpace, view, setView, spaceCatalogManaged, recordTaskSpace, hostsOfCurrent, reload],
   );
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }

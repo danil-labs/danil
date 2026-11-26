@@ -6,8 +6,9 @@ import { useMemo, useRef, useState } from "react";
 import { FlatList, type FlatListProps, StyleSheet, Text, View } from "react-native";
 import { cardOf, marksOf } from "../../../lib/cards";
 import { createTask, runShell, suggestedDefaults, type Task, taskKey } from "../../../lib/engine";
+import { failureKey } from "../../../lib/failureNotice";
 import { HostError } from "../../../lib/hosts";
-import { lang, t, w } from "../../../lib/i18n";
+import { hasKey, lang, t, w } from "../../../lib/i18n";
 import { useMachines } from "../../../lib/machines";
 import { effectiveGit } from "../../../lib/taskGit";
 import { useTaskGit } from "../../../lib/useTaskGit";
@@ -54,7 +55,11 @@ export default function AgentScreen() {
     } catch (error) {
       if (error instanceof HostError && error.code === "machine_asleep") setNote(w("web.machines.off_action", { name: host.label }));
       else if (error instanceof HostError && error.code === "machine_outdated") setNote(w("web.machines.outdated_action", { name: host.label }));
-      else setNote(t("task.error", { detail: error instanceof Error ? error.message : String(error) }));
+      else {
+        const clave = failureKey(error);
+        if (clave && hasKey(clave)) setNote(t(clave));
+        else setNote(t("task.error", { detail: error instanceof Error ? error.message : String(error) }));
+      }
       return false;
     }
   }

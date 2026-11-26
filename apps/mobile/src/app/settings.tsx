@@ -107,7 +107,7 @@ export default function Settings() {
                 <ListRow testID="open-activity" icon={{ name: "terminal", color: "#334155" }} title={t("activity.title")} subtitle={t("activity.description")} chevron onPress={() => router.push("/activity")} />
               </Group>
             ) : null}
-            {session && registry?.length ? (
+            {plane.bearerServices && session && registry?.length ? (
               <>
                 <GroupHeader>{t("github.title")}</GroupHeader>
                 <Group inset={56}>
@@ -117,7 +117,7 @@ export default function Settings() {
                 </Group>
               </>
             ) : null}
-            {session && registry?.length ? (
+            {plane.bearerServices && session && registry?.length ? (
               <>
                 <GroupHeader>{t("memory.title")}</GroupHeader>
                 <Group inset={56}>
