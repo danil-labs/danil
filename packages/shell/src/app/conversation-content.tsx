@@ -12,8 +12,8 @@ import { taskSideLayout, taskSideUsesSplitWidth, type TaskFiles } from "../../..
 import { cn } from "../../../ui/src/lib/utils";
 import VisorDeArtefacto from "../../../features/artifacts/src/screens/ArtifactViewer";
 import { type PermissionRequest } from "../../../features/chat/src/screens/Chat.tsx";
-import { taskFilesWidth } from "../../../features/code/src/screens/TaskFilesRow";
-import { createDockMotion, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
+import { taskSideWidth } from "../../../features/code/src/screens/TaskFilesRow";
+import { createDockMotion, isCompactDock, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
 import { type createSessionMutations as T_createSessionMutations } from "../../../features/projects/src";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions.tsx";
 import Sitio from "../../../features/sites/src/screens/Site";
@@ -129,12 +129,12 @@ export function createCeldasDeContenido(deps: CeldasDeContenidoDeps) {
           const tabVisible = () => !tapadoPorElProyecto(sitio());
           const visible = () => layout() !== "closed" && tabVisible();
           const renderedDock = createDockMotion(() => panel().dock, visible);
-          const isFiles = () => renderedDock() === "files";
+          const isCompact = () => isCompactDock(renderedDock());
           const isFullWidth = () => layout() === "files-expanded" || layout() === "panel-full";
           const ancho = () => {
             if (!visible()) return "0px";
             if (isFullWidth()) return "100%";
-            return taskFilesWidth(taskSideUsesSplitWidth(panel()), anchoDeArchivos(), anchoDelArbol());
+            return taskSideWidth(layout(), taskSideUsesSplitWidth(panel()), anchoDeArchivos(), anchoDelArbol());
           };
           return (
             <div
@@ -143,7 +143,8 @@ export function createCeldasDeContenido(deps: CeldasDeContenidoDeps) {
               aria-hidden={!visible() ? "true" : undefined}
               class={cn(
                 "pointer-events-none z-10 flex min-h-0 min-w-0 justify-self-end overflow-hidden",
-                isFiles() ? BELOW_LOCATION : "pt-[38px]",
+                BELOW_LOCATION,
+                isCompact() && "items-start",
                 visible() ? "translate-x-0 opacity-100 *:pointer-events-auto" : "translate-x-3 opacity-0",
                 !tabVisible() && "hidden",
                 llevaTiraInterior(sitio()) && "mt-[30px]",

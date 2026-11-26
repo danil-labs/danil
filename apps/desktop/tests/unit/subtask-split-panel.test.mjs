@@ -44,12 +44,14 @@ test("subtask split panel renders side-by-side live thread with two aligned comp
     const delegatedBtn = doc.querySelector('[data-delegated-trigger="toolbar"]');
     assert.ok(delegatedBtn, "los botones superiores siguen fijos en su barra original");
 
-    // 3. Open Subtasks panel -> docks side-by-side pushing the main chat with smooth animation (NO overlay popover)
+    // 3. Open Subtasks panel -> own compact auto-height panel pushing the main chat with smooth animation (NO full-height files shell, NO overlay)
     delegatedBtn.click();
     assert.ok(await until(() => doc.querySelector('[data-task-dock="subtasks"]')));
     const subtasksPanel = doc.querySelector('[data-task-dock="subtasks"]');
     assert.equal(subtasksPanel.getAttribute("data-task-layout"), "panel-split", "el botón de rama abre un panel acoplado junto al chat");
-    assert.ok(subtasksPanel.className.includes("border-l"), "el panel acoplado separa con borde vertical");
+    assert.equal(subtasksPanel.hasAttribute("data-task-files"), false, "subtareas usa su propio componente compacto, no el de archivos");
+    assert.ok(subtasksPanel.className.includes("self-start") && subtasksPanel.className.includes("rounded-lg") && !subtasksPanel.className.includes("h-full"),
+      "subtareas conserva su tarjeta compacta sin ocupar toda la altura");
     assert.equal(doc.querySelector('[data-task-popover]'), null, "ya no hay popovers flotando sobre el contenido");
     assert.ok(doc.querySelector('[data-task-side-drawer]')?.className.includes("transition-[width,opacity,transform]"), "el drawer anima su apertura de forma fluida");
     assert.ok(doc.querySelector('[data-panel-spacer]')?.className.includes("transition-[width]"), "el espaciador anima el desplazamiento del chat");
@@ -62,9 +64,10 @@ test("subtask split panel renders side-by-side live thread with two aligned comp
 
     assert.ok(await until(() => doc.querySelector('[data-subtask-thread="sub-1"]')));
     const splitThread = doc.querySelector('[data-subtask-thread="sub-1"]');
-    const dockPanel = doc.querySelector('[data-task-files]');
-    assert.equal(dockPanel?.getAttribute("data-task-layout"), "subtask-split", "al picar una subtarea se divide en dos columnas");
-    assert.ok(dockPanel?.className.includes("border-l"), "línea vertical separa ambas conversaciones");
+    const subtaskFrame = doc.querySelector('[data-task-dock="subtask"]');
+    assert.equal(subtaskFrame?.getAttribute("data-task-layout"), "subtask-split", "al picar una subtarea se divide en dos columnas");
+    assert.equal(subtaskFrame?.hasAttribute("data-task-files"), false, "el chat de subtarea usa su propio marco vertical, no el de archivos");
+    assert.ok(subtaskFrame?.className.includes("border-l") && subtaskFrame?.className.includes("h-full"), "línea vertical de altura completa separa ambas conversaciones");
     assert.ok(doc.querySelector('[role="separator"][aria-label="Ancho del panel de archivos"]'), "hay separador deslizable entre chat principal y subhilo");
     assert.equal(splitThread.querySelector('[data-subtask-title]')?.textContent, "Aclarar repositorio en danil-labs", "el subhilo muestra el título de la subtarea");
     assert.equal(splitThread.querySelector('[data-subtask-overview]'), null, "no tiene botón de regresar a subtareas");
@@ -96,17 +99,23 @@ test("subtask split panel renders side-by-side live thread with two aligned comp
     // 6. Opening Files replaces the subtask thread (mutually exclusive) side-by-side with floating card style & resize handle
     const filesBtn = doc.querySelector('button[aria-label="Archivos de la tarea"]');
     filesBtn.click();
-    assert.ok(await until(() => doc.querySelector('[data-task-files]')?.getAttribute("data-task-layout") === "files-split"),
-      "archivos aparece junto al chat principal separado por el tirador");
+    assert.ok(await until(() => {
+      const files = doc.querySelector('[data-task-files]');
+      return files && !files.classList.contains("hidden") && files.getAttribute("data-task-layout") === "files-split";
+    }), "archivos aparece en su propio componente junto al chat principal separado por el tirador");
     assert.ok(doc.querySelector('[data-task-files]')?.className.includes("rounded-lg"), "archivos conserva estilo de tarjeta flotante");
     assert.ok(doc.querySelector('[role="separator"][aria-label="Ancho del panel de archivos"]'), "archivos tiene separador deslizable junto al chat");
     assert.equal(doc.querySelector('[data-subtask-thread="sub-1"]'), null, "archivos y subhilo nunca aparecen al mismo tiempo");
 
-    // 7. Search docks side-by-side pushing the main chat (NO floating overlay)
+    // 7. Search docks side-by-side in its own compact auto-height card pushing the main chat (NO full-height files shell, NO overlay)
     const searchBtn = doc.querySelector('button[aria-label="Buscar en esta tarea"]');
     searchBtn.click();
     assert.ok(await until(() => doc.querySelector('[data-task-dock="search"]')), "el buscador abre acoplado empujando el chat");
-    assert.equal(doc.querySelector('[data-task-dock="search"]')?.getAttribute("data-task-layout"), "panel-split", "el buscador recorre el chat principal");
+    const searchPanel = doc.querySelector('[data-task-dock="search"]');
+    assert.equal(searchPanel?.getAttribute("data-task-layout"), "panel-split", "el buscador recorre el chat principal");
+    assert.equal(searchPanel?.hasAttribute("data-task-files"), false, "el buscador usa su propio componente compacto, no el de archivos");
+    assert.ok(searchPanel?.className.includes("self-start") && searchPanel?.className.includes("rounded-lg") && !searchPanel?.className.includes("h-full"),
+      "el buscador conserva su tarjeta compacta sin ocupar toda la altura");
     assert.equal(doc.querySelector('[data-task-popover]'), null, "el buscador ya no flota sobre el chat");
 
     // 8. Clicking the branch button again opens the subtasks panel; picking sub-1 reopens it and close button animates it closed

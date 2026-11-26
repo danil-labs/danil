@@ -9,8 +9,8 @@ import { cn } from "../../../ui/src/lib/utils";
 import SearchPanel from "../../../features/chat/src/components/SearchPanel";
 import { DelegatedPanel, type DelegatedPanelModel } from "../../../features/projects/src/screens/DelegatedTasks";
 import { type SearchSurface } from "../../../features/chat/src/screens/ThreadSearch.tsx";
-import { taskFilesWidth } from "../../../features/code/src/screens/TaskFilesRow";
-import { createDockMotion, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
+import { taskSideWidth } from "../../../features/code/src/screens/TaskFilesRow";
+import { createDockMotion, isCompactDock, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions.tsx";
 import { DragOverlay } from "../../../features/tabs/src";
 import { BELOW_LOCATION } from "../../../host/src/window";
@@ -105,12 +105,13 @@ export function createCeldasDeTareas(deps: CeldasDeTareasDeps) {
           const tabVisible = () => celda() !== undefined && !tapadoPorElProyecto(sitio());
           const visible = () => layout() !== "closed" && tabVisible();
           const renderedDock = createDockMotion(() => panel().dock, visible);
-          const isFiles = () => renderedDock() === "files";
+          const isSubtask = () => renderedDock() === "subtask";
+          const isCompact = () => isCompactDock(renderedDock());
           const isFullWidth = () => layout() === "files-expanded" || layout() === "subtask-full" || layout() === "panel-full";
           const ancho = () => {
             if (!visible()) return "0px";
             if (isFullWidth()) return "100%";
-            return taskFilesWidth(taskSideUsesSplitWidth(panel()), anchoDeArchivos(), anchoDelArbol());
+            return taskSideWidth(layout(), taskSideUsesSplitWidth(panel()), anchoDeArchivos(), anchoDelArbol());
           };
           const delegatedModel = () => delegatedPanels().get(`${workspaceActivo()}/${p.session}`)?.();
           return (
@@ -120,7 +121,8 @@ export function createCeldasDeTareas(deps: CeldasDeTareasDeps) {
               aria-hidden={!visible() ? "true" : undefined}
               class={cn(
                 "pointer-events-none z-10 flex min-h-0 min-w-0 justify-self-end overflow-hidden",
-                isFiles() ? BELOW_LOCATION : "pt-[38px]",
+                isSubtask() ? "pt-[38px]" : BELOW_LOCATION,
+                isCompact() && "items-start",
                 visible() ? "translate-x-0 opacity-100 *:pointer-events-auto" : "translate-x-3 opacity-0",
                 !tabVisible() && "hidden",
                 llevaTiraInterior(sitio()) && "mt-[30px]",
