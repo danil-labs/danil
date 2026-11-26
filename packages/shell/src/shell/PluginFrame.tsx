@@ -1,5 +1,10 @@
-import { createMemo, createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, on, onCleanup, onMount, Show } from "solid-js";
 import { openExternalTarget } from "../../../host/src/file-preview";
+import {
+  executePluginProxyHttp,
+  subscribeMessagingEvents,
+  type PluginSseEvent,
+} from "../../../platform-client/src/messaging-proxy";
 import { VISUAL_THEME_TOKENS, type VisualTheme } from "../../../ui/src/lib/chat/inlineVisual";
 import { t } from "../../../ui/src/lib/i18n";
 import { Spinner } from "../../../ui/src/Spinner";
@@ -28,19 +33,35 @@ function isSafeExternalUrl(raw: unknown): raw is string {
 /**
  * Contenedor `<iframe>` para una pestaña de aplicación o conector visual.
  *
- * Mantiene el marco vivo mientras la pestaña exista (se oculta al cambiar de
- * pestaña sin recargar), sincroniza el tema del host hacia el origen exacto
- * del conector y delega la apertura de enlaces externos (`ui/open-link`).
+ * Implementa el puente de Modalidad 1 (`proxy`, cero tokens en el `<iframe>`,
+ * #398 / #400 / #401):
+ * - Handshake `danil:ready` / `ui/initialize` → `danil:context` (`mode: 'proxy'`)
+ * - RPC `danil/http` hacia el borde con allowlist y sesión del host
+ * - Stream SSE de eventos de mensajería reenviado como `danil/event`
+ * - Sincronización de tema (`terminus:visual-theme` y `ui/notifications/host-context-changed`)
+ * - Utilidades `ui/open-link`, `ui/download`, `ui/badge` y `danil:channel-connected`
  */
 export default function PluginFrame(props: {
   pluginId: string;
   title: string;
   url: string;
+  workspaceId?: string | null;
+  orgId?: string | null;
+  onBadge?: (count: number) => void;
+  onChannelConnected?: (payload: unknown) => void;
 }) {
   let container: HTMLDivElement | undefined;
   let frame: HTMLIFrameElement | undefined;
   const [loaded, setLoaded] = createSignal(false);
+  const [ready, setReady] = createSignal(false);
   const targetOrigin = createMemo(() => originOf(props.url));
+  const pendingRequests = new AbortController();
+
+  const postToFrame = (payload: unknown) => {
+    const origin = targetOrigin();
+    if (!origin || !frame?.contentWindow) return;
+    frame.contentWindow.postMessage(payload, origin);
+  };
 
   const readTheme = (): VisualTheme => {
     const root = document.documentElement;
@@ -55,20 +76,76 @@ export default function PluginFrame(props: {
     };
   };
 
-  const syncTheme = () => {
-    const origin = targetOrigin();
-    if (!origin || !frame?.contentWindow) return;
+  const sendContext = () => {
     const theme = readTheme();
-    frame.contentWindow.postMessage({ type: "terminus:visual-theme", theme }, origin);
-    frame.contentWindow.postMessage(
-      {
-        jsonrpc: "2.0",
-        method: "ui/notifications/host-context-changed",
-        params: { theme: theme.mode },
-      },
-      origin,
-    );
+    postToFrame({
+      type: "danil:context",
+      mode: "proxy",
+      orgId: props.orgId ?? null,
+      workspaceId: props.workspaceId ?? null,
+      theme: theme.mode,
+    });
   };
+
+  const syncTheme = () => {
+    const theme = readTheme();
+    postToFrame({ type: "terminus:visual-theme", theme });
+    postToFrame({
+      jsonrpc: "2.0",
+      method: "ui/notifications/host-context-changed",
+      params: { theme: theme.mode },
+    });
+  };
+
+  const forwardSseEvent = (event: PluginSseEvent) => {
+    postToFrame({ type: "danil/event", event });
+    postToFrame({
+      jsonrpc: "2.0",
+      method: "danil/notifications/event",
+      params: { event },
+    });
+  };
+
+  const handleHttpRpc = async (id: unknown, rawParams: unknown) => {
+    const params = (rawParams && typeof rawParams === "object" ? rawParams : {}) as Record<string, unknown>;
+    try {
+      const result = await executePluginProxyHttp({
+        method: typeof params.method === "string" ? params.method : "GET",
+        path: typeof params.path === "string" ? params.path : "",
+        headers:
+          params.headers && typeof params.headers === "object" && !Array.isArray(params.headers)
+            ? (params.headers as Record<string, string>)
+            : undefined,
+        body: params.body,
+        workspaceId: props.workspaceId,
+        signal: pendingRequests.signal,
+      });
+      postToFrame({ jsonrpc: "2.0", id, result });
+    } catch (error) {
+      if (pendingRequests.signal.aborted) return;
+      postToFrame({
+        jsonrpc: "2.0",
+        id,
+        error: {
+          code: -32000,
+          message: error instanceof Error ? error.message : "proxy_request_failed",
+        },
+      });
+    }
+  };
+
+  createEffect(
+    on([ready, () => props.workspaceId, () => props.orgId], ([isReady]) => {
+      if (!isReady) return;
+      sendContext();
+      if (props.pluginId !== "messaging") return;
+      const stopSse = subscribeMessagingEvents({
+        workspaceId: props.workspaceId,
+        onEvent: forwardSseEvent,
+      });
+      onCleanup(stopSse);
+    }),
+  );
 
   onMount(() => {
     const onMessage = (event: MessageEvent) => {
@@ -76,13 +153,56 @@ export default function PluginFrame(props: {
       if (!origin || !frame?.contentWindow || event.source !== frame.contentWindow || event.origin !== origin) return;
       const msg = event.data;
       if (!msg || typeof msg !== "object") return;
+
       if (msg.type === "danil:ready") {
         setLoaded(true);
+        setReady(true);
+        sendContext();
         syncTheme();
         return;
       }
-      if (msg.method === "ui/open-link" && isSafeExternalUrl(msg.params?.url)) {
+
+      if (msg.method === "ui/initialize") {
+        setLoaded(true);
+        setReady(true);
+        if (msg.id !== undefined) {
+          postToFrame({
+            jsonrpc: "2.0",
+            id: msg.id,
+            result: {
+              protocolVersion: "2025-11-25",
+              hostInfo: { name: "Danil", version: "0.3.5" },
+              hostCapabilities: { openLinks: {}, downloadFile: {}, proxyHttp: true },
+              hostContext: {
+                theme: readTheme().mode,
+                orgId: props.orgId ?? null,
+                workspaceId: props.workspaceId ?? null,
+              },
+            },
+          });
+        }
+        sendContext();
+        syncTheme();
+        return;
+      }
+
+      if (msg.method === "danil/http" && msg.id !== undefined) {
+        void handleHttpRpc(msg.id, msg.params);
+        return;
+      }
+
+      if ((msg.method === "ui/open-link" || msg.method === "ui/download") && isSafeExternalUrl(msg.params?.url)) {
         void openExternalTarget(msg.params.url).catch(() => {});
+        return;
+      }
+
+      if (msg.method === "ui/badge" && typeof msg.params?.count === "number" && Number.isFinite(msg.params.count)) {
+        props.onBadge?.(Math.max(0, Math.floor(msg.params.count)));
+        return;
+      }
+
+      if (msg.type === "danil:channel-connected" || msg.method === "ui/notifications/channel-connected") {
+        props.onChannelConnected?.(msg.params ?? msg);
       }
     };
 
@@ -93,6 +213,7 @@ export default function PluginFrame(props: {
       attributeFilter: ["data-theme", "data-light-style", "data-dark-style", "style"],
     });
     onCleanup(() => {
+      pendingRequests.abort();
       window.removeEventListener("message", onMessage);
       themeObserver.disconnect();
     });
@@ -123,6 +244,7 @@ export default function PluginFrame(props: {
         class="block h-full w-full flex-1 border-0 bg-surface"
         onLoad={() => {
           setLoaded(true);
+          sendContext();
           syncTheme();
         }}
       />

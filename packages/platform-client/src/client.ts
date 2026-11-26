@@ -159,6 +159,11 @@ export function setEdgeContext(origin: string | null, current?: () => string | n
   edgeContext = origin && current ? { origin: new URL(origin).origin, current } : null;
 }
 
+/** Origen del borde configurado en la ventana web, o `null` en Desk. */
+export function currentEdgeOrigin(): string | null {
+  return edgeContext?.origin ?? null;
+}
+
 /** Toda llamada al borde con organización lleva el contexto del grupo activo, salvo que quien llama ya puso el suyo. */
 function withEdgeContext(input: RequestInfo | URL, init?: RequestInit): RequestInit | undefined {
   if (!edgeContext) return init;
