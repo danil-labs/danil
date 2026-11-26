@@ -57,7 +57,7 @@ const SIGNED_OUT_ACCOUNT: Account = {
   email: null,
   name: null,
   plane: {
-    computers: async () => [],
+    computers: async () => ({ kind: "ok", value: [] }),
     workspaces: async () => null,
     wake: noSession,
     relay: { endpoint: "", getToken: noSession },

@@ -59,6 +59,7 @@ import {
 import type { TaskActivity } from "@terminus/design";
 import { canonicalAgentId, chipModel, FREE_ROUTER_OPENCODE, type FlatRow, isFreeRouterAgent, flattenTasks, launcherOf, REMOTE_CHILD_FEATURE, type RemoteScope, remoteLauncherOf, type Surface } from "@terminus/tasks";
 import { AUTO_MODE } from "./composer.ts";
+import type { WorkspaceSpaceCatalog } from "./edge-spaces.ts";
 import { type Host, HostError } from "./hosts.ts";
 
 /** Una tarea de la lista, con la máquina y la carpeta de donde viene. */
@@ -396,7 +397,69 @@ export function mergeSnapshots(parts: HostSnapshot[], tagMachines: (host: string
 export type MergedSpace = Space & { on: Record<string, string> };
 
 /** Si la tarea va en el space, como `enEscritorio` del escritorio: una sin space resuelto va en todos. */
-export const taskInSpace = (task: { space?: string | null }, space: MergedSpace | null) => !space || !task.space || Object.values(space.on).includes(task.space);
+export const taskInSpace = (task: { space?: string | null }, space: MergedSpace | null) =>
+  !space || !task.space || task.space === space.id || Object.values(space.on).includes(task.space);
+
+/**
+ * Proyecta los espacios y el campo `space` de cada tarea desde el catálogo del borde
+ * (`/v1/workspaces/{id}/spaces`), igual que `space-catalog-projection.ts` del escritorio.
+ * Sin catálogo (o con catálogo vacío) conserva lo que respondieron las máquinas.
+ */
+export function withSpaceCatalog<S extends { spaces: MergedSpace[]; tasks: Task[]; delegated: Task[] }>(
+  snapshot: S,
+  catalog: WorkspaceSpaceCatalog | null | undefined,
+  hostIds: readonly string[],
+): S {
+  if (!catalog || catalog.spaces.length === 0) return snapshot;
+  const byId = new Map(catalog.spaces.map((space) => [space.id, space]));
+  const ordered = [
+    ...catalog.order.flatMap((id) => {
+      const found = byId.get(id);
+      return found ? [found] : [];
+    }),
+    ...catalog.spaces.filter((space) => !catalog.order.includes(space.id)),
+  ];
+  const spaces: MergedSpace[] = ordered.map((space) => ({
+    id: space.id,
+    name: space.name,
+    account: true,
+    created_at: 0,
+    updated_at: 0,
+    folders: space.folders.flatMap((folderId) => hostIds.map((hostId) => `${hostId}/${folderId}`)),
+    on: Object.fromEntries(hostIds.map((hostId) => [hostId, space.id])),
+  }));
+  const validIds = new Set(spaces.map((space) => space.id));
+  const defaultSpace = spaces[0].id;
+  const projectRows = (rows: readonly Task[]) =>
+    rows.map((task) => {
+      const direct = catalog.task_spaces[task.id];
+      const parent = task.launched_by ? catalog.task_spaces[task.launched_by] : undefined;
+      const assigned =
+        (direct && validIds.has(direct) ? direct : undefined) ??
+        (parent && validIds.has(parent) ? parent : undefined) ??
+        (task.space && validIds.has(task.space) ? task.space : undefined) ??
+        defaultSpace;
+      return task.space === assigned ? task : { ...task, space: assigned };
+    });
+  return {
+    ...snapshot,
+    spaces,
+    tasks: projectRows(snapshot.tasks),
+    delegated: projectRows(snapshot.delegated),
+  };
+}
+
+/**
+ * Carpetas elegibles en «Nueva tarea» para la máquina activa: prioriza las del espacio activo
+ * y, si ese espacio no enlaza ninguna carpeta del workspace, muestra todas para no bloquear el envío.
+ */
+export function foldersForNewTask(allFolders: readonly Folder[], space: Pick<MergedSpace, "folders"> | null, hostId: string | undefined): Folder[] {
+  const scoped = space ? allFolders.filter((f) => space.folders.includes(f.key)) : [...allFolders];
+  const visible = scoped.length > 0 ? scoped : [...allFolders];
+  const here = visible.filter((f) => f.host === hostId);
+  const elsewhere = visible.filter((f) => f.host !== hostId && f.kind !== "folder" && !here.some((h) => h.id === f.id));
+  return [...here, ...elsewhere.filter((f, i) => elsewhere.findIndex((x) => x.id === f.id) === i)];
+}
 
 /** La clave de una tarea entre máquinas: el mismo id puede repetirse en dos. */
 export const taskKey = (task: { host: string; id: string }) => `${task.host}/${task.id}`;
@@ -516,6 +579,8 @@ export type Draft = {
   permissionMode: string | null;
   /** Rutas en la máquina que devolvió `prepare_attachments`. */
   attachments: string[];
+  /** Identificador por intento para que el motor y el relay deduplicen reintentos. */
+  clientMessageId?: string | null;
 };
 
 /**
@@ -539,6 +604,7 @@ export async function sendToTask(host: Host, workspace: string, folder: string, 
     effort: draft.effort,
     permissionMode: draft.permissionMode,
     attachments: draft.attachments,
+    ...(draft.clientMessageId ? { clientMessageId: draft.clientMessageId } : {}),
   });
   return value;
 }
@@ -609,7 +675,7 @@ export function suggestedDefaults(tasks: Task[], host: string, workspace: string
 export async function createTask(
   host: Host,
   workspace: string,
-  args: { folder: string; prompt: string; provider: string; model: string | null; agent: string | null; space: string | null } & Partial<Pick<Draft, "effort" | "permissionMode" | "attachments">> & { baseRef?: string | null; unwrapSnapshot?: boolean },
+  args: { folder: string; prompt: string; provider: string; model: string | null; agent: string | null; space: string | null } & Partial<Pick<Draft, "effort" | "permissionMode" | "attachments" | "clientMessageId">> & { baseRef?: string | null; unwrapSnapshot?: boolean },
 ) {
   const { value } = await host.call<string>("send_message", workspace, {
     ...MESSAGE_DEFAULTS,
@@ -623,6 +689,7 @@ export async function createTask(
     attachments: args.attachments ?? [],
     baseRef: args.baseRef ?? null,
     ...(args.unwrapSnapshot ? { unwrapSnapshot: true } : {}),
+    ...(args.clientMessageId ? { clientMessageId: args.clientMessageId } : {}),
     agent: args.agent,
     taskFromAgent: Boolean(args.agent),
     space: args.space,

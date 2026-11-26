@@ -1,5 +1,5 @@
 import { RADIUS, TEXT } from "@terminus/design";
-import { SendButton } from "./SendButton";
+import { SendButton, WEB_TAP_GUARD } from "./SendButton";
 import {
   ATTACHMENT_DOCUMENTS_FEATURE,
   type Frase,
@@ -501,6 +501,8 @@ export function Composer({
     let ok = false;
     try {
       ok = await submit(body, paths);
+    } catch {
+      ok = false;
     } finally {
       if (!ok) {
         taken.current = null;
@@ -608,8 +610,10 @@ export function Composer({
 
   // En la web, react-native-web deja pasar el evento del navegador: Shift+Enter sigue su curso.
   function onWebKey(e: TextInputKeyPressEvent) {
-    const key = e as unknown as { key: string; shiftKey?: boolean; nativeEvent: { isComposing?: boolean; keyCode?: number }; preventDefault: () => void };
-    if (enterAction({ key: key.key, shiftKey: key.shiftKey, isComposing: key.nativeEvent.isComposing, keyCode: key.nativeEvent.keyCode }) !== "send") return;
+    const key = e as unknown as { key?: string; shiftKey?: boolean; nativeEvent: { key?: string; shiftKey?: boolean; isComposing?: boolean; keyCode?: number }; preventDefault: () => void };
+    const eventKey = key.key ?? key.nativeEvent?.key;
+    const shiftKey = key.shiftKey ?? key.nativeEvent?.shiftKey;
+    if (!eventKey || enterAction({ key: eventKey, shiftKey, isComposing: key.nativeEvent?.isComposing, keyCode: key.nativeEvent?.keyCode }) !== "send") return;
     key.preventDefault();
     void send();
   }
@@ -817,7 +821,7 @@ export function Composer({
               <Icon name="square" size={11} color={theme.bg} fill={theme.bg} />
             </Pressable>
           ) : shell ? (
-            <Pressable testID="send" disabled={!ready || !text.slice(1).trim()} onPress={send} style={[styles.run, { backgroundColor: theme.text, opacity: ready && text.slice(1).trim() ? 1 : 0.4 }]}>
+            <Pressable testID="send" hitSlop={6} disabled={!ready || !text.slice(1).trim()} onPress={send} {...WEB_TAP_GUARD} style={[styles.run, { backgroundColor: theme.text, opacity: ready && text.slice(1).trim() ? 1 : 0.4 }]}>
               <Icon name="corner-down-left" size={14} color={theme.bg} />
               <Text style={{ color: theme.bg, fontWeight: "700", fontSize: TEXT.ui }}>{sendLabel}</Text>
             </Pressable>

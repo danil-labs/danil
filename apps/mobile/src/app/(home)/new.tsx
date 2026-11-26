@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { AgentAvatar } from "../../ui/AgentAvatar";
 import { carryForNewTask } from "../../lib/carry";
-import { baseBranchesOf, createTask, runShell, shareSpace, suggestedDefaults, type BranchList } from "../../lib/engine";
+import { baseBranchesOf, createTask, foldersForNewTask, runShell, shareSpace, suggestedDefaults, usableProviders, type BranchList } from "../../lib/engine";
 import { store } from "../../lib/store";
 import { HostError } from "../../lib/hosts";
 import { t, w } from "../../lib/i18n";
@@ -33,7 +33,7 @@ export default function NewTask() {
   const theme = useTheme();
   const params = useLocalSearchParams<{ folder?: string; agent?: string; host?: string }>();
   const { preferred, rememberMachine, tick } = useMachines();
-  const { current, snapshot, space, hostsOfCurrent, reload } = useWorkspaces();
+  const { current, snapshot, loading, space, spaceCatalogManaged, recordTaskSpace, hostsOfCurrent, reload } = useWorkspaces();
   const [hostId, setHostId] = useState<string | null>(null);
   const [folder, setFolder] = useState<string | null>(null);
   const [agent, setAgent] = useState<string | null>(null);
@@ -52,11 +52,7 @@ export default function NewTask() {
   }, [params.folder, params.agent, params.host]);
 
   const host = hostsOfCurrent.find((h) => h.id === hostId) ?? preferred(hostsOfCurrent);
-  const visible = (snapshot?.folders ?? []).filter((f) => !space || space.folders.includes(f.key));
-  const here = visible.filter((f) => f.host === host?.id);
-  // Una carpeta de git de otra máquina del workspace también vale: su trabajo se lleva al crear la tarea.
-  const elsewhere = visible.filter((f) => f.host !== host?.id && f.kind !== "folder" && !here.some((h) => h.id === f.id));
-  const folders = [...here, ...elsewhere.filter((f, i) => elsewhere.findIndex((x) => x.id === f.id) === i)];
+  const folders = foldersForNewTask(snapshot?.folders ?? [], space, host?.id);
   const target = folders.find((f) => f.id === folder) ?? folders[0] ?? null;
   // El id del workspace en esa máquina: cada motor tiene el suyo.
   const workspace = host ? (current?.members.get(host.id) ?? null) : null;
@@ -65,6 +61,8 @@ export default function NewTask() {
   const act = host?.canAct();
   const power = host?.power();
   const defaults = host && workspace ? suggestedDefaults(snapshot?.tasks ?? [], host.id, workspace, chosenAgent) : { provider: null, model: null };
+  const hostProviders = host ? (snapshot?.providers[host.id] ?? []) : [];
+  const hasProvider = Boolean(defaults.provider || usableProviders(hostProviders).length);
   void tick;
 
   // Las ramas base de la carpeta, si tiene git y la máquina contesta. Leer no enciende nada.
@@ -91,12 +89,17 @@ export default function NewTask() {
     setWaking(wakes);
     if (wakes) setPending(s.shell ? `!${s.command}` : s.prompt);
     try {
-      // Un space que la máquina de destino no tiene se comparte antes desde la que lo guarda, con el mismo id.
-      let spaceId = spaceOn(host.id);
-      const owner = !spaceId && space ? Object.entries(space.on)[0] : undefined;
-      const keeper = owner ? hostsOfCurrent.find((h) => h.id === owner[0]) : undefined;
-      const keeperWs = keeper ? current?.members.get(keeper.id) : undefined;
-      if (owner && keeper && keeperWs) spaceId = await shareSpace(keeper, keeperWs, owner[1]).then(() => owner[1], () => null);
+      const clientMessageId = Crypto.randomUUID();
+      // Con espacios en Workspaces el motor usa su espacio por defecto y aquí se graba la asignación del usuario.
+      let spaceId: string | null = null;
+      if (!spaceCatalogManaged) {
+        // Un space que la máquina de destino no tiene se comparte antes desde la que lo guarda, con el mismo id.
+        spaceId = spaceOn(host.id);
+        const owner = !spaceId && space ? Object.entries(space.on)[0] : undefined;
+        const keeper = owner ? hostsOfCurrent.find((h) => h.id === owner[0]) : undefined;
+        const keeperWs = keeper ? current?.members.get(keeper.id) : undefined;
+        if (owner && keeper && keeperWs) spaceId = await shareSpace(keeper, keeperWs, owner[1]).then(() => owner[1], () => null);
+      }
       let baseRef = branch;
       let unwrapSnapshot = false;
       const from = target.host !== host.id ? hostsOfCurrent.find((h) => h.id === target.host) : undefined;
@@ -119,7 +122,8 @@ export default function NewTask() {
       }
       const id = s.shell
         ? (await runShell(host, workspace, { folder: target.id, session: null, command: s.command, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode, space: spaceId, agent: chosenAgent, baseRef })).session
-        : await createTask(host, workspace, { folder: target.id, prompt: s.prompt, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode, attachments: s.attachments, agent: chosenAgent, space: spaceId, baseRef, unwrapSnapshot });
+        : await createTask(host, workspace, { folder: target.id, prompt: s.prompt, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode, attachments: s.attachments, agent: chosenAgent, space: spaceId, baseRef, unwrapSnapshot, clientMessageId });
+      if (spaceCatalogManaged) void recordTaskSpace(id, space?.id ?? null);
       rememberMachine(host.id);
       openTask(host.id, workspace, target.id, id, true);
       return true;
@@ -151,7 +155,13 @@ export default function NewTask() {
           ? w("web.machines.outdated_action", { name: host.label })
           : act === "wakes" && power === "off"
             ? w("shell.machines.asleep_notice", { name: host.label })
-            : null;
+            : !loading && snapshot
+              ? !target
+                ? t("new.no_folder")
+                : power === "on" && !hasProvider
+                  ? t("new.no_provider")
+                  : null
+              : null;
 
   const header = (
     <View style={styles.selectors}>

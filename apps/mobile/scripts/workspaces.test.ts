@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccountWorkspace } from "@terminus/computers";
 import { delegatedOf } from "@terminus/tasks";
-import { type Folder, mergeSnapshots, taskInSpace, tasksOf, withAccountFolders, workspaceEntries } from "../src/lib/engine.ts";
+import { type Folder, foldersForNewTask, mergeSnapshots, taskInSpace, tasksOf, withAccountFolders, withSpaceCatalog, workspaceEntries } from "../src/lib/engine.ts";
 
 const REGISTRY: AccountWorkspace[] = [
   {
@@ -117,4 +117,80 @@ test("el teléfono usa el orden compartido aunque los motores listen en otro ord
     { id: "b", name: "B", folders: [], position: 1, changed_at: 1 },
   ], settings: { space_order: '["b","a"]' } }];
   assert.deepEqual(withAccountFolders(snapshot, registry, "w1", []).spaces.map(space => space.id), ["b", "a"]);
+});
+
+test("withSpaceCatalog proyecta espacios en orden y asigna tareas e hijas desde task_spaces", () => {
+  const taskRow = (id: string, space: string | null, extra: object = {}) => ({
+    id,
+    title: id,
+    provider: "codex",
+    model: null,
+    created_at: 0,
+    updated_at: 0,
+    esperando: false,
+    agent: null,
+    space,
+    host: "vm1",
+    workspace: "w1",
+    folder: "f1",
+    folderKey: "vm1/f1",
+    ...extra,
+  });
+  const base = {
+    spaces: [{ id: "eng_empty", name: null, folders: [], on: { vm1: "eng_empty" } }],
+    tasks: [
+      taskRow("t_mapped", "eng_empty"),
+      taskRow("t_fallback", "eng_empty"),
+      taskRow("t_engine", "sp_b"),
+    ],
+    delegated: [taskRow("t_child", "eng_empty", { launched_by: "t_mapped" })],
+  };
+  assert.equal(withSpaceCatalog(base, null, ["vm1"]), base);
+  assert.equal(withSpaceCatalog(base, { version: 1, spaces: [], order: [], task_spaces: {} }, ["vm1"]), base);
+
+  const projected = withSpaceCatalog(
+    base,
+    {
+      version: 4,
+      spaces: [
+        { id: "sp_a", name: null, folders: ["f1"] },
+        { id: "sp_b", name: "App", folders: ["f2"] },
+      ],
+      order: ["sp_b", "sp_a"],
+      task_spaces: { t_mapped: "sp_b" },
+    },
+    ["vm1", "mac1"],
+  );
+  assert.deepEqual(projected.spaces.map((s) => s.id), ["sp_b", "sp_a"]);
+  assert.deepEqual(projected.spaces[0].folders, ["vm1/f2", "mac1/f2"]);
+  assert.deepEqual(projected.tasks.map((t) => [t.id, t.space]), [
+    ["t_mapped", "sp_b"],
+    ["t_fallback", "sp_b"],
+    ["t_engine", "sp_b"],
+  ]);
+  assert.equal(projected.delegated[0].space, "sp_b", "la hija hereda el espacio de su coordinador");
+  assert.ok(taskInSpace({ space: "sp_x" }, { id: "sp_x", name: "X", folders: [], on: {} }), "matchea id aunque on esté vacío");
+});
+
+test("foldersForNewTask prioriza el espacio activo y cae a todas las carpetas si el espacio no enlaza ninguna", () => {
+  const all: Folder[] = [
+    { id: "f1", name: "Notas", kind: "folder", key: "vm1/f1", host: "vm1" },
+    { id: "f2", name: "Repo", kind: "git", key: "vm1/f2", host: "vm1" },
+    { id: "f3", name: "RemotaGit", kind: "git", key: "mac1/f3", host: "mac1" },
+    { id: "f4", name: "RemotaLocal", kind: "folder", key: "mac1/f4", host: "mac1" },
+    { id: "f2", name: "RepoDup", kind: "git", key: "mac1/f2", host: "mac1" },
+  ];
+  assert.deepEqual(
+    foldersForNewTask(all, { folders: ["vm1/f2"] }, "vm1").map((f) => f.key),
+    ["vm1/f2"],
+  );
+  assert.deepEqual(
+    foldersForNewTask(all, { folders: [] }, "vm1").map((f) => f.key),
+    ["vm1/f1", "vm1/f2", "mac1/f3"],
+    "con espacio sin carpetas cae al resto sin duplicar f2 ni incluir folder no-git remoto",
+  );
+  assert.deepEqual(
+    foldersForNewTask(all, { folders: ["vm1/desconocida"] }, "vm1").map((f) => f.key),
+    ["vm1/f1", "vm1/f2", "mac1/f3"],
+  );
 });
