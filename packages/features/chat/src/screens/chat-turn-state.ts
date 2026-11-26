@@ -2,7 +2,6 @@ import { t } from "../../../../ui/src/lib/i18n";
 import type { Source } from "../../../../ui/src/lib/model";
 import { interrumpible } from "../../../../ui/src/lib/queue.ts";
 import type { Respuesta } from "../components/Questions";
-import type { VirtualThreadApi } from "../components/VirtualThread";
 import type { InputMessage } from "../components/YourMessages";
 import { pideClave } from "../model/commandInput";
 import { chunkAt, chunkStart } from "../model/threadWindow";
@@ -15,11 +14,11 @@ import type { createChatThreadWindow } from "./chat-thread-window";
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js";
 
 /** Lo que el bloque usa del cuerpo de Chat. */
-export type ChatTurnStateDeps = { bloques: ReturnType<typeof createChatBlocks>["bloques"]; composerBox: HTMLDivElement | undefined; elContenido: HTMLElement | undefined; filaDe: ReturnType<typeof createChatThreadWindow>["filaDe"]; hilo: ReturnType<typeof createChatComposerState>["hilo"]; hiloDeFilas: VirtualThreadApi | undefined; hiloVirtual: ReturnType<typeof createChatThreadWindow>["hiloVirtual"]; menuOpen: ReturnType<typeof createChatComposerInput>["menuOpen"]; motivos: ReturnType<typeof createChatThreadWindow>["motivos"]; origen: ReturnType<typeof createChatThreadWindow>["origen"]; retenerFila: ReturnType<typeof createChatThreadWindow>["retenerFila"]; searchMessages: ReturnType<typeof createChatBlocks>["searchMessages"]; setCajaDeFilas: ReturnType<typeof createChatThreadWindow>["setCajaDeFilas"]; setFirstChunk: ReturnType<typeof createChatThreadWindow>["setFirstChunk"]; setRetenidas: ReturnType<typeof createChatThreadWindow>["setRetenidas"]; shownFrom: ReturnType<typeof createChatThreadWindow>["shownFrom"] };
+export type ChatTurnStateDeps = { bloques: ReturnType<typeof createChatBlocks>["bloques"]; composerBox: HTMLDivElement | undefined; elContenido: HTMLElement | undefined; hilo: ReturnType<typeof createChatComposerState>["hilo"]; menuOpen: ReturnType<typeof createChatComposerInput>["menuOpen"]; origen: ReturnType<typeof createChatThreadWindow>["origen"]; searchMessages: ReturnType<typeof createChatBlocks>["searchMessages"]; setFirstChunk: ReturnType<typeof createChatThreadWindow>["setFirstChunk"]; shownFrom: ReturnType<typeof createChatThreadWindow>["shownFrom"] };
 
 /** Movido tal cual de Chat.tsx (el componente `Chat`, tarea 2.6). Lo que usa del cuerpo de Chat llega por `deps`. */
 export function createChatTurnState(props: ChatProps, deps: ChatTurnStateDeps) {
-  const { bloques, filaDe, hilo, hiloVirtual, menuOpen, motivos, origen, retenerFila, searchMessages, setCajaDeFilas, setFirstChunk, setRetenidas, shownFrom } = deps;
+  const { bloques, hilo, menuOpen, origen, searchMessages, setFirstChunk, shownFrom } = deps;
   // Un input por marca, incluido el que llegó de un encargado o de otra tarea.
   const inputsDelHilo = createMemo<InputMessage[]>(
     () =>
@@ -52,14 +51,6 @@ export function createChatTurnState(props: ChatProps, deps: ChatTurnStateDeps) {
     const hijos = deps.elContenido?.children;
     const montadoDesde = chunkStart(shownFrom(), origen());
     const corte = elHilo.getBoundingClientRect().top + (elHilo.clientHeight - altoDeLaCaja()) / 3;
-    if (hiloVirtual) {
-      const borde = corte - elHilo.getBoundingClientRect().top;
-      for (let k = lista.length - 1; k >= 0; k--) {
-        const arriba = deps.hiloDeFilas?.topOf(lista[k].block);
-        if (arriba !== null && arriba !== undefined && arriba <= borde) return setMensajeVisto(k);
-      }
-      return setMensajeVisto(0);
-    }
     for (let k = lista.length - 1; k >= 0; k--) {
       const el = hijos?.[lista[k].block - montadoDesde];
       if (lista[k].block < montadoDesde || (el && el.getBoundingClientRect().top <= corte)) return setMensajeVisto(k);
@@ -70,42 +61,12 @@ export function createChatTurnState(props: ChatProps, deps: ChatTurnStateDeps) {
     hilo.contenedor(el);
     elHilo = el;
     setSearchThread(el);
-    // Tras insertarla: recién clonada del `<template>` su documento no tiene ventana ni observadores.
-    createEffect(() => setCajaDeFilas(el));
     let espera: ReturnType<typeof setTimeout> | undefined;
     const alScrollear = () => {
       clearTimeout(espera);
       espera = setTimeout(medirMensajeVisto, ESPERA_DEL_RIEL_MS);
     };
     el.addEventListener("scroll", alScrollear, { passive: true });
-    const alEnfocar = (e: FocusEvent) => retenerFila(filaDe(e.target as Node), "foco");
-    const alDesenfocar = (e: FocusEvent) => { if (!el.contains(e.relatedTarget as Node | null)) retenerFila(null, "foco"); };
-    const alPulsar = (e: PointerEvent) => retenerFila(filaDe(e.target as Node), "gesto");
-    const alSoltar = () => retenerFila(null, "gesto");
-    const alSeleccionar = () => {
-      const seleccion = document.getSelection();
-      const dentroDelHilo = seleccion && !seleccion.isCollapsed && el.contains(seleccion.anchorNode);
-      retenerFila(dentroDelHilo ? filaDe(seleccion.anchorNode) : null, "seleccion");
-      retenerFila(dentroDelHilo ? filaDe(seleccion.focusNode) : null, "seleccion-fin");
-    };
-    if (hiloVirtual) {
-      el.addEventListener("focusin", alEnfocar);
-      el.addEventListener("focusout", alDesenfocar);
-      el.addEventListener("pointerdown", alPulsar);
-      window.addEventListener("pointerup", alSoltar);
-      window.addEventListener("pointercancel", alSoltar);
-      document.addEventListener("selectionchange", alSeleccionar);
-      onCleanup(() => {
-        el.removeEventListener("focusin", alEnfocar);
-        el.removeEventListener("focusout", alDesenfocar);
-        el.removeEventListener("pointerdown", alPulsar);
-        window.removeEventListener("pointerup", alSoltar);
-        window.removeEventListener("pointercancel", alSoltar);
-        document.removeEventListener("selectionchange", alSeleccionar);
-        motivos.clear();
-        setRetenidas(new Set<string>());
-      });
-    }
     // `clientWidth` y no la entrada: sin layout —jsdom— no hay ancho, y el riel no tiene dónde ir.
     const ojo = typeof ResizeObserver === "undefined"
       ? undefined
@@ -115,17 +76,12 @@ export function createChatTurnState(props: ChatProps, deps: ChatTurnStateDeps) {
       clearTimeout(espera);
       el.removeEventListener("scroll", alScrollear);
       ojo?.disconnect();
-      if (elHilo === el) { elHilo = undefined; setSearchThread(undefined); setCajaDeFilas(undefined); }
+      if (elHilo === el) { elHilo = undefined; setSearchThread(undefined); }
     });
   };
   createEffect(on([inputsDelHilo, hilo.alFondo], () => medirMensajeVisto()));
   /** Monta el tramo del mensaje si no estaba y lo deja arriba, suelto del fondo. */
   const saltarAlMensaje = (bloque: number) => {
-    if (hiloVirtual) {
-      hilo.soltar();
-      void deps.hiloDeFilas?.jump(bloque, DESFASE_DEL_SALTO).then(medirMensajeVisto);
-      return;
-    }
     const tramo = chunkAt(bloque, origen());
     if (tramo < shownFrom()) hilo.anteponer(() => setFirstChunk(tramo));
     hilo.retomar(bloque - chunkStart(shownFrom(), origen()), DESFASE_DEL_SALTO);

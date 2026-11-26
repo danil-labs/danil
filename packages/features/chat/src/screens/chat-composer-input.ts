@@ -6,21 +6,20 @@ import { slashPick, slashRows } from "../../../../ui/src/lib/skills";
 import { placeLabel, referenceId, searchPlaces, searchTasks, taskLabel, taskTarget, type MentionTarget } from "../../../../ui/src/lib/taskMentions";
 import { workLabel } from "../../../../ui/src/lib/workLabel.ts";
 import type { Suggestion } from "../components/Suggestions";
-import { chunkStart, type Lectura } from "../model/threadWindow";
+import { chunkAt, chunkStart, type Lectura } from "../model/threadWindow";
 import type { createChatComposerState } from "./chat-composer-state";
 import { filterMentionSources } from "./chat-model";
 import type { ChatProps } from "./chat-props";
 import { createEffect, createMemo, createSignal, on, onCleanup, onMount, type Accessor } from "solid-js";
 
 /** Lo que el bloque usa del cuerpo de Chat. */
-export type ChatComposerInputDeps = { bloqueDeLectura: (lectura: Lectura) => number | null; campo: HTMLTextAreaElement | undefined; dismissed: ReturnType<typeof createChatComposerState>["dismissed"]; hilo: ReturnType<typeof createChatComposerState>["hilo"]; hiloVirtual: boolean; lecturaPorSaltar: Lectura | null; origen: Accessor<number>; pendingCaret: number | null; pick: ReturnType<typeof createChatComposerState>["pick"]; reclamaElFoco: boolean; saltarALaLectura: () => void; setCaret: ReturnType<typeof createChatComposerState>["setCaret"]; shownFrom: Accessor<number>; slashGroups: ReturnType<typeof createChatComposerState>["slashGroups"]; trigger: ReturnType<typeof createChatComposerState>["trigger"]; vacia: ReturnType<typeof createChatComposerState>["vacia"] };
+export type ChatComposerInputDeps = { bloqueDeLectura: (lectura: Lectura) => number | null; campo: HTMLTextAreaElement | undefined; dismissed: ReturnType<typeof createChatComposerState>["dismissed"]; hilo: ReturnType<typeof createChatComposerState>["hilo"]; origen: Accessor<number>; pendingCaret: number | null; pick: ReturnType<typeof createChatComposerState>["pick"]; reclamaElFoco: boolean; setCaret: ReturnType<typeof createChatComposerState>["setCaret"]; setFirstChunk: (chunk: number | null) => void; shownFrom: Accessor<number>; slashGroups: ReturnType<typeof createChatComposerState>["slashGroups"]; trigger: ReturnType<typeof createChatComposerState>["trigger"]; vacia: ReturnType<typeof createChatComposerState>["vacia"] };
 
 /** Movido tal cual de Chat.tsx (el componente `Chat`, tarea 2.6). Lo que usa del cuerpo de Chat llega por `deps`. */
 export function createChatComposerInput(props: ChatProps, deps: ChatComposerInputDeps) {
   const { dismissed, hilo, pick, setCaret, slashGroups, trigger, vacia } = deps;
   const bloqueDeLectura: ChatComposerInputDeps["bloqueDeLectura"] = (...a) => deps.bloqueDeLectura(...a);
   const origen: ChatComposerInputDeps["origen"] = (...a) => deps.origen(...a);
-  const saltarALaLectura: ChatComposerInputDeps["saltarALaLectura"] = (...a) => deps.saltarALaLectura(...a);
   const shownFrom: ChatComposerInputDeps["shownFrom"] = (...a) => deps.shownFrom(...a);
   const suggestions = createMemo<Suggestion[]>(() => {
     const d = trigger();
@@ -147,11 +146,8 @@ export function createChatComposerInput(props: ChatProps, deps: ChatComposerInpu
     retomarLectura = null;
     const bloque = lectura && bloqueDeLectura(lectura);
     if (lectura && bloque !== null) {
-      if (deps.hiloVirtual) {
-        hilo.soltar();
-        deps.lecturaPorSaltar = lectura;
-        return queueMicrotask(saltarALaLectura);
-      }
+      const tramo = chunkAt(bloque, origen());
+      if (tramo < shownFrom()) hilo.anteponer(() => deps.setFirstChunk(tramo));
       return hilo.retomar(bloque - chunkStart(shownFrom(), origen()), lectura.desfase);
     }
     hilo.recolocar();
