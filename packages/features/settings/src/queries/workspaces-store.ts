@@ -10,7 +10,7 @@
 import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { callEngine } from "../../../../engine-client/src/client.ts";
 import { createNavigationOrder } from "../../../../ui/src/lib/navigation-order";
-import { activeWorkspaceContext, workspaceContextOptions } from "../../../../session/src/workspace-context.ts";
+import { activeWorkspaceContext, requestedWorkspaceSnapshot, workspaceContextOptions } from "../../../../session/src/workspace-context.ts";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
 import type { Workspace, MemoriaProveedor, Startup } from "../../../../ui/src/lib/workspace-startup.ts"; export type { Workspace, MemoriaProveedor, Startup };
 
@@ -66,21 +66,25 @@ export function createWorkspaces() {
   const [activo, setActivo] = createSignal<string | null>(null);
   const [cargando, setCargando] = createSignal(true);
   const [fallo, setFallo] = createSignal<Failure | null>(null);
+  let solicitud = 0;
 
   async function cargar() {
+    const actual = ++solicitud;
     setCargando(true);
     try {
       const a = await pedirEspacios();
+      if (actual !== solicitud || !requestedWorkspaceSnapshot(a)) return;
       setLista(a.workspaces);
       setActivo(a.active);
       setFallo(null);
     } catch (e) {
+      if (actual !== solicitud) return;
       // Cargando, vacío y error son tres estados distintos: en un refresco
       // posterior conservamos la última lista conocida para no parpadear logos ni el selector.
       if (lista() === null) setLista(null);
       setFallo(asFailure(e));
     } finally {
-      setCargando(false);
+      if (actual === solicitud) setCargando(false);
     }
   }
 
@@ -100,6 +104,7 @@ export function createWorkspaces() {
 
   async function cambiarA(id: string | null, context?: string) {
     if (id === activo() && (context ?? null) === activeWorkspaceContext()) return;
+    ++solicitud;
     try {
       await callEngine("set_active_workspace", { id }, workspaceContextOptions(context ?? null));
       // Una lista pedida antes del cambio trae el anterior como activo; los

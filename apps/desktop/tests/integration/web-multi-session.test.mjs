@@ -419,3 +419,51 @@ test('web usage button recovers after initial provider failure and renders when 
   await until(() => fake.calls.some(c => c.command === 'list_providers' && c.workspace === 'wx1'), 'providers retry after switching to cloud workspace');
   await until(() => doc.querySelector('button [role="progressbar"][aria-valuenow="75"]'), 'usage button renders active Codex account even when composer uses Claude');
 });
+
+test('reopening the web app without URL params restores the last opened workspace instead of the first/personal one', async t => {
+  edge();
+  const fake1 = relay({ table });
+  const app1 = await boot('listo', 'web-remember-last-ws-1', {}, undefined, {}, {
+    web: true,
+    beforeImport(w) { w.WebSocket = fake1.Socket; globalThis.WebSocket = fake1.Socket; },
+  });
+  const doc1 = app1.w.document;
+  await until(() => tile(doc1, 'wp') && (tile(doc1, 'wx1') || doc1.querySelector('[data-org-stack="org_x"]')), 'initial rail');
+  if (!tile(doc1, 'wx1')) doc1.querySelector('[data-org-stack="org_x"]')?.click();
+  await until(() => tile(doc1, 'wx1'), 'wx1 tile');
+  tile(doc1, 'wx1').click();
+  await until(() => tile(doc1, 'wx1')?.getAttribute('aria-current') === 'true' && tile(doc1, 'wx1')?.dataset.workspaceContext === 'ctx_x', 'wx1 opened');
+  const saved = app1.w.localStorage.getItem('danil.web.last-workspace');
+  assert.deepEqual(JSON.parse(saved), { workspace: 'wx1', org: 'org_x', account: 'user_a' });
+  app1.w.dispatchEvent(new app1.w.Event('pagehide'));
+  await new Promise(resolve => setTimeout(resolve, 50));
+
+  // Reopen at "/" (no query string) with the persisted localStorage entry.
+  edge();
+  const fake2 = relay({ table });
+  const app2 = await boot('listo', 'web-remember-last-ws-2', {}, undefined, {}, {
+    web: true,
+    beforeImport(w) {
+      w.localStorage.setItem('danil.web.last-workspace', saved);
+      w.WebSocket = fake2.Socket;
+      globalThis.WebSocket = fake2.Socket;
+    },
+  });
+  t.after(() => app2.w.dispatchEvent(new app2.w.Event('pagehide')));
+  const doc2 = app2.w.document;
+  await until(() => {
+    if (!tile(doc2, 'wx1')) doc2.querySelector('[data-org-stack="org_x"]')?.click();
+    return tile(doc2, 'wx1')?.getAttribute('aria-current') === 'true' && tile(doc2, 'wx1')?.dataset.workspaceContext === 'ctx_x';
+  }, 'wx1 restored automatically on reopen without URL params');
+  assert.notEqual(tile(doc2, 'wp')?.getAttribute('aria-current'), 'true', 'personal workspace is not opened instead');
+  await until(() => fake2.calls.some(call => ['list_projects', 'list_live_sessions'].includes(call.command) && call.workspace === 'wx1'), 'wx1 loads its tasks automatically');
+});
+
+test('startup still opens the workspace automatically when another organization in the set is expired or unseeded', async t => {
+  edge({ expireX: () => true });
+  const fake = relay({ table });
+  const app = await open(t, 'web-startup-with-expired-org', fake);
+  const doc = app.w.document;
+  await until(() => tile(doc, 'wp')?.getAttribute('aria-current') === 'true' && tile(doc, 'wp')?.dataset.workspaceContext === 'ctx_p', 'personal opens automatically even though org_x is 401 session_expired');
+  await until(() => fake.calls.some(call => ['list_projects', 'list_live_sessions'].includes(call.command) && call.workspace === 'wp'), 'wp loads its tasks without requiring a manual click');
+});
