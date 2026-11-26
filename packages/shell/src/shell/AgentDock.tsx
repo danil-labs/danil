@@ -1,11 +1,7 @@
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import FileText from "lucide-solid/icons/file-text";
-import Folder from "lucide-solid/icons/folder";
-import LayoutGrid from "lucide-solid/icons/layout-grid";
 import Plus from "lucide-solid/icons/plus";
-import { createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../ui/src/lib/i18n";
 import type { AgentProfile } from "../../../ui/src/lib/model";
 import { cn } from "../../../ui/src/lib/utils";
@@ -15,18 +11,14 @@ import { Pressable } from "../../../ui/src/Pressable";
 import { SignalDot } from "../../../ui/src/SignalDot";
 import { AstroAvatar } from "../../../features/projects/src/screens/AstroAvatar";
 import { displayName } from "../../../features/projects/src/queries/profiles";
-import { agentFolder, type DockAgent, orderDockAgents } from "./dockLayout";
-import { DOCK_CELL, DOCK_CELL_GAP, dockColumns, pageDock } from "./dockPagination";
+import { agentFolder, type DockAgent } from "./dockLayout";
+import { DOCK_CELL, DOCK_CELL_GAP, dockColumns } from "./dockPagination";
+
+import { createGrabScroll } from "./grabScroll";
 
 export type { DockAgent } from "./dockLayout";
 type DockFolder = { id: string; name: string };
-export type DockGroups = { workspace: string[]; project: string[]; repo: string[] };
-type DockLevel = keyof DockGroups;
-
-const LEVELS = ["workspace", "project", "repo"] as const;
-const ICONS = { workspace: LayoutGrid, project: Folder, repo: FileText };
-const LABELS = { workspace: "shell.agent_dock.workspace", project: "shell.agent_dock.project", repo: "shell.agent_dock.repository" };
-const ICON_BUTTON = "relative grid size-6 shrink-0 place-items-center rounded-md bg-transparent p-0 text-neutral-500 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-30 disabled:hover:bg-transparent";
+const ICON_BUTTON = "relative grid size-4 shrink-0 place-items-center rounded-md bg-transparent p-0 text-neutral-500 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-primary disabled:opacity-30 disabled:hover:bg-transparent";
 
 /** Mismas palabras que la fila del agente en AgentRows. */
 function dockStatusText(agent: DockAgent): string {
@@ -44,8 +36,6 @@ export default function AgentDock(props: {
   selected: string | null;
   foldersOf: (name: string) => DockFolder[];
   currentFolder: string | null;
-  contextKey?: string;
-  groups?: DockGroups;
   onTalk: (project: string, name: string) => void;
   onShowTasks: (name: string) => void;
   onProfile: (project: string, name: string) => void;
@@ -56,46 +46,33 @@ export default function AgentDock(props: {
   /** Cuando `RailSection` ya dibuja la cabecera plegable y el botón «+». */
   embedded?: boolean;
 }) {
-  const [position, setPosition] = createSignal<{ context: string; level: DockLevel | null; page: number }>({ context: "", level: null, page: 0 });
+  const [currentPage, setCurrentPage] = createSignal(0);
   const [menu, setMenu] = createSignal<string | null>(null);
-  const context = () => `${props.contextKey ?? ""}\n${props.currentFolder ?? ""}`;
-  // Una carpeta nueva empieza en Todos/página 1 sin escribir estado derivado.
-  const navigation = () => position().context === context() ? position() : { level: null, page: 0 };
   const label = (name: string) => displayName(name, props.profileOf?.(name));
-  const levels = createMemo(() => new Map<string, DockLevel>(LEVELS.flatMap(level =>
-    (props.groups?.[level] ?? []).map(name => [name, level] as const))));
-  const allowed = createMemo(() => new Set(props.groups ? [
-    ...props.groups.workspace,
-    ...(props.currentFolder ? [...props.groups.project, ...props.groups.repo] : []),
-  ] : props.agents.map(agent => agent.name)));
-  const agents = createMemo(() => orderDockAgents(props.agents.filter(agent => allowed().has(agent.name)), agent => label(agent.name), agent => props.profileOf?.(agent.name)?.hidden === true));
-  const filtered = createMemo(() => agents().filter(agent => !navigation().level || levels().get(agent.name) === navigation().level));
+  const agents = createMemo(() => props.agents.filter(agent => !props.profileOf?.(agent.name)?.hidden));
   // El hueco entre caras es fijo. Si el sidebar crece, caben más agentes; no se separan.
   const [medido, setMedido] = createSignal(0);
-  let fila: HTMLDivElement | undefined;
-  onMount(() => {
-    const nodo = fila;
+  const [fila, setFila] = createSignal<HTMLDivElement>();
+  const grab = createGrabScroll(fila);
+  createEffect(() => {
+    const nodo = fila();
     if (!nodo || typeof ResizeObserver === "undefined") return;
-    const obs = new ResizeObserver((entries) => setMedido(entries[0]?.contentRect.width ?? 0));
+    const obs = new ResizeObserver(() => setMedido(nodo.clientWidth));
     obs.observe(nodo);
     onCleanup(() => obs.disconnect());
   });
   const columnas = () => dockColumns(medido());
-  const pista = () => ({ "grid-template-columns": `repeat(${columnas()}, ${DOCK_CELL}px)`, gap: `${DOCK_CELL_GAP}px` });
-  const page = createMemo(() => pageDock(filtered(), navigation().page, columnas()));
-  const workingIn = (level: DockLevel) => agents().filter(agent => levels().get(agent.name) === level && agent.status === "working");
-  const levelTitle = (level: DockLevel) => {
-    const names = workingIn(level).map(agent => label(agent.name));
-    return names.length
-      ? t("shell.agent_dock.level_working", { level: t(LABELS[level]), count: names.length, names: names.join(", ") })
-      : t(LABELS[level]);
+  const pista = () => ({ "grid-auto-columns": `${DOCK_CELL}px`, gap: `${DOCK_CELL_GAP}px` });
+  const pages = () => Math.max(1, Math.ceil(agents().length / columnas()));
+  const page = () => Math.min(currentPage(), pages() - 1);
+  const agentTitle = (agent: DockAgent) => `${label(agent.name)} · ${dockStatusText(agent)}`;
+  const turnPage = (offset: number) => {
+    const node = fila();
+    if (!node) return;
+    node.scrollTo({ left: Math.max(0, Math.min(pages() - 1, page() + offset)) * columnas() * (DOCK_CELL + DOCK_CELL_GAP) });
   };
-  const agentTitle = (agent: DockAgent) => {
-    const level = levels().get(agent.name);
-    return `${label(agent.name)} · ${dockStatusText(agent)}${level ? ` · ${t(LABELS[level])}` : ""}`;
-  };
-  const selectLevel = (level: DockLevel) => setPosition({ context: context(), level: navigation().level === level ? null : level, page: 0 });
-  const turnPage = (offset: number) => setPosition({ context: context(), level: navigation().level, page: page().page + offset });
+  const workingBefore = () => agents().slice(0, page() * columnas()).some(agent => agent.status === "working");
+  const workingAfter = () => agents().slice((page() + 1) * columnas()).some(agent => agent.status === "working");
   const destination = (name: string) => agentFolder(props.foldersOf(name).map(folder => folder.id), props.currentFolder) ?? "";
 
   return <div aria-label={props.embedded ? undefined : t("shell.agent_dock.team")} class={cn("flex min-w-0 shrink-0 flex-col", !props.embedded && "gap-1 px-1 pt-1 pb-2")} data-agent-dock="">
@@ -110,7 +87,13 @@ export default function AgentDock(props: {
       fallback={<p class="m-0 px-2 py-1 text-caption text-neutral-500">{t("shell.agent_dock.empty")}</p>}
     >
       <div class="flex min-w-0 flex-col gap-1.5 rounded-lg border border-border bg-surface px-2 py-2">
-        <div ref={fila} class="flex min-h-[54px] min-w-0 items-center" aria-busy={props.loading}>
+        <div ref={setFila} class="scroll-visible flex min-h-[54px] min-w-0 items-center overflow-x-auto overscroll-x-contain" style={{ cursor: grab.dragging() ? "grabbing" : "grab", "user-select": "none" }} aria-busy={props.loading}
+          onPointerDown={grab.start}
+          onScroll={() => {
+            const node = fila();
+            if (node) setCurrentPage(node.scrollLeft >= node.scrollWidth - node.clientWidth - 1
+              ? pages() - 1 : Math.floor(node.scrollLeft / (columnas() * (DOCK_CELL + DOCK_CELL_GAP))));
+          }}>
           <Show
             when={agents().length}
             fallback={
@@ -120,13 +103,13 @@ export default function AgentDock(props: {
             }
           >
             <ContextMenu>
-              <ContextMenuTrigger class="w-full" onContextMenu={(event: MouseEvent) => {
+              <ContextMenuTrigger class="min-w-full shrink-0" onContextMenu={(event: MouseEvent) => {
                 const name = (event.target as HTMLElement).closest<HTMLElement>("[data-dock-agent]")?.dataset.dockAgent;
                 if (!name) event.preventDefault();
                 setMenu(name ?? null);
               }}>
-                <div class="grid min-h-[54px] w-full items-center justify-start" style={pista()} data-dock-page={page().page + 1} data-dock-columns={columnas()}>
-                  <KeyedList each={page().shown} by={agent => agent.name}>{agent => <Pressable
+                <div class="grid min-h-[54px] w-max min-w-full grid-flow-col items-center justify-start" style={pista()} data-dock-page={page() + 1} data-dock-columns={columnas()}>
+                  <KeyedList each={agents()} by={agent => agent.name}>{agent => <Pressable
                     data-dock-agent={agent().name}
                     aria-label={agentTitle(agent())}
                     aria-current={props.selected === agent().name ? "true" : undefined}
@@ -136,11 +119,9 @@ export default function AgentDock(props: {
                   >
                     <span class="relative inline-flex">
                       <AstroAvatar name={agent().name} status={agent().status ?? "asleep"} body={props.profileOf?.(agent().name)?.body} avatar={props.profileOf?.(agent().name)?.avatar} size={30} />
-                      <Show when={levels().get(agent().name)}>{level => <span class="absolute -right-1 -bottom-0.5 grid size-3.5 place-items-center rounded-full border border-border bg-surface text-neutral-500"><Dynamic component={ICONS[level()]} size={8} aria-hidden="true" /></span>}</Show>
                     </span>
                     <span class="w-full truncate text-center text-2xs leading-tight text-neutral-500">{label(agent().name)}</span>
                   </Pressable>}</KeyedList>
-                  <Show when={filtered().length === 0}><span class="px-1 text-caption text-neutral-500" style={{ "grid-column": "1 / -1" }}>{t("shell.agent_dock.filter_empty")}</span></Show>
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent><Show when={menu()}>{name => <>
@@ -151,22 +132,17 @@ export default function AgentDock(props: {
             </ContextMenu>
           </Show>
         </div>
-        <div class="flex items-center justify-between gap-1 border-t border-border pt-1.5">
+        <div class="flex items-center justify-end gap-1">
           <div role="group" aria-label={t("shell.agent_dock.pagination")} class="flex items-center gap-1">
-            <Pressable class={cn(ICON_BUTTON, "border border-border bg-surface-muted")} aria-label={t("shell.agent_dock.previous")} disabled={page().page === 0} onClick={() => turnPage(-1)}>
-              <ChevronLeft size={12} aria-hidden="true" /><SignalDot tone="working" class={cn("absolute -top-0.5 -right-0.5", !page().workingBefore && "invisible")} />
+            <Pressable class={cn(ICON_BUTTON, "border-0")} aria-label={t("shell.agent_dock.previous")} disabled={page() === 0} onClick={() => turnPage(-1)}>
+              <ChevronLeft size={12} aria-hidden="true" /><SignalDot tone="working" class={cn("absolute -top-0.5 -right-0.5", !workingBefore() && "invisible")} />
             </Pressable>
-            <span class="min-w-6 text-center text-2xs text-neutral-500 tabular-nums" role="status" aria-live="polite" aria-label={t("shell.agent_dock.page", { current: page().page + 1, total: page().pages })}>{page().page + 1}/{page().pages}</span>
-            <Pressable class={cn(ICON_BUTTON, "border border-border bg-surface-muted")} aria-label={t("shell.agent_dock.next")} disabled={page().page >= page().pages - 1} onClick={() => turnPage(1)}>
-              <ChevronRight size={12} aria-hidden="true" /><SignalDot tone="working" class={cn("absolute -top-0.5 -right-0.5", !page().workingAfter && "invisible")} />
+            <span class="min-w-6 text-center text-2xs text-neutral-500 tabular-nums" role="status" aria-live="polite" aria-label={t("shell.agent_dock.page", { current: page() + 1, total: pages() })}>{page() + 1}/{pages()}</span>
+            <Pressable class={cn(ICON_BUTTON, "border-0")} aria-label={t("shell.agent_dock.next")} disabled={page() >= pages() - 1} onClick={() => turnPage(1)}>
+              <ChevronRight size={12} aria-hidden="true" /><SignalDot tone="working" class={cn("absolute -top-0.5 -right-0.5", !workingAfter() && "invisible")} />
             </Pressable>
           </div>
-          <div role="group" aria-label={t("shell.agent_dock.filter")} class="flex items-center gap-0.5 rounded-md border border-border bg-surface-muted p-0.5">
-            <For each={LEVELS}>{level => <Pressable class={cn(ICON_BUTTON, "h-5 border-0", navigation().level === level && "bg-surface text-neutral-950")} data-dock-level={level} aria-label={levelTitle(level)} title={levelTitle(level)} aria-pressed={navigation().level === level} onClick={() => selectLevel(level)}>
-              <Dynamic component={ICONS[level]} size={12} aria-hidden="true" />
-              <SignalDot tone="working" pulse={workingIn(level).length > 0} class={cn("absolute -top-0.5 -right-0.5 motion-reduce:animate-none", workingIn(level).length === 0 && "invisible")} />
-            </Pressable>}</For>
-          </div>
+
         </div>
       </div>
     </Show>
