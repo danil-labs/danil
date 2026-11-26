@@ -61,41 +61,45 @@ test("cerrar la última pestaña quita el modo expandido y vuelve el árbol", ()
   assert.equal(files.panel("t").open, true);
 });
 
-test("los popovers flotantes y el panel acoplado de archivos son independientes", () => {
+test("todos los paneles de tarea se acoplan junto al chat (sin popovers sobre el contenido)", () => {
   const files = createTaskFiles();
   assert.equal(files.panel("t").dock, "none");
   assert.equal(files.panel("t").popover, "none");
 
   files.present("t", "search");
-  assert.equal(files.panel("t").popover, "search");
-  assert.equal(files.panel("t").dock, "none");
+  assert.equal(files.panel("t").dock, "search");
+  assert.equal(files.panel("t").popover, "none");
+  assert.equal(taskSideLayout(files.panel("t"), false), "panel-split");
   assert.equal(isTaskToolActive(files.panel("t"), "search"), true);
 
   files.present("t", "usage");
-  assert.equal(files.panel("t").popover, "usage");
+  assert.equal(files.panel("t").dock, "usage");
   assert.equal(isTaskToolActive(files.panel("t"), "usage"), true);
   files.present("t", "usage");
-  assert.equal(files.panel("t").popover, "none");
+  assert.equal(files.panel("t").dock, "none");
   assert.equal(files.panel("t").open, false);
 
   files.present("t", "delegated");
-  assert.equal(files.panel("t").popover, "subtasks");
-  assert.equal(files.panel("t").dock, "none");
+  assert.equal(files.panel("t").dock, "subtasks");
+  assert.equal(taskSideLayout(files.panel("t"), false), "panel-split");
+  assert.equal(isTaskToolActive(files.panel("t"), "delegated"), true);
 
-  // Abrir un archivo acopla Archivos a la derecha y cierra el popover activo.
+  // Abrir un archivo acopla Archivos a la derecha sustituyendo el panel anterior.
   files.open("t", { tree: "a", path: "App.tsx", changes: false, pinned: true });
   assert.equal(files.panel("t").dock, "files");
   assert.equal(files.panel("t").popover, "none");
   assert.deepEqual(ids(files, "t"), ["App.tsx"]);
 
-  // Abrir el buscador no cierra el panel de Archivos acoplado.
+  // Abrir el buscador sustituye Archivos en el dock (mutuamente excluyentes) y closePopover lo cierra.
   files.present("t", "search");
-  assert.equal(files.panel("t").dock, "files");
-  assert.equal(files.panel("t").popover, "search");
+  assert.equal(files.panel("t").dock, "search");
+  assert.equal(taskSideLayout(files.panel("t"), false), "panel-split");
   files.closePopover("t");
-  assert.equal(files.panel("t").popover, "none");
-  assert.equal(files.panel("t").dock, "files");
+  assert.equal(files.panel("t").dock, "none");
+  assert.equal(files.panel("t").open, false);
 
+  files.toggle("t");
+  assert.equal(files.panel("t").dock, "files");
   files.toggle("t");
   assert.equal(files.panel("t").dock, "none");
   assert.equal(files.panel("t").open, false);
@@ -113,7 +117,7 @@ test("renombrar o borrar una carpeta mueve o cierra sus pestañas", () => {
   assert.deepEqual(ids(files, "t"), []);
 });
 
-test("archivos y chat de subtarea se excluyen en el dock; buscador y lista de subtareas son popovers", () => {
+test("archivos, buscador, lista de subtareas y subhilo se acoplan todos empujando el chat", () => {
   const files = createTaskFiles();
   assert.equal(taskSidePanelKind("files"), "files-search");
   assert.equal(taskSidePanelKind("search"), "files-search");
@@ -127,12 +131,12 @@ test("archivos y chat de subtarea se excluyen en el dock; buscador y lista de su
   files.setExpanded("t", true);
   assert.equal(taskSideLayout(files.panel("t"), false), "files-expanded");
 
-  // Elegir una subtarea cierra el popover y sustituye Archivos en el dock (nunca a la vez).
+  // Subtareas abre acoplado empujando el chat (panel-split); elegir una pasa a subtask-split.
   files.present("t", "delegated");
-  assert.equal(files.panel("t").popover, "subtasks");
+  assert.equal(files.panel("t").dock, "subtasks");
+  assert.equal(taskSideLayout(files.panel("t"), false), "panel-split");
   files.openSubtask("t", { project: "p1", session: "sub-1" });
   assert.equal(files.panel("t").dock, "subtask");
-  assert.equal(files.panel("t").popover, "none");
   assert.equal(files.panel("t").expanded, false);
   assert.deepEqual(files.panel("t").subtask, { project: "p1", session: "sub-1" });
   assert.equal(taskSideLayout(files.panel("t"), false), "subtask-split");
@@ -140,18 +144,17 @@ test("archivos y chat de subtarea se excluyen en el dock; buscador y lista de su
   assert.equal(taskSideUsesSplitWidth(files.panel("t")), true);
   assert.deepEqual(files.activeSubtasks(), ["sub-1"]);
 
-  // El botón de rama vuelve a abrir el popover compacto sin cerrar el subhilo abierto.
+  // El botón de rama vuelve a la lista de subtareas en el mismo dock.
   files.present("t", "delegated");
-  assert.equal(files.panel("t").popover, "subtasks");
-  assert.equal(files.panel("t").dock, "subtask");
-  assert.deepEqual(files.activeSubtasks(), ["sub-1"]);
+  assert.equal(files.panel("t").dock, "subtasks");
+  assert.equal(taskSideLayout(files.panel("t"), false), "panel-split");
+  assert.deepEqual(files.activeSubtasks(), []);
 
-  // Abrir Archivos reemplaza el subhilo en el dock pero conserva sus pestañas.
+  // Abrir Archivos sustituye en el dock y conserva sus pestañas.
   files.present("t", "files");
   assert.equal(files.panel("t").dock, "files");
   assert.equal(taskSideLayout(files.panel("t"), false), "files-split");
   assert.deepEqual(ids(files, "t"), ["App.tsx"]);
-  assert.deepEqual(files.activeSubtasks(), []);
 
   // Cerrar el dock deja el chat a ancho completo.
   files.closeDock("t");

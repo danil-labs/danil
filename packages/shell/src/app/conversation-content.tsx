@@ -8,12 +8,12 @@ import { moviendoHueco } from "../../../ui/src/lib/sites";
 import { type Superficie } from "../../../ui/src/lib/surfaces.ts";
 import { fileTabId, type ArtifactTab, type FileTab, type PluginTab, type ScreenTab, type SiteTab } from "../../../ui/src/lib/tabs";
 import { type ContentTab, type Tab } from "../../../ui/src/lib/tabs-types.ts";
-import { taskSideLayout, taskSideUsesSplitWidth, type TaskFiles, type TaskPopoverMode } from "../../../ui/src/lib/taskFiles.ts";
+import { taskSideLayout, taskSideUsesSplitWidth, type TaskFiles } from "../../../ui/src/lib/taskFiles.ts";
 import { cn } from "../../../ui/src/lib/utils";
 import VisorDeArtefacto from "../../../features/artifacts/src/screens/ArtifactViewer";
 import { type PermissionRequest } from "../../../features/chat/src/screens/Chat.tsx";
 import { taskFilesWidth } from "../../../features/code/src/screens/TaskFilesRow";
-import { TaskPopoverShell, TaskSide, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
+import { createDockMotion, TaskSideShell } from "../../../features/code/src/screens/TaskSide";
 import { type createSessionMutations as T_createSessionMutations } from "../../../features/projects/src";
 import { type SessionRow } from "../../../features/projects/src/screens/Sessions.tsx";
 import Sitio from "../../../features/sites/src/screens/Site";
@@ -117,7 +117,7 @@ export function createCeldasDeContenido(deps: CeldasDeContenidoDeps) {
         )}
       </Index>
 
-      {/* Los archivos base de la carpeta, antes de que exista la tarea: el mismo panel, leído del proyecto. */}
+      {/* Los archivos base de la carpeta, antes de que exista la tarea: el mismo panel acoplado con animación fluida. */}
       <Index each={sitiosEnBlanco()}>
         {(sitio) => {
           const llave = () => (carpetaDelProyecto() ? llaveDeBorrador(project()) : "");
@@ -126,52 +126,60 @@ export function createCeldasDeContenido(deps: CeldasDeContenidoDeps) {
           createEffect(() => { if (llave() && panel().dock !== "none") setUsado(true); });
           const narrow = () => paneles.isSplit() || compacta();
           const layout = () => (llave() ? taskSideLayout(panel(), narrow()) : "closed");
-          const visible = () => layout() !== "closed" && !tapadoPorElProyecto(sitio());
-          const isFullWidth = () => layout() === "files-expanded";
-          const ancho = () => (isFullWidth() ? undefined : taskFilesWidth(taskSideUsesSplitWidth(panel()), anchoDeArchivos(), anchoDelArbol()));
-          const popover = () => (llave() ? panel().popover : "none");
-          const popoverVisible = () => popover() !== "none" && !tapadoPorElProyecto(sitio());
+          const tabVisible = () => !tapadoPorElProyecto(sitio());
+          const visible = () => layout() !== "closed" && tabVisible();
+          const renderedDock = createDockMotion(() => panel().dock, visible);
+          const isFiles = () => renderedDock() === "files";
+          const isFullWidth = () => layout() === "files-expanded" || layout() === "panel-full";
+          const ancho = () => {
+            if (!visible()) return "0px";
+            if (isFullWidth()) return "100%";
+            return taskFilesWidth(taskSideUsesSplitWidth(panel()), anchoDeArchivos(), anchoDelArbol());
+          };
           return (
-            <>
+            <div
+              data-task-side-drawer=""
+              data-open={visible() ? "true" : "false"}
+              aria-hidden={!visible() ? "true" : undefined}
+              class={cn(
+                "pointer-events-none z-10 flex min-h-0 min-w-0 justify-self-end overflow-hidden",
+                isFiles() ? BELOW_LOCATION : "pt-[38px]",
+                visible() ? "translate-x-0 opacity-100 *:pointer-events-auto" : "translate-x-3 opacity-0",
+                !tabVisible() && "hidden",
+                llevaTiraInterior(sitio()) && "mt-[30px]",
+                !moviendoHueco() && "transition-[width,opacity,transform] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+              )}
+              style={{ ...estiloDeLaCelda(sitio()), width: ancho() }}
+              onPointerDown={() => mandarVentana(sitio())}
+            >
               <Show when={usado() && project()}>
                 {(proyecto) => (
-                  <div class={cn(
-                    "pointer-events-none z-10 flex min-h-0 min-w-0 justify-self-end pb-3 *:pointer-events-auto",
-                    BELOW_LOCATION,
-                    isFullWidth() ? "w-full px-2" : "pr-2",
-                  )}
-                    classList={{ hidden: !visible(), "mt-[30px]": llevaTiraInterior(sitio()), "transition-[width] duration-200 ease-out": !moviendoHueco() }}
-                    style={{ ...estiloDeLaCelda(sitio()), width: ancho() }}
-                    onPointerDown={() => mandarVentana(sitio())}>
-                    <TaskSideShell dock={panel().dock} layout={layout()} subtaskSlot={null}>
-                      <Suspense fallback={null}>
-                        <TaskFilesCard visores={visoresDeCodigo} project={proyecto()} session="" panelKey={llave()} preview={{ baseRef: draftBases()[claveAbierta()] }}
-                          files={archivosDeTarea} visible={visible()}
-                          expandedOnly={narrow()}
-                          onSaved={() => {}} onExportChat={async () => {}}
-                          onMoved={() => {}} onRemoved={() => {}} />
-                      </Suspense>
-                    </TaskSideShell>
-                  </div>
+                  <TaskSideShell
+                    dock={renderedDock()}
+                    layout={layout()}
+                    onDismiss={() => { if (llave()) archivosDeTarea.closeDock(llave()); }}
+                    subtaskSlot={null}
+                    delegatedSlot={<p class="m-0 px-3 py-3 text-xs text-neutral-500">{t("chat.delegation.none")}</p>}
+                    usageSlot={
+                      <UsagePanel
+                        usage={consumo}
+                        agent={agent()}
+                        onManage={() => { if (llave()) archivosDeTarea.closeDock(llave()); setSettings("proveedores-ia"); }}
+                        onClose={() => { if (llave()) archivosDeTarea.closeDock(llave()); }}
+                      />
+                    }
+                  >
+                    <Suspense fallback={null}>
+                      <TaskFilesCard visores={visoresDeCodigo} project={proyecto()} session="" panelKey={llave()} preview={{ baseRef: draftBases()[claveAbierta()] }}
+                        files={archivosDeTarea} visible={visible() && panel().dock === "files"}
+                        expandedOnly={narrow()}
+                        onSaved={() => {}} onExportChat={async () => {}}
+                        onMoved={() => {}} onRemoved={() => {}} />
+                    </Suspense>
+                  </TaskSideShell>
                 )}
               </Show>
-              <Show when={popoverVisible()}>
-                <div class={cn(
-                  "pointer-events-none z-30 flex max-h-[min(468px,calc(100%-16px))] min-h-0 min-w-0 self-start justify-self-end pr-2 *:pointer-events-auto",
-                  BELOW_LOCATION,
-                )}
-                  classList={{ "mt-[30px]": llevaTiraInterior(sitio()) }}
-                  style={{ ...estiloDeLaCelda(sitio()), width: `min(${Math.max(300, anchoDelArbol())}px, calc(100% - 16px))` }}
-                  onPointerDown={() => mandarVentana(sitio())}>
-                  <TaskPopoverShell popover={popover() as Exclude<TaskPopoverMode, "none">} onDismiss={() => archivosDeTarea.closePopover(llave())}>
-                    <TaskSide popover={popover()}
-                      searchSlot={undefined}
-                      usageSlot={<UsagePanel usage={consumo} agent={agent()} onManage={() => { archivosDeTarea.closePopover(llave()); setSettings("proveedores-ia"); }} onClose={() => archivosDeTarea.closePopover(llave())} />}
-                      delegatedSlot={<p class="m-0 px-3 py-3 text-xs text-neutral-500">{t("chat.delegation.none")}</p>} />
-                  </TaskPopoverShell>
-                </div>
-              </Show>
-            </>
+            </div>
           );
         }}
       </Index>

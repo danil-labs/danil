@@ -23,6 +23,7 @@ export type InlineComposerDeps = {
   handoff: ReturnType<typeof createThreadStream>["handoff"];
   hilos: ReturnType<typeof createDeskStrip>["hilos"];
   loadThread: (project: string, id: string) => Promise<void>;
+  marcarQuieta: ReturnType<typeof createThreadStream>["marcarQuieta"];
   model: Accessor<string>;
   modo: Accessor<string>;
   reponerGates: (session: string) => Promise<void>;
@@ -41,7 +42,7 @@ export function createInlineComposer(
 ) {
   const {
     agent, configDeLaSesion, conversationScope, drafts, effort, enviar,
-    escritorio, filaDe, handoff, hilos, loadThread, model, modo, reponerGates,
+    escritorio, filaDe, handoff, hilos, loadThread, marcarQuieta, model, modo, reponerGates,
     vivas, workspaceContext,
   } = deps;
 
@@ -170,7 +171,11 @@ export function createInlineComposer(
     const id = target.session();
     const projectId = target.project();
     if (!id || !vivas().includes(id)) return;
-    await handoff.requestStop(conversationScope(id, projectId));
+    const scope = conversationScope(id, projectId);
+    const hadPending = Boolean(handoff.view(scope).pending);
+    const stopPromise = handoff.requestStop(scope);
+    if (!hadPending) marcarQuieta(id, "interrupted");
+    await stopPromise;
   }
 
   const questionTarget = () => ({

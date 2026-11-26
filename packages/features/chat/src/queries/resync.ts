@@ -126,7 +126,7 @@ export function createResync(deps: ResyncDeps) {
       const nuevas = active.filter((id) => !vivas().includes(id));
       const finished = vivas().filter((id) => !active.includes(id) && !pendingStarts.has(id));
       for (const id of nuevas) void reponerGates(id);
-      for (const id of active) if (!settlingTurns().includes(id)) { marcarViva(id, undefined, true); handoff.observe({ kind: "started", scope: conversationScope(id) }); }
+      for (const id of active) if (!settlingTurns().includes(id) && !handoff.view(conversationScope(id)).stopping) { marcarViva(id, undefined, true); handoff.observe({ kind: "started", scope: conversationScope(id) }); }
       for (const id of finished) void settleTurn(id);
     } catch {
       // Un IPC fallido no demuestra que el turno haya terminado.

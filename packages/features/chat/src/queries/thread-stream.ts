@@ -145,6 +145,11 @@ export function createThreadStream(deps: ThreadStreamDeps) {
         const { [id]: _, ...resto } = d;
         return resto;
       });
+      if (outcome === "interrupted") {
+        setPermissions((ps) => ps.filter((p) => p.session !== id));
+        setReintento((r) => (r?.session === id ? null : r));
+        setEnFondo((ids) => ids.filter((x) => x !== id));
+      }
     });
   /**
    * ¿Este evento es de la tarea que se está mirando? Solo filtra el
@@ -230,7 +235,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
         if (current()) {
           if (shell) detenidos.delete(id);
           void reconcileActiveTurns();
-          if (vivas().includes(id)) threads.appendLive(id, [{ role: "system", text: t("shell.turn.stop_failed", { error: prosaDe(error) }), meta: "fallo" }]);
+          threads.appendLive(id, [{ role: "system", text: t("shell.turn.stop_failed", { error: prosaDe(error) }), meta: "fallo" }]);
         }
         throw error;
       }
