@@ -12,34 +12,34 @@ import { Pressable } from "../../../ui/src/Pressable";
 import { hasDanilCreditsCapability, UsagePanel, useDanilCreditsStatus } from "./UsageTool";
 import { type ActiveCard, type Usage, usageKey } from "./usage";
 
-const RING_R = 4.6;
+const RING_R = 4.4;
 const RING_C = 2 * Math.PI * RING_R;
 
-function ringToneClass(remaining: number): string {
-  if (remaining <= 5) return "text-error-strong";
-  if (remaining <= 20) return "text-warning-strong";
+export function ringToneClass(remaining: number): string {
+  if (remaining <= 20) return "text-error-strong";
+  if (remaining <= 50) return "text-warning-strong";
   return "text-success-strong";
 }
 
-/** Mini circular progress ring badge placed on the top-right corner of a provider icon. */
+/** Mini circular progress ring badge tucked tightly over the top-right corner of a provider icon. */
 function QuotaRing(props: { remaining: number; stale?: boolean }) {
   const offset = () => RING_C * (1 - Math.max(0, Math.min(100, props.remaining)) / 100);
   return (
     <span
       class={cn(
-        "pointer-events-none absolute -top-0.5 -right-0.5 grid size-[11px] place-items-center rounded-full bg-surface",
+        "pointer-events-none absolute top-[1px] right-[1px] grid size-[10px] place-items-center rounded-full bg-surface/90",
         props.stale && "opacity-60",
       )}
       aria-hidden="true"
     >
-      <svg viewBox="0 0 12 12" class="size-[11px] -rotate-90">
+      <svg viewBox="0 0 12 12" class="size-[10px] -rotate-90" aria-hidden="true">
         <circle
           cx="6"
           cy="6"
           r={RING_R}
           fill="none"
           stroke="currentColor"
-          stroke-width="1.8"
+          stroke-width="2.1"
           class="text-neutral-500/25"
         />
         <circle
@@ -48,7 +48,7 @@ function QuotaRing(props: { remaining: number; stale?: boolean }) {
           r={RING_R}
           fill="none"
           stroke="currentColor"
-          stroke-width="1.8"
+          stroke-width="2.1"
           stroke-linecap="round"
           stroke-dasharray={`${RING_C}`}
           stroke-dashoffset={`${offset()}`}
@@ -115,7 +115,7 @@ export default function SidebarUsageBar(props: {
     <Show when={hasAny()}>
       <div
         data-sidebar-usage-bar=""
-        class="shrink-0 border-t border-border px-2.5 py-1.5"
+        class="shrink-0 border-t border-border px-2 py-1"
       >
         <Popover open={open()} onOpenChange={setOpen} placement="top-start">
           <PopoverTrigger
@@ -124,7 +124,7 @@ export default function SidebarUsageBar(props: {
                 {...trigger}
                 role="group"
                 aria-label={t("usage.bar.aria")}
-                class="flex min-w-0 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                class="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                 onClick={(e: MouseEvent) => {
                   // Only buttons inside toggle; ignore clicks on empty gap.
                   if (e.target === e.currentTarget) e.stopPropagation();
@@ -148,7 +148,7 @@ export default function SidebarUsageBar(props: {
                         title={title()}
                         aria-pressed={open() && selectedAgent() === card.agent}
                         class={cn(
-                          "relative grid size-7 shrink-0 place-items-center rounded-md text-neutral-950 transition-colors hover:bg-neutral-200/70 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary",
+                          "relative grid size-6 shrink-0 place-items-center rounded-md text-neutral-950 transition-colors hover:bg-neutral-200/70 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary",
                           open() && selectedAgent() === card.agent && "bg-neutral-200/80",
                         )}
                         onClick={(e) => {
@@ -156,16 +156,16 @@ export default function SidebarUsageBar(props: {
                           openFor(card.agent);
                         }}
                       >
-                        <MarcaAgente id={card.agent} size={16} />
+                        <MarcaAgente id={card.agent} size={13} />
                         <Show when={remaining() !== null}>
                           <QuotaRing remaining={remaining()!} stale={stale()} />
                         </Show>
                         <Show when={remaining() === null && failed()}>
                           <span
-                            class="pointer-events-none absolute -top-0.5 -right-0.5 grid size-[11px] place-items-center rounded-full bg-surface text-warning-strong"
+                            class="pointer-events-none absolute top-[1px] right-[1px] grid size-[10px] place-items-center rounded-full bg-surface/90 text-warning-strong"
                             aria-hidden="true"
                           >
-                            <AlertTriangle size={9} />
+                            <AlertTriangle size={8} />
                           </span>
                         </Show>
                       </Pressable>
@@ -183,7 +183,7 @@ export default function SidebarUsageBar(props: {
                         title={title()}
                         aria-pressed={open() && selectedAgent() === "danil"}
                         class={cn(
-                          "relative grid size-7 shrink-0 place-items-center rounded-md text-neutral-950 transition-colors hover:bg-neutral-200/70 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary",
+                          "relative grid size-6 shrink-0 place-items-center rounded-md text-neutral-950 transition-colors hover:bg-neutral-200/70 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary",
                           open() && selectedAgent() === "danil" && "bg-neutral-200/80",
                         )}
                         onClick={(e) => {
@@ -191,7 +191,7 @@ export default function SidebarUsageBar(props: {
                           openFor("danil");
                         }}
                       >
-                        <MarcaAgente id="danil" size={16} />
+                        <MarcaAgente id="danil" size={13} />
                         <Show when={(credits.amount() ?? 0) > 0}>
                           <QuotaRing remaining={100} />
                         </Show>
@@ -207,13 +207,13 @@ export default function SidebarUsageBar(props: {
                       data-provider-disconnected=""
                       aria-label={agent.label}
                       title={agent.label}
-                      class="relative grid size-7 shrink-0 place-items-center rounded-md text-neutral-500 opacity-45 grayscale transition-all hover:bg-neutral-200/70 hover:opacity-85 hover:grayscale-0 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
+                      class="relative grid size-6 shrink-0 place-items-center rounded-md text-neutral-500 opacity-45 grayscale transition-all hover:bg-neutral-200/70 hover:opacity-85 hover:grayscale-0 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
                       onClick={(e) => {
                         e.stopPropagation();
                         openFor(agent.id);
                       }}
                     >
-                      <MarcaAgente id={agent.id} size={16} />
+                      <MarcaAgente id={agent.id} size={13} />
                     </Pressable>
                   )}
                 </For>

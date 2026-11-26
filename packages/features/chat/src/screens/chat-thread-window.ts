@@ -3,7 +3,7 @@ import { estimateBlock } from "../model/threadRows";
 import { CHUNK, chunkIds, chunkStart, headChunk, tailChunk, type Lectura } from "../model/threadWindow";
 import type { createChatBlocks } from "./chat-blocks";
 import type { createChatComposerState } from "./chat-composer-state";
-import { FILAS_ANTES_DE_PEDIR, HILO_POR_TRAMOS, SOLTAR_LO_LEIDO_MS } from "./chat-model";
+import { FILAS_ANTES_DE_PEDIR, HILO_POR_TRAMOS, HILO_VIRTUAL, SOLTAR_LO_LEIDO_MS } from "./chat-model";
 import type { ChatProps } from "./chat-props";
 import { batch, createEffect, createMemo, createSignal, on, onCleanup } from "solid-js";
 
@@ -13,8 +13,13 @@ export type ChatThreadWindowDeps = { bloqueDeLectura: ReturnType<typeof createCh
 /** Movido tal cual de Chat.tsx (el componente `Chat`, tarea 2.6). Lo que usa del cuerpo de Chat llega por `deps`. */
 export function createChatThreadWindow(props: ChatProps, deps: ChatThreadWindowDeps) {
   const { bloqueDeLectura, bloques, clavesDelHilo, hilo } = deps;
-  // Sin layout (jsdom) todo mide cero: el hilo se monta entero por tramos.
-  const hiloVirtual = typeof ResizeObserver !== "undefined" && document.documentElement.getBoundingClientRect().width > 0 && !localStorage.getItem(HILO_POR_TRAMOS);
+  // Por defecto se monta progresivamente por tramos reales (`threadWindow`) sin alturas
+  // estimadas ni márgenes sintéticos; el virtualizador queda solo bajo marca de laboratorio.
+  const hiloVirtual =
+    typeof ResizeObserver !== "undefined" &&
+    document.documentElement.getBoundingClientRect().width > 0 &&
+    localStorage.getItem(HILO_VIRTUAL) === "1" &&
+    !localStorage.getItem(HILO_POR_TRAMOS);
   // En su propio trozo: la carga inicial tiene techo y el hilo llega después de pintar la ventana.
   const [hiloDeFilasListo, setHiloDeFilasListo] = createSignal<typeof import("../components/VirtualThread").VirtualThread>();
   if (hiloVirtual) void import("../components/VirtualThread").then((module) => setHiloDeFilasListo(() => module.VirtualThread));
