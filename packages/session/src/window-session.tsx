@@ -24,6 +24,7 @@ import { organizationMachine, windowBilling } from './window-billing';
 import { webSessionCommands, type WebSessionStatus } from './web-session-contexts';
 import { webRailCatalog } from './web-rail-catalog';
 import { windowActiveContext } from './window-active-context';
+import { readLastWorkspace, requestedWorkspaceFromSearch } from './last-workspace';
 import { freeModelScope } from './free-model-policy';
 import { freeRouterEngine, freeRouterWebEdge } from '../../features/settings/src/queries/free-router-adapters';
 import { setFreeRouterHost, signOutPlatform } from '../../features/settings/src/queries/free-router-session';
@@ -82,7 +83,9 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const permits = (name: string) => supports(caps(), name);
     const gone = () => stopped || signedOut() || exit.leaving();
     const sessions = webSessionCommands(raw, { expired: () => expired() });
-    const active = windowActiveContext(sessions);
+    const active = windowActiveContext(sessions, {
+      preferred: () => requestedWorkspaceFromSearch(window.location.search) ?? readLastWorkspace(),
+    });
     // Las fuentes que llaman directo a `platformFetch` llevan el mismo contexto que `active.scoped`.
     setEdgeContext(options.origin, () => active.current()?.context ?? null);
     const rail = webRailCatalog(sessions);

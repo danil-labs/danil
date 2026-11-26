@@ -98,9 +98,15 @@ export function createAddedSync(deps: {
   schedule?: (run: () => void, ms: number) => void;
 }) {
   let server: { key: string; added: Set<string> } | null = null;
+  let settledKey: string | null = null;
   let running: Promise<void> | null = null;
   let again = false;
   let retrying = false;
+  const markSettled = (key: string) => {
+    if (settledKey === key) return;
+    settledKey = key;
+    deps.onChange();
+  };
   const schedule = deps.schedule ?? ((run, ms) => void setTimeout(run, ms));
   const record = (key: string): AddedRecord => deps.store.read(key) ?? { local: null, pending: [] };
   const localOf = (value: AddedRecord) => deps.seed === "explicit" ? value.local : validLocal(value);
@@ -172,6 +178,7 @@ export function createAddedSync(deps: {
     const read = outcomeOf(reply) === "ok" ? parsePreferences(reply.body) : null;
     if (!read) {
       keepLocal(key);
+      markSettled(key);
       return retry();
     }
     // Sin fila, o una fila en `version` 1 sin ids: quitar uno exige haberlo agregado antes, así que nunca tuvo nada.
@@ -182,6 +189,7 @@ export function createAddedSync(deps: {
         // Sin evidencia (o sin fuente) no se siembra: el riel sigue mostrando los de la organización.
         if (current.local) deps.store.write(key, { ...current, local: null });
         server = null;
+        if (deps.available()) settledKey = key;
         deps.onChange();
         if (!deps.available()) retry();
         return;
@@ -191,6 +199,7 @@ export function createAddedSync(deps: {
         // La persona los quitó todos antes de tener cuenta: se queda la lista local vacía, sin sembrar.
         deps.store.write(key, { ...current, local: [] });
         server = null;
+        settledKey = key;
         deps.onChange();
         return;
       }
@@ -200,12 +209,14 @@ export function createAddedSync(deps: {
         if (outcome === "ok") {
           deps.store.write(key, { local: null, pending: [] });
           server = { key, added: new Set(seed) };
+          settledKey = key;
           deps.onSeeded?.(seed);
           deps.onChange();
           return;
         }
         if (outcome === "conflict") return void (again = true);
         keepLocal(key);
+        markSettled(key);
         return retry();
       }
       // La fila ya existe vacía: la siembra va id por id.
@@ -216,12 +227,14 @@ export function createAddedSync(deps: {
     const uploaded = record(key).pending;
     if (!(await flush(key))) {
       server = { key, added: apply(apply(read.added, uploaded), record(key).pending) };
+      settledKey = key;
       deps.onChange();
       return retry();
     }
     const current = record(key);
     if (current.local) deps.store.write(key, { ...current, local: null });
     server = { key, added: apply(apply(read.added, uploaded), record(key).pending) };
+    settledKey = key;
     if (seeding) deps.onSeeded?.(seeding);
     deps.onChange();
   }
@@ -265,6 +278,11 @@ export function createAddedSync(deps: {
       if (server?.key === key) return server.added;
       const local = localOf(record(key));
       return local ? new Set(local) : null;
+    },
+    /** `true` cuando la primera comprobación del alcance actual ya terminó (con lista, sin sembrar o fallida). */
+    settled: (): boolean => {
+      const scope = deps.scope();
+      return !!scope && settledKey === keyOf(scope);
     },
     sync,
     add: (id: string) => change(id, "add"),

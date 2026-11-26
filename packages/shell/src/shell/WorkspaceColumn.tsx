@@ -20,7 +20,8 @@ import { AttentionBadge, MarcaDeWorkspace } from "./WorkspaceMarks";
 
 export { AttentionBadge } from "./WorkspaceMarks";
 
-import { organizationStartTarget, requestedStartTarget } from "./organization-start-target";
+import { organizationStartTarget, resolveStartupWorkspace } from "./organization-start-target";
+import { readLastWorkspace, writeLastWorkspace } from "../../../session/src/last-workspace";
 import ProfileMenu from "./ProfileMenu";
 import { SessionWorkspaceRows } from "./SessionWorkspaceRows";
 import { sessionRail } from "./session-groups";
@@ -74,7 +75,9 @@ export default function WorkspaceColumn(props: {
     const next = organizationStartTarget(visibleGroups().map((g) => ({
       ...g, available: g.available?.filter((w) => w.id !== target.id || g.context_id !== target.context) ?? null,
     })), target.id, target.context ?? null, sessions.sessions.defaultContext());
-    await ws.cambiarA(next?.id ?? fallback?.id ?? null, next?.context);
+    const nextId = next?.id ?? fallback?.id ?? null;
+    if (!nextId) writeLastWorkspace(null);
+    await ws.cambiarA(nextId, next?.context);
     if (isActive(target)) throw new Error("workspace_still_active");
   }
   function hide(target: RailWorkspaceTarget) {
@@ -99,20 +102,47 @@ export default function WorkspaceColumn(props: {
   }
   createEffect(() => {
     const open = ws.activo();
-    if (!open || !railIds().includes(open)) return;
+    const ctx = ws.activoContexto();
     const rows = visibles();
-    if (!rows.some((w) => w.id === open) || (ws.activoContexto() && !sessions.groups()?.some((group) => group.context_id === ws.activoContexto()))) { const target = organizationStartTarget(visibleGroups(), open, ws.activoContexto(), sessions.sessions.defaultContext()); void ws.cambiarA(target?.id ?? rows.find((row) => row.id !== open)?.id ?? null, target?.context); }
+    if (open && ctx && rows.some((w) => w.id === open)) {
+      const group = groupOf(ctx);
+      const family = group ? sessions.sessions.families().find((f) => f.family === group.family) : undefined;
+      const account = family?.sub ?? group?.person ?? group?.email;
+      if (group && account) writeLastWorkspace({ workspace: open, org: group.org, account });
+    }
+    if (!open || !railIds().includes(open)) return;
+    if (!rows.some((w) => w.id === open) || (ctx && !sessions.groups()?.some((group) => group.context_id === ctx))) {
+      const target = organizationStartTarget(visibleGroups(), open, ctx, sessions.sessions.defaultContext());
+      void ws.cambiarA(target?.id ?? rows.find((row) => row.id !== open)?.id ?? null, target?.context);
+    }
   });
   let sessionsSettled = false;
-  // La web abre al arrancar el de la URL (W6) o el primero agregado, aunque ninguna máquina diga un activo.
+  // Al arrancar abre el de la URL (W6), el último workspace recordado o el primero agregado, sin bloquearse por otras organizaciones.
   const asked = capabilities().nativeWindow ? "" : window.location.search;
+  const remembered = readLastWorkspace();
+  const openWorkspace = (id: string, context?: string) => {
+    sessionsSettled = true;
+    void ws.cambiarA(id, context);
+  };
   createEffect(() => {
     const groups = sessions.groups() && visibleGroups();
-    if (sessionsSettled || !groups?.length || groups.some((g) => !g.available || !g.added) || (!ws.activo() && capabilities().nativeWindow)) return;
+    if (sessionsSettled || !groups?.length) return;
+    const decision = resolveStartupWorkspace({
+      groups,
+      families: sessions.sessions.families(),
+      urlSearch: asked,
+      remembered,
+      open: ws.activo(),
+      activeContext: ws.activoContexto(),
+      defaultContext: sessions.sessions.defaultContext(),
+      nativeWindow: Boolean(capabilities().nativeWindow),
+      workspaceLoading: ws.cargando(),
+    });
+    if (decision.kind === "wait") return;
     sessionsSettled = true;
-    const open = ws.activo();
-    const next = requestedStartTarget(groups, sessions.sessions.families(), asked) ?? (open ? (groups.some((g) => g.available?.some((w) => w.id === open)) ? organizationStartTarget(groups, open, ws.activoContexto(), sessions.sessions.defaultContext()) : null) : organizationStartTarget(groups, "", null, sessions.sessions.defaultContext()));
-    if (next && (next.id !== ws.activo() || next.context !== ws.activoContexto())) void ws.cambiarA(next.id, next.context);
+    if (decision.kind === "open" && (decision.id !== ws.activo() || decision.context !== ws.activoContexto())) {
+      void ws.cambiarA(decision.id, decision.context);
+    }
   });
   const tasksOf = (id: string) => props.attention.find((w) => w.workspace === id)?.tasks ?? [];
 
@@ -163,7 +193,7 @@ export default function WorkspaceColumn(props: {
         <Show when={accounts && others().length > 0}>
           <AccountHeader accounts={accounts} id={accounts!.current.user_id} email={accounts!.current.email} extra={accounts!.current.extra} signedIn />
         </Show>
-        <SessionWorkspaceRows suppressTooltips={addMenuOpen()} sessions={sessions} rows={visibles()} active={ws.activo() && ws.activoContexto() ? { workspace: ws.activo()!, context: ws.activoContexto()! } : null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} staleOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.stale ?? false} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void ws.cambiarA(id, context)} onHide={hide} onRemove={setRemoving} hidden={isHidden} />
+        <SessionWorkspaceRows suppressTooltips={addMenuOpen()} sessions={sessions} rows={visibles()} active={ws.activo() && ws.activoContexto() ? { workspace: ws.activo()!, context: ws.activoContexto()! } : null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} staleOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.stale ?? false} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={openWorkspace} onHide={hide} onRemove={setRemoving} hidden={isHidden} />
         <AddWorkspaceMenu
           onOpenChange={setAddMenuOpen}
           sessions={sessions}
@@ -173,7 +203,7 @@ export default function WorkspaceColumn(props: {
           tasksOf={tasksOf}
           badge={AttentionBadge}
           labelOf={(s) => taskLabel(s, true)}
-          onOpen={(id, context) => void ws.cambiarA(id, context)}
+          onOpen={openWorkspace}
           onShow={(w) => hidden.show(hiddenKey(w.id, w.context))}
           onRemove={setRemoving}
         />

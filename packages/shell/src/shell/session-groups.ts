@@ -23,7 +23,7 @@ import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-adde
 import { sendIdentityMe } from "../../../platform-client/src/identity.ts";
 
 type WorkspaceRow = { id: string; name: string; logo?: string | null };
-export type SessionRailGroup = ContextGroup & { available: readonly WorkspaceRow[] | null; added: ReadonlySet<string> | null; person: string | null; org_type?: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
+export type SessionRailGroup = ContextGroup & { available: readonly WorkspaceRow[] | null; added: ReadonlySet<string> | null; person: string | null; org_type?: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null; settled?: boolean };
 let instance: ReturnType<typeof wire> | undefined;
 export const [sessionRailState, setSessionRailState] = createRoot(() => createSignal<ReturnType<typeof wire>>());
 export const hasSessionGroups = () => !!instance?.groups();
@@ -49,6 +49,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   });
   const catalog = capabilities().webRailCatalog;
   const deskLists = new Map<string, readonly WorkspaceRow[]>();
+  const deskLoaded = new Set<string>();
   const reading = new Map<string, Promise<void>>();
   const availableFor = (context: string) => {
     revision();
@@ -71,7 +72,13 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
           : [];
       }));
       changed();
-    }).finally(() => reading.delete(context));
+    }).finally(() => {
+      reading.delete(context);
+      if (!deskLoaded.has(context)) {
+        deskLoaded.add(context);
+        changed();
+      }
+    });
     reading.set(context, read);
     return read;
   }
@@ -112,7 +119,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     adoptionStarted = true;
     void adoption.retry();
   });
-  const records = new Map<string, { person: string | null; orgType: string | null; orgRole: string | null; asking: boolean; sync: ReturnType<typeof createAddedSync> }>();
+  const records = new Map<string, { person: string | null; orgType: string | null; orgRole: string | null; asking: boolean; checked: boolean; sync: ReturnType<typeof createAddedSync> }>();
   const known = new Set<string>();
   /** Lo agregado que se vio de cada contexto: una sesión vencida no puede releerlo y conserva sus cuadros. */
   const lastAdded = new Map<string, ReadonlySet<string>>();
@@ -122,7 +129,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     const existing = records.get(g.context_id);
     if (existing?.person || existing?.asking) return;
     if (!existing && g.workspaces === "later") setLaterContext(g.context_id);
-    const record = existing ?? { person: null as string | null, orgType: null as string | null, orgRole: null as string | null, asking: false, sync: null as unknown as ReturnType<typeof createAddedSync> };
+    const record = existing ?? { person: null as string | null, orgType: null as string | null, orgRole: null as string | null, asking: false, checked: false, sync: null as unknown as ReturnType<typeof createAddedSync> };
     if (!existing) record.sync = createAddedSync({
       seed: g.workspaces === "later" ? "explicit" : "rail",
       transport: edgeAddedTransport((method, path, body) => sessions.send(g.context_id, method, path, body)),
@@ -147,7 +154,13 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
         changed();
         void record.sync.sync();
       }
-    }).catch(() => {}).finally(() => { record.asking = false; });
+    }).catch(() => {}).finally(() => {
+      record.asking = false;
+      if (!record.checked) {
+        record.checked = true;
+        if (!record.person) changed();
+      }
+    });
   };
   const rows = createMemo(() => {
     revision();
@@ -161,6 +174,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     const added = record?.sync.added() ?? null;
     if (added) lastAdded.set(g.context_id, added);
     const free = accounts.free(g.context_id);
+    const availableSettled = available !== null || (catalog ? (catalog.settled?.() ?? false) : deskLoaded.has(g.context_id));
+    const addedSettled = added !== null || Boolean(empty_reason) || Boolean(record?.checked && (!record.person || record.sync.settled()));
     return {
       ...g,
       ...(!g.role && record?.orgRole ? { role: record.orgRole } : {}),
@@ -170,6 +185,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       empty_reason,
       added: added ?? (empty_reason === "session_expired" ? lastAdded.get(g.context_id) ?? null : null),
       person: record?.person ?? null,
+      settled: Boolean(empty_reason) || (availableSettled && (available === null || addedSettled)),
     };
     }) ?? null;
   });

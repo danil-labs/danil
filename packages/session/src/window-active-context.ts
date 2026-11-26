@@ -6,17 +6,26 @@ import type { WebSessionCommands, WebSessionStatus } from "./web-session-context
 
 /**
  * La organización de la ventana es la del workspace abierto (`activeWorkspaceContext`), no un
- * estado del servidor. Antes de abrir uno, la personal del primer correo. Así `me`, créditos,
- * billing y credenciales llevan siempre su `X-Danil-Session` (plan web varias sesiones W3).
+ * estado del servidor. Antes de abrir uno, la del último workspace recordado (o URL) si sigue en
+ * el conjunto, y si no la personal del primer correo. Así `me`, créditos, billing y credenciales
+ * llevan siempre su `X-Danil-Session` (plan web varias sesiones W3).
  */
-export function windowActiveContext(sessions: Pick<WebSessionCommands, "last">) {
+export function windowActiveContext(
+  sessions: Pick<WebSessionCommands, "last">,
+  options?: { preferred?: () => { org: string; account: string } | null },
+) {
   const groups = (status: WebSessionStatus | null = sessions.last()): (GroupAccount & { personal: boolean; sub: string; email: string | null })[] =>
     status?.sessions.flatMap((f) => f.contexts.map((c) => ({ context: c.context_id, org: c.org, name: c.org_name ?? c.org, plan: c.plan, role: c.role ?? undefined, personal: c.personal === true, sub: f.sub, email: f.email }))) ?? [];
   type Group = ReturnType<typeof groups>[number];
+  const initial = (all: readonly Group[]): Group | null => {
+    const wanted = options?.preferred?.();
+    const matched = wanted ? all.find((g) => g.org === wanted.org && g.sub === wanted.account) : undefined;
+    return matched ?? all.find((g) => g.personal) ?? all[0] ?? null;
+  };
   const current = (): Group | null => {
     const all = groups();
     const open = activeWorkspaceContext();
-    return all.find((g) => g.context === open) ?? all.find((g) => g.personal) ?? all[0] ?? null;
+    return all.find((g) => g.context === open) ?? initial(all);
   };
   /**
    * El transporte de la ventana: toda llamada sin contexto propio lleva el del workspace abierto (o el
