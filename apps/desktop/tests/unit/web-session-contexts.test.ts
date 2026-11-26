@@ -232,3 +232,32 @@ test("explicit personal: false is preserved on web session contexts for free-pla
   assert.equal(status.sessions[0].contexts[1].personal, true);
 });
 
+test("windowActiveContext prefers the remembered (org, account) before activeWorkspaceContext is set, and last-workspace clears on logout", async () => {
+  const { windowActiveContext } = await import("../../src/web/window-active-context.ts");
+  const { setActiveWorkspaceContext } = await import("../../src/lib/workspace-context.ts");
+  const { readLastWorkspace, writeLastWorkspace, WEB_LAST_WORKSPACE_KEY } = await import("../../../../packages/session/src/last-workspace.ts");
+  const { clearWebCaches } = await import("../../../../packages/session/src/session-storage.ts");
+  const { transport } = fakeEdge(() => json(sessions));
+  const web = webSessionCommands(transport, { expired: () => {} });
+  await web.handle("danil_session_status");
+
+  const backing = new Map<string, string>();
+  const store = {
+    get length() { return backing.size; },
+    key: (i: number) => [...backing.keys()][i] ?? null,
+    getItem: (k: string) => backing.get(k) ?? null,
+    setItem: (k: string, v: string) => void backing.set(k, v),
+    removeItem: (k: string) => void backing.delete(k),
+  };
+
+  setActiveWorkspaceContext(null);
+  writeLastWorkspace({ workspace: "wx1", org: "org_x", account: "user_a" }, store, WEB_LAST_WORKSPACE_KEY);
+  assert.deepEqual(readLastWorkspace(store, WEB_LAST_WORKSPACE_KEY), { workspace: "wx1", org: "org_x", account: "user_a" });
+  const active = windowActiveContext(web, { preferred: () => readLastWorkspace(store, WEB_LAST_WORKSPACE_KEY) });
+  assert.equal(active.current()?.context, "ctx_x", "startup prefers the remembered organization over personal");
+
+  clearWebCaches(store);
+  assert.equal(readLastWorkspace(store, WEB_LAST_WORKSPACE_KEY), null, "signing out clears the remembered web workspace");
+  assert.equal(active.current()?.context, "ctx_personal", "without a remembered workspace, falls back to personal");
+});
+

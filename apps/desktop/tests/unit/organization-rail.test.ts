@@ -116,3 +116,78 @@ test("an email with no tile in the rail keeps a footer sign-out, by the same rul
   assert.deepEqual(emptySessionEmails(groups, null).map((row) => row.family), ["f1", "f3", "f4", "f5", "f6", "f7"]);
   assert.deepEqual(emptySessionEmails(null, null), []);
 });
+
+test("resolveStartupWorkspace opens the remembered workspace without waiting for unrelated or unsettled organizations", async () => {
+  const { resolveStartupWorkspace } = await import("../../../../packages/shell/src/shell/organization-start-target.ts");
+  const families = [{ family: "f1", sub: "user_a" }];
+  const personal: SessionRailGroup = { ...group("org_personal", "ctx_personal", ["ws_cd"]), family: "f1", added: null, settled: false };
+  const danil: SessionRailGroup = { ...group("org_danil", "ctx_danil", ["ws_danil"]), family: "f1", added: new Set(["ws_danil"]), settled: true };
+  const expired: SessionRailGroup = { ...group("org_expired", "ctx_expired", []), family: "f1", available: null, added: null, empty_reason: "session_expired", settled: true };
+
+  // Remembered Danil opens immediately even though personal is still loading and expired has added: null.
+  assert.deepEqual(
+    resolveStartupWorkspace({
+      groups: [personal, danil, expired],
+      families,
+      urlSearch: "",
+      remembered: { workspace: "ws_danil", org: "org_danil", account: "user_a" },
+      open: null,
+      activeContext: null,
+      defaultContext: "ctx_personal",
+      nativeWindow: false,
+      workspaceLoading: false,
+    }),
+    { kind: "open", id: "ws_danil", context: "ctx_danil" },
+  );
+
+  // While the remembered target's own org is still loading, wait instead of flashing personal.
+  const danilLoading: SessionRailGroup = { ...danil, added: null, settled: false };
+  const personalReady: SessionRailGroup = { ...personal, added: new Set(["ws_cd"]), settled: true };
+  assert.deepEqual(
+    resolveStartupWorkspace({
+      groups: [personalReady, danilLoading],
+      families,
+      urlSearch: "",
+      remembered: { workspace: "ws_danil", org: "org_danil", account: "user_a" },
+      open: null,
+      activeContext: null,
+      defaultContext: "ctx_personal",
+      nativeWindow: false,
+      workspaceLoading: false,
+    }),
+    { kind: "wait" },
+  );
+
+  // Explicit URL overrides remembered workspace.
+  assert.deepEqual(
+    resolveStartupWorkspace({
+      groups: [personalReady, danil],
+      families,
+      urlSearch: "?workspace=ws_cd&org=org_personal&account=user_a",
+      remembered: { workspace: "ws_danil", org: "org_danil", account: "user_a" },
+      open: null,
+      activeContext: null,
+      defaultContext: "ctx_personal",
+      nativeWindow: false,
+      workspaceLoading: false,
+    }),
+    { kind: "open", id: "ws_cd", context: "ctx_personal" },
+  );
+
+  // When default org is settled with added: null (unseeded) and another org has an added workspace, startup never deadlocks.
+  const personalUnseeded: SessionRailGroup = { ...personal, added: null, settled: true };
+  assert.deepEqual(
+    resolveStartupWorkspace({
+      groups: [personalUnseeded, danil, expired],
+      families,
+      urlSearch: "",
+      remembered: null,
+      open: null,
+      activeContext: null,
+      defaultContext: "ctx_personal",
+      nativeWindow: false,
+      workspaceLoading: false,
+    }),
+    { kind: "open", id: "ws_danil", context: "ctx_danil" },
+  );
+});
