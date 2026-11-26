@@ -731,3 +731,21 @@ test("a pending context selection keeps the displayed conversation routed to its
     assert.deepEqual(f.store.messages(), []);
   } finally { f.dispose(); setActiveWorkspaceContext(null); setDisplayWorkspaceContext(null); }
 });
+
+test("an empty post-ACK read does not erase the first optimistic user message before disk flush", async () => {
+  let turns: Session["turns"] = [];
+  const f = fixture(async <T>() => session(turns) as T);
+  try {
+    const generation = f.generation();
+    const own = msg("primer mensaje", "user");
+    f.store.appendOptimistic("s", [own]);
+    f.store.acknowledgeOptimistic("s", [own]);
+    const emptyRead = await f.store.read("p", "s");
+    f.store.acceptSession("s", emptyRead, true, generation);
+    assert.deepEqual(f.store.messages(), [own], "empty disk read keeps the acknowledged user bubble");
+    turns = [{ id: "u1", role: "user", text: "primer mensaje" }];
+    const durableRead = await f.store.read("p", "s");
+    f.store.acceptSession("s", durableRead, false, generation);
+    assert.deepEqual(f.store.messages().map((row) => row.turno), ["u1"]);
+  } finally { f.dispose(); }
+});

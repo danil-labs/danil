@@ -80,6 +80,7 @@ export function createChatEvents(deps: ChatEventsDeps) {
       // se recarga para que la fila aparezca —o, en un `done` de una tarea
       // que no se está mirando, para que deje de decir que trabaja—.
       if (kind === "started" || kind === "done") {
+        if (kind === "done") pendingStarts.delete(session);
         if (kind === "started" && workspace) liveThreads.add(liveThreadKey(workspace, session));
         enviarFiltro();
         if (kind === "started" && esDelWorkspaceAbierto(workspace)) {

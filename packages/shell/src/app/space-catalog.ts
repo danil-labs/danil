@@ -62,7 +62,7 @@ export function createSpaceCatalog(
       const client = value()?.client ?? await workspaceSpacesForEngine(selected.send, selected.context, selected.org, selected.id);
       if (!client) return undefined;
       const catalog = await client.read();
-      if (scope() === selected && generation === request) {
+      if (scope() === selected && generation === request && catalog.version >= (value()?.catalog.version ?? 0)) {
         const next = { client, catalog };
         setReady({ scope: selected, value: next });
         return next;
@@ -266,7 +266,7 @@ export function createSpaceCatalog(
     const request = ++generation;
     try {
       const catalog = await current.client.assignTask(taskRef, bareSpace);
-      if (scope() === selected && generation === request) {
+      if (scope() === selected && (generation === request || catalog.version >= (value()?.catalog.version ?? 0))) {
         setReady({ scope: selected, value: { ...current, catalog } });
       }
       return true;

@@ -141,3 +141,60 @@ test("sending from new task hides the folder picker immediately and anchors the 
     assert.deepEqual(app.failures, []);
   } finally { app.w.close(); }
 });
+
+test("slow first send with delayed started and empty initial load_session keeps the message and running turn visible", async () => {
+  let resolveSend;
+  let flushed = false;
+  let active = false;
+  const sendResult = new Promise((resolve) => { resolveSend = resolve; });
+
+  const fixture = await open("new-task-first-send-delayed-start", { computers: [HOME], extra: {
+    list_active_turns: () => active ? ["t2"] : [],
+    list_live_sessions: () => [
+      { ...row("t1", "Primera"), turns: 1 },
+      ...(flushed ? [{ ...row("t2", "Hola mundo"), turns: 1 }] : []),
+    ],
+    load_session: ({ id }) => id === "t2"
+      ? { id: "t2", provider: "codex", turns: flushed ? [{ role: "user", id: "u2", text: "Hola mundo" }] : [] }
+      : { id: "t1", provider: "codex", turns: [{ role: "user", id: "u1", text: "hola" }, { role: "agent", id: "a1", text: "respuesta vieja", duration_ms: 10 }] },
+    send_message: () => sendResult,
+  } });
+  const { app, doc } = fixture;
+  try {
+    assert.ok(await until(() => doc.querySelector('[data-sesion="t1"]')));
+    await newTask(app);
+    assert.ok(await until(() => doc.querySelector("[data-borrador]")));
+
+    const field = doc.querySelector("textarea");
+    field.value = "Hola mundo";
+    field.dispatchEvent(new app.w.Event("input", { bubbles: true }));
+    field.closest("form").dispatchEvent(new app.w.Event("submit", { bubbles: true, cancelable: true }));
+
+    // While send_message is in flight, the provisional task is active in the rail and shows the message.
+    assert.ok(doc.querySelector("[data-chat-thread]")?.textContent.includes("Hola mundo"), "user message is visible immediately");
+    const provisionalRail = doc.querySelector('[data-sesion^="naciendo:"]');
+    assert.ok(provisionalRail && (provisionalRail.getAttribute("aria-current") === "true" || provisionalRail.getAttribute("data-active") === "true"), "provisional row is highlighted in the rail");
+    assert.equal(doc.querySelector("[data-project-picker]"), null, "folder picker is gone while sending");
+
+    // send_message resolves BEFORE `started`, BEFORE `list_active_turns` includes t2,
+    // and BEFORE `load_session` has flushed turns to disk.
+    resolveSend("t2");
+    await sleep(200);
+
+    // Must NEVER snap back to blank "Nueva tarea" or drop the message/activity.
+    assert.equal(doc.querySelector("[data-project-picker]"), null, "does not snap back to folder picker before started");
+    assert.equal(doc.querySelector("[data-composer-layer]")?.getAttribute("data-composer-layer"), "bottom", "composer stays anchored at bottom");
+    assert.ok(doc.querySelector("[data-chat-thread]")?.textContent.includes("Hola mundo"), "user message stays visible even when initial load_session is empty");
+    assert.ok(doc.querySelector('button[aria-label="Detener turno"]'), "turn stays live until started/done instead of settling prematurely");
+
+    // Later the engine finishes flushing and emits `started` + `done`.
+    flushed = true;
+    active = true;
+    app.emit("chat", { session: "t2", workspace: "w", kind: "started", text: "" });
+    assert.ok(await until(() => doc.querySelector("[data-chat-thread]")?.textContent.includes("Hola mundo")));
+    active = false;
+    app.emit("chat", { session: "t2", workspace: "w", kind: "done", text: "", ok: true });
+    assert.ok(await until(() => !doc.querySelector('button[aria-label="Detener turno"]')));
+    assert.deepEqual(app.failures, []);
+  } finally { app.w.close(); }
+});

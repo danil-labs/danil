@@ -101,18 +101,32 @@ test("con el borde, una intención con la VM apagada la enciende antes por el pl
   machines.close();
 });
 
-test("el plano de control del borde: la lista sale de /v1/machines y encender es start con su operación", async () => {
+test("el plano de control del borde: la lista sale de /v1/machines, encender usa tickets con wake y 409 machine_stopped conserva su código", async () => {
   const calls: Request[] = [];
+  const bodies: string[] = [];
+  let wakeAttempts = 0;
   const request: typeof fetch = async (input, init) => {
     const r = new Request(input, init);
     calls.push(r);
+    const body = r.method === "POST" ? await r.clone().text() : "";
+    bodies.push(body);
     const path = new URL(r.url).pathname;
     if (path === "/v1/capabilities") return Response.json({ items: [] });
     if (path === "/v1/identity/csrf") return Response.json({ csrf_token: "c" });
     if (path === "/v1/machines") return Response.json({ items: [{ machine_id: "mch_1", name: "Danil", state: "stopped", future_field: 1 }], next_cursor: null });
-    if (path === "/v1/machines/mch_1/start")
-      return Response.json({ operation: { operation_id: "op_1", status: "succeeded" } }, { status: 202, headers: { location: "/v1/operations/op_1" } });
-    if (path === "/v1/machines/mch_1") return Response.json({ machine_id: "mch_1", state: "running", connection: "connected" });
+    if (path === "/v1/machines/mch_1/tickets") {
+      if (body === '{"wake":true}') {
+        wakeAttempts++;
+        if (wakeAttempts === 1) {
+          return Response.json(
+            { code: "machine_starting" },
+            { status: 503, headers: { "content-type": "application/problem+json", "retry-after": "0" } },
+          );
+        }
+        return Response.json({ ticket: "t_wake", url: "wss://connect.example/v1/machines/mch_1/session" }, { status: 201 });
+      }
+      return Response.json({ code: "machine_stopped" }, { status: 409, headers: { "content-type": "application/problem+json" } });
+    }
     return Response.json({ code: "not_found" }, { status: 404, headers: { "content-type": "application/problem+json" } });
   };
   const plane = edgeControlPlane({ origin: "https://edge.example", timeoutMs: 1000 }, { fetch: request, relayOrigins: ["wss://connect.example"] });
@@ -123,11 +137,54 @@ test("el plano de control del borde: la lista sale de /v1/machines y encender es
     assert.equal(list.value[0].state, "stopped");
     assert.equal(list.value[0].wakeable, true, "la máquina de la organización la enciende el borde");
   }
+  await assert.rejects(
+    plane.admit("mch_1"),
+    (err: unknown) => err instanceof Error && (err as { code?: string }).code === "machine_stopped",
+    "409 machine_stopped preserva err.code para que RelaySession se aparque hasta wake",
+  );
   assert.equal(await plane.wake("mch_1"), true);
+  assert.equal(wakeAttempts, 2, "reintenta 503 machine_starting hasta el 201");
+  const wakeCalls = calls.filter((r, i) => new URL(r.url).pathname === "/v1/machines/mch_1/tickets" && bodies[i] === '{"wake":true}');
+  assert.equal(wakeCalls.length, 2);
+  assert.equal(wakeCalls[0].headers.get("idempotency-key"), wakeCalls[1].headers.get("idempotency-key"), "misma Idempotency-Key al reintentar wake");
+  assert.ok(!calls.some((r) => new URL(r.url).pathname === "/v1/machines/mch_1/start"), "no usa la ruta heredada /start");
   for (const r of calls) {
     assert.equal(r.credentials, "include");
     assert.equal(r.headers.has("authorization"), false);
   }
+});
+
+test("con el borde, una VM apagada que contesta 409 machine_stopped se aparca y se reabre al mandar un mensaje", async () => {
+  FakeSocket.all = [];
+  let awake = false;
+  let woke = 0;
+  const machines = accountFleet(
+    {
+      endpoint: "wss://connect.example",
+      admit: async (id) => {
+        if (!awake) {
+          const error = new Error("machine_stopped") as Error & { code?: string };
+          error.code = "machine_stopped";
+          throw error;
+        }
+        return { url: `wss://connect.example/v1/machines/${id}/session`, ticket: "t-awake", protocol: "danil.machine-session.v1" };
+      },
+      wake: async () => {
+        woke++;
+        awake = true;
+        setTimeout(() => FakeSocket.all.at(-1)?.open("online"), 10);
+        return true;
+      },
+    },
+    (url, protocols) => new FakeSocket(url, protocols),
+  );
+  const [host] = machines.set([VM]);
+  await sleep(15);
+  assert.equal(FakeSocket.all.length, 0, "mientras está apagada no abre socket");
+  const answer = await host.call("send_message", "w1", { session: null, project: "", prompt: "hola" });
+  assert.equal(woke, 1);
+  assert.deepEqual(answer.value, { ok: true });
+  machines.close();
 });
 
 test("el plano de control del borde: 404 o 501 de la colección es «aún no»; 401 avisa la sesión vencida", async () => {
