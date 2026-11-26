@@ -81,6 +81,8 @@ test("subtask split panel renders side-by-side live thread with two aligned comp
     const subTextarea = splitThread.querySelector("textarea");
     const mainTextarea = composers.find((el) => el !== subTextarea);
     assert.ok(mainTextarea && subTextarea, "chat principal y subtarea tienen composers propios");
+    assert.equal(subTextarea.style.height, "", "el composer de la subtarea vacía no congela una altura extra al animar la apertura");
+    assert.equal(mainTextarea.style.height, "", "el composer principal vacío conserva su altura base");
 
     // Typing in each composer does not affect the other
     mainTextarea.value = "mensaje principal";

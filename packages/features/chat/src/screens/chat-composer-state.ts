@@ -135,8 +135,23 @@ export function createChatComposerState(props: ChatProps, deps: ChatComposerStat
   const hilo = seguirElFondo(enTurno);
   // La caja que se remonta llega después del efecto, y el `focus()` de aquel
   // cae sobre el campo viejo. La reclamación la recoge el campo nuevo.
+  let campoResize: ResizeObserver | undefined;
+  let campoWidth = -1;
+  onCleanup(() => { campoResize?.disconnect(); campoResize = undefined; });
   const tomarCampo = (el: HTMLTextAreaElement) => {
     deps.campo = el;
+    campoResize?.disconnect();
+    campoWidth = el.clientWidth;
+    if (typeof ResizeObserver !== "undefined") {
+      campoResize = new ResizeObserver(() => {
+        const nextWidth = el.clientWidth;
+        if (nextWidth === campoWidth) return;
+        campoWidth = nextWidth;
+        ajustarAlto();
+      });
+      campoResize.observe(el);
+    }
+    ajustarAlto();
     if (!deps.reclamaElFoco) return;
     deps.reclamaElFoco = false;
     enfocar(el);
@@ -155,6 +170,12 @@ export function createChatComposerState(props: ChatProps, deps: ChatComposerStat
   /** La caja crece con el texto hasta su tope y ahí empieza a scrollear. */
   function ajustarAlto() {
     if (!deps.campo) return;
+    // Sin texto, limpia cualquier alto fijo en línea para que el campo conserve su altura de
+    // una línea (`rows={1}` + `min-h-10`) incluso si montó dentro de un panel animando desde 0 px.
+    if (!deps.campo.value) {
+      deps.campo.style.height = "";
+      return;
+    }
     deps.campo.style.height = "auto";
     deps.campo.style.height = `${deps.campo.scrollHeight}px`;
   }
