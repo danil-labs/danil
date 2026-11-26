@@ -97,7 +97,7 @@ export default function AgentDock(props: {
           <Show
             when={agents().length}
             fallback={
-              <div class="grid w-full justify-start justify-items-center py-1" style={pista()} data-dock-loading="">
+              <div class="grid w-full grid-flow-col items-center justify-start justify-items-center py-1" style={pista()} data-dock-loading="">
                 <For each={Array.from({ length: columnas() }, (_, i) => i)}>{() => <span class="size-7 rounded-full bg-neutral-200 motion-safe:animate-pulse" />}</For>
               </div>
             }
