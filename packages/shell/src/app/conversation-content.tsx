@@ -335,6 +335,7 @@ export function createCeldasDeContenido(deps: CeldasDeContenidoDeps) {
                           pluginId={pl().pluginId}
                           title={pl().titulo}
                           url={pl().url}
+                          workspaceId={workspaceActivo()}
                         />
                       )}
                     </Match>

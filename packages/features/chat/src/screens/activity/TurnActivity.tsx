@@ -8,6 +8,7 @@ import { Markdown } from "../../../../../ui/src/Markdown";
 import type { ActivityChunk } from "../../model/activityBlocks";
 import { attachActivityBottomFollow } from "../../model/activityScroll";
 import { ActivityIndicator, ActivityCaption } from "../../components/activity/ActivityIndicator";
+import { isInteractiveMcpApp } from "../../model/messagingMcpApp";
 import McpAppView from "../McpAppView";
 import type { Msg, Razonamiento } from "../../model/messageTypes";
 import LineaDeTiempo, { SUPERFICIE_DE_EJECUCION } from "../../components/Timeline";
@@ -175,7 +176,7 @@ export function RegistroDeTrabajo(props: {
             </For>
       <Index each={todos()}>
         {(step) => (
-          <Show when={!step().corriendo && step().mcpApp}>
+          <Show when={!step().corriendo && !isInteractiveMcpApp(step().mcpApp) ? step().mcpApp : undefined}>
             {(call) => <McpAppView call={call()} />}
           </Show>
         )}
@@ -186,6 +187,13 @@ export function RegistroDeTrabajo(props: {
           })()}
         </Show>
       </Show>
+      <Index each={todos()}>
+        {(step) => (
+          <Show when={!step().corriendo && isInteractiveMcpApp(step().mcpApp) ? step().mcpApp : undefined}>
+            {(call) => <McpAppView call={call()} />}
+          </Show>
+        )}
+      </Index>
 
     </>
   );

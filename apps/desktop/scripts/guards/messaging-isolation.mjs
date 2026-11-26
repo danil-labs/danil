@@ -6,6 +6,9 @@ import { ROOT, walkFiles } from '../git.mjs';
 const root = process.argv[2] ? resolve(process.argv[2]) : ROOT;
 const shared = process.argv[2] ? join(root, 'packages') : resolve(root, '../../packages');
 const legacy = JSON.parse(readFileSync(new URL('./messaging-isolation-legacy.json', import.meta.url), 'utf8'));
+// Excepción acotada para el puente proxy del plugin oficial de Mensajería (#398, #400, #401):
+// solo `platform-client/src/messaging-proxy.ts` puede enrutar `/v1/messaging/*` y `/v1/agents/*`.
+const pluginProxyAllowlist = new Set(['packages/platform-client/src/messaging-proxy.ts']);
 const forbidden = /(?:\/v1\/(?:bff|messaging|agents|inventory|knowledge)(?:\b|\/))|(?:["'`]messaging\/)|\/api\/(?:inbox|messaging|marketing|contacts|channels|agents|http_tools|account_variables|credits)(?:\b|\/)|danil-bff|agents_bff_fetch|["'`][^"'`]*attention\/(?:src\/)?|packages\/attention|@terminus\/attention|(?:web|features)\/attention|capabilities\(\)\.inbox|openInbox|openBroadcasts/;
 const violations = [];
 const retained = [];
@@ -17,6 +20,7 @@ for (const [dir, base, prefix] of [
   for (const file of walkFiles(dir, ['.ts', '.tsx', '.rs', '.mjs', '.js'])) {
     const name = prefix + relative(base, file).split(sep).join('/');
     if (/(?:^|\/)(?:tests?|node_modules)\//.test(name) || /\.test\.[cm]?[jt]sx?$/.test(name) || /(?:^|\/)tests\.rs$/.test(name)) continue;
+    if (pluginProxyAllowlist.has(name)) continue;
     const source = readFileSync(file, 'utf8');
     if (!name.startsWith('src/web/attention/') && !forbidden.test(source)) continue;
     const digest = createHash('sha256').update(source).digest('hex');

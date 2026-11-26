@@ -13,6 +13,9 @@ import {
 import { asFailure, type Failure, FailureNote } from "../../../../ui/src/Failure";
 import DrawioMcpCanvas from "./DrawioMcpCanvas";
 import ExcalidrawMcpCanvas from "./ExcalidrawMcpCanvas";
+import MessagingConnectCard from "./MessagingConnectCard";
+import MessagingMcpCard from "./MessagingMcpCard";
+import { isMessagingConnectCall, parseMessagingCardTarget } from "../model/messagingMcpApp";
 import { PROXY } from "../model/mcpAppProxy";
 import type { McpAppCall } from "../model/transcript";
 import { Pressable } from "../../../../ui/src/Pressable";
@@ -28,6 +31,14 @@ function esDrawio(v: AppView) {
 }
 
 export default function McpAppView(props: { call: McpAppCall }) {
+  if (isMessagingConnectCall(props.call)) {
+    return <MessagingConnectCard call={props.call} />;
+  }
+  const cardTarget = parseMessagingCardTarget(props.call);
+  if (cardTarget) {
+    return <MessagingMcpCard target={cardTarget} />;
+  }
+
   let frame: HTMLIFrameElement | undefined;
   let bridge: AppBridge | undefined;
   let disposed = false;
