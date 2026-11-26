@@ -5,12 +5,17 @@
  */
 import type { AccountWorkspace, Answer, Computer } from "@terminus/computers";
 import type { EdgeControlPlane, EdgeWorkspace } from "./edge.ts";
+import type { WorkspaceSpaceCatalog } from "./edge-spaces.ts";
 import type { RelayAuth, Waker } from "./hosts.ts";
 
 export type ControlPlane = {
   computers(): Promise<Answer<Computer[]>>;
   /** El registro de workspaces de la cuenta; `null` si este plano de control no lo dice. */
   workspaces(): Promise<Answer<AccountWorkspace[] | EdgeWorkspace[]> | null>;
+  /** Catálogo de espacios de un workspace por `account_id`; opcional según el plano de control. */
+  workspaceSpaces?: (accountWorkspaceId: string) => Promise<WorkspaceSpaceCatalog | null>;
+  /** Registra el espacio de una tarea recién creada en Workspaces. */
+  assignTaskSpace?: (accountWorkspaceId: string, taskId: string, spaceId: string | null) => Promise<WorkspaceSpaceCatalog | null>;
   wake: Waker;
   /** Con qué abre la flota cada sesión de relay: portador o ticket. */
   relay: RelayAuth;
@@ -33,6 +38,8 @@ export function edgeMachinesPlane(edge: EdgeControlPlane, scope: string | null =
   return {
     computers: () => edge.computers(),
     workspaces: () => edge.workspaces(),
+    workspaceSpaces: (accountWorkspaceId) => edge.workspaceSpaces(accountWorkspaceId),
+    assignTaskSpace: (accountWorkspaceId, taskId, spaceId) => edge.assignTaskSpace(accountWorkspaceId, taskId, spaceId),
     wake: (computer) => edge.wake(computer),
     relay: { endpoint: edge.relayOrigin, admit: (computer) => edge.admit(computer) },
     bearerServices: false,

@@ -1,4 +1,5 @@
 import { RADIUS, TEXT } from "@terminus/design";
+import * as Crypto from "expo-crypto";
 import { AgentAvatar } from "../../../../../ui/AgentAvatar";
 import { SendButton } from "../../../../../ui/SendButton";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -92,7 +93,7 @@ export default function TaskScreen() {
   const { workspace, id } = params;
   const folder = params.folder === "_" ? "" : params.folder;
   const { hostOf, subscribe, setOpenTask, titleOf, registry } = useMachines();
-  const { getToken } = useAccount();
+  const { getToken, plane } = useAccount();
   const accountBackground = registry?.find((w) => w.id === workspace)?.background_url ?? null;
   const host = hostOf(params.host);
   const { snapshot, list: workspaces, reload } = useWorkspaces();
@@ -275,14 +276,19 @@ export default function TaskScreen() {
     setBackground(null);
     if (!host) return;
     let current = true;
-    void chatBackgroundOf(host, workspace, accountBackground, COMPUTERS).then(async (next) => {
-      const token = next.remote ? await getToken().catch(() => null) : null;
+    void chatBackgroundOf(
+      host,
+      workspace,
+      plane.bearerServices ? accountBackground : null,
+      plane.bearerServices ? COMPUTERS : "",
+    ).then(async (next) => {
+      const token = plane.bearerServices && next.remote ? await getToken().catch(() => null) : null;
       if (current) setBackground({ ...next, token });
     });
     return () => {
       current = false;
     };
-  }, [host, workspace, accountBackground, getToken]);
+  }, [host, workspace, accountBackground, getToken, plane.bearerServices]);
 
   // La máquina cambió: encendida, la copia deja paso a lo vivo; apagada, se ve lo último que guardó en el
   // relay (con su aviso). El enlace que se reabre también avisa aquí: se relee por si algo pasó sin verse.
@@ -405,7 +411,7 @@ export default function TaskScreen() {
         send: () =>
           s.shell
             ? runShell(host!, workspace, { folder, session: id, command: s.command, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode })
-            : sendToTask(host!, workspace, folder, id, s),
+            : sendToTask(host!, workspace, folder, id, { ...s, clientMessageId: Crypto.randomUUID() }),
       }),
     );
   };
@@ -722,7 +728,6 @@ export default function TaskScreen() {
             {pending && waking ? <Bubble line={{ key: "pending", kind: "message", role: "user", text: pending, images: [], attachments: [] }} theme={theme} /> : null}
             {wakingNote ? <Text style={{ color: theme.textMuted }}>{wakingNote}</Text> : null}
             {asleepNote ? <Text style={{ color: theme.textMuted }}>{asleepNote}</Text> : null}
-            {note ? <Text style={{ color: theme.textMuted }}>{note}</Text> : null}
           </View>
   );
 
@@ -821,6 +826,7 @@ export default function TaskScreen() {
         </Pressable>
       ) : null}
       <View style={{ display: questions.length && !questionsCollapsed ? "none" : "flex" }}>
+      {note ? <Text style={{ color: theme.error, fontSize: TEXT.ui, paddingHorizontal: 16, paddingBottom: 6 }}>{note}</Text> : null}
       <Composer
         key={transferKey}
         host={host}

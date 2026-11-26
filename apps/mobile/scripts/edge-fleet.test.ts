@@ -310,3 +310,96 @@ test("el plano de control del borde manda el contexto, lee el catálogo y no enc
   assert.deepEqual(await gated.workspaces(), { kind: "error", status: 403, code: "organization_selection_required" });
   assert.equal(required, 2);
 });
+
+test("el ticket con 409 machine_stopped conserva .code para detener bucles hasta un intent con wake", async () => {
+  FakeSocket.all = [];
+  let running = false;
+  let admitAttempts = 0;
+  let wakeAttempts = 0;
+  const request: typeof fetch = async (input, init) => {
+    const r = new Request(input, init);
+    const path = new URL(r.url).pathname;
+    if (path === "/v1/identity/csrf") return Response.json({ csrf_token: "c" });
+    if (path === "/v1/machines/mch_1/tickets") {
+      const payload = JSON.parse((await r.clone().text()) || "{}") as { wake?: boolean };
+      if (payload.wake) {
+        wakeAttempts += 1;
+        running = true;
+        setTimeout(() => FakeSocket.all.at(-1)?.open("online"), 5);
+        return Response.json({ ticket: "t_woke", url: "wss://connect.example/v1/machines/mch_1/session" }, { status: 201 });
+      }
+      admitAttempts += 1;
+      if (!running) {
+        return Response.json({ code: "machine_stopped" }, { status: 409, headers: { "content-type": "application/problem+json" } });
+      }
+      return Response.json({ ticket: `t_${admitAttempts}`, url: "wss://connect.example/v1/machines/mch_1/session", protocol: "danil.machine-session.v1" }, { status: 201 });
+    }
+    return Response.json({ code: "not_found" }, { status: 404, headers: { "content-type": "application/problem+json" } });
+  };
+  const plane = edgeControlPlane({ origin: "https://edge.example", timeoutMs: 1000 }, { fetch: request, relayOrigins: ["wss://connect.example"] });
+  await assert.rejects(() => plane.admit("mch_1"), (error: unknown) => (error as { code?: unknown } | null)?.code === "machine_stopped");
+  admitAttempts = 0;
+
+  const fleet = accountFleet(
+    {
+      endpoint: plane.relayOrigin,
+      admit: (id) => plane.admit(id),
+      wake: (id) => plane.wake(id),
+    },
+    (url, protocols) => new FakeSocket(url, protocols),
+  );
+  try {
+    const [host] = fleet.set([VM]);
+    await sleep(40);
+    assert.equal(admitAttempts, 1, "sin wake, RelaySession frena en el primer 409 machine_stopped");
+    assert.equal(wakeAttempts, 0);
+    const answer = await host.call("send_message", "w1", { session: "s", prompt: "hola" });
+    assert.deepEqual(answer.value, { ok: true });
+    assert.equal(wakeAttempts, 1);
+  } finally {
+    fleet.close();
+  }
+});
+
+test("el catálogo de espacios /v1/workspaces/{id}/spaces lee y asigna tareas con eco y tolerancia a 404", async () => {
+  const echo = { "X-Danil-Session-Applied": "ctx_x", "X-Danil-Session-Applied-Org": "org_x" };
+  let posted: unknown = null;
+  let spacesCalls = 0;
+  const request: typeof fetch = async (input, init) => {
+    const r = new Request(input, init);
+    const path = new URL(r.url).pathname;
+    if (path === "/v1/identity/csrf") return Response.json({ csrf_token: "c" });
+    if (path === "/v1/workspaces/12/spaces") {
+      spacesCalls += 1;
+      if (r.method === "POST") {
+        posted = JSON.parse(await r.text());
+        return Response.json(
+          { version: 3, spaces: [{ id: "sp_1", name: "App", folders: ["f1"] }], order: ["sp_1"], task_spaces: { t1: "sp_1" } },
+          { headers: echo },
+        );
+      }
+      return Response.json(
+        { version: 2, spaces: [{ id: "sp_1", name: "App", folders: ["f1"] }], order: ["sp_1"], task_spaces: {} },
+        { headers: echo },
+      );
+    }
+    if (path === "/v1/workspaces/77/spaces") {
+      return Response.json({ version: 1, spaces: [], order: [] }, { headers: { "X-Danil-Session-Applied": "otro", "X-Danil-Session-Applied-Org": "org_x" } });
+    }
+    return Response.json({ code: "not_found" }, { status: 404, headers: { ...echo, "content-type": "application/problem+json" } });
+  };
+  const plane = edgeControlPlane(
+    { origin: "https://edge.example", timeoutMs: 1000 },
+    { fetch: request, context: () => "ctx_x", organization: () => "org_x" },
+  );
+  assert.equal(await plane.workspaceSpaces("abc"), null, "un id que no es numérico de cuenta no sale al borde");
+  assert.equal(spacesCalls, 0);
+  const read = await plane.workspaceSpaces("12");
+  assert.equal(read?.version, 2);
+  assert.deepEqual(read?.spaces[0].folders, ["f1"]);
+  assert.equal(await plane.workspaceSpaces("99"), null, "un 404 es null tolerante");
+  assert.equal(await plane.workspaceSpaces("77"), null, "un eco distinto se rechaza");
+  const assigned = await plane.assignTaskSpace("12", "t1", "sp_1");
+  assert.deepEqual(posted, { kind: "assign_task", task: "t1", space: "sp_1" });
+  assert.equal(assigned?.task_spaces.t1, "sp_1");
+});
