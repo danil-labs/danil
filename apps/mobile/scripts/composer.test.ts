@@ -7,8 +7,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccountWorkspace } from "@terminus/computers";
-import type { PermissionModeOption } from "@terminus/protocol";
-import { effectiveMode, enterAction, hasSomethingToSend, initialMode } from "../src/lib/composer.ts";
+import type { PermissionModeOption, ProviderInfo } from "@terminus/protocol";
+import { DANIL_CREDITS_MODEL, FREE_ROUTER_MODEL, type Surface } from "@terminus/tasks";
+import { creditsSurfaceOf, effectiveMode, enterAction, hasSomethingToSend, initialMode, resolveProvider, resolveSurfaceModel } from "../src/lib/composer.ts";
 import { workspaceEntries } from "../src/lib/engine.ts";
 
 const label = { key: "x" };
@@ -84,4 +85,43 @@ test("el modo del workspace sale de la máquina que contesta, o del registro de 
   assert.equal(asleep[0].defaultPermissionMode, "auto", "la VM dormida: el del registro");
   const none = workspaceEntries(hosts, { vm: null, mac: [{ id: "w1", name: "Producto" }] }, null);
   assert.equal(none[0].defaultPermissionMode, null);
+});
+
+const PROVIDERS: ProviderInfo[] = [
+  { id: "codex", label: "Codex", available: true, driver: true },
+  { id: "claude", label: "Claude", available: true, driver: true },
+  { id: "opencode", label: "OpenCode", available: true, driver: true },
+];
+
+const SURFACES: Surface[] = [
+  { id: "codex", provider: "codex", label: "Codex", catalogo: "todo", usable: false, marca: "Sin cuenta", porque: null },
+  { id: "danil-credits-claude", provider: "claude", label: "Danil Credits", catalogo: "de_pago", usable: true, marca: null, porque: null },
+  { id: "danil-credits", provider: "opencode", label: "Danil Credits", catalogo: "de_pago", usable: true, marca: null, porque: null },
+  { id: "free-router-opencode", provider: "free-router-opencode", label: "Free Router", catalogo: "gratuitos", usable: true, marca: null, porque: null },
+];
+
+test("elige el proveedor de la primera superficie utilizable antes que un CLI sin cuenta", () => {
+  assert.equal(resolveProvider(null, PROVIDERS, SURFACES), "claude");
+  assert.equal(resolveProvider("codex", PROVIDERS, SURFACES), "codex", "una elección explícita manda");
+  assert.equal(resolveProvider(null, [], SURFACES), "claude", "funciona aunque list_providers todavía no haya llegado");
+  assert.equal(resolveProvider(null, PROVIDERS, []), "codex", "sin superficies cae al primer CLI instalado");
+});
+
+test("completa el modelo canónico de Danil Credits y Free Router y respeta cuentas personales", () => {
+  const creditsClaude = SURFACES[1];
+  const router = SURFACES[3];
+  const personalClaude: Surface = { id: "claude", provider: "claude", label: "Claude", catalogo: "todo", usable: true, marca: null, porque: null };
+
+  assert.equal(resolveSurfaceModel(creditsClaude, null, []), DANIL_CREDITS_MODEL, "Danil Credits nunca manda model null");
+  assert.equal(resolveSurfaceModel(creditsClaude, "claude-sonnet-4-5", []), DANIL_CREDITS_MODEL, "si el modelo no es de Credits, cambia a Equilibrado");
+  assert.equal(resolveSurfaceModel(creditsClaude, "danil-credits/danil/avanzado", []), "danil-credits/danil/avanzado", "conserva otro nivel válido de Credits");
+  assert.equal(resolveSurfaceModel(router, null, []), FREE_ROUTER_MODEL, "Free Router completa su ruta gratuita");
+  assert.equal(resolveSurfaceModel(personalClaude, null, []), null, "una cuenta personal sin modelo deja elegir al CLI");
+  assert.equal(resolveSurfaceModel(personalClaude, DANIL_CREDITS_MODEL, [{ id: "claude-sonnet-4-5" }]), "claude-sonnet-4-5", "al salir de Credits no conserva su modelo");
+});
+
+test("encuentra Danil Credits aunque el proveedor activo sea otro", () => {
+  assert.equal(creditsSurfaceOf(SURFACES, "codex")?.id, "danil-credits-claude");
+  assert.equal(creditsSurfaceOf(SURFACES, "opencode")?.id, "danil-credits");
+  assert.equal(creditsSurfaceOf(SURFACES.map((s) => ({ ...s, usable: false })), "claude"), undefined);
 });

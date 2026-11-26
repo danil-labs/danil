@@ -9,6 +9,7 @@ import { shellCacheMatches } from "../../../../session/src/shellCache";
 import { type ShellSnapshot } from "../../../../session/src/shellCache.ts";
 import { type Space } from "../../../../ui/src/lib/spaces";
 import { isTaskTab } from "../../../../ui/src/lib/tabs";
+import { esProvisional } from "../../../../ui/src/lib/taskDraft";
 import { aplicarTemaDeTerminal } from "../model/terminal-themes";
 import { displayWorkspaceSnapshot, callEngine, requestedWorkspaceSnapshot } from "../../../../engine-client/src/client.ts";
 import { capabilities, isNoMachines } from "../../../../host/src/platform";
@@ -327,6 +328,14 @@ export function createAttachments(deps: AttachmentsDeps) {
     const lista = await pedidas;
     if (generation !== workspaceContext.generation()) return;
     const desk = asentarEscritorio(a.active, lista);
+    // Si la persona ya empezó a mandar una tarea nueva mientras arrancaba, no
+    // sobrescribir su pestaña provisional con la tira guardada.
+    const activaAlArrancar = pestanas.active();
+    if (sessionId() !== null || esProvisional(activaAlArrancar)) {
+      if (a.active !== null && desk) paneles.bindTo(a.active, desk);
+      if (!isNoMachines()) await reconcileActiveTurns();
+      return;
+    }
     const restored = pestanas.load(a.active, desk);
     // El reparto de su espacio vuelve con la tira: la pantalla partida que se
     // dejó al cerrar. La tarea de delante la abre `abrirSesion`, abajo; las

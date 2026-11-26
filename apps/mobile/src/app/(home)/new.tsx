@@ -58,9 +58,10 @@ export default function NewTask() {
   const elsewhere = visible.filter((f) => f.host !== host?.id && f.kind !== "folder" && !here.some((h) => h.id === f.id));
   const folders = [...here, ...elsewhere.filter((f, i) => elsewhere.findIndex((x) => x.id === f.id) === i)];
   const target = folders.find((f) => f.id === folder) ?? folders[0] ?? null;
+  const folderId = target?.id ?? "";
   // El id del workspace en esa máquina: cada motor tiene el suyo.
   const workspace = host ? (current?.members.get(host.id) ?? null) : null;
-  const agents = (snapshot?.agents ?? []).filter((a) => a.places.some((p) => p.host === host?.id && p.folder === target?.id));
+  const agents = (snapshot?.agents ?? []).filter((a) => a.places.some((p) => p.host === host?.id && p.folder === folderId));
   const chosenAgent = agents.some((a) => a.name === agent) ? agent : null;
   const act = host?.canAct();
   const power = host?.power();
@@ -85,7 +86,7 @@ export default function NewTask() {
   const spaceOn = (id: string | undefined) => (id ? (space?.on[id] ?? null) : null);
 
   async function start(s: Submission) {
-    if (!host || !workspace || !target) return false;
+    if (!host || workspace === null) return false;
     setNote(null);
     const wakes = act === "wakes" && power !== "on";
     setWaking(wakes);
@@ -99,9 +100,9 @@ export default function NewTask() {
       if (owner && keeper && keeperWs) spaceId = await shareSpace(keeper, keeperWs, owner[1]).then(() => owner[1], () => null);
       let baseRef = branch;
       let unwrapSnapshot = false;
-      const from = target.host !== host.id ? hostsOfCurrent.find((h) => h.id === target.host) : undefined;
+      const from = target && target.host !== host.id ? hostsOfCurrent.find((h) => h.id === target.host) : undefined;
       const fromWorkspace = from ? (current?.members.get(from.id) ?? null) : null;
-      if (from && fromWorkspace && from.power() === "on" && !s.shell) {
+      if (target && from && fromWorkspace && from.power() === "on" && !s.shell) {
         setNote(t("new.carrying", { from: from.label, to: host.label }));
         const carried = await carryForNewTask({
           source: { host: from, workspace: fromWorkspace },
@@ -118,10 +119,10 @@ export default function NewTask() {
         setNote(null);
       }
       const id = s.shell
-        ? (await runShell(host, workspace, { folder: target.id, session: null, command: s.command, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode, space: spaceId, agent: chosenAgent, baseRef })).session
-        : await createTask(host, workspace, { folder: target.id, prompt: s.prompt, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode, attachments: s.attachments, agent: chosenAgent, space: spaceId, baseRef, unwrapSnapshot });
+        ? (await runShell(host, workspace, { folder: folderId, session: null, command: s.command, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode, space: spaceId, agent: chosenAgent, baseRef })).session
+        : await createTask(host, workspace, { folder: folderId, prompt: s.prompt, provider: s.provider, model: s.model, effort: s.effort, permissionMode: s.permissionMode, attachments: s.attachments, agent: chosenAgent, space: spaceId, baseRef, unwrapSnapshot });
       rememberMachine(host.id);
-      openTask(host.id, workspace, target.id, id, true);
+      openTask(host.id, workspace, folderId, id, true);
       return true;
     } catch (error) {
       if (error instanceof HostError && error.code === "key_changed") setNote(t("new.carry_key_changed", { name: host.label }));
@@ -204,13 +205,13 @@ export default function NewTask() {
         testID="new-message"
         host={host ?? undefined}
         workspace={workspace}
-        folder={target?.id ?? null}
+        folder={host && workspace !== null ? folderId : null}
         session={null}
         providers={host ? (snapshot?.providers[host.id] ?? []) : []}
         provider={defaults.provider}
         model={defaults.model}
         permissionMode={current?.defaultPermissionMode ?? null}
-        disabled={!host || !target || act === "asleep" || act === "outdated" || waking}
+        disabled={!host || workspace === null || act === "asleep" || act === "outdated" || waking}
         placeholder={t("new.placeholder")}
         header={header}
         onSubmit={start}

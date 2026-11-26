@@ -1,4 +1,16 @@
-import type { PermissionModeOption } from "@terminus/protocol";
+import type { PermissionModeOption, ProviderInfo } from "@terminus/protocol";
+import {
+  canonicalAgentId,
+  DANIL_CREDITS_CLAUDE_SURFACE,
+  DANIL_CREDITS_MODEL,
+  defaultSurfaceModel,
+  FREE_ROUTER_MODEL,
+  isDanilCreditsSurface,
+  isFreeRouterAgent,
+  type Surface,
+  surfaceHas,
+  type SurfaceModel,
+} from "@terminus/tasks";
 
 /**
  * Qué hace una tecla en el cuadro de la web del teléfono, con la regla del
@@ -60,4 +72,75 @@ export function effectiveMode(modes: readonly PermissionModeOption[], chosen: st
   const usable = modes.filter((m) => !m.falta);
   if (start.saved && usable.some((m) => m.id === start.saved)) return start.saved;
   return initialMode(modes, start.workspace ?? null);
+}
+
+/**
+ * Qué proveedor usa el cuadro cuando aún no se eligió uno explícito:
+ * 1. El que ya tiene la tarea o eligió la persona (`explicit`).
+ * 2. El proveedor de la primera superficie utilizable (`list_surfaces`, que
+ *    incluye Danil Credits y el Router gratuito además de las cuentas personales).
+ * 3. El primer CLI instalado (`available && driver`) como respaldo cuando el
+ *    motor aún no entrega superficies.
+ */
+export function resolveProvider(
+  explicit: string | null,
+  providers: readonly Pick<ProviderInfo, "id" | "available" | "driver">[],
+  surfaces: readonly Pick<Surface, "id" | "provider" | "usable">[],
+): string | null {
+  if (explicit) return explicit;
+  const fromSurface = surfaces.find((s) => s.usable)?.provider;
+  if (fromSurface) return fromSurface;
+  return providers.find((p) => p.available && p.driver)?.id ?? null;
+}
+
+/**
+ * Superficie utilizable de Danil Credits disponible en la máquina, aunque el
+ * proveedor actualmente seleccionado sea otro (por ejemplo `codex` sin sesión).
+ * Prefiere la del proveedor actual y, si no, la de Claude sobre la histórica.
+ */
+export function creditsSurfaceOf<S extends Pick<Surface, "id" | "provider" | "usable">>(
+  surfaces: readonly S[],
+  currentProvider: string | null,
+): S | undefined {
+  const usable = surfaces.filter((s) => s.usable && isDanilCreditsSurface(s.id));
+  return (
+    usable.find((s) => s.provider === currentProvider) ??
+    usable.find((s) => s.id === DANIL_CREDITS_CLAUDE_SURFACE) ??
+    usable[0]
+  );
+}
+
+const isRouterSurfaceLike = (s: Pick<Surface, "provider" | "catalogo">) =>
+  s.catalogo === "gratuitos" && isFreeRouterAgent(canonicalAgentId(s.provider, FREE_ROUTER_MODEL));
+
+/**
+ * El modelo que realmente viaja para `surface`:
+ * - Mantiene `model` si sigue perteneciendo a la superficie activa.
+ * - En Danil Credits o Free Router, completa su modelo canónico (`Equilibrado` o
+ *   la ruta gratuita) incluso antes de que termine de cargar el catálogo, para
+ *   no mandar `model: null` y caer en una cuenta personal inexistente.
+ * - En una superficie normal, si el modelo anterior era de otra superficie
+ *   (por ejemplo al cambiar desde Credits o Free Router), elige el predeterminado
+ *   de la superficie o `null` para que el CLI use el suyo.
+ */
+export function resolveSurfaceModel<M extends SurfaceModel>(
+  surface: Surface | undefined,
+  model: string | null,
+  models: readonly M[],
+): string | null {
+  if (!surface) return model;
+  const surfaceModels = models.filter((m) => surfaceHas(surface, m));
+  if (model) {
+    const known =
+      models.find((m) => m.id === model) ??
+      { id: model, gratis: model === FREE_ROUTER_MODEL ? true : undefined };
+    if (surfaceHas(surface, known)) return model;
+  }
+  if (isDanilCreditsSurface(surface.id)) {
+    return defaultSurfaceModel(surface, surfaceModels)?.id ?? DANIL_CREDITS_MODEL;
+  }
+  if (isRouterSurfaceLike(surface)) {
+    return defaultSurfaceModel(surface, surfaceModels)?.id ?? FREE_ROUTER_MODEL;
+  }
+  return model ? (defaultSurfaceModel(surface, surfaceModels)?.id ?? null) : null;
 }

@@ -314,7 +314,13 @@ export function createSend(deps: SendDeps) {
         // Antes de adoptarla: su encabezado lee de dónde vino al pintarse.
         if (llevado) carryModule()?.adoptOrigin(claveBorrador, id);
         if (!abierta) adoptarNacida(id, { provisional, proyecto, titulo: tituloProvisional(m.text), claveBorrador });
-        if (!finishedTurns.has(id)) marcarViva(id);
+        if (!finishedTurns.has(id)) {
+          // Protege el turno recién aceptado hasta que `started` o `list_active_turns`
+          // lo confirme; sin esto, `reconcileActiveTurns()` al salir de `enviar` lo
+          // asentaba antes de tiempo en máquinas lentas o remotas.
+          pendingStarts.set(id, start);
+          marcarViva(id);
+        }
         if (!abierta) { threads.finishActivity(""); setArrancando(false); }
         // Las fuentes de este mensaje salen del borrador; las de otro
         // que siga esperando, no. Va por id: da igual qué se esté mirando.
@@ -429,7 +435,7 @@ export function createSend(deps: SendDeps) {
       if (respuestas) throw e;
       return false;
     } finally {
-      if (abierta && pendingStarts.get(abierta) === start) pendingStarts.delete(abierta);
+      if (!enviado && abierta && pendingStarts.get(abierta) === start) pendingStarts.delete(abierta);
       void reconcileActiveTurns();
     }
   }

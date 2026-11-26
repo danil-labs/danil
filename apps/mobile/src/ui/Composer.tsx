@@ -12,7 +12,7 @@ import {
   type SlashMenu,
 } from "@terminus/protocol";
 import { replaceSlash, slashAt } from "@terminus/chat";
-import { canonicalAgentId, creditsBalanceState, DANIL_CREDITS_MODEL, danilServiceOf, defaultSurfaceModel, FREE_ROUTER_MODEL, isDanilCreditsModel, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, previewLabel, type CreditsBalanceState, type RouterOfferState, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
+import { canonicalAgentId, creditsBalanceState, DANIL_CREDITS_MODEL, danilServiceOf, FREE_ROUTER_MODEL, isDanilCreditsModel, isFreeRouterAgent, menuSurfaces, modelName, modelPresentation, previewLabel, type CreditsBalanceState, type RouterOfferState, type Surface, surfaceHas, surfaceOf } from "@terminus/tasks";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
@@ -36,7 +36,7 @@ import {
   usableProviders,
 } from "../lib/engine";
 import type { Host } from "../lib/hosts";
-import { effectiveMode, enterAction, hasSomethingToSend } from "../lib/composer";
+import { creditsSurfaceOf, effectiveMode, enterAction, hasSomethingToSend, resolveProvider, resolveSurfaceModel } from "../lib/composer";
 import { promote, type Queued, queueMemory } from "../lib/steer";
 import { lang, phrase, t, w } from "../lib/i18n";
 import { modelLabel, surfacePresentation, selectedModelMark } from "../lib/model-presentation";
@@ -298,7 +298,7 @@ export function Composer({
   useEffect(() => setModel(initialModel), [initialModel]);
 
   const usable = usableProviders(providers);
-  const current = provider ?? usable[0]?.id ?? null;
+  const current = resolveProvider(provider, providers, surfaces);
   // Cambiar de CLI es de una tarea abierta; en una nueva se elige sin confirmar.
   const locked = providerLocked || (Boolean(session) && !canHandoff);
   const providerLabel = (id: string | null) => (id ? providers.find((p) => p.id === id)?.label ?? id : "");
@@ -394,21 +394,26 @@ export function Composer({
 
   // Solo parte el catálogo un agente con más de una superficie; los demás enseñan todo.
   const ownSurfaces = surfaces.filter((s) => s.provider === current);
-  const activeSurface = ownSurfaces.length > 1 ? ownSurfaces.find((s) => s.id === surface) : undefined;
-  const menu = menuSurfaces(surfaces, surface);
+  const resolvedSurfaceId = current
+    ? surfaceOf(surfaces, current, model ?? "", models?.models ?? [], surface)
+    : surface;
+  const activeSurface = ownSurfaces.length > 1 ? ownSurfaces.find((s) => s.id === resolvedSurfaceId) : undefined;
+  const menu = menuSurfaces(surfaces, resolvedSurfaceId);
   const surfaceModels = models?.models.filter((m) => surfaceHas(activeSurface, m)) ?? [];
-  const chosen = models?.models.find((m) => m.id === model) ?? null;
-  const selectedSurface = ownSurfaces.find((s) => s.id === surface) ?? (ownSurfaces.length === 1 ? ownSurfaces[0] : undefined);
-  const selectedMark = selectedModelMark(current, model, selectedSurface);
-  const selectedProviderLabel = isDanilCreditsModel(model) ? t("services.credits") : (selectedSurface ? surfacePresentation(selectedSurface, { free: t("composer.free_models"), credits: t("services.credits") }).label : providerLabel(current));
+  const selectedSurface = ownSurfaces.find((s) => s.id === resolvedSurfaceId) ?? (ownSurfaces.length === 1 ? ownSurfaces[0] : undefined);
+  const sentModel = resolveSurfaceModel(selectedSurface, model, models?.models ?? []);
+  const chosen = models?.models.find((m) => m.id === sentModel) ?? null;
+  const selectedMark = selectedModelMark(current, sentModel, selectedSurface);
+  const selectedProviderLabel = isDanilCreditsModel(sentModel) ? t("services.credits") : (selectedSurface ? surfacePresentation(selectedSurface, { free: t("composer.free_models"), credits: t("services.credits") }).label : providerLabel(current));
   const serviceLabels = { credits: t("services.label"), router: t("composer.free_models") };
-  const modelText = model ? modelLabel(model, serviceLabels, models) : previewLabel(lang, "default_model");
+  const modelText = sentModel ? modelLabel(sentModel, serviceLabels, models) : previewLabel(lang, "default_model");
   // El Router y Danil Credits viven en la sección Danil: ni su superficie ni sus modelos se repiten abajo.
   const isRouterSurface = (s: Surface<Frase>) => s.catalogo === "gratuitos" && isFreeRouterAgent(canonicalAgentId(s.provider, FREE_ROUTER_MODEL));
   // Solo el agente propio del Router; `opencode-zen` sigue siendo OpenCode de pago aunque también sirva el Router.
   const isRouterProvider = (id: string) => isFreeRouterAgent(id);
   const routerSurface = surfaces.find((s) => isRouterSurface(s) && s.usable);
   const routerProvider = routerSurface?.provider ?? usable.find((p) => isRouterProvider(p.id))?.id ?? null;
+  const creditsSurface = creditsSurfaceOf(surfaces, current);
   const efforts = chosen?.efforts ?? models?.models[0]?.efforts ?? [];
   // Lo que se ve es lo que se manda: el elegido, o el de la tarea o el workspace, o el del proveedor.
   const sentMode = effectiveMode(modes, mode, { saved: savedPermissionMode, workspace: permissionMode });
@@ -417,7 +422,7 @@ export function Composer({
   const ready = Boolean(host && workspace !== null && folder !== null && current) && !disabled && !busy && !uploading;
   const hasText = Boolean(text.trim()) || attachments.some((a) => a.path);
   useEffect(() => {
-    if (choice) choice.current = current ? { provider: current, model, effort, permissionMode: sentMode } : null;
+    if (choice) choice.current = current ? { provider: current, model: sentModel, effort, permissionMode: sentMode } : null;
   });
 
   /** Elegir una superficie: el agente que la sirve y un modelo de su mitad del catálogo. */
@@ -429,14 +434,14 @@ export function Composer({
       return;
     }
     if (s.provider !== current) {
-      chooseProvider(s.provider);
+      chooseProvider(s.provider, resolveSurfaceModel(s, null, []));
       setSurface(s.id);
       return;
     }
     setSurface(s.id);
-    if (chosen && !surfaceHas(s, chosen)) {
-      const first = defaultSurfaceModel(s, models?.models.filter((m) => surfaceHas(s, m)) ?? []) ?? null;
-      setModel(first?.id ?? null);
+    const nextModel = resolveSurfaceModel(s, model, models?.models ?? []);
+    if (nextModel !== model) {
+      setModel(nextModel);
       setEffort(null);
     }
   }
@@ -450,7 +455,8 @@ export function Composer({
       // El traspaso de una tarea abierta se confirma antes; el modelo elegido se aplica al confirmar.
       if (session && canHandoff && provider !== initialProvider) return;
     }
-    if (provider === routerSurface?.provider) setSurface(routerSurface.id);
+    if (provider === routerSurface?.provider && id === FREE_ROUTER_MODEL) setSurface(routerSurface.id);
+    else if (isDanilCreditsModel(id) && creditsSurface?.provider === provider) setSurface(creditsSurface.id);
     setModel(id);
     setEffort(null);
     picked.current = id;
@@ -461,9 +467,9 @@ export function Composer({
   async function submit(body: string, paths: string[]) {
     if (!current) return false;
     if (body.startsWith("!")) {
-      return onSubmit({ shell: true, command: body.slice(1).trim(), provider: current, model, effort, permissionMode: sentMode });
+      return onSubmit({ shell: true, command: body.slice(1).trim(), provider: current, model: sentModel, effort, permissionMode: sentMode });
     }
-    return onSubmit({ shell: false, prompt: body, provider: current, model, effort, permissionMode: sentMode, attachments: paths });
+    return onSubmit({ shell: false, prompt: body, provider: current, model: sentModel, effort, permissionMode: sentMode, attachments: paths });
   }
 
   async function injectQueued(item: Queued) {
@@ -608,9 +614,21 @@ export function Composer({
 
   // En la web, react-native-web deja pasar el evento del navegador: Shift+Enter sigue su curso.
   function onWebKey(e: TextInputKeyPressEvent) {
-    const key = e as unknown as { key: string; shiftKey?: boolean; nativeEvent: { isComposing?: boolean; keyCode?: number }; preventDefault: () => void };
-    if (enterAction({ key: key.key, shiftKey: key.shiftKey, isComposing: key.nativeEvent.isComposing, keyCode: key.nativeEvent.keyCode }) !== "send") return;
-    key.preventDefault();
+    const key = e as unknown as {
+      key?: string;
+      shiftKey?: boolean;
+      nativeEvent?: { key?: string; shiftKey?: boolean; isComposing?: boolean; keyCode?: number };
+      preventDefault?: () => void;
+    };
+    if (
+      enterAction({
+        key: key.key ?? key.nativeEvent?.key ?? "",
+        shiftKey: key.shiftKey ?? key.nativeEvent?.shiftKey,
+        isComposing: key.nativeEvent?.isComposing,
+        keyCode: key.nativeEvent?.keyCode,
+      }) !== "send"
+    ) return;
+    key.preventDefault?.();
     void send();
   }
 
@@ -842,9 +860,11 @@ export function Composer({
           const routerState: RouterOfferState = host?.power() === "on" ? freeRouterState(routerRows) : "unavailable";
           const shownModels = surfaceModels.filter((m) => !danilServiceOf(m.id) && matches(query, m.label, m.id, modelName(m.id, models)));
           const showServices = matches(query, t("services.label"), t("services.credits"), t("composer.free_models"), w("surfaces.label.free"));
-          // Credits se elige solo si el motor de esta máquina anuncia algún nivel en el catálogo abierto; su saldo no llega al teléfono.
+          // Credits se elige si la máquina ofrece una superficie utilizable de Danil Credits o niveles en el catálogo abierto.
           const creditsOption = models?.models.find((m) => m.id === DANIL_CREDITS_MODEL) ?? models?.models.find((m) => isDanilCreditsModel(m.id));
-          const creditsReady = !disabled && !!creditsOption;
+          const creditsProvider = creditsSurface?.provider ?? (creditsOption ? current : null);
+          const creditsModel = (creditsProvider === current ? creditsOption?.id : undefined) ?? DANIL_CREDITS_MODEL;
+          const creditsReady = !disabled && !!creditsProvider && !(locked && creditsProvider !== current);
           const routerReady = !disabled && routerState === "ready" && !!routerProvider && !(locked && routerProvider !== current);
           return (
             <>
@@ -876,7 +896,7 @@ export function Composer({
                     left={presentation.mark ? <BrandMark id={presentation.mark} size={17} color={theme.text} /> : undefined}
                     label={presentation.label}
                     detail={s.usable ? null : whyNot(s)}
-                    selected={p.id === current && s.id === surface}
+                    selected={p.id === current && s.id === resolvedSurfaceId}
                     disabled={(locked && p.id !== current) || (!s.usable && !onAccounts)}
                     onPress={() => chooseSurface(s)}
                   />
@@ -886,11 +906,11 @@ export function Composer({
               {showServices ? (
                 <DanilServices
                   balance={creditsBalanceState(null)}
-                  credits={{ ready: creditsReady, selected: isDanilCreditsModel(model), onUse: () => pickService(creditsOption?.id ?? DANIL_CREDITS_MODEL, current) }}
+                  credits={{ ready: creditsReady, selected: isDanilCreditsModel(sentModel), onUse: () => pickService(creditsModel, creditsProvider) }}
                   router={{
                     state: routerState,
                     ready: routerReady,
-                    selected: model === FREE_ROUTER_MODEL,
+                    selected: sentModel === FREE_ROUTER_MODEL,
                     onUse: () => pickService(FREE_ROUTER_MODEL, routerProvider),
                     onActivate: () => {
                       const row = routerRows?.find((r) => isFreeRouterAgent(canonicalAgentId(r.provider, "danil-free/")));
@@ -911,7 +931,7 @@ export function Composer({
                   label={modelPresentation(m.id, m.label || modelName(m.id, models)).label}
                   tag={modelPresentation(m.id, m.label).creator}
                   detail={m.note ? phrase(m.note) : null}
-                  selected={model === m.id}
+                  selected={sentModel === m.id}
                   onPress={() => {
                     const level = effort && m.efforts.includes(effort) ? effort : null;
                     setModel(m.id);

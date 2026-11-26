@@ -23,7 +23,7 @@ import type { createThreadStream } from "./thread-stream.ts";
 /** Lo que el bloque usaba del cuerpo de App. */
 export type HandoverDeps = { agent: Accessor<string>; avisar: (sesion: string) => (e: unknown) => void; borrador: () => Draft; busy: ReturnType<typeof createThreadStream>["busy"];
   claveAbierta: () => string; composer: ComposerPort; deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined;
-  draftMachine: () => string | null; drafts: DraftsPort; esChatDeAgente: (s: { chat_de_agente?: boolean; }) => boolean; filaDe: (id: string) => SessionRow | undefined;
+  draftMachine: () => string | null; drafts: DraftsPort; esChatDeAgente: (s: { chat_de_agente?: boolean; }) => boolean; escritorio?: Accessor<string | null>; filaDe: (id: string) => SessionRow | undefined;
   machines: MachinesPort; model: Accessor<string>; modo: Accessor<string>; mudarPestana: ReturnType<typeof createPanelDeChat>["mudarPestana"]; notifyProfiles: () => void;
   olvidarPestana: ReturnType<typeof createPanelDeChat>["olvidarPestana"];
   opcionesDeLaTarea: (id: string | null | undefined, workspace: string | null | undefined) => { headers: { [k: string]: string; }; }; paneles: ReturnType<typeof createPanels>;
@@ -36,7 +36,7 @@ export type HandoverDeps = { agent: Accessor<string>; avisar: (sesion: string) =
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 4591–4883, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createHandover(deps: HandoverDeps) {
-  const { agent, avisar, borrador, busy, claveAbierta, composer, deLaTarea, draftMachine, drafts, esChatDeAgente, filaDe, machines, model, modo, notifyProfiles, opcionesDeLaTarea, paneles, permissions, pestanas, project, reatarVistaPrevia, responderPermiso, sessionId, setDraftBases, setError, setNaciendo, setTraspasoPendiente, threads, traspasoPendiente, traspasos, vivas, workspaceActivo } = deps;
+  const { agent, avisar, borrador, busy, claveAbierta, composer, deLaTarea, draftMachine, drafts, esChatDeAgente, escritorio, filaDe, machines, model, modo, notifyProfiles, opcionesDeLaTarea, paneles, permissions, pestanas, project, reatarVistaPrevia, responderPermiso, sessionId, setDraftBases, setError, setNaciendo, setTraspasoPendiente, threads, traspasoPendiente, traspasos, vivas, workspaceActivo } = deps;
   const mudarPestana: HandoverDeps["mudarPestana"] = (...a: Parameters<HandoverDeps["mudarPestana"]>) => deps.mudarPestana(...a);
   const olvidarPestana: HandoverDeps["olvidarPestana"] = (...a: Parameters<HandoverDeps["olvidarPestana"]>) => deps.olvidarPestana(...a);
   /**
@@ -274,6 +274,7 @@ export function createHandover(deps: HandoverDeps) {
     // ventana no lleva máquina, igual que sus filas.
     const destino = draftMachine() ?? capabilities().remoteCreate?.(workspaceActivo())?.machine ?? null;
     const machine = destino && !isOwnMachine(machines().find((m) => m.id === destino)) ? destino : undefined;
+    const space = escritorio?.() ?? null;
     // Fila y pestaña en el mismo lote: al montarse la celda provisional ya
     // encuentra su fila (`turns: 1`) y nunca entra como tarea sin empezar.
     batch(() => {
@@ -298,6 +299,7 @@ export function createHandover(deps: HandoverDeps) {
             parent_agent: null,
             chat_de_agente: false,
             ...(machine ? { machine } : {}),
+            ...(space ? { space } : {}),
           },
         },
       ]);
@@ -308,6 +310,8 @@ export function createHandover(deps: HandoverDeps) {
       pestanas.ensure({ id: provisional, project: proyecto, titulo });
       pestanas.pin(provisional);
       pestanas.activate(provisional);
+      paneles.sync(pestanas.open().map((p) => p.id));
+      paneles.activate(provisional);
     });
     return provisional;
   }

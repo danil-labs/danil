@@ -177,6 +177,7 @@ export function createWindows(deps: WindowsDeps) {
     const id = paneles.activeTabAt(sitio);
     const p = id ? pestanas.open().find((x) => x.id === id) : null;
     if (p) void activarPestana(p);
+    else if (sessionId() !== null) irAlBlanco(carpetaDelEscritorio(project()));
   }
 
   // Separar conserva la vista y deja disponible su celda de origen.
