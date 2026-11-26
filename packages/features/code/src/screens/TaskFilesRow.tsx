@@ -6,10 +6,18 @@ import { cn } from "../../../../ui/src/lib/utils";
 
 /** The main chat keeps at least 320 px when split side-by-side with a right-hand panel. */
 const CHAT_ROOM = 320;
+/** Compact panels (search, subtasks list, usage) keep at least 300 px so their headers never cramp. */
+const COMPACT_PANEL_MIN = 300;
 
 /** Width of the docked right pane (shared by the animated spacer and the right panel wrapper). */
 export const taskFilesWidth = (splitWidth: boolean, fraction: number, treePx: number) =>
   `min(${splitWidth ? `${fraction * 100}%` : `${treePx}px`}, calc(100% - ${CHAT_ROOM}px))`;
+
+/** Width of any docked right panel, giving compact panels (search/subtasks/usage) at least 300 px. */
+export const taskSideWidth = (layout: TaskSideLayout, splitWidth: boolean, fraction: number, treePx: number) => {
+  const px = layout === "panel-split" ? Math.max(COMPACT_PANEL_MIN, treePx) : treePx;
+  return taskFilesWidth(splitWidth, fraction, px);
+};
 
 /** Shared fluid push-drawer easing curve so the chat spacer and side panel always move in lockstep. */
 export const PANEL_SLIDE_TRANSITION = "transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none";
@@ -38,7 +46,7 @@ export default function TaskFilesRow(props: {
   const splitting = () => props.layout === "files-split" || props.layout === "subtask-split" || props.layout === "panel-split";
   const replacing = () => props.layout === "files-expanded" || props.layout === "subtask-full" || props.layout === "panel-full";
   const spacerStyle = () => ({
-    width: splitting() ? taskFilesWidth(props.splitWidth, props.width, props.treeWidth) : "0px",
+    width: splitting() ? taskSideWidth(props.layout, props.splitWidth, props.width, props.treeWidth) : "0px",
   });
   const move = (clientX: number) => {
     const box = row?.getBoundingClientRect();
