@@ -22,7 +22,9 @@ export function crearAncla({ cajaActual, dentroActual, scrollTop, ponScrollTop, 
    * ancla solo devuelve lo que encoge por encima de lo que se ve. `y` es su
    * altura dentro del contenido, que no cambia con `scrollTop`.
    */
-  let ancla: { el: Element; desfase: number; y: number; i: number } | undefined;
+  let ancla: { el: Element; desfase: number; y: number; i: number; st: number } | undefined;
+
+  const esEspaciador = (el: Element) => el.getAttribute?.("aria-hidden") === "true";
 
   /**
    * Busca desde el último hijo que sirvió y camina hacia donde haga falta.
@@ -47,6 +49,12 @@ export function crearAncla({ cajaActual, dentroActual, scrollTop, ponScrollTop, 
     while (i > 0 && hijos[i]!.getBoundingClientRect().top > arriba) i--;
     // Y hacia abajo mientras acabe por encima: ese ya no se ve.
     while (i < hijos.length - 1 && hijos[i]!.getBoundingClientRect().bottom <= arriba) i++;
+    // Nunca anclar al espaciador decorativo del composer (`aria-hidden="true"`).
+    while (i > 0 && esEspaciador(hijos[i]!)) i--;
+    if (esEspaciador(hijos[i]!)) {
+      ancla = undefined;
+      return;
+    }
     const el = hijos[i]!;
     const rect = el.getBoundingClientRect();
     // Si incluso el primer hijo montado queda por debajo de la vista (p. ej. al
@@ -56,8 +64,9 @@ export function crearAncla({ cajaActual, dentroActual, scrollTop, ponScrollTop, 
       ancla = undefined;
       return;
     }
+    const st = scrollTop();
     const desfase = rect.top - arriba;
-    ancla = { el, desfase, y: desfase + scrollTop(), i };
+    ancla = { el, desfase, y: desfase + st, i, st };
   };
 
   /** Cuánto encogió el contenido por encima del ancla desde que se tomó. */
@@ -82,15 +91,27 @@ export function crearAncla({ cajaActual, dentroActual, scrollTop, ponScrollTop, 
     const caja = cajaActual();
     if (!ancla || !caja || !ancla.el.isConnected) return;
     const arriba = caja.getBoundingClientRect().top;
+    const st = scrollTop();
     const desfase = ancla.el.getBoundingClientRect().top - arriba;
-    const yAhora = desfase + scrollTop();
-    const movido = modo === "vista" ? desfase - ancla.desfase : yAhora - ancla.y;
+    const yAhora = desfase + st;
+    let movido: number;
+    if (modo === "vista") {
+      movido = desfase - ancla.desfase;
+    } else {
+      // Si al encoger el contenido el navegador recortó `scrollTop` al nuevo `maxScroll`,
+      // ese descenso es recorte del navegador y no un gesto de la persona: descontarlo
+      // evita restarlo dos veces y disparar la vista hacia arriba.
+      const maxScroll = Math.max(0, caja.scrollHeight - caja.clientHeight);
+      const recortado = st >= maxScroll - 1.5 && ancla.st > st ? ancla.st - st : 0;
+      movido = yAhora - ancla.y + recortado;
+    }
     // El medio píxel es el redondeo de `scrollTop`: corregir por menos de eso
     // es escribir un valor que el navegador ya tiene.
-    if (Math.abs(movido) >= 0.5) ponScrollTop(scrollTop() + movido);
+    if (Math.abs(movido) >= 0.5) ponScrollTop(st + movido);
     if (modo === "contenido") {
+      const stFinal = scrollTop();
       const nuevoDesfase = ancla.el.getBoundingClientRect().top - arriba;
-      ancla = { ...ancla, desfase: nuevoDesfase, y: nuevoDesfase + scrollTop() };
+      ancla = { ...ancla, desfase: nuevoDesfase, y: nuevoDesfase + stFinal, st: stFinal };
     }
   };
 

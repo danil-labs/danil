@@ -1,7 +1,6 @@
 import { createVirtualizer, defaultRangeExtractor, observeElementRect, type Range } from "@tanstack/solid-virtual";
 import { batch, createEffect, createMemo, createSignal, mapArray, onCleanup, onMount, untrack, type Accessor, type JSX } from "solid-js";
 import { ThreadRowContext } from "../model/threadRow";
-import { shouldAlignVirtualOffset } from "../model/threadRows";
 
 const THREAD_GAP = 6;
 // En hilos cortos/medios (<= 80 bloques) se montan todas las filas para que el scroll sea
@@ -89,11 +88,11 @@ export function VirtualThread(props: {
       };
     },
   });
-  // `scrollToFn` es no-op, pero alinea el `scrollOffset` interno de TanStack cuando
-  // cambia el alto de una fila por encima de la vista: sin esto, `calculateRange()`
-  // lee el offset viejo tras `resizeItem` y monta filas hacia arriba en cascada.
-  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = (item, _delta, instance) =>
-    shouldAlignVirtualOffset(item.end, instance.scrollOffset);
+  // `seguirElFondo` es el único dueño de compensar `scrollTop` y la línea de `settled()`
+  // ya alinea `virtualizer.scrollOffset` con `scroller.scrollTop`: dejar que TanStack
+  // ajuste `scrollOffset` otra vez en `resizeItem` aplicaba `delta` dos veces y disparaba
+  // cascadas hacia arriba.
+  virtualizer.shouldAdjustScrollPositionOnItemSizeChange = () => false;
 
   const placed = createMemo<Placed[]>(() => {
     const items = virtualizer.getVirtualItems();
@@ -223,6 +222,7 @@ export function VirtualThread(props: {
       // `settled()` antes de medir filas recién montadas (el evento `scroll` llega después).
       if (virtualizer.scrollOffset !== null) {
         virtualizer.scrollOffset = props.scroller.scrollTop;
+        (virtualizer as unknown as { pendingWrite?: unknown }).pendingWrite = null;
       }
     }
     if (added.length > 0) {

@@ -936,3 +936,52 @@ test("subir pocos píxeles con barra/inercia cerca del final y un encogimiento p
   await cuadros(2);
   assert.equal(el.scrollTop, donde, "no debe volver a arrastrar al fondo tras un encogimiento pequeño");
 });
+
+test("al encoger por encima cerca del fondo no resta dos veces el recorte del navegador", async () => {
+  const { el } = contenedorFalso(400, 4000);
+  const p = createRoot(() => seguirElFondo());
+  const c = contenidoFalso(el, Array(20).fill(200));
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 4000);
+  await cuadros(3);
+
+  // Suelto cerca del fondo: leyendo bloque 16 (y=3200, top=-100) a 300 px del final (maxScroll=3600).
+  el.scrollTop = 3300;
+  await cuadros(1);
+  assert.equal(c.children[16]!.getBoundingClientRect().top, -100);
+
+  // Encoge -1000 px por encima del ancla (p. ej. al reemplazar filas/estimaciones arriba):
+  // el nuevo maxScroll baja a 2600 y el navegador recorta `scrollTop` de 3300 a 2600 (-700 px).
+  c.crecer(0, -1000);
+  el.scrollHeight -= 1000;
+  el.scrollTop = Math.min(el.scrollTop, el.scrollHeight - el.clientHeight); // clamp real del navegador -> 2600
+
+  // `sostener()` debe compensar solo los -300 px restantes (2600 -> 2300), nunca -1000 (1600).
+  p.sostener();
+  assert.equal(el.scrollTop, 2300, "no debe teletransportar hacia arriba restando dos veces el clamp");
+  assert.equal(c.children[16]!.getBoundingClientRect().top, -100, "el bloque leído conserva su posición exacta");
+});
+
+test("tomarAncla ignora el espaciador decorativo aria-hidden al final del hilo", async () => {
+  const { el } = contenedorFalso(400, 2200);
+  const p = createRoot(() => seguirElFondo());
+  const c = contenidoFalso(el, Array(10).fill(200));
+  const espaciador = {
+    isConnected: true,
+    getAttribute: (name: string) => (name === "aria-hidden" ? "true" : null),
+    getBoundingClientRect: () => ({ top: 2000 - el.scrollTop, bottom: 2200 - el.scrollTop }),
+  };
+  c.children.push(espaciador as unknown as (typeof c.children)[number]);
+  p.contenedor(el as unknown as HTMLElement);
+  p.contenido(c as unknown as HTMLElement);
+  disparar!(c, 2200);
+  await cuadros(3);
+
+  // Suelto al final (donde el último bloque real acaba en y=2000 y el espaciador ocupa 2000..2200).
+  el.scrollTop = 1750;
+  await cuadros(1);
+  const lectura = p.lectura();
+  assert.ok(lectura, "debe tener ancla de lectura");
+  assert.notEqual(lectura.el, espaciador, "no debe anclarse al espaciador aria-hidden");
+});
