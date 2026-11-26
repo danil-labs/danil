@@ -144,6 +144,14 @@ export function createChatEvents(deps: ChatEventsDeps) {
         return;
       }
 
+      // Tras un Detener optimista el frente ya cerró el turno; descarta deltas/herramientas/reintentos
+      // rezagados del turno moribundo hasta que llegue el `done` del backend.
+      const wsKey = workspace ?? workspaceActivo();
+      const stoppedOptimistically =
+        handoff.view(conversationScope(session)).stopping &&
+        !(wsKey && liveThreads.has(liveThreadKey(wsKey, session)));
+      if (stoppedOptimistically && kind !== "done" && kind !== "permission_resolved") return;
+
       // El CLI está reintentando contra su proveedor. No entra en la
       // transcripción —cinco intentos serían cinco filas permanentes por algo
       // que puede resolverse solo—: enciende el indicador de estado del

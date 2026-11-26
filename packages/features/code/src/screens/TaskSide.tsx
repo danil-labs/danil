@@ -1,103 +1,96 @@
-import { type JSX, Match, Show, Switch, createEffect, onCleanup } from "solid-js";
-import { taskSidePanelKind, type TaskDockMode, type TaskPopoverMode, type TaskSideLayout } from "../../../../ui/src/lib/taskFiles";
+import { type Accessor, type JSX, Match, Show, Switch, createEffect, createSignal, onCleanup } from "solid-js";
+import { taskSidePanelKind, type TaskDockMode, type TaskSideLayout, type TaskSideMode } from "../../../../ui/src/lib/taskFiles";
 import { cn } from "../../../../ui/src/lib/utils";
 
+/** Duration in ms matching the CSS push-drawer transition so closing panels fade/slide before unmounting. */
+export const PANEL_SLIDE_MS = 240;
+
 /**
- * Right-side docked panel frame beside the main chat (below the fixed top bar):
- * - Files ("files-split" / "files-expanded"): floating Danil card frame aligned with the composer.
- * - Subtask thread ("subtask-split" / "subtask-full"): full-height vertical split separated by a clean border line.
+ * Keeps the last non-"none" dock rendered while the panel slides closed (`PANEL_SLIDE_MS`),
+ * so close transitions animate out smoothly before unmounting heavy child views (e.g. Subtask chat).
  */
-export function TaskSideShell(props: { dock: TaskDockMode; layout: TaskSideLayout; subtaskSlot: JSX.Element; children: JSX.Element }) {
-  const isSubtask = () => props.dock === "subtask";
-  const sideMode = (): "delegated" | "files" => (isSubtask() ? "delegated" : "files");
-  return (
-    <section
-      data-task-files
-      data-task-side={sideMode()}
-      data-task-panel={taskSidePanelKind(sideMode())}
-      data-task-layout={props.layout}
-      class={cn(
-        "@container relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-surface",
-        isSubtask()
-          ? "border-l border-border"
-          : "rounded-lg border border-border shadow-md",
-      )}
-    >
-      <div class="flex h-full min-h-0 min-w-0 flex-1" classList={{ hidden: props.dock !== "files" }}>
-        {props.children}
-      </div>
-      <Show when={props.dock === "subtask"}>
-        <div class="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {props.subtaskSlot}
-        </div>
-      </Show>
-    </section>
-  );
+export function createDockMotion(dock: Accessor<TaskDockMode>, open: Accessor<boolean>) {
+  const [rendered, setRendered] = createSignal<TaskDockMode>(dock());
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  createEffect(() => {
+    const current = dock();
+    const isOpen = open();
+    clearTimeout(timer);
+    if (isOpen && current !== "none") {
+      setRendered(current);
+      return;
+    }
+    if (rendered() === "none") return;
+    timer = setTimeout(() => setRendered("none"), PANEL_SLIDE_MS);
+  });
+  onCleanup(() => clearTimeout(timer));
+  return rendered;
+}
+
+function sideModeOf(dock: TaskDockMode): TaskSideMode {
+  if (dock === "subtask" || dock === "subtasks") return "delegated";
+  if (dock === "search") return "search";
+  if (dock === "usage") return "usage";
+  return "files";
 }
 
 /**
- * Compact floating popover anchored below the fixed top-right toolbar buttons.
- * Never occupies the full viewport height: sizes to its content up to a scrollable max height.
+ * Unified right-side docked panel frame beside the main chat (below the fixed top bar):
+ * - Files ("files-split" / "files-expanded"): floating Danil card style (`rounded-lg border shadow-md`).
+ * - Subtask thread, Search, and Subtasks list: full-height vertical split separated by `border-l border-border`,
+ *   smoothly pushing the main chat (never overlaying content).
  */
-export function TaskPopoverShell(props: {
-  popover: Exclude<TaskPopoverMode, "none">;
+export function TaskSideShell(props: {
+  dock: TaskDockMode;
+  layout: TaskSideLayout;
   onDismiss?: () => void;
+  subtaskSlot: JSX.Element;
+  searchSlot?: JSX.Element;
+  delegatedSlot?: JSX.Element;
+  usageSlot?: JSX.Element;
   children: JSX.Element;
 }) {
-  let root: HTMLElement | undefined;
-  const mode = () => (props.popover === "subtasks" ? "delegated" : props.popover) as "search" | "usage" | "delegated";
+  const isFiles = () => props.dock === "files";
+  const isFilesExpanded = () => props.layout === "files-expanded";
+  const sideMode = () => sideModeOf(props.dock);
   createEffect(() => {
     const dismiss = props.onDismiss;
-    if (!dismiss || props.popover === "search") return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Element | null;
-      if (!target) return;
-      if (root?.contains(target) || target.closest("[data-task-toolbar]")) return;
-      dismiss();
-    };
+    if (!dismiss || (props.dock !== "subtasks" && props.dock !== "usage")) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.preventDefault();
       dismiss();
     };
-    window.addEventListener("pointerdown", onPointerDown, true);
     window.addEventListener("keydown", onKeyDown);
-    onCleanup(() => {
-      window.removeEventListener("pointerdown", onPointerDown, true);
-      window.removeEventListener("keydown", onKeyDown);
-    });
+    onCleanup(() => window.removeEventListener("keydown", onKeyDown));
   });
   return (
     <section
-      ref={root}
-      data-task-popover={props.popover}
-      data-task-side={mode()}
-      data-task-panel={taskSidePanelKind(mode())}
-      data-task-layout="popover"
-      class="flex max-h-full min-h-0 w-full flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-md"
+      data-task-files
+      data-task-dock={props.dock}
+      data-task-side={sideMode()}
+      data-task-panel={taskSidePanelKind(sideMode())}
+      data-task-layout={props.layout}
+      class={cn(
+        "@container relative flex min-h-0 min-w-0 flex-1 overflow-hidden bg-surface",
+        isFiles()
+          ? cn("mb-3 rounded-lg border border-border shadow-md", isFilesExpanded() ? "mx-2" : "mr-2")
+          : "h-full border-l border-border",
+      )}
     >
-      {props.children}
+      <div class="flex h-full min-h-0 min-w-0 flex-1" classList={{ hidden: props.dock !== "files" }}>
+        {props.children}
+      </div>
+      <Show when={props.dock !== "files" && props.dock !== "none"}>
+        <div class="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <Switch>
+            <Match when={props.dock === "subtask"}>{props.subtaskSlot}</Match>
+            <Match when={props.dock === "search"}>{props.searchSlot}</Match>
+            <Match when={props.dock === "subtasks"}>{props.delegatedSlot}</Match>
+            <Match when={props.dock === "usage"}>{props.usageSlot}</Match>
+          </Switch>
+        </div>
+      </Show>
     </section>
-  );
-}
-
-export function TaskSide(props: {
-  popover: TaskPopoverMode;
-  searchSlot: JSX.Element;
-  usageSlot: JSX.Element;
-  delegatedSlot: JSX.Element;
-}) {
-  return (
-    <Switch>
-      <Match when={props.popover === "search"}>
-        {props.searchSlot}
-      </Match>
-      <Match when={props.popover === "usage"}>
-        {props.usageSlot}
-      </Match>
-      <Match when={props.popover === "subtasks"}>
-        {props.delegatedSlot}
-      </Match>
-    </Switch>
   );
 }
