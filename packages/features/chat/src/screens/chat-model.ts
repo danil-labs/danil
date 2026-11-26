@@ -147,11 +147,6 @@ function esInterrupcion(msg: Msg) {
  * `group` sin nombre respondería a cualquier ancestro y se encenderían las de
  * todo el hilo. El sitio se reserva para que no baile el hilo.
  */
-/** Marcas de laboratorio para comparar tramos reales frente al virtualizador; no son opciones de producto. */
-const HILO_POR_TRAMOS = "terminus.chat.thread-chunks";
-const HILO_VIRTUAL = "terminus.chat.thread-virtual";
-const FILAS_ANTES_DE_PEDIR = 8;
-
 const FILA_DEL_MENSAJE =
   "flex items-center gap-0.5 pt-0.5 opacity-0 transition-opacity group-hover/mensaje:opacity-100 group-focus-within/mensaje:opacity-100";
 /** Cuántas fuentes se llegan a ofrecer de una vez. */
@@ -206,4 +201,4 @@ function claseDeSistema(meta: string | undefined): Clase {
   if (meta === "fin") return "fin";
   return "aviso";
 }
-export { SelectorDeModelo, type Bloque, type Avance, type BloqueDeTrabajo, METRICA_DEL_CAMPO, FUENTE_DE_TERMINAL, archivosDelNavegador, mensajeDe, pasosDe, trabajoDe, fromWork, SIN_MENSAJE, SIN_AVANCE, SOLTAR_LO_LEIDO_MS, ANCHO_DEL_RIEL, mismoRemitente, ESPERA_DEL_RIEL_MS, DESFASE_DEL_SALTO, activitySteps, claveDeTrabajo, claveDeBloque, textoVisible, esInterrupcion, HILO_POR_TRAMOS, HILO_VIRTUAL, FILAS_ANTES_DE_PEDIR, FILA_DEL_MENSAJE, filterMentionSources, textoDeSistema, claseDeSistema };
+export { SelectorDeModelo, type Bloque, type Avance, type BloqueDeTrabajo, METRICA_DEL_CAMPO, FUENTE_DE_TERMINAL, archivosDelNavegador, mensajeDe, pasosDe, trabajoDe, fromWork, SIN_MENSAJE, SIN_AVANCE, SOLTAR_LO_LEIDO_MS, ANCHO_DEL_RIEL, mismoRemitente, ESPERA_DEL_RIEL_MS, DESFASE_DEL_SALTO, activitySteps, claveDeTrabajo, claveDeBloque, textoVisible, esInterrupcion, FILA_DEL_MENSAJE, filterMentionSources, textoDeSistema, claseDeSistema };

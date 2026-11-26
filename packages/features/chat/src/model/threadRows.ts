@@ -51,23 +51,3 @@ export function createBlockKeys() {
     },
   };
 }
-
-const ESTIMATED_LINE = 22;
-const ESTIMATED_CHARS_PER_LINE = 96;
-const ESTIMATED_MAX = 1200;
-
-/** Alto probable de un bloque antes de medirlo; solo acerca la barra, no fija la lectura. */
-export function estimateBlock(kind: "msg" | "pasos" | "trabajo", text: number, steps: number): number {
-  const body = Math.ceil(text / ESTIMATED_CHARS_PER_LINE) * ESTIMATED_LINE;
-  if (kind === "pasos") return 32 + Math.min(steps, 3) * ESTIMATED_LINE;
-  return Math.min(ESTIMATED_MAX, (kind === "trabajo" ? 64 : 40) + body);
-}
-
-/**
- * Alinea el `scrollOffset` interno del virtualizador cuando cambia el alto de una fila
- * completamente por encima del borde superior: evita que `calculateRange()` desplace el
- * rango hacia arriba en cascada antes de que llegue el evento `scroll` del navegador.
- */
-export function shouldAlignVirtualOffset(itemEnd: number, scrollOffset: number | null): boolean {
-  return scrollOffset !== null && itemEnd <= scrollOffset;
-}

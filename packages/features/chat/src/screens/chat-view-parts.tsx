@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { Pressable } from "../../../../ui/src/Pressable";
 import { Select } from "../../../../ui/src/Select";
 import TarjetaDeTerminal from "../components/ShellCard";
-import type { VirtualThreadApi } from "../components/VirtualThread";
 import YourMessages from "../components/YourMessages";
 import { PendingHandoff } from "./thread/PendingHandoff";
 import { HOLGURA } from "../model/paste";
@@ -14,21 +13,19 @@ import type { createChatAttachments } from "./chat-attachments";
 import type { createChatBlocks } from "./chat-blocks";
 import type { createChatComposer } from "./chat-composer";
 import type { createChatComposerState } from "./chat-composer-state";
-import type { Bloque } from "./chat-model";
 import type { ChatProps } from "./chat-props";
 import type { createChatThreadRow } from "./chat-thread-row";
 import type { createChatThreadWindow } from "./chat-thread-window";
 import type { createChatTurnState } from "./chat-turn-state";
 import Pencil from "lucide-solid/icons/pencil";
-import { For, Index, Show, createMemo } from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { For, Index, Show } from "solid-js";
 
 /** Lo que el bloque usa del cuerpo de Chat. */
-export type ChatViewPartsDeps = { Caja: ReturnType<typeof createChatComposer>["Caja"]; altoDeLaCaja: ReturnType<typeof createChatTurnState>["altoDeLaCaja"]; altoEstimado: ReturnType<typeof createChatThreadWindow>["altoEstimado"]; bloques: ReturnType<typeof createChatBlocks>["bloques"]; cajaDelHilo: ReturnType<typeof createChatTurnState>["cajaDelHilo"]; cajaVirtual: ReturnType<typeof createChatThreadWindow>["cajaVirtual"]; centrada: ReturnType<typeof createChatComposerState>["centrada"]; chunks: ReturnType<typeof createChatThreadWindow>["chunks"]; clavesDelHilo: ReturnType<typeof createChatBlocks>["clavesDelHilo"]; elContenido: HTMLElement | undefined; filaDelHilo: ReturnType<typeof createChatThreadRow>["filaDelHilo"]; filasRetenidas: ReturnType<typeof createChatThreadWindow>["filasRetenidas"]; forkAgentChoice: ReturnType<typeof createChatAttachments>["forkAgentChoice"]; forkDesde: ReturnType<typeof createChatAttachments>["forkDesde"]; forkTurn: ReturnType<typeof createChatAttachments>["forkTurn"]; forkeando: ReturnType<typeof createChatComposerState>["forkeando"]; hilo: ReturnType<typeof createChatComposerState>["hilo"]; hiloDeFilas: VirtualThreadApi | undefined; hiloDeFilasListo: ReturnType<typeof createChatThreadWindow>["hiloDeFilasListo"]; hiloVirtual: ReturnType<typeof createChatThreadWindow>["hiloVirtual"]; inputsDelHilo: ReturnType<typeof createChatTurnState>["inputsDelHilo"]; margenDelHilo: ReturnType<typeof createChatComposerState>["margenDelHilo"]; medirCaja: ReturnType<typeof createChatTurnState>["medirCaja"]; mensajeVisto: ReturnType<typeof createChatTurnState>["mensajeVisto"]; mostrarProyecto: ReturnType<typeof createChatComposerState>["mostrarProyecto"]; origen: ReturnType<typeof createChatThreadWindow>["origen"]; preguntaPendiente: ReturnType<typeof createChatTurnState>["preguntaPendiente"]; presentation: ReturnType<typeof createChatComposerState>["presentation"]; rielVisible: ReturnType<typeof createChatTurnState>["rielVisible"]; saltarALaLectura: ReturnType<typeof createChatThreadWindow>["saltarALaLectura"]; saltarAlMensaje: ReturnType<typeof createChatTurnState>["saltarAlMensaje"]; saludo: ReturnType<typeof createChatComposerState>["saludo"]; setForkAgentChoice: ReturnType<typeof createChatAttachments>["setForkAgentChoice"]; setForkTurn: ReturnType<typeof createChatAttachments>["setForkTurn"]; setPrimeraFila: ReturnType<typeof createChatThreadWindow>["setPrimeraFila"]; tomarHilo: ReturnType<typeof createChatTurnState>["tomarHilo"]; watchOlder: ReturnType<typeof createChatThreadWindow>["watchOlder"] };
+export type ChatViewPartsDeps = { Caja: ReturnType<typeof createChatComposer>["Caja"]; altoDeLaCaja: ReturnType<typeof createChatTurnState>["altoDeLaCaja"]; bloques: ReturnType<typeof createChatBlocks>["bloques"]; cajaDelHilo: ReturnType<typeof createChatTurnState>["cajaDelHilo"]; centrada: ReturnType<typeof createChatComposerState>["centrada"]; chunks: ReturnType<typeof createChatThreadWindow>["chunks"]; elContenido: HTMLElement | undefined; filaDelHilo: ReturnType<typeof createChatThreadRow>["filaDelHilo"]; forkAgentChoice: ReturnType<typeof createChatAttachments>["forkAgentChoice"]; forkDesde: ReturnType<typeof createChatAttachments>["forkDesde"]; forkTurn: ReturnType<typeof createChatAttachments>["forkTurn"]; forkeando: ReturnType<typeof createChatComposerState>["forkeando"]; hilo: ReturnType<typeof createChatComposerState>["hilo"]; inputsDelHilo: ReturnType<typeof createChatTurnState>["inputsDelHilo"]; margenDelHilo: ReturnType<typeof createChatComposerState>["margenDelHilo"]; medirCaja: ReturnType<typeof createChatTurnState>["medirCaja"]; mensajeVisto: ReturnType<typeof createChatTurnState>["mensajeVisto"]; mostrarProyecto: ReturnType<typeof createChatComposerState>["mostrarProyecto"]; origen: ReturnType<typeof createChatThreadWindow>["origen"]; preguntaPendiente: ReturnType<typeof createChatTurnState>["preguntaPendiente"]; presentation: ReturnType<typeof createChatComposerState>["presentation"]; rielVisible: ReturnType<typeof createChatTurnState>["rielVisible"]; saltarAlMensaje: ReturnType<typeof createChatTurnState>["saltarAlMensaje"]; saludo: ReturnType<typeof createChatComposerState>["saludo"]; setForkAgentChoice: ReturnType<typeof createChatAttachments>["setForkAgentChoice"]; setForkTurn: ReturnType<typeof createChatAttachments>["setForkTurn"]; tomarHilo: ReturnType<typeof createChatTurnState>["tomarHilo"]; watchOlder: ReturnType<typeof createChatThreadWindow>["watchOlder"] };
 
 /** Movido tal cual de Chat.tsx (el componente `Chat`, tarea 2.6). Lo que usa del cuerpo de Chat llega por `deps`. */
 export function createChatViewParts(props: ChatProps, deps: ChatViewPartsDeps) {
-  const { Caja, altoDeLaCaja, altoEstimado, bloques, cajaDelHilo, cajaVirtual, centrada, chunks, clavesDelHilo, filaDelHilo, filasRetenidas, forkAgentChoice, forkDesde, forkTurn, forkeando, hilo, hiloDeFilasListo, hiloVirtual, inputsDelHilo, margenDelHilo, medirCaja, mensajeVisto, mostrarProyecto, origen, preguntaPendiente, presentation, rielVisible, saltarALaLectura, saltarAlMensaje, saludo, setForkAgentChoice, setForkTurn, setPrimeraFila, tomarHilo, watchOlder } = deps;
+  const { Caja, altoDeLaCaja, bloques, cajaDelHilo, centrada, chunks, filaDelHilo, forkAgentChoice, forkDesde, forkTurn, forkeando, hilo, inputsDelHilo, margenDelHilo, medirCaja, mensajeVisto, mostrarProyecto, origen, preguntaPendiente, presentation, rielVisible, saltarAlMensaje, saludo, setForkAgentChoice, setForkTurn, tomarHilo, watchOlder } = deps;
   const DialogoDeContinuacion = () => (
       <Dialog open={forkTurn() !== null} onOpenChange={(open) => { if (!open && !forkeando()) setForkTurn(null); }}>
         <DialogContent>
@@ -124,40 +121,13 @@ export function createChatViewParts(props: ChatProps, deps: ChatViewPartsDeps) {
               también las filas antiguas, perdía el ancla de lectura y hacía
               que WebKit encogiera y recompusiera el hilo en dos movimientos.
               `Index` conserva cada sitio del DOM y solo actualiza sus datos. */}
-          <Show
-            when={hiloDeFilasListo() ? cajaVirtual() : undefined}
-            keyed
-            fallback={
-              <Show when={!hiloVirtual}>
-                <For each={chunks()}>
-                  {(chunk) => (
-                    <Index each={chunkOf(bloques(), chunk, origen())}>
-                      {(bloque, blockIndex) => filaDelHilo(bloque, () => chunkStart(chunk, origen()) + blockIndex)}
-                    </Index>
-                  )}
-                </For>
-              </Show>
-            }
-          >
-            {(caja) => (
-              <Dynamic
-                component={hiloDeFilasListo()!}
-                scroller={caja.el}
-                keys={() => clavesDelHilo().lista}
-                estimate={altoEstimado}
-                retained={filasRetenidas}
-                write={hilo.escribir}
-                settled={hilo.sostener}
-                onRange={setPrimeraFila}
-                ref={(api: VirtualThreadApi) => { deps.hiloDeFilas = api; saltarALaLectura(); }}
-                row={(clave: string, indice: () => number) => {
-                  // La lista de filas puede ir un paso detrás de las claves: una que ya salió no se pinta.
-                  const inicial = clavesDelHilo().deClave.get(clave);
-                  return inicial ? filaDelHilo(createMemo<Bloque>((previo) => clavesDelHilo().deClave.get(clave) ?? previo, inicial), indice) : null;
-                }}
-              />
+          <For each={chunks()}>
+            {(chunk) => (
+              <Index each={chunkOf(bloques(), chunk, origen())}>
+                {(bloque, blockIndex) => filaDelHilo(bloque, () => chunkStart(chunk, origen()) + blockIndex)}
+              </Index>
             )}
-          </Show>
+          </For>
 
           {/* Mientras el turno viva, y sin más condiciones: con «y el
               último mensaje no es del agente» el renglón se apagaba con la
