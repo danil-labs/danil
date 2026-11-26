@@ -115,7 +115,7 @@ export default function SidebarUsageBar(props: {
     <Show when={hasAny()}>
       <div
         data-sidebar-usage-bar=""
-        class="shrink-0 border-t border-border px-2 py-1"
+        class="shrink-0 border-t border-border px-2 pt-2 pb-1.5"
       >
         <Popover open={open()} onOpenChange={setOpen} placement="top-start">
           <PopoverTrigger
