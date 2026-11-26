@@ -28,6 +28,7 @@ import {
   wokeOf,
 } from "../../../../packages/platform-client/src/machines.ts";
 import { type EdgeSessionSet, sessionSetOf } from "./edge-sessions.ts";
+import { type WorkspaceSpaceCatalog, parseSpaceCatalog, workspaceSpacesPath } from "./edge-spaces.ts";
 import { catalogPage, type EdgeWorkspace, workspaceRead, type WorkspaceRead } from "./edge-workspaces.ts";
 
 export type EdgeOptions = {
@@ -149,6 +150,32 @@ export function edgeControlPlane(deployment: EdgeDeployment, options: EdgeOption
         throw error;
       }
       return answer.value;
+    },
+    /** Catálogo de espacios del workspace en Workspaces; `null` si aún no existe o falla. */
+    async workspaceSpaces(accountWorkspaceId: string): Promise<WorkspaceSpaceCatalog | null> {
+      const path = workspaceSpacesPath(accountWorkspaceId);
+      if (!path) return null;
+      try {
+        const response = await scoped.call(path);
+        return parseSpaceCatalog(await response.json());
+      } catch {
+        return null;
+      }
+    },
+    /** Registra en Workspaces en qué espacio nació o vive una tarea; `null` si falla. */
+    async assignTaskSpace(accountWorkspaceId: string, taskId: string, spaceId: string | null): Promise<WorkspaceSpaceCatalog | null> {
+      const path = workspaceSpacesPath(accountWorkspaceId);
+      if (!path) return null;
+      try {
+        const key = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+        const response = await scoped.mutation(path, {
+          headers: { "Content-Type": "application/json", "Idempotency-Key": key },
+          body: JSON.stringify({ kind: "assign_task", task: taskId, space: spaceId }),
+        });
+        return parseSpaceCatalog(await response.json());
+      } catch {
+        return null;
+      }
     },
   };
 }

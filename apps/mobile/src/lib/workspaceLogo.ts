@@ -40,8 +40,8 @@ function load(url: string, getToken: () => Promise<string>, onUnauthorized: () =
 /** La imagen del logo, o `null` sin logo, mientras carga o si no se pudo leer. */
 export function useWorkspaceLogo(workspace: string | null | undefined): string | null {
   const { registry } = useMachines();
-  const { getToken, unauthorized } = useAccount();
-  const url = registry?.find((row) => row.id === workspace)?.logo_url ?? null;
+  const { getToken, unauthorized, plane } = useAccount();
+  const url = plane.bearerServices ? (registry?.find((row) => row.id === workspace)?.logo_url ?? null) : null;
   const [loaded, setLoaded] = useState<{ url: string; image: string } | null>(null);
   useEffect(() => {
     if (!url || read.has(url)) return;
