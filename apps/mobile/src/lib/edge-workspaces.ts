@@ -6,6 +6,8 @@
 import type { AccountWorkspace, Computer } from "@terminus/computers";
 
 export type EdgeWorkspace = AccountWorkspace & {
+  /** Id numérico del workspace en el servicio `workspaces` (para `/v1/workspaces/{id}/spaces`). */
+  account_id?: string | null;
   /** Dónde puede correr. `null`: el catálogo no lo limita. */
   runs_on?: ReadonlyArray<"personal" | "cloud"> | null;
 };
@@ -43,6 +45,7 @@ export function catalogPage(body: unknown): { rows: EdgeWorkspace[]; next: strin
     if (!engine) continue;
     rows.push({
       id: engine,
+      account_id: text(row.id),
       name: text(row.name) ?? engine,
       projects: [],
       computers: [],

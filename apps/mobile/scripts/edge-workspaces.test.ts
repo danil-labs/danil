@@ -43,6 +43,7 @@ test("el catálogo usa el id del motor y deja fuera lo archivado y lo que no est
     next_cursor: null,
   });
   assert.deepEqual(page.rows.map((row) => row.id), ["ws_cloud", "ws_mine"]);
+  assert.deepEqual(page.rows.map((row) => row.account_id), ["12", "13"]);
   assert.deepEqual(page.rows[1].runs_on, ["personal"]);
   assert.equal(workspaceRead([{ rows: [], empty: "no_workspace_access" }]).kind, "workspace");
   assert.equal(workspaceRead([{ rows: [], empty: "no_organization" }]).kind, "organization");
@@ -62,4 +63,5 @@ test("una máquina personal no recibe un workspace que solo corre en la nube", (
   assert.deepEqual(placed.machines.find((machine) => machine.computer_id === "mch_cloud")?.workspaces, ["ws_cloud"]);
   assert.deepEqual(placed.machines.find((machine) => machine.computer_id === "mch_own")?.workspaces, ["ws_mine"]);
   assert.deepEqual(placed.registry.find((workspace) => workspace.id === "ws_cloud")?.computers, ["mch_cloud"]);
+  assert.equal((placed.registry.find((workspace) => workspace.id === "ws_cloud") as { account_id?: string } | undefined)?.account_id, "12");
 });
