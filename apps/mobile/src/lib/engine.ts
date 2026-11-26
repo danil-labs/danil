@@ -506,6 +506,13 @@ export function coalesced<T>(run: (arg: T) => Promise<void>, merge: (a: T, b: T)
   };
 }
 
+/** Clave de idempotencia del cliente para `send_message` (`chat_queue_v1`, `[A-Za-z0-9_-]`, 1..128). */
+export function newClientMessageId(): string {
+  const randomUUID = globalThis.crypto?.randomUUID;
+  if (typeof randomUUID === "function") return randomUUID.call(globalThis.crypto);
+  return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 /** Lo que el cuadro de escribir elige para un mensaje, como la ventana. */
 export type Draft = {
   prompt: string;
@@ -516,6 +523,8 @@ export type Draft = {
   permissionMode: string | null;
   /** Rutas en la máquina que devolvió `prepare_attachments`. */
   attachments: string[];
+  /** Identidad de envío (`chat_queue_v1`): en un reintento conserva la misma para no duplicar. */
+  clientMessageId?: string;
 };
 
 /**
@@ -539,6 +548,7 @@ export async function sendToTask(host: Host, workspace: string, folder: string, 
     effort: draft.effort,
     permissionMode: draft.permissionMode,
     attachments: draft.attachments,
+    clientMessageId: draft.clientMessageId ?? newClientMessageId(),
   });
   return value;
 }
@@ -609,7 +619,7 @@ export function suggestedDefaults(tasks: Task[], host: string, workspace: string
 export async function createTask(
   host: Host,
   workspace: string,
-  args: { folder: string; prompt: string; provider: string; model: string | null; agent: string | null; space: string | null } & Partial<Pick<Draft, "effort" | "permissionMode" | "attachments">> & { baseRef?: string | null; unwrapSnapshot?: boolean },
+  args: { folder: string; prompt: string; provider: string; model: string | null; agent: string | null; space: string | null } & Partial<Pick<Draft, "effort" | "permissionMode" | "attachments" | "clientMessageId">> & { baseRef?: string | null; unwrapSnapshot?: boolean },
 ) {
   const { value } = await host.call<string>("send_message", workspace, {
     ...MESSAGE_DEFAULTS,
@@ -626,6 +636,7 @@ export async function createTask(
     agent: args.agent,
     taskFromAgent: Boolean(args.agent),
     space: args.space,
+    clientMessageId: args.clientMessageId ?? newClientMessageId(),
   });
   if (typeof value !== "string" || !value) throw new HostError("operation_failed");
   return value;
@@ -688,6 +699,7 @@ export async function answerQuestion(host: Host, workspace: string, folder: stri
     model: taskDefaults(current).model,
     prompt: "",
     respuestas: remaining,
+    clientMessageId: newClientMessageId(),
   });
 }
 

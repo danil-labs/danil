@@ -10,7 +10,8 @@ import type { AccountWorkspace } from "@terminus/computers";
 import type { PermissionModeOption, ProviderInfo } from "@terminus/protocol";
 import { DANIL_CREDITS_MODEL, FREE_ROUTER_MODEL, type Surface } from "@terminus/tasks";
 import { creditsSurfaceOf, effectiveMode, enterAction, hasSomethingToSend, initialMode, resolveProvider, resolveSurfaceModel } from "../src/lib/composer.ts";
-import { workspaceEntries } from "../src/lib/engine.ts";
+import { answerQuestion, createTask, sendToTask, workspaceEntries } from "../src/lib/engine.ts";
+import type { Host } from "../src/lib/hosts.ts";
 
 const label = { key: "x" };
 // Claude: los tres; `ediciones` es el que resolvió el motor.
@@ -124,4 +125,53 @@ test("encuentra Danil Credits aunque el proveedor activo sea otro", () => {
   assert.equal(creditsSurfaceOf(SURFACES, "codex")?.id, "danil-credits-claude");
   assert.equal(creditsSurfaceOf(SURFACES, "opencode")?.id, "danil-credits");
   assert.equal(creditsSurfaceOf(SURFACES.map((s) => ({ ...s, usable: false })), "claude"), undefined);
+});
+
+test("sendToTask, createTask y answerQuestion siempre mandan clientMessageId válido (chat_queue_v1)", async () => {
+  const sent: Record<string, unknown>[] = [];
+  const host: Host = {
+    id: "m1",
+    label: "VM",
+    kind: "computer",
+    managed: true,
+    linked: null,
+    power: () => "on",
+    canAct: () => "now",
+    onChange: () => () => {},
+    onEvents: () => () => {},
+    wake: async () => {},
+    close: () => {},
+    call: async (command, _workspace, args = {}) => {
+      if (command === "send_message") {
+        sent.push(args as Record<string, unknown>);
+        return { value: "t_new" as never, cachedAt: null };
+      }
+      if (command === "load_session") {
+        return {
+          value: {
+            id: "t1",
+            provider: "claude",
+            turns: [{ id: "u1", role: "agent", text: "?", questions: [{ id: "q1", question: "?", options: [] }] }],
+          } as never,
+          cachedAt: null,
+        };
+      }
+      if (command === "pending_requests") {
+        return { value: { permissions: [], questions: [] } as never, cachedAt: null };
+      }
+      return { value: [] as never, cachedAt: null };
+    },
+  };
+
+  await createTask(host, "w1", { folder: "", prompt: "hola", provider: "claude", model: DANIL_CREDITS_MODEL, agent: null, space: null });
+  await sendToTask(host, "w1", "", "t1", { prompt: "sigue", provider: "claude", model: DANIL_CREDITS_MODEL, effort: null, permissionMode: null, attachments: [] });
+  await sendToTask(host, "w1", "", "t1", { prompt: "reintento", provider: "claude", model: DANIL_CREDITS_MODEL, effort: null, permissionMode: null, attachments: [], clientMessageId: "retry-123" });
+  await answerQuestion(host, "w1", "", "t1", { request_id: null, turn: "u1", questions: [{ id: "q1", question: "?", options: [], multiple: false }] }, {}, { q1: "sí" });
+
+  assert.equal(sent.length, 4);
+  for (const payload of sent) {
+    assert.equal(typeof payload.clientMessageId, "string");
+    assert.match(payload.clientMessageId as string, /^[A-Za-z0-9_-]{1,128}$/);
+  }
+  assert.equal(sent[2].clientMessageId, "retry-123", "conserva el clientMessageId en un reintento");
 });

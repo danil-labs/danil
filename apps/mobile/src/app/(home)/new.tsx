@@ -7,8 +7,9 @@ import { AgentAvatar } from "../../ui/AgentAvatar";
 import { carryForNewTask } from "../../lib/carry";
 import { baseBranchesOf, createTask, runShell, shareSpace, suggestedDefaults, type BranchList } from "../../lib/engine";
 import { store } from "../../lib/store";
+import { failureKey } from "../../lib/failureNotice";
 import { HostError } from "../../lib/hosts";
-import { t, w } from "../../lib/i18n";
+import { hasKey, t, w } from "../../lib/i18n";
 import { useMachines } from "../../lib/machines";
 import { spaceName, useWorkspaces } from "../../lib/workspaces";
 import { AddFolderSheets, type AddFolderMode } from "../../ui/AddFolder";
@@ -129,7 +130,11 @@ export default function NewTask() {
       else if (error instanceof HostError && error.code === "machine_asleep") setNote(w("web.machines.off_action", { name: host.label }));
       else if (error instanceof HostError && error.code === "machine_outdated") setNote(w("web.machines.outdated_action", { name: host.label }));
       else if (error instanceof HostError && (error.code === "start_failed" || error.code === "start_timeout")) setNote(t("machines.start_failed", { name: host.label }));
-      else setNote(t("task.error", { detail: error instanceof Error ? error.message : String(error) }));
+      else {
+        const clave = failureKey(error);
+        if (clave && hasKey(clave)) setNote(t(clave));
+        else setNote(t("task.error", { detail: error instanceof Error ? error.message : String(error) }));
+      }
       return false;
     } finally {
       setWaking(false);
