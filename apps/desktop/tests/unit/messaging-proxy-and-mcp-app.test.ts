@@ -7,6 +7,7 @@ import {
   normalizePluginProxyPath,
   parseSseChunk,
   sanitizeProxyHeaders,
+  unwrapPluginSseEvent,
 } from "../../../../packages/platform-client/src/messaging-proxy.ts";
 import {
   classifyConnectProblem,
@@ -167,6 +168,18 @@ test("parseSseChunk decodifica múltiples eventos y conserva el remanente incomp
     raw: "{\"id\":\"c1\",\"unread\":3}",
   });
   assert.equal(rest, "id: 103\nevent: partial\ndata: {\"cut");
+
+  const unwrapped = unwrapPluginSseEvent(events[0]!);
+  assert.deepEqual(unwrapped, { id: "m1" });
+
+  const signalWrapped = unwrapPluginSseEvent({
+    id: "evt_9",
+    event: "messaging.message.created",
+    data: { id: "evt_9", type: "messaging.message.created", channel_id: "ch_1" },
+    raw: "{}",
+  });
+  assert.equal(signalWrapped.type, "messaging.message.created");
+  assert.equal(signalWrapped.channel_id, "ch_1");
 });
 
 test("parseConnectSessionPayload interpreta structuredContent y JSON en content[0].text", () => {

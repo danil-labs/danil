@@ -325,6 +325,17 @@ export function parseSseChunk(
   return { events, rest };
 }
 
+/** Desenvuelve `PluginSseEvent` al `SignalEvent` plano que espera el iframe del conector. */
+export function unwrapPluginSseEvent(event: PluginSseEvent): Record<string, unknown> {
+  if (event.data && typeof event.data === "object" && !Array.isArray(event.data)) {
+    return {
+      ...(event.id ? { id: event.id } : {}),
+      ...(event.data as Record<string, unknown>),
+    };
+  }
+  return { id: event.id, type: event.event, data: event.data };
+}
+
 /** Suscribe `GET /v1/messaging/events` con reconexión acotada (`Last-Event-ID`). */
 export function subscribeMessagingEvents(options: {
   onEvent: (event: PluginSseEvent) => void;
