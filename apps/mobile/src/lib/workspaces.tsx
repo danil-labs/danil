@@ -7,7 +7,7 @@ import type { ProviderInfo, Workspace } from "@terminus/protocol";
 import { DEFAULT_SIDEBAR_VIEW, type SidebarView, sanitizeSidebarView } from "@terminus/tasks";
 import { store } from "./store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { type Agent, type Folder, type HostSnapshot, type MergedSpace, type Task, type WorkspaceEntry, mergeSnapshots, snapshotOf, taskKey, withAccountFolders, withSpaceCatalog, workspaceEntries, workspacesOf } from "./engine";
+import { type Agent, type Folder, type HostSnapshot, type MergedSpace, type Task, type WorkspaceEntry, mergeSnapshots, snapshotOf, taskKey, wakeableStoppedHosts, withAccountFolders, withSpaceCatalog, workspaceEntries, workspacesOf } from "./engine";
 import type { Host } from "./hosts";
 import { useMachines } from "./machines";
 import { keepSame } from "./reconcile";
@@ -106,6 +106,7 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
   const [spaceCatalogs, setSpaceCatalogs] = useState<Record<string, WorkspaceSpaceCatalog>>({});
   const hasSnapshot = useRef(false);
   hasSnapshot.current = snapshot !== null;
+  const autoWoken = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     catalogs.current = { scope: plane.scope, byEntry: new Map() };
@@ -292,6 +293,18 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
 
   const current = list.find((w) => w.id === currentId) ?? null;
   const hostsOfCurrent = useMemo(() => hosts.filter((h) => current?.members.has(h.id)), [hosts, current]);
+
+  // Abrir un workspace cuya VM administrada está detenida la despierta una vez para cargar sus tareas.
+  useEffect(() => {
+    for (const host of hosts) {
+      if (host.power() === "on") autoWoken.current.delete(host.id);
+    }
+    const targets = hostsOfCurrent.length ? hostsOfCurrent : hosts;
+    for (const host of wakeableStoppedHosts(targets, autoWoken.current)) {
+      autoWoken.current.add(host.id);
+      void host.wake().then(() => refresh()).catch(() => {});
+    }
+  }, [hosts, hostsOfCurrent, tick, refresh]);
 
   const selectionReady=spacePreferenceReady && enumeratedScope===JSON.stringify(hosts.map(host=>host.id).sort()) && (!current || snapshotScope===JSON.stringify([current.id,[...current.hosts].sort()]));
   const value = useMemo<Workspaces>(

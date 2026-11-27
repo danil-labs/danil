@@ -16,26 +16,27 @@ export function webRailCatalog(sessions: Pick<WebSessionCommands, "handle">) {
   const [settled, setSettled] = createSignal(false);
   let running: Promise<void> | null = null;
   async function read() {
-    try {
-      const reply = (await fetchSessionsCatalog(sessions)) as Reply;
-      if (reply.status !== 200) return;
-      const items = (reply.body as { items?: unknown } | null)?.items;
-      const next = new Map<string, readonly Row[] | null>();
-      for (const family of Array.isArray(items) ? items : []) {
-        for (const raw of Array.isArray(family?.contexts) ? family.contexts : []) {
-          const context = typeof raw?.context_id === "string" ? raw.context_id : null;
-          if (!context) continue;
-          const rows = Array.isArray(raw.workspaces)
-            ? raw.workspaces.flatMap((w: { engine_workspace_id?: unknown; account_id?: unknown; name?: unknown }) => (typeof w?.engine_workspace_id === "string" && w.engine_workspace_id ? [{ id: w.engine_workspace_id, name: typeof w.name === "string" ? w.name : w.engine_workspace_id, account: typeof w.account_id === "string" ? w.account_id : null }] : []))
-            : null;
-          // Un vacío confirmado es una lista vacía; uno sin comprobar conserva la lectura anterior.
-          next.set(context, rows ?? (raw.catalog_state === "empty" ? [] : lists().get(context) ?? null));
-        }
-      }
-      setLists(next);
-    } finally {
+    const reply = (await fetchSessionsCatalog(sessions)) as Reply;
+    if (reply.status === 404 || reply.status === 501) {
       setSettled(true);
+      return;
     }
+    if (reply.status !== 200) return;
+    const items = (reply.body as { items?: unknown } | null)?.items;
+    const next = new Map<string, readonly Row[] | null>();
+    for (const family of Array.isArray(items) ? items : []) {
+      for (const raw of Array.isArray(family?.contexts) ? family.contexts : []) {
+        const context = typeof raw?.context_id === "string" ? raw.context_id : null;
+        if (!context) continue;
+        const rows = Array.isArray(raw.workspaces)
+          ? raw.workspaces.flatMap((w: { engine_workspace_id?: unknown; account_id?: unknown; name?: unknown }) => (typeof w?.engine_workspace_id === "string" && w.engine_workspace_id ? [{ id: w.engine_workspace_id, name: typeof w.name === "string" ? w.name : w.engine_workspace_id, account: typeof w.account_id === "string" ? w.account_id : null }] : []))
+          : null;
+        // Un vacío confirmado es una lista vacía; uno sin comprobar conserva la lectura anterior.
+        next.set(context, rows ?? (raw.catalog_state === "empty" ? [] : lists().get(context) ?? null));
+      }
+    }
+    setLists(next);
+    setSettled(true);
   }
   return {
     workspaces: (context: string) => lists().get(context) ?? null,

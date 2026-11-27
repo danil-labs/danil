@@ -956,3 +956,71 @@ test("Desk paid-org list_workspaces and preview_file preserve local workspace lo
     router.close();
   }
 });
+
+test("connected personal PC (hosted: false) without workspace on disk does not mask a stopped hosted org VM", async () => {
+  const calls: Array<{ machine: string; command: string; workspace: string | null }> = [];
+  const fleet = new Fleet({
+    self: null,
+    connect: (machine) => {
+      if (machine.id === "mch_laptop") {
+        return {
+          state: () => "online" as const,
+          onState: () => () => {},
+          onEvents: () => () => {},
+          subscribe: () => {},
+          start: () => {},
+          close: () => {},
+          async call(_id, command, workspace) {
+            calls.push({ machine: machine.id, command, workspace });
+            if (command === "list_workspaces") return { value: { workspaces: [{ id: "5er4pkz3", name: "Personal" }], active: "5er4pkz3" }, cached: null };
+            return { value: [], cached: null };
+          },
+        };
+      }
+      return {
+        state: () => "stopped" as const,
+        blocked: () => "machine_stopped" as const,
+        onState: () => () => {},
+        onEvents: () => () => {},
+        subscribe: () => {},
+        start: () => {},
+        close: () => {},
+        async call() {
+          throw { code: "machine_stopped" };
+        },
+      };
+    },
+  });
+  fleet.setMachines([
+    { id: "mch_nube", name: "Nube", wakes: true, kind: "organization", hosted: true, organizationId: "org_danil", context: "ctx_danil" },
+    { id: "mch_laptop", name: "LAPTOP_ASUS", wakes: false, kind: "organization", hosted: false, organizationId: "org_danil", context: "ctx_danil" },
+  ]);
+  fleet.setListing("mch_laptop", [{ id: "5er4pkz3", name: "Personal" }], "ctx_danil");
+
+  const router = createRouter({
+    self: null,
+    native: null,
+    fleet,
+    contextInfo: (context) => (context === "ctx_danil" ? { org: "org_danil", plan: "enterprise" } : null),
+  });
+  try {
+    await router.handle("set_active_workspace", { id: "fqgx1w8m" }, contextOptions("ctx_danil"));
+    const rows = (await router.handle("machine_list", {}, contextOptions("ctx_danil"))) as Array<{
+      id: string; active: boolean; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    const nube = rows.find((r) => r.id === "mch_nube");
+    const laptop = rows.find((r) => r.id === "mch_laptop");
+    assert.ok(nube && nube.active === true && nube.materializes === true && nube.refuses === false, "stopped hosted org VM remains the active lead for fqgx1w8m");
+    assert.ok(laptop && laptop.active === false && laptop.hosts === false && laptop.materializes === false && laptop.refuses === true, "connected personal PC without fqgx1w8m is refused instead of acting as catalog member");
+    assert.deepEqual(router.createsOn("fqgx1w8m"), { machine: "mch_nube", lead: true });
+
+    await assert.rejects(
+      () => router.handle("list_live_sessions", { project: "", open: [] }, contextOptions("ctx_danil")),
+      (err: { detail?: string }) => err.detail === "machine_off",
+      "reading fqgx1w8m reports Nube machine_off instead of returning [] from LAPTOP_ASUS",
+    );
+    assert.equal(calls.some((c) => c.machine === "mch_laptop" && c.workspace === "fqgx1w8m"), false, "LAPTOP_ASUS is never queried for fqgx1w8m");
+  } finally {
+    router.close();
+  }
+});

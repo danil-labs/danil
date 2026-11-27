@@ -48,6 +48,8 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const [revision, bump] = createSignal(0);
   let listed = new Map<string, Machine>();
   const powers = new Map<string, string>();
+  const waking = new Map<string, Promise<void>>();
+  const autoWoken = new Set<string>();
   const unavailable = () => ({ what: t("web.machines.unavailable"), detail: "machines_unavailable" });
   const notifyMachines = () => window.dispatchEvent(new CustomEvent("harness:machines"));
   const pool = createContextRelayPool();
@@ -88,6 +90,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       const power = fleet.power(id, context);
       const key = memberKey(id, context);
       const changed = powers.get(key) !== power;
+      if (power === "on") autoWoken.delete(key);
       if (power === "on" && powers.get(key) !== "on" && active.unlisted()) window.dispatchEvent(new CustomEvent("harness:workspace"));
       powers.set(key, power);
       if (changed && !isRemoteGuestMachine(id)) void refresh();
@@ -191,6 +194,8 @@ export function mountWindow(base: Base, mounted: Mounted) {
     fleet.subscribeEvents();
     active.registryChanged();
     for (const name of ["harness:workspace-name", "harness:service-resync", "harness:machines"]) window.dispatchEvent(new CustomEvent(name));
+    const openWorkspace = active.activeWorkspace();
+    if (openWorkspace) wakeWorkspaceMachines(active.activeContext() ?? scope.current()?.context ?? undefined, openWorkspace, { auto: true });
     return true;
   }
   function refresh(): Promise<boolean> {
@@ -249,7 +254,42 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const github = base.origin && base.transport
     ? webEdgeGithubAccount(base.origin, base.transport, () => window.location.href)
     : undefined;
-  installIpc(window, createWebTransport(scope.engine(active), __TERMINUS_VERSION__, browser, composeControlPlane(base.sessions, github)));
+  // Abrir una pantalla o un workspace que necesita la VM es una acción: se enciende una vez (`wake: true`) y se vuelve a leer.
+  const wakeWorkspaceMachines = (context: string | undefined, workspace: string | null, opts?: { auto?: boolean }) => {
+    for (const m of fleet.machines(context)) {
+      const key = memberKey(m.id, m.context);
+      const power = fleet.power(m.id, m.context);
+      if (!m.wakes || m.child || power === "on" || power === "starting" || power === "outdated" || waking.has(key)) continue;
+      if (workspace) {
+        if (m.hosted === false && fleet.lists(m.id, workspace) !== true) continue;
+        if (m.organization && !m.organization.workspaces.some((w) => w.id === workspace)) continue;
+        if (m.linked && !m.linked.has(workspace)) continue;
+      }
+      if (opts?.auto) {
+        if (autoWoken.has(key)) continue;
+        autoWoken.add(key);
+      }
+      waking.set(key, fleet.wake(m.id, m.context)
+        .then(() => {
+          slicesChanged(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]);
+          for (const name of ["harness:workspace-name", "harness:machines", "harness:service-resync"]) window.dispatchEvent(new CustomEvent(name));
+        })
+        .catch(() => {})
+        .finally(() => { waking.delete(key); bump(n => n + 1); }));
+    }
+  };
+  const engine = scope.engine(active);
+  const ipcEngine = {
+    handle: async (command: string, args?: Record<string, unknown>, init?: { headers?: HeadersInit }) => {
+      const result = await engine.handle(command, args, init);
+      if (command === "set_active_workspace" && typeof args?.id === "string" && args.id) {
+        const ctx = new Headers(init?.headers).get("x-danil-context") || active.activeContext() || scope.current()?.context;
+        wakeWorkspaceMachines(ctx ?? undefined, args.id, { auto: true });
+      }
+      return result;
+    },
+  };
+  installIpc(window, createWebTransport(ipcEngine, __TERMINUS_VERSION__, browser, composeControlPlane(base.sessions, github)));
   let disposeApp: (() => void) | undefined;
   let disposeNotice: (() => void) | undefined;
   let noticeLayer: HTMLElement | undefined;
@@ -258,19 +298,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
     if (stopped) disposeApp();
   }).catch(base.onUnavailable);
   window.addEventListener("pagehide", () => fleet.close(), { once: true });
-  // Abrir una pantalla que necesita la VM es una acción: se enciende una vez (`wake: true`) y se vuelve a leer.
-  const waking = new Map<string, Promise<void>>();
-  const onMachineAction = () => {
-    const context = scope.current()?.context;
-    for (const m of fleet.machines(context)) {
-      const key = memberKey(m.id, m.context);
-      if (!m.wakes || m.child || fleet.power(m.id, m.context) === "on" || waking.has(key)) continue;
-      waking.set(key, fleet.wake(m.id, m.context)
-        .then(() => { for (const name of ["harness:machines", "harness:service-resync"]) window.dispatchEvent(new CustomEvent(name)); })
-        .catch(() => {})
-        .finally(() => { waking.delete(key); bump(n => n + 1); }));
-    }
-  };
+  const onMachineAction = () => wakeWorkspaceMachines(scope.current()?.context ?? active.activeContext() ?? undefined, active.activeWorkspace());
   const onFocus = () => {
     if (availability().kind === "no_machines") void refresh();
   };
