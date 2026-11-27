@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { AccountWorkspace } from "@terminus/computers";
 import { delegatedOf } from "@terminus/tasks";
-import { type Folder, foldersForNewTask, mergeSnapshots, taskInSpace, tasksOf, withAccountFolders, withSpaceCatalog, workspaceEntries } from "../src/lib/engine.ts";
+import { type Folder, foldersForNewTask, mergeSnapshots, taskInSpace, tasksOf, wakeableStoppedHosts, withAccountFolders, withSpaceCatalog, workspaceEntries } from "../src/lib/engine.ts";
 
 const REGISTRY: AccountWorkspace[] = [
   {
@@ -193,4 +193,22 @@ test("foldersForNewTask prioriza el espacio activo y cae a todas las carpetas si
     foldersForNewTask(all, { folders: ["vm1/desconocida"] }, "vm1").map((f) => f.key),
     ["vm1/f1", "vm1/f2", "mac1/f3"],
   );
+});
+
+test("wakeableStoppedHosts elige solo VMs administradas apagadas que aún no se intentaron encender", () => {
+  const mk = (id: string, managed: boolean, power: "on" | "off" | "starting" | "outdated", canAct: "now" | "wakes" | "asleep" | "outdated") => ({
+    id,
+    managed,
+    power: () => power,
+    canAct: () => canAct,
+  });
+  const hosts = [
+    mk("mch_nube", true, "off", "wakes"),
+    mk("mch_starting", true, "starting", "wakes"),
+    mk("mch_online", true, "on", "now"),
+    mk("mch_laptop", false, "off", "asleep"),
+    mk("mch_outdated", true, "outdated", "outdated"),
+  ];
+  assert.deepEqual(wakeableStoppedHosts(hosts).map((h) => h.id), ["mch_nube"]);
+  assert.deepEqual(wakeableStoppedHosts(hosts, new Set(["mch_nube"])).map((h) => h.id), []);
 });

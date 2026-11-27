@@ -261,3 +261,33 @@ test("windowActiveContext prefers the remembered (org, account) before activeWor
   assert.equal(active.current()?.context, "ctx_personal", "without a remembered workspace, falls back to personal");
 });
 
+test("webRailCatalog does not latch settled on transient 503 or network errors and recovers on retry", async () => {
+  const { webRailCatalog } = await import("../../../../packages/session/src/web-rail-catalog.ts");
+  let mode: "throw" | "503" | "200" = "throw";
+  const catalog = webRailCatalog({
+    handle: async () => {
+      if (mode === "throw") throw new Error("network");
+      if (mode === "503") return { status: 503, body: { code: "unavailable" } };
+      return {
+        status: 200,
+        body: {
+          items: [{ contexts: [{ context_id: "ctx_danil", catalog_state: "listed", workspaces: [{ account_id: "130", engine_workspace_id: "fqgx1w8m", name: "Danil Workspace" }] }] }],
+        },
+      };
+    },
+  });
+
+  await catalog.refresh();
+  assert.equal(catalog.settled(), false, "network failure must not mark catalog settled");
+  assert.equal(catalog.workspaces("ctx_danil"), null);
+
+  mode = "503";
+  await catalog.refresh();
+  assert.equal(catalog.settled(), false, "transient 503 must not mark catalog settled");
+
+  mode = "200";
+  await catalog.refresh();
+  assert.equal(catalog.settled(), true, "200 marks catalog settled");
+  assert.deepEqual(catalog.workspaces("ctx_danil"), [{ id: "fqgx1w8m", name: "Danil Workspace", account: "130" }]);
+});
+

@@ -138,6 +138,20 @@ async function read<T>(host: Host, command: Parameters<Host["call"]>[0], workspa
   }
 }
 
+/** Máquinas administradas detenidas que deben encenderse para leer un workspace sin copia viva. */
+export function wakeableStoppedHosts<H extends Pick<Host, "id" | "managed" | "power" | "canAct">>(
+  hosts: readonly H[],
+  alreadyAttempted?: ReadonlySet<string>,
+): H[] {
+  return hosts.filter(
+    (host) =>
+      host.managed &&
+      host.power() === "off" &&
+      host.canAct() === "wakes" &&
+      !alreadyAttempted?.has(host.id),
+  );
+}
+
 /** Los workspaces de una máquina; apagada y sin copia, `null`: no dijo cuáles tiene. */
 export async function workspacesOf(host: Host): Promise<{ list: Workspace[] | null; cachedAt: number | null }> {
   const at = { cachedAt: null as number | null };

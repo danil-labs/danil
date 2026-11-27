@@ -1,7 +1,9 @@
 import { accessMailto, RADIUS, TEXT } from "@terminus/design";
+import { useState } from "react";
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useAccount } from "../lib/account";
 import { EMAIL_MARK, type EmptyFleet, aroundEmail, emptyFleet } from "../lib/emptyFleet";
+import { wakeableStoppedHosts } from "../lib/engine";
 import type { Host } from "../lib/hosts";
 import { t, w } from "../lib/i18n";
 import { type Fleet, useMachines } from "../lib/machines";
@@ -9,13 +11,14 @@ import { useTheme } from "./theme";
 
 /**
  * Lo que la persona tiene que saber de sus máquinas, siempre en tono neutro:
- * una máquina apagada no es un error. Encendiéndose, se dice; apagada, no se
- * dice nada: la lista de tareas ya enseña lo que guardó.
+ * una máquina apagada no es un error. Encendiéndose, se dice; si una VM
+ * administrada quedó detenida, se ofrece encenderla para leer sus tareas.
  */
 export function MachineNote({ hosts, fleet }: { hosts: Host[]; fleet: Fleet }) {
   const theme = useTheme();
   const { reloadComputers, contextReady, access } = useMachines();
   const { email } = useAccount();
+  const [wakeError, setWakeError] = useState<string | null>(null);
   if (fleet === "license") return <LicenseNote />;
   if (access === "organization" || access === "workspace") {
     return (
@@ -29,11 +32,16 @@ export function MachineNote({ hosts, fleet }: { hosts: Host[]; fleet: Fleet }) {
   const lines: string[] = [];
   if (fleet === "no_account") lines.push(w("web.computers.no_account"));
   if (fleet === "error") lines.push(w("web.computers.error"));
+  const stoppedWakeable = wakeableStoppedHosts(hosts);
   for (const host of hosts) {
     if (host.power() === "starting") lines.push(w("shell.machines.waking", { name: host.label }));
     else if (host.power() === "outdated") lines.push(w("web.machines.outdated_action", { name: host.label }));
   }
-  if (!lines.length) return null;
+  if (!lines.length && !stoppedWakeable.length) return null;
+  const startHost = (host: Host) => {
+    setWakeError(null);
+    void host.wake().catch(() => setWakeError(t("machines.start_failed", { name: host.label })));
+  };
   return (
     <View style={[styles.note, { backgroundColor: theme.muted }]} testID="machine-note">
       {lines.map((line) => (
@@ -41,6 +49,20 @@ export function MachineNote({ hosts, fleet }: { hosts: Host[]; fleet: Fleet }) {
           {line}
         </Text>
       ))}
+      {stoppedWakeable.map((host) => (
+        <View key={host.id} style={styles.wakeRow}>
+          <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{t("machines.off_wakes", { name: host.label })}</Text>
+          <Pressable
+            testID={`wake-machine-${host.id}`}
+            accessibilityRole="button"
+            style={[styles.cta, { backgroundColor: theme.primary }]}
+            onPress={() => startHost(host)}
+          >
+            <Text style={{ color: theme.onPrimary, fontWeight: "600" }}>{t("machines.wake")}</Text>
+          </Pressable>
+        </View>
+      ))}
+      {wakeError ? <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{wakeError}</Text> : null}
       {fleet === "error" || fleet === "no_account" ? (
         <Pressable onPress={() => void reloadComputers()}>
           <Text style={{ color: theme.primary, fontWeight: "600" }}>{w("web.computers.retry")}</Text>
@@ -120,5 +142,6 @@ function EmptyNote({ empty, retry }: { empty: EmptyFleet; retry: () => void }) {
 
 const styles = StyleSheet.create({
   note: { marginHorizontal: 12, marginTop: 10, padding: 10, borderRadius: 10, gap: 4 },
+  wakeRow: { gap: 4 },
   cta: { alignSelf: "flex-start", marginVertical: 4, paddingHorizontal: 14, paddingVertical: 8, borderRadius: RADIUS.lg },
 });
