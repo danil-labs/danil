@@ -10,7 +10,10 @@ import { ariaDeAtajo } from "../../../ui/src/lib/shortcuts";
 import { cn } from "../../../ui/src/lib/utils";
 import { KeyedList } from "../../../ui/src/KeyedList";
 import { Pressable } from "../../../ui/src/Pressable";
+import { Spinner } from "../../../ui/src/Spinner";
 import { TeclaDeAtajo } from "../../../ui/src/Shortcut";
+import { machineAction } from "../../../host/src/machine-action";
+import { machineName, machines } from "../../../features/machines/src/queries/store";
 import {
   SidebarContent,
   SidebarMenu,
@@ -96,13 +99,42 @@ export default function Sidebar(props: SidebarProps) {
   const { FilaDeClon, Grupo } = createFilas(props, tareas, { setDesplegado, setCreatingAgentIn });
   const seccionesVisibles = createMemo(() => resolvedRailSections().filter((section) => section.visible));
   const algunAgenteTrabajando = createMemo(() => agentesDelDock().some((a) => a.status === "working"));
+  const asleepMachine = createMemo(() => {
+    const rows = machines().filter((m) => !m.local && m.wakes && !m.refuses);
+    return rows.find((m) => m.power === "starting") ?? rows.find((m) => m.power === "off") ?? null;
+  });
 
   /** La misma lista, montada en dos sitios: expandida y en el desplegable. */
   const Lista = () => (
     <div data-sidebar-tasks class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-[14px]">
       <Show when={props.clon}>{(c) => <FilaDeClon clon={c()} />}</Show>
 
-      <Show when={todas().length === 0 && !hayCarpetasVacias()}>
+      <Show when={asleepMachine()}>
+        {(machine) => (
+          <Show
+            when={machine().power === "starting"}
+            fallback={
+              <div class="mx-1 flex flex-col items-start gap-1.5 rounded-md border border-border bg-surface px-2.5 py-2 text-caption text-neutral-600" data-machine-stopped={machine().id}>
+                <p class="m-0">{t("web.machines.off_wakes", { name: machineName(machine().id) })}</p>
+                <Pressable
+                  class="rounded-md bg-neutral-200 px-2 py-1 text-caption font-medium text-neutral-950 hover:bg-neutral-300 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
+                  data-wake-machine={machine().id}
+                  onClick={() => machineAction()}
+                >
+                  {t("web.machines.wake")}
+                </Pressable>
+              </div>
+            }
+          >
+            <div class="mx-1 flex items-center gap-2 rounded-md border border-border bg-surface px-2.5 py-2 text-caption text-neutral-600" data-machine-waking={machine().id}>
+              <Spinner size={13} class="shrink-0 text-neutral-500" />
+              <span class="min-w-0 truncate">{t("web.machines.starting", { name: machineName(machine().id) })}</span>
+            </div>
+          </Show>
+        )}
+      </Show>
+
+      <Show when={todas().length === 0 && !hayCarpetasVacias() && !asleepMachine()}>
         <Show
           when={props.projects.length === 0}
           fallback={<p class="m-0 px-2 pt-1 text-xs text-neutral-500" data-sidebar-empty="">{t("shell.sidebar.empty")}</p>}

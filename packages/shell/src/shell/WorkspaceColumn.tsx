@@ -138,9 +138,9 @@ export default function WorkspaceColumn(props: {
       nativeWindow: Boolean(capabilities().nativeWindow),
       workspaceLoading: ws.cargando(),
     });
-    if (decision.kind === "wait") return;
+    if (decision.kind === "wait" || decision.kind === "none") return;
     sessionsSettled = true;
-    if (decision.kind === "open" && (decision.id !== ws.activo() || decision.context !== ws.activoContexto())) {
+    if (decision.id !== ws.activo() || decision.context !== ws.activoContexto()) {
       void ws.cambiarA(decision.id, decision.context);
     }
   });

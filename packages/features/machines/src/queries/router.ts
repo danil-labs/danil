@@ -202,15 +202,17 @@ function createRouterCore(config: RouterConfig) {
     fleet.lists(m.id, workspace) === true || childHosted(m, workspace);
   /**
    * En un contexto de organización de pago, el catálogo de workspaces vive en
-   * el servicio de workspaces y cualquier máquina autorizada de esa organización
-   * (ya filtrada por `/v1/machines`) puede atenderlos bajo demanda sin exigir
-   * que ya tenga `workspaces/<id>` en disco.
+   * el servicio de workspaces y cualquier máquina hospedada autorizada de esa
+   * organización (ya filtrada por `/v1/machines`) puede atenderlos bajo demanda
+   * sin exigir que ya tenga `workspaces/<id>` en disco. Una máquina personal
+   * conectada (`hosted: false`) solo atiende los workspaces que ya aloja aquí.
    */
   const catalogMember = (m: MachineInfo, workspace: string | null): boolean =>
     !!config.organizationCatalog
     && !!workspace
     && !m.child
     && m.kind === "organization"
+    && m.hosted !== false
     && !!m.organizationId
     && (!m.organization || m.organization.workspaces.some((w) => w.id === workspace))
     && (!m.linked || m.linked.has(workspace));
@@ -488,7 +490,7 @@ function createRouterCore(config: RouterConfig) {
   /** Nadie trajo nada: se dice por qué, y la ventana se queda con lo que tenía. */
   function noAnswer(slices: Slice[], workspace: string | null): Failure {
     const failed = slices.find((s) => s.error) ?? slices[0];
-    const code = failed?.status === "outdated" ? "version_mismatch" : failed?.error === "machine_off" || !failed ? "machine_off" : (failed.error ?? "machine_timeout");
+    const code = failed?.status === "outdated" ? "version_mismatch" : failed?.error === "machine_off" || failed?.error === "machine_stopped" || !failed ? "machine_off" : (failed.error ?? "machine_timeout");
     const machine = failed?.machine ?? leadOf(workspace);
     // Leer nunca enciende una máquina: la enciende un mensaje o una acción (`fleet.send`).
     // Si ya se está encendiendo (la encendió otro), la ventana vuelve a leer cuando esté en línea.

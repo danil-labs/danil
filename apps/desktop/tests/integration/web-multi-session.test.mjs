@@ -467,3 +467,82 @@ test('startup still opens the workspace automatically when another organization 
   await until(() => tile(doc, 'wp')?.getAttribute('aria-current') === 'true' && tile(doc, 'wp')?.dataset.workspaceContext === 'ctx_p', 'personal opens automatically even though org_x is 401 session_expired');
   await until(() => fake.calls.some(call => ['list_projects', 'list_live_sessions'].includes(call.command) && call.workspace === 'wp'), 'wp loads its tasks without requiring a manual click');
 });
+
+test('opening a cloud workspace wakes a stopped hosted VM even when a connected personal PC without that workspace is online', async t => {
+  let cloudAwake = false;
+  let cloudWakeCalls = 0;
+  const echo = (context, body, init = {}) => Response.json(body, { ...init, headers: { 'X-Danil-Session-Applied': context, 'X-Danil-Session-Applied-Org': ORGS[context] } });
+  const fetcher = async (input, init = {}) => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    const context = new Headers(init.headers).get('X-Danil-Session');
+    switch (url.pathname) {
+      case '/v1/capabilities': return Response.json({ contract: 'mvp-v1', items: ['machines', 'machines.start', 'machines.session', 'workspaces'].map(name => ({ name, version: 1, status: 'available' })) });
+      case '/v1/identity/csrf': return Response.json({ csrf_token: 'bound' });
+      case '/v1/identity/sessions': return Response.json({ version: 1, items: [{ session_id: 'ses_a', sub: 'user_a', email: 'a@example.test', contexts: [
+        { context_id: 'ctx_x', org: 'org_x', org_name: 'Danil', plan: 'enterprise', role: 'admin' },
+      ] }], primary: 'ses_a', default_context: 'ctx_x' });
+      case '/v1/identity/sessions/catalog': return Response.json({ version: 1, items: [{ session_id: 'ses_a', sub: 'user_a', email: 'a@example.test', contexts: [
+        { context_id: 'ctx_x', org: 'org_x', org_name: 'Danil', catalog_state: 'listed', workspaces: [{ account_id: '130', engine_workspace_id: 'wx1', name: 'Danil Workspace' }] },
+      ] }] });
+      case '/v1/identity/me': return echo(context, { id: 'user_a', name: 'QA A', email: 'a@example.test', workspace: null, organizations: [] });
+      case '/v1/workspaces/preferences': return echo(context, { version: 1, added: ['wx1'] });
+      case '/v1/workspaces': return echo(context, { items: [{ id: '130', org: 'org_x', name: 'Danil Workspace', role: 'admin', engine_workspace_id: 'wx1', placement: { kind: 'organization_machine' } }], next_cursor: null });
+      case '/v1/credits/balance': return echo(context, { items: [] });
+      case '/v1/machines': return echo(context, { items: [
+        { machine_id: 'mx', name: 'Nube', kind: 'organization', provider: 'danil', person_id: null, organization_id: 'org_x', state: cloudAwake ? 'running' : 'stopped', connection: cloudAwake ? 'connected' : 'disconnected' },
+        { machine_id: 'mlaptop', name: 'LAPTOP_ASUS', kind: 'personal', provider: 'connected', person_id: 'user_a', organization_id: 'org_x', state: 'running', connection: 'connected' },
+      ], next_cursor: null });
+    }
+    if (url.pathname === '/v1/machines/mx/tickets') {
+      const body = JSON.parse(String(init.body || '{}'));
+      if (body.wake) {
+        cloudWakeCalls++;
+        cloudAwake = true;
+        return echo(context, { ticket: 'woke-ticket', url: 'wss://connect.danil.ai/v1/machines/mx/session', expires_at: '2099-01-01T00:00:00Z' }, { status: 201 });
+      }
+      if (!cloudAwake) {
+        return echo(context, { code: 'machine_stopped', detail: 'machine_stopped', status: 409 }, { status: 409, headers: { 'content-type': 'application/problem+json' } });
+      }
+      return echo(context, { ticket: 'cloud-ticket', url: 'wss://connect.danil.ai/v1/machines/mx/session', expires_at: '2099-01-01T00:00:00Z' }, { status: 201 });
+    }
+    if (url.pathname === '/v1/machines/mlaptop/tickets') {
+      return echo(context, { ticket: 'laptop-ticket', url: 'wss://connect.danil.ai/v1/machines/mlaptop/session', expires_at: '2099-01-01T00:00:00Z' }, { status: 201 });
+    }
+    return echo(context, {}, { status: 404 });
+  };
+  fetcher.__jsdomApp = true;
+  globalThis.fetch = fetcher;
+
+  const cloudRelay = relay({ table: {
+    ...engine,
+    list_workspaces: { workspaces: [{ id: 'wx1', name: 'Danil Workspace', context_root: null }], active: 'wx1' },
+    workspaces_startup: { workspaces: [{ id: 'wx1', name: 'Danil Workspace', context_root: null }], active: 'wx1' },
+    list_projects: [{ id: 'p_cloud', name: 'App Cloud', path: '/srv/app', kind: 'folder', created_at: 1, updated_at: 1, sessions: 1 }],
+    list_live_sessions: ({ project }) => project === 'p_cloud'
+      ? [{ id: 't_cloud', title: 'Tarea en la nube', provider: 'codex', model: null, created_at: 10, updated_at: 10, esperando: false, agent: null }]
+      : [],
+  } });
+  const laptopRelay = relay({ table: {
+    ...engine,
+    list_workspaces: { workspaces: [{ id: 'w_other', name: 'Solo Laptop', context_root: null }], active: 'w_other' },
+    workspaces_startup: { workspaces: [{ id: 'w_other', name: 'Solo Laptop', context_root: null }], active: 'w_other' },
+    list_projects: [],
+    list_live_sessions: [],
+  } });
+  class RoutingSocket {
+    constructor(url, protocols) {
+      return url.includes('/mx/') ? new cloudRelay.Socket(url, protocols) : new laptopRelay.Socket(url, protocols);
+    }
+  }
+
+  const app = await open(t, 'web-wake-stopped-cloud-vm', { Socket: RoutingSocket }, '?workspace=wx1&org=org_x&account=user_a');
+  const doc = app.w.document;
+  await until(() => cloudWakeCalls >= 1, 'opening wx1 wakes stopped cloud VM via tickets wake:true');
+  await until(() => doc.querySelector('[data-sesion="mx~t_cloud"]'), 'cloud VM tasks appear in the sidebar once awake');
+  assert.deepEqual(
+    laptopRelay.calls.filter(call => call.workspace === 'wx1' && call.command !== 'list_workspace_attention').map(c => c.command),
+    [],
+    'connected personal PC without wx1 is never queried for wx1 data',
+  );
+});
