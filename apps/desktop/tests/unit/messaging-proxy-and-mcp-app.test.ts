@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { setEdgeContext } from "../../../../packages/platform-client/src/client.ts";
 import {
+  completeConnectSession,
   executePluginProxyHttp,
   normalizePluginProxyPath,
   parseSseChunk,
@@ -17,27 +19,33 @@ import {
   parseMessagingCardTarget,
 } from "../../../../packages/features/chat/src/model/messagingMcpApp.ts";
 
-test("normalizePluginProxyPath permite solo rutas de messaging y agents", () => {
+test("normalizePluginProxyPath permite solo rutas de messaging, agents e inventory y bloquea traversal codificado", () => {
   assert.equal(normalizePluginProxyPath("/v1/messaging/channels"), "/v1/messaging/channels");
   assert.equal(normalizePluginProxyPath("/api/v1/messaging/conversations?limit=20"), "/v1/messaging/conversations?limit=20");
   assert.equal(normalizePluginProxyPath("/v1/agents/runs"), "/v1/agents/runs");
   assert.equal(normalizePluginProxyPath("/api/v1/agents/sales"), "/v1/agents/sales");
+  assert.equal(normalizePluginProxyPath("/v1/inventory/items"), "/v1/inventory/items");
+  assert.equal(normalizePluginProxyPath("/api/v1/inventory"), "/v1/inventory");
 
   assert.equal(normalizePluginProxyPath("/v1/identity/me"), null);
   assert.equal(normalizePluginProxyPath("/v1/billing/subscriptions"), null);
   assert.equal(normalizePluginProxyPath("/v1/messaging/../identity/me"), null);
+  assert.equal(normalizePluginProxyPath("/v1/messaging/%2e%2e/identity/me"), null);
+  assert.equal(normalizePluginProxyPath("/v1/messaging/%2E%2E%2fidentity/me"), null);
+  assert.equal(normalizePluginProxyPath("/v1/messaging/%5cidentity/me"), null);
   assert.equal(normalizePluginProxyPath("//evil.example/v1/messaging/channels"), null);
   assert.equal(normalizePluginProxyPath("https://evil.example/v1/messaging/channels"), null);
   assert.equal(normalizePluginProxyPath("/v1/messaging/channels\r\nX-Injected: 1"), null);
 });
 
-test("sanitizeProxyHeaders elimina credenciales del iframe y agrega Idempotency-Key en mutaciones", () => {
+test("sanitizeProxyHeaders elimina credenciales/spoofing del iframe y agrega Idempotency-Key en mutaciones", () => {
   const headers = sanitizeProxyHeaders(
     {
       Authorization: "Bearer stolen",
       Cookie: "sid=evil",
       "X-Danil-Session": "forged",
       "X-CSRF-Token": "forged",
+      "X-Danil-Workspace": "999",
       Accept: "application/json",
       "Content-Type": "application/json",
     },
@@ -51,9 +59,19 @@ test("sanitizeProxyHeaders elimina credenciales del iframe y agrega Idempotency-
   assert.equal(headers["X-Danil-Workspace"], "42");
   assert.ok(typeof headers["Idempotency-Key"] === "string" && headers["Idempotency-Key"].length > 8);
 
+  const spoofNoHostWs = sanitizeProxyHeaders(
+    { "x-danil-workspace": "999" },
+    { method: "GET", workspaceId: null },
+  );
+  assert.equal(spoofNoHostWs["X-Danil-Workspace"], undefined);
+  assert.equal(spoofNoHostWs["x-danil-workspace"], undefined);
+
   const getHeaders = sanitizeProxyHeaders({ Accept: "application/json" }, { method: "GET", workspaceId: "ws_non_numeric" });
   assert.equal(getHeaders["Idempotency-Key"], undefined);
   assert.equal(getHeaders["X-Danil-Workspace"], undefined);
+
+  const zeroHeaders = sanitizeProxyHeaders({ Accept: "application/json" }, { method: "GET", workspaceId: "0" });
+  assert.equal(zeroHeaders["X-Danil-Workspace"], undefined);
 });
 
 test("executePluginProxyHttp rechaza rutas fuera del allowlist con 403", async () => {
@@ -247,4 +265,40 @@ test("classifyConnectProblem y parseAllowedOriginsInput cubren errores 410/409/4
     parseAllowedOriginsInput("https://a.com, https://b.com\nhttps://c.com "),
     ["https://a.com", "https://b.com", "https://c.com"],
   );
+});
+
+test("completeConnectSession desenvuelve connect_session y conserva channel_name y publishable_key", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedWorkspaceHeader: string | null = null;
+  setEdgeContext("https://edge.danil.ai", () => "ctx_test_1");
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.endsWith("/v1/identity/csrf")) {
+      return new Response(JSON.stringify({ csrf_token: "csrf_1" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    capturedWorkspaceHeader = new Headers(init?.headers).get("X-Danil-Workspace");
+    return new Response(
+      JSON.stringify({
+        connect_session: { id: "cs_web_1", status: "connected", channel_id: "ch_1" },
+        channel: { id: "ch_1", name: "Web Chat", config: { publishable_key: "pk_live_123" } },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const res = await completeConnectSession("cs_web_1", { allowed_origins: ["https://danil.ai"] }, { workspaceId: "42" });
+    assert.equal(res.ok, true);
+    assert.equal(capturedWorkspaceHeader, "42");
+    assert.equal(res.session?.id, "cs_web_1");
+    assert.equal(res.session?.status, "connected");
+    assert.equal(res.session?.channel_name, "Web Chat");
+    assert.equal(res.session?.publishable_key, "pk_live_123");
+  } finally {
+    setEdgeContext(null);
+    globalThis.fetch = originalFetch;
+  }
 });

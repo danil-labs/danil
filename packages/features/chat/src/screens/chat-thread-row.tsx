@@ -61,6 +61,7 @@ export function createChatThreadRow(props: ChatProps, deps: ChatThreadRowDeps) {
                       abierto={Boolean(trabajos()[`activity:${b().activity?.key ?? ""}`])}
                       onAlternar={(open) => setTrabajos({ ...trabajos(), [`activity:${b().activity?.key ?? ""}`]: open })}
                       onVerCambios={props.onVerCambios}
+                      workspaceId={props.workspaceId}
                       status={() => <Show when={b().activity?.active && handoffStarting() && props.handoff} fallback={<Show when={b().activity?.active || (b().activity?.key === props.activities?.at(-1)?.key && (props.esperando || props.reintento || props.enFondo || props.machineWait))}><Show when={props.permission} fallback={<EstadoDelTurno inline desde={b().activity?.startedAt ?? null} paso={null} esperando={props.esperando} reintento={props.reintento} enFondo={props.enFondo ?? false} machineWait={props.machineWait} />}><span class="text-neutral-500">{t("chat.permission.title")}</span></Show></Show>}><span class="text-neutral-500">{props.handoff ? handoffStatus(props.handoff) : ""}</span></Show>}
                     />
                   </div>
@@ -116,6 +117,7 @@ export function createChatThreadRow(props: ChatProps, deps: ChatThreadRowDeps) {
                       forkeando={fromWork(b(), (t) => forkeando() === t.msg.turno, false)}
                       forkDeshabilitado={forkeando() !== null}
                       rapida={respuestaRapida(fromWork(b(), (t) => t.i, 0))}
+                      workspaceId={props.workspaceId}
                     />
                   )}
                 </Match>
@@ -136,6 +138,7 @@ export function createChatThreadRow(props: ChatProps, deps: ChatThreadRowDeps) {
                       onAlternar={(abierto) => {
                         setTrabajos({ ...trabajos(), [claveFila(bp())]: abierto });
                       }}
+                      workspaceId={props.workspaceId}
                     />
                     <div data-thread-search-text={indice()}><RespuestasDeAvance route={props.machineOf} avance={pasosDe(b())?.avance ?? SIN_AVANCE} visualBudget={visualBudget} visualScope={props.visualScope} readVisual={props.readVisual} openVisual={props.openVisual} /></div>
                     <Index each={(pasosDe(b())?.avance ?? SIN_AVANCE).map(chunk => chunk.msg).filter(message => message.preguntas?.length)}>{(message) => <RegistroPreguntas items={message().preguntas!} respuestas={message().turno ? respondido().get(message().turno!) ?? null : null} abierta={!preguntasPlegadas()[claveDeTrabajo(message())]} onAlternar={() => { const key = claveDeTrabajo(message()); setPreguntasPlegadas({ ...preguntasPlegadas(), [key]: !preguntasPlegadas()[key] }); }} />}</Index>

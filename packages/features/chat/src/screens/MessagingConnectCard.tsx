@@ -59,7 +59,7 @@ function resolveProblem(status: number, code: string | null | undefined, fallbac
  * Delega el popup de Meta/OAuth al origen aislado de mensajería (sin abrir `script-src` en Danil)
  * y sincroniza el cierre por `postMessage` y sondeo de estado vía `queries/messaging-connect`.
  */
-export default function MessagingConnectCard(props: { call: McpAppCall }) {
+export default function MessagingConnectCard(props: { call: McpAppCall; workspaceId?: string | null }) {
   const initial = parseConnectSessionPayload(props.call);
   if (!initial) return null;
 
@@ -119,7 +119,7 @@ export default function MessagingConnectCard(props: { call: McpAppCall }) {
       return;
     }
     try {
-      const res = await fetchConnectSessionStatus(initial.id);
+      const res = await fetchConnectSessionStatus(initial.id, { workspaceId: props.workspaceId });
       if (disposed) return;
       if (res.ok && res.session) {
         applySessionUpdate(res.session);
@@ -146,7 +146,7 @@ export default function MessagingConnectCard(props: { call: McpAppCall }) {
     setPhase("completing");
     setErrorText(null);
     try {
-      const res = await submitConnectSessionCompletion(initial.id, payload);
+      const res = await submitConnectSessionCompletion(initial.id, payload, { workspaceId: props.workspaceId });
       if (disposed) return;
       if (res.ok && res.session) {
         applySessionUpdate(res.session);
@@ -218,7 +218,7 @@ export default function MessagingConnectCard(props: { call: McpAppCall }) {
 
       if (msg.type === "danil:channel-connected" || msg.method === "ui/notifications/channel-connected") {
         const params = (msg.params && typeof msg.params === "object" ? msg.params : msg) as Record<string, unknown>;
-        if (initial.id && typeof params.session_id === "string" && params.session_id !== initial.id) return;
+        if (initial.id && (typeof params.session_id !== "string" || params.session_id !== initial.id)) return;
         stopPolling();
         if (typeof params.channel_name === "string") setChannelName(params.channel_name);
         setErrorText(null);
@@ -339,7 +339,7 @@ export default function MessagingConnectCard(props: { call: McpAppCall }) {
           <p class="m-0 text-xs font-medium text-neutral-700">{t("chat.messaging_connect.select_asset")}</p>
           <For each={assets()}>
             {(asset) => (
-              <Button variant="outline" class="justify-start text-left" onClick={() => void completeWith({ selected_asset_id: asset.id })}>
+              <Button variant="outline" class="justify-start text-left" onClick={() => void completeWith({ page_id: asset.id })}>
                 <span class="truncate font-medium">{asset.name}</span>
                 <Show when={asset.category}>{(cat) => <span class="ml-auto text-xs text-neutral-500">{cat()}</span>}</Show>
               </Button>

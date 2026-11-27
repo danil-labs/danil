@@ -19,8 +19,10 @@ import { type SessionRow } from "../../../features/projects/src/screens/Sessions
 import Sitio from "../../../features/sites/src/screens/Site";
 import { openMachineScreen } from "../../../host/src/platform";
 import { BELOW_LOCATION } from "../../../host/src/window";
+import { activeWorkspaceContext, displayWorkspaceContext } from "../../../session/src/workspace-context";
 import { materialDeProyecto, visoresDeCodigo } from "../featureSlots";
 import PluginFrame from "../shell/PluginFrame";
+import { resolveActivePlatformContext } from "../shell/session-groups";
 import { UsagePanel } from "../shell/UsageTool";
 import { createFreeRouterConsent, renderImage, renderPdf, renderTable } from "./chatSlots";
 import { Screen, TaskFilesCard, VisorDeArchivo, VistaDeProyecto } from "./lazy-screens";
@@ -331,14 +333,22 @@ export function createCeldasDeContenido(deps: CeldasDeContenidoDeps) {
                           : null
                       }
                     >
-                      {(pl) => (
-                        <PluginFrame
-                          pluginId={pl().pluginId}
-                          title={pl().titulo}
-                          url={pl().url}
-                          workspaceId={workspaceActivo()}
-                        />
-                      )}
+                      {(pl) => {
+                        const platformCtx = () =>
+                          resolveActivePlatformContext(
+                            workspaceActivo(),
+                            activeWorkspaceContext() ?? displayWorkspaceContext(),
+                          );
+                        return (
+                          <PluginFrame
+                            pluginId={pl().pluginId}
+                            title={pl().titulo}
+                            url={pl().url}
+                            workspaceId={platformCtx().workspaceId}
+                            orgId={platformCtx().orgId}
+                          />
+                        );
+                      }}
                     </Match>
                   </Switch>
                 </div>

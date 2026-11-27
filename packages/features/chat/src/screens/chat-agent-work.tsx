@@ -72,6 +72,7 @@ function TrabajoDeAgente(props: {
   forkDeshabilitado: boolean;
   /** `null` si esta conversación no puede mandar respuestas rápidas. */
   rapida: RespuestaRapida | null;
+  workspaceId?: string | null;
 }) {
   /**
    * Las preguntas no cuentan aquí: son un bloque hermano, y contándolas
@@ -99,6 +100,7 @@ function TrabajoDeAgente(props: {
           razonamiento={props.msg.razonamiento}
           animando={props.animando}
           onVerCambios={props.msg.code?.length ? props.onVerCambios : undefined}
+          workspaceId={props.workspaceId}
         />
       </Show>
 
