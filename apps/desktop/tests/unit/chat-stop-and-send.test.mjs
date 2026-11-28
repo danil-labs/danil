@@ -226,6 +226,7 @@ test("Detener con razonamiento activo apaga el spinner y escribir encima muestra
     app.emit("chat", { kind: "done", session: "t1", workspace: "w", ok: false });
     await waitFor(() => enviados.length === 1, "el mensaje encolado no salió tras ACK y done", 2000);
     assert.equal(enviados[0].prompt, TEXTO);
+    assert.ok(!app.w.document.body.textContent.includes("Actividad antes del error"), "done ok:false tras Detener optimista no reclasifica el turno como fallo");
   } finally {
     app.w.close();
   }
@@ -338,6 +339,55 @@ test("si falla stop_turn tras Detener optimista no ofrece Reintentar el prompt y
 
     const retryButtons = [...app.w.document.querySelectorAll("button")].filter((el) => el.textContent?.trim() === "Reintentar");
     assert.equal(retryButtons.length, 0, "un fallo de Detener no ofrece Reintentar el último prompt");
+    assert.equal(enviados.length, 0);
+  } finally {
+    app.w.close();
+  }
+});
+
+test("con dos elementos en cola durante handoff se oculta «mandar» inerte y «Enviar de nuevo» incierto respeta la barrera", async () => {
+  let resolverStop = null;
+  let vivos = ["t1"];
+  const enviados = [];
+  const app = await boot("listo", "chat-stop-resend-and-two-queued", responses({
+    list_active_turns: () => vivos,
+    load_queue: ({ session }) => session === "t1"
+      ? [
+          { id: "q1", text: "primero promovido", provider: AGENTE, model: "deepseek", effort: null, permission_mode: null, attachments: [] },
+          { id: "q2", text: "segundo incierto", provider: AGENTE, model: "deepseek", effort: null, permission_mode: null, attachments: [], uncertain: true },
+        ]
+      : [],
+    stop_turn: () => new Promise((resolve) => { resolverStop = resolve; }),
+    send_message: (args) => {
+      enviados.push(args);
+      return "nuevo-turno";
+    },
+  }));
+  try {
+    await sleep(600);
+    app.w.document.querySelector('[data-sesion="t1"]').click();
+    await sleep(400);
+    app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+    await sleep(150);
+
+    // Detener optimista: `q2` incierto tiene su botón «Enviar de nuevo» bloqueado mientras `stop_turn` sigue en vuelo.
+    porTitulo(app, "Detener turno").click();
+    await sleep(40);
+    const reenviar = app.w.document.querySelector('button[aria-label*="Enviar de nuevo"], button[title="Enviar de nuevo"]');
+    assert.ok(reenviar, "la fila incierta muestra su acción de reenvío");
+    assert.equal(reenviar.disabled, true, "Enviar de nuevo queda deshabilitado mientras stop_turn sigue en vuelo");
+    reenviar.click();
+    await sleep(60);
+    assert.equal(enviados.length, 0, "Enviar de nuevo no puede disparar send_message durante stopping");
+
+    // Promueve q1 a handoff: q2 sigue visible en cola, pero sin un botón «mandar» que no hace nada.
+    const btnMandarAntes = [...app.w.document.querySelectorAll("button")].find((el) => el.textContent?.trim() === "mandar");
+    assert.ok(btnMandarAntes);
+    btnMandarAntes.click();
+    await sleep(60);
+    assert.ok(app.w.document.body.textContent.includes("segundo incierto"), "el segundo elemento sigue visible en la cola");
+    const btnMandarDespues = [...app.w.document.querySelectorAll("button")].find((el) => el.textContent?.trim() === "mandar");
+    assert.equal(btnMandarDespues, undefined, "con un handoff activo la barra manual no ofrece un botón «mandar» sin efecto");
     assert.equal(enviados.length, 0);
   } finally {
     app.w.close();

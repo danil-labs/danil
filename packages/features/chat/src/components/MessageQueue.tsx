@@ -22,8 +22,10 @@ export type ColaDeMensajesProps = {
   compact?: boolean;
   items: Encolado[];
   pending?: string[];
-  /** The transcript already presents this pending input; retain its queue controls without repeating its body. */
+  /** The transcript already presents this pending input; omit it from the queue list while handoff owns it. */
   handoffItemId?: string;
+  /** True while a turn or stop barrier is active so direct resend actions stay disabled. */
+  blocked?: boolean;
   agentes: Agent[];
   /** Con qué se responde ahora mismo, para marcar lo que se escribió con otra cosa. */
   actual: { agent: string; model: string };
@@ -124,7 +126,8 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
               when={
                 props.retenida !== null &&
                 props.retenida !== "pregunta" &&
-                editando() === null
+                editando() === null &&
+                !props.handoffItemId
               }
             >
               <Button
@@ -208,7 +211,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                       <Show when={it.uncertain}>
                         <span class="text-xs text-warning-strong">{t("chat.queue.uncertain")}</span>
                         <Button type="button" variant="ghost" size="icon" class="size-7" aria-label={t("chat.queue.send_again_aria", { n: i() + 1 })}
-                          title={t("chat.queue.send_again")} disabled={props.pending?.includes(it.id)} onClick={() => props.onReenviar(it.id)}>
+                          title={t("chat.queue.send_again")} disabled={props.blocked || props.pending?.includes(it.id)} onClick={() => props.onReenviar(it.id)}>
                           <RotateCcw size={13} />
                         </Button>
                       </Show>

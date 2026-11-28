@@ -283,6 +283,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
    */
   async function enviarDeLaCola(session: string, id: string, clientMessageId = id) {
     const scope = conversationScope(session);
+    if (handoff.blocked(scope) || vivas().includes(session) || settlingTurns().includes(session)) return;
     const item = (session === sessionId() ? cola() : taskQueues.saved(session)?.items ?? []).find((q: { id: string }) => q.id === id);
     if (!item || injecting().some((q) => q.session === session && q.id === id)) return;
     handoff.observe({ kind: "dispatching", scope, itemIds: [id] });

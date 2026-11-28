@@ -218,32 +218,30 @@ export function createThreadStream(deps: ThreadStreamDeps) {
     workspace: workspaceActivo(), generation: workspaceContext.generation(), project: projectId, session: id,
     route: opcionesDeLaTarea(id, workspaceActivo()),
   });
+  const shellStops = new WeakSet<ConversationScope>();
   const handoff = createConversationHandoff({
     current: () => ({ workspace: workspaceActivo(), generation: workspaceContext.generation() }),
     runtime: { active: (scope) => vivas().includes(scope.session), stop: async (scope) => {
       const id = scope.session, shell = Boolean(terminales()[id] || lanzados.has(id));
       const current = () => scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation();
-      if (shell) detenidos.add(id);
+      if (shell) { detenidos.add(id); shellStops.add(scope); }
       try {
         const stopped = shell ? await callEngine<boolean>("stop_shell_command", { session: id }, scope.route) : await stopTurn(scope);
         if (current()) {
           if (shell && stopped === false) detenidos.delete(id);
-          if (!shell) {
-            queueMicrotask(() => { if (current()) void reconcileActiveTurns(); });
-            if (stopped !== false) setPermissions(ps => ps.filter(p => p.session !== id));
-          }
+          if (!shell && stopped !== false) setPermissions(ps => ps.filter(p => p.session !== id));
         }
         return stopped;
       } catch (error) {
         if (current()) {
           if (shell) detenidos.delete(id);
-          // Reconcilia tras actualizar la barrera de handoff (`stopping = false`) para que
-          // un turno que siguió vivo tras fallar Detener recupere su estado activo.
-          queueMicrotask(() => { if (current()) void reconcileActiveTurns(); });
           threads.appendLive(id, [{ role: "system", text: t("shell.turn.stop_failed", { error: prosaDe(error) }), meta: "fallo", fallo: { clase: "stop_failed", detail: "" } }]);
         }
         throw error;
       }
+    }, onStopSettled: (scope) => {
+      if (shellStops.has(scope)) return;
+      if (scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation()) void reconcileActiveTurns();
     } },
     queue: { message: (scope, id: string) => (scope.session === sessionId() ? taskQueues.items() : taskQueues.saved(scope.session)?.items ?? []).find((item) => item.id === id),
       select: (scope, id: string) => { if (scope.session !== sessionId() || !taskQueues.items().some(item => item.id === id)) return false; taskQueues.prioritize(id); return true; },

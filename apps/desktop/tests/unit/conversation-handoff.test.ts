@@ -170,3 +170,27 @@ for (const phase of ["submitting", "awaiting-start"] as const) test(`an authorit
   assert.deepEqual(f.released, ["one"]); f.handoff.observe({ kind: "accepted", scope });
   assert.equal(f.handoff.presentation(scope), null); f.dispose();
 });
+
+test("onStopSettled observes the updated barrier synchronously for declined and failed stops", async () => {
+  for (const mode of ["declined", "failed"] as const) {
+    const observed: { outcome: string; stopping: boolean; hasError: boolean }[] = [];
+    const handoff = createConversationHandoff({
+      current: () => ({ workspace: scope.workspace, generation: scope.generation }),
+      runtime: {
+        active: () => true,
+        stop: async () => {
+          if (mode === "failed") throw new Error("stop boom");
+          return false;
+        },
+        onStopSettled: (settledScope, outcome) => {
+          const view = handoff.view(settledScope);
+          observed.push({ outcome, stopping: view.stopping, hasError: view.error !== null });
+        },
+      },
+      queue: { message: () => undefined, select: () => false, release: () => {}, failed: () => {} },
+    });
+    await handoff.requestStop(scope);
+    assert.deepEqual(observed, [{ outcome: mode, stopping: false, hasError: mode === "failed" }]);
+    handoff.dispose();
+  }
+});

@@ -468,4 +468,8 @@ test("an optimistically interrupted turn keeps its interrupted outcome and never
   assert.equal(projected.length, 1);
   assert.equal(projected[0].outcome, "interrupted");
   assert.equal(projected[0].anchorIndex, 1, "detached closed activity stays before trailing failure row");
+
+  // A subsequent `done { ok: false }` (`failed`) must not overwrite an optimistic `interrupted` close.
+  assert.equal(model.finish("A", "s", "failed"), false);
+  assert.equal(model.project("A", "s", [persisted, stopFailure])[0].outcome, "interrupted");
 });

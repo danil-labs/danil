@@ -61,7 +61,7 @@ export function createActivityProjection() {
     const activity = current(workspace, session);
     if (!activity) return false;
     if (!activity.active) {
-      if (outcome !== "done" && activity.outcome !== outcome) {
+      if (activity.outcome === "done" && outcome !== "done") {
         activity.outcome = outcome;
         return true;
       }
