@@ -18,7 +18,7 @@ export const LOCAL = "local";
 
 export const LOCAL_KEY = JSON.stringify([LOCAL, null, null]);
 
-export type Installed = { key: string; fleet: Fleet; router: Router; restore: () => void };
+export type Installed = { key: string; fleet: Fleet; router: Router; wakeActive: () => void; pruneContexts: (contexts: readonly string[]) => void; restore: () => void };
 
 /** Sistema de la ventana de escritorio. La web no carga este módulo. */
 export function windowSystem(): SystemId {

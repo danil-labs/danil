@@ -1,5 +1,7 @@
 import { type RecoveryBoundary } from "./event-recovery.ts";
 
+export type RelayAdmission = { url: string; ticket: string; protocol?: string; session_expires_at?: string | null };
+
 export type RelayConfig = {
   /** Origen del relay: `relay.example`, `https://relay.example` o `wss://relay.example`. */
   endpoint: string;
@@ -26,7 +28,7 @@ export type RelayConfig = {
   probe?: () => Promise<Blocked | null>;
 } & (
   | { getToken: () => string | Promise<string>; getAdmission?: never }
-  | { getAdmission: () => Promise<{ url: string; ticket: string; protocol?: string; session_expires_at?: string | null }>; getToken?: never }
+  | { getAdmission: () => Promise<RelayAdmission>; getToken?: never }
 );
 
 /** Lo que detiene la sesión sin reintentar sola: la persona no tiene Terminus de pago (computers#22). */

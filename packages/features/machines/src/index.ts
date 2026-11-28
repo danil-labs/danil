@@ -1,3 +1,4 @@
+export { AUTO_WAKE_BACKOFF_MS, createAutoWaker, type AutoWakeOptions } from "./model/auto-wake.ts";
 export { contextAttentionStale } from "./queries/context-attention.ts";
 export { createContextRelayPool } from "./queries/context-relay-pool.ts";
 export { createRemoteGuestManager } from "./queries/remoteGuestLink.ts";

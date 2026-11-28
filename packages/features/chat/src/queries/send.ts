@@ -183,8 +183,6 @@ export function createSend(deps: SendDeps) {
       // nada— sino el evento `started`, que `chat::acp` emite cuando el proceso
       // del agente ya contestó al saludo.
       if (!abierta) provisional = pintarNaciendo(proyecto, tituloProvisional(m.text), m, agenteDelBorrador);
-      if (abierta && dormida) threads.markMachineWait(abierta, { machine: dormida, phase: "waking" });
-      if (provisional && naceDormida) threads.markMachineWait(provisional, { machine: naceDormida, phase: "waking" });
     });
     let enviado = false;
     try {

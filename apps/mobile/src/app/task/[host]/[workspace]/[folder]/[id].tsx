@@ -696,7 +696,7 @@ export default function TaskScreen() {
   const lastRun = thread.runs.at(-1);
   const since = running ? runClock(view?.liveSince ?? null, lastRun?.at ?? null) : null;
   const asleepNote = asleep && host ? (host.canAct() === "outdated" ? w("web.machines.outdated_action", { name: host.label }) : w("web.machines.off_action", { name: host.label })) : null;
-  const wakingNote = waking && host ? w("shell.machines.waking", { name: host.label }) : null;
+  const wakingNote: string | null = null;
   const owner = useRef({}).current;
   useEffect(() => {
     publishWork(key, owner, { runs: thread.runs, since, permissions, deciding, asleep: asleepNote, waking: wakingNote, note, questions: questions.length, decide });

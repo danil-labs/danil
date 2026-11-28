@@ -1024,3 +1024,42 @@ test("connected personal PC (hosted: false) without workspace on disk does not m
     router.close();
   }
 });
+
+test("remote app_unavailable maps to web.machines.lost instead of Desk-local engine_down", async () => {
+  const fleet = new Fleet({
+    self: null,
+    connect: () => ({
+      state: () => "online" as const,
+      onState: () => () => {},
+      onEvents: () => () => {},
+      subscribe: () => {},
+      start: () => {},
+      close: () => {},
+      async call() {
+        throw { code: "app_unavailable" };
+      },
+    }),
+  });
+  fleet.setMachines([
+    { id: "mch_nube", name: "Nube", wakes: true, kind: "organization", hosted: true, organizationId: "org_danil", context: "ctx_danil" },
+  ]);
+  const router = createRouter({
+    self: null,
+    native: null,
+    fleet,
+    contextInfo: (context) => (context === "ctx_danil" ? { org: "org_danil", plan: "enterprise" } : null),
+  });
+  try {
+    await router.handle("set_active_workspace", { id: "ws_1" }, contextOptions("ctx_danil"));
+    await assert.rejects(
+      () => router.handle("stop_turn", { project: "p1", session: "mch_nube~t1" }, contextOptions("ctx_danil")),
+      (err: { what?: unknown; detail?: unknown }) =>
+        err.detail === "app_unavailable"
+        && typeof err.what === "string"
+        && err.what.includes("Nube")
+        && !err.what.includes("motor de Danil"),
+    );
+  } finally {
+    router.close();
+  }
+});

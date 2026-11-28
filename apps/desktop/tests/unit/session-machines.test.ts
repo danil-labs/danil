@@ -2,6 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { mergeBridgeInventory } from "../../../../packages/features/machines/src/model/bridge-inventory.ts";
 import { createContextRelayPool } from "../../../../packages/features/machines/src/queries/context-relay-pool.ts";
+import { createAutoWaker } from "../../../../packages/features/machines/src/model/auto-wake.ts";
+import { applyDeskCloudContextReady, createDeskAutoWakeController } from "../../../../packages/features/machines/src/model/desk-cloud-sync.ts";
+import { infoOf } from "../../../../packages/features/machines/src/model/machine-info.ts";
+import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
+import { Fleet, FleetError } from "../../../../packages/features/machines/src/model/fleet/index.ts";
+import { confirmWorkspaceSelection } from "../../../../packages/session/src/workspace-context.ts";
+import { windowContext } from "../../../../packages/session/src/window-context.ts";
 import { createSessionCloud, mergeContextMachines } from "../../../../packages/features/machines/src/queries/session-cloud.ts";
 import { createAccountWorkspaces } from "../../../../packages/shell/src/shell/session-account-workspaces.ts";
 import { confirmEmailClose, emailContextCount } from "../../../../packages/shell/src/shell/session-close-confirm.ts";
@@ -413,4 +420,409 @@ test("a caller waiting on a reopened relay's attention read gives up at its own 
     assert.equal(attentionReads, 1);
     assert.ok(Date.now() - started < 1_000, "the reopen read's 30 s limit does not extend the caller's 50 ms");
   } finally { for (const link of links) link.close(); }
+});
+
+test("a terminally closed relay session is dropped from the pool so subsequent calls and retries open a fresh session", async () => {
+  const pool = createContextRelayPool();
+  let created = 0;
+  const retries: unknown[] = [];
+  const closers: Array<() => void> = [];
+  let suspended = 0;
+  const link = pool.link("machine", () => {
+    const id = ++created;
+    let dead = false;
+    const onCloseListeners = new Set<() => void>();
+    closers.push(() => {
+      dead = true;
+      for (const listener of onCloseListeners) listener();
+    });
+    return {
+      state: () => "online",
+      onState: () => () => {},
+      onEvents: () => () => {},
+      onClose: (listener) => { onCloseListeners.add(listener); return () => void onCloseListeners.delete(listener); },
+      subscribe() {},
+      start() {},
+      retry(admission) { retries.push([id, admission]); },
+      close() { dead = true; },
+      async call(_reqId, command) {
+        if (dead) throw { code: "app_unavailable" };
+        if (command === "list_workspace_attention") return { value: [], cached: null };
+        return { value: `session-${id}`, cached: null };
+      },
+    };
+  }, { onSuspend: () => { suspended += 1; } });
+
+  try {
+    assert.equal((await link.call("1", "list_workspaces", null, null, {})).value, "session-1");
+    // Simulate terminal close (4001 REPLACED / 4003 REVOKED / 4008 TICKET_CONTEXT_REVOKED) on session-1.
+    closers[0]();
+    assert.equal(suspended, 1, "pool marks attention suspended when relay closes terminally");
+    // Next call must NOT hit the dead zombie session-1; it must create session-2.
+    assert.equal((await link.call("2", "stop_turn", null, null, {})).value, "session-2");
+    assert.equal(created, 2);
+
+    // If session-2 also closes terminally, retry(admission) opens session-3 with that prefetched admission.
+    closers[1]();
+    const admission = { url: "wss://connect.danil.ai/v1/machines/machine/session", ticket: "fresh-ticket" };
+    assert.equal(link.retry?.(admission), true);
+    assert.equal(created, 3);
+    assert.deepEqual(retries.at(-1), [3, admission]);
+  } finally {
+    link.close();
+  }
+});
+
+test("pool returns false from retry(admission) when all slots are busy, propagates onClose, isolates stale recovery and shares one call deadline", async () => {
+  // 1. Full & busy pool on the same machine: retry(admission) returns false instead of silently dropping the ticket.
+  const busyPool = createContextRelayPool(undefined, 1);
+  let releaseBusy!: () => void;
+  const busyLink = busyPool.link("machine", () => ({
+    state: () => "online", onState: () => () => {}, onEvents: () => () => {}, subscribe() {}, start() {}, close() {},
+    call: () => new Promise((resolve) => { releaseBusy = () => resolve({ value: "ok", cached: null }); }),
+  }));
+  const waitingLink = busyPool.link("machine", () => ({
+    state: () => "stopped", onState: () => () => {}, onEvents: () => () => {}, subscribe() {}, start() {}, close() {},
+    call: async () => ({ value: "ok", cached: null }),
+  }));
+  const inflight = busyLink.call("1", "list_workspaces", null, null, {});
+  await Promise.resolve();
+  assert.equal(waitingLink.retry?.({ url: "wss://connect.danil.ai/v1/machines/machine/session", ticket: "t" }), false);
+  releaseBusy();
+  await inflight;
+  busyLink.close();
+  waitingLink.close();
+
+  // 2. Stale recovery rejecting or finishing onResume after a replacement relay opens NEVER suspends or corrupts the replacement.
+  const recoveryPool = createContextRelayPool(undefined, 2);
+  let seq = 0;
+  let closedRelays: number[] = [];
+  let finishStaleResume!: () => void;
+  let rejectStaleAttention!: (err: unknown) => void;
+  const onCloseHooks: Array<() => void> = [];
+  const relayedCloses: number[] = [];
+  const link = recoveryPool.link("machine", () => {
+    const id = ++seq;
+    const listeners = new Set<() => void>();
+    onCloseHooks.push(() => { for (const l of listeners) l(); });
+    return {
+      state: () => "online",
+      onState: () => () => {},
+      onEvents: () => () => {},
+      onClose: (l) => { listeners.add(l); return () => void listeners.delete(l); },
+      subscribe() {},
+      start() {},
+      close() { closedRelays.push(id); },
+      call(_req, command) {
+        if (command === "list_workspace_attention" && id === 2) {
+          return new Promise((_res, rej) => { rejectStaleAttention = rej; });
+        }
+        return Promise.resolve({ value: command === "list_workspace_attention" ? [] : `ok-${id}`, cached: null });
+      },
+    };
+  }, {
+    onResume: () => seq === 2 ? new Promise<void>((resolve) => { finishStaleResume = resolve; }) : undefined,
+  });
+  link.onClose?.(() => relayedCloses.push(seq));
+  await link.call("a", "list_workspaces", null, null, {}); // opens relay #1
+  onCloseHooks[0](); // closes relay #1 terminally -> marks needsRecovery, fires onClose
+  assert.deepEqual(relayedCloses, [1], "pool link propagates inner terminal onClose");
+  // Trigger relay #2 (enters recovery: list_workspace_attention pending)
+  const call2 = link.call("b", "list_workspaces", null, null, {}, 500).catch((e) => e);
+  await Promise.resolve();
+  // Relay #2 closes terminally before recovery finishes -> opens slot; relay #3 opens healthy.
+  onCloseHooks[1]();
+  const res3 = await link.call("c", "list_workspaces", null, null, {}, 500);
+  assert.equal(res3.value, "ok-3");
+  // Now relay #2's stale recovery rejects: relay #3 must NOT be closed/suspended!
+  rejectStaleAttention(new Error("stale-recovery-failed"));
+  await call2;
+  assert.equal(closedRelays.includes(3), false, "stale recovery catch must not close replacement relay #3");
+  assert.equal((await link.call("d", "list_workspaces", null, null, {})).value, "ok-3");
+  void finishStaleResume;
+  link.close();
+
+  // 3. Single absolute deadline spans acquire + call on the same machine.
+  const deadlinePool = createContextRelayPool(undefined, 1);
+  let releaseBlocker!: () => void;
+  const blocker = deadlinePool.link("machine", () => ({
+    state: () => "online", onState: () => () => {}, onEvents: () => () => {}, subscribe() {}, start() {}, close() {},
+    call: () => new Promise((resolve) => { releaseBlocker = () => resolve({ value: "a", cached: null }); }),
+  }));
+  let receivedTimeout: number | undefined;
+  const waiter = deadlinePool.link("machine", () => ({
+    state: () => "online", onState: () => () => {}, onEvents: () => () => {}, subscribe() {}, start() {}, close() {},
+    call: async (_id, _cmd, _ws, _f, _args, timeoutMs) => { receivedTimeout = timeoutMs; return { value: "b", cached: null }; },
+  }));
+  const blocking = blocker.call("1", "list_workspaces", null, null, {});
+  setTimeout(() => releaseBlocker(), 60);
+  await waiter.call("2", "list_workspaces", null, null, {}, 200);
+  await blocking;
+  assert.ok(typeof receivedTimeout === "number" && receivedTimeout <= 160, `remaining call timeout (${receivedTimeout}) deducts acquire wait`);
+  blocker.close();
+  waiter.close();
+});
+
+test("createAutoWaker runs all 3 scheduled retries (5s/15s/30s), admits inventory starting, re-evaluates active workspace, cancels on online/context-switch/close, and stops on not_remotely_startable", async () => {
+  const timers = new Map<number, { fn: () => void; ms: number }>();
+  let nextTimer = 1;
+  let attempts = 0;
+  let powerState: "off" | "starting" | "on" = "starting";
+  let currentWorkspace: string | null = "ws-a";
+  const checkedWorkspaces: (string | null)[] = [];
+  let nextError: unknown = new FleetError("machine_timeout", "vm1", "start");
+  const fleet = {
+    machines: (ctx?: string) => ctx === "ctx-a" ? [{ id: "vm1", name: "VM", wakes: true, hosted: true, context: "ctx-a", linked: new Set(["ws-a", "ws-b"]) }] : [],
+    power: () => powerState,
+    lists: (_id: string, ws: string) => { checkedWorkspaces.push(ws); return true; },
+    wake: async () => {
+      attempts += 1;
+      checkedWorkspaces.push(currentWorkspace);
+      if (nextError) throw nextError;
+    },
+  } as unknown as Fleet;
+  const waker = createAutoWaker({
+    fleet: () => fleet,
+    activeTarget: () => ({ context: "ctx-a", workspace: currentWorkspace }),
+    setTimer: (fn, ms) => { const id = nextTimer++; timers.set(id, { fn, ms }); return id as unknown as ReturnType<typeof setTimeout>; },
+    clearTimer: (h) => { timers.delete(h as unknown as number); },
+  });
+
+  // undefined context is ignored (never broadcasts across all orgs).
+  waker.wake(undefined, null, { auto: true });
+  assert.equal(attempts, 0);
+
+  // Inventory already showing `starting` STILL enters auto-wake to acquire the 201 ticket, and runs all 3 scheduled retries (5s, 15s, 30s -> 4 total attempts).
+  waker.wake("ctx-a", "ws-a", { auto: true });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(attempts, 1, "inventory power=starting triggers initial auto-wake");
+  assert.deepEqual([...timers.values()].map((t) => t.ms), [5_000]);
+
+  // Switch workspace within the same org before timer #1 fires -> timer re-evaluates live activeTarget (`ws-b`), not stale `ws-a`.
+  currentWorkspace = "ws-b";
+  nextError = new FleetError("machine_lost", "vm1");
+  const t1 = [...timers.values()][0]; timers.clear();
+  t1.fn();
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(attempts, 2);
+  assert.equal(checkedWorkspaces.at(-1), "ws-b", "timer re-evaluates live workspace on retry");
+  assert.deepEqual([...timers.values()].map((t) => t.ms), [15_000]);
+
+  // Timer #2 (15s) -> attempt #3, schedules timer #3 (30s).
+  const t2 = [...timers.values()][0]; timers.clear();
+  t2.fn();
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(attempts, 3);
+  assert.deepEqual([...timers.values()].map((t) => t.ms), [30_000]);
+
+  // Timer #3 (30s) MUST execute attempt #4 and then stop scheduling further retries.
+  const t3 = [...timers.values()][0]; timers.clear();
+  t3.fn();
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(attempts, 4, "final 30s scheduled retry executes");
+  assert.equal(timers.size, 0, "no further retries after all 3 backoff steps");
+  waker.wake("ctx-a", "ws-b", { auto: true });
+  await Promise.resolve();
+  assert.equal(attempts, 4, "exhausted budget stays stopped until power=on or manual action");
+
+  // Power becoming "on" resets failure budget cleanly.
+  powerState = "off";
+  waker.onPowerChange("vm1", "ctx-a", "on");
+
+  // Explicit not_remotely_startable (`machine_off`, canWake: false) stops automatic retries permanently.
+  nextError = new FleetError("machine_off", "vm1", null, false);
+  waker.wake("ctx-a", "ws-b", { auto: true });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(attempts, 5);
+  assert.equal(timers.size, 0);
+  waker.wake("ctx-a", "ws-b", { auto: true });
+  await Promise.resolve();
+  assert.equal(attempts, 5, "not_remotely_startable does not re-trigger automatically");
+
+  // Context switch cancels pending timers cleanly.
+  nextError = new FleetError("machine_timeout", "vm1", "start");
+  waker.wake("ctx-a", "ws-b"); // manual wake clears unstartable
+  await Promise.resolve(); await Promise.resolve();
+  waker.wake("ctx-a", "ws-b", { auto: true });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(timers.size, 1);
+  waker.wake("ctx-b", null, { auto: true });
+  assert.equal(timers.size, 0, "switching active context cancels old org retry timer");
+  waker.close();
+});
+
+test("Desk cold start with linked account restores selection and emits wake POST before slow inactive org resolves in all arrival orders", async () => {
+  for (const order of ["selection-first", "inventory-first", "selection-resolves-after-install"] as const) {
+    confirmWorkspaceSelection(null, null);
+    let resolveSlow!: (v: unknown) => void;
+    let resolvePreInstallSelect!: () => void;
+    let preInstallSelection: Promise<void> | null = null;
+    const woken: { ctx: string; body: unknown }[] = [];
+    const cloudIds = new Set<string>();
+    const cloud = createSessionCloud(async (command, args) => {
+      if (command === "danil_session_status") {
+        return {
+          state: "connected",
+          sessions: [{
+            contexts: [
+              { context_id: "ctx-fast", org: "org-fast", plan: "enterprise" },
+              { context_id: "ctx-slow", org: "org-slow", plan: "enterprise" },
+            ],
+          }],
+        };
+      }
+      const ctx = args?.context as string;
+      const path = args?.path as string;
+      const echo = { "x-danil-session-applied": ctx, "x-danil-session-applied-org": ctx === "ctx-fast" ? "org-fast" : "org-slow" };
+      if (path === "/v1/capabilities") {
+        return { status: 200, headers: echo, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } };
+      }
+      if (path === "/v1/machines" && ctx === "ctx-fast") {
+        return { status: 200, headers: echo, body: { items: [{ machine_id: "vm-fast", organization_id: "org-fast", name: "Fast VM", state: "stopped", kind: "organization", wakeable: true }] } };
+      }
+      if (path === "/v1/machines" && ctx === "ctx-slow") {
+        return await new Promise((resolve) => { resolveSlow = resolve; });
+      }
+      if (path === "/v1/machines/vm-fast/tickets") {
+        woken.push({ ctx, body: args?.body });
+        return { status: 201, headers: echo, body: { ticket: "t-fast", url: "wss://connect.danil.ai/v1/machines/vm-fast/session", protocol: "danil.machine-session.v1" } };
+      }
+      return { status: 404, headers: echo, body: {} };
+    });
+
+    if (order === "selection-first") {
+      // Confirmed selection arrived BEFORE Desk installed the router.
+      confirmWorkspaceSelection("ws-fast", "ctx-fast");
+    } else if (order === "selection-resolves-after-install") {
+      // cambiarA() started set_active_workspace on the pre-install native route and stays pending until after install() + list_workspaces finish.
+      preInstallSelection = new Promise<void>((resolve) => { resolvePreInstallSelect = resolve; }).then(() => {
+        confirmWorkspaceSelection("ws-fast", "ctx-fast");
+      });
+    }
+
+    const linkedKey = JSON.stringify(["cmp_home", "acc_1", "https://edge.danil.ai"]);
+    let installed: { key: string; fleet: Fleet; router: ReturnType<typeof createRouter>; autoWake: ReturnType<typeof createDeskAutoWakeController> } | null = null;
+    let slowResolved = false;
+
+    const pending = cloud.rows(true, (contextId, rows) => {
+      for (const row of rows) cloudIds.add(row.computer_id);
+      applyDeskCloudContextReady({
+        contextId,
+        expectedKey: linkedKey,
+        rows,
+        hasGuests: false,
+        installed: installed
+          ? {
+              key: installed.key,
+              applyMachines: (next) => installed!.fleet.setMachines(next.map(infoOf)),
+              activeContext: () => installed!.router.activeContext(),
+              wakeActive: () => installed!.autoWake.wakeActive(),
+            }
+          : null,
+        install: (initialRows) => {
+          const fleet = new Fleet({
+            self: "cmp_home",
+            connect: () => {
+              const stateListeners = new Set<(s: "stopped" | "online") => void>();
+              let state: "stopped" | "online" = "stopped";
+              return {
+                state: () => state,
+                call: async () => ({ value: null, cached: null }),
+                onState: (l) => { stateListeners.add(l as never); return () => void stateListeners.delete(l as never); },
+                onEvents: () => () => {},
+                subscribe() {},
+                start() {},
+                retry: () => { state = "online"; for (const l of stateListeners) l("online"); return true; },
+                close() {},
+              };
+            },
+            wake: async (id, ctx) => {
+              const answer = await cloud.client.wake(id, ctx);
+              return answer.kind === "ok" ? { ok: true, admission: answer.value } : false;
+            },
+          });
+          const router = createRouter({
+            self: "cmp_home",
+            contextInfo: cloud.contextInfo,
+            fleet,
+            native: async (command) => command === "list_workspaces" ? { active: "ws-fast", workspaces: [{ id: "ws-fast", name: "Fast" }] } : null,
+          });
+          const autoWake = createDeskAutoWakeController({
+            fleet: () => fleet,
+            router,
+            hasContextInfo: (ctx) => Boolean(cloud.contextInfo(ctx)),
+            isCloudMachine: (id) => cloudIds.has(id),
+          });
+          fleet.setMachines(initialRows.map(infoOf));
+          autoWake.wakeActive();
+          installed = { key: linkedKey, fleet, router, autoWake };
+        },
+        onUpdated: () => {},
+      });
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    assert.equal(slowResolved, false, `${order}: slow inactive org is still unresolved`);
+    assert.ok(installed, `${order}: linked-account cold start installed partial fleet`);
+
+    if (order === "inventory-first") {
+      assert.equal(woken.length, 0, "inventory-first waits for confirmed active context before emitting wake");
+      await installed!.autoWake.route("set_active_workspace", { id: "ws-fast" }, { headers: { "x-danil-context": "ctx-fast" } });
+      await new Promise((resolve) => setTimeout(resolve, 15));
+    } else if (order === "selection-resolves-after-install") {
+      // Initial list_workspaces completes while selection is still pending and slow org is still unresolved.
+      await installed!.router.handle("list_workspaces", {});
+      assert.equal(woken.length, 0, "no wake before pre-install selection confirms");
+      resolvePreInstallSelect();
+      await preInstallSelection;
+      await new Promise((resolve) => setTimeout(resolve, 15));
+    }
+
+    assert.equal(woken.length, 1, `${order}: active org wake POST left automatically before slow inactive org resolved`);
+    assert.equal(woken[0].ctx, "ctx-fast");
+    assert.deepEqual(typeof woken[0].body === "string" ? JSON.parse(woken[0].body) : woken[0].body, { wake: true });
+
+    slowResolved = true;
+    resolveSlow({ status: 200, headers: { "x-danil-session-applied": "ctx-slow", "x-danil-session-applied-org": "org-slow" }, body: { items: [] } });
+    const final = await pending;
+    assert.equal(final.state, "ready");
+    installed!.autoWake.close();
+    installed!.router.close();
+    // Disposed controller ignores subsequent selection confirmations.
+    confirmWorkspaceSelection("ws-fast", "ctx-fast");
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    assert.equal(woken.length, 1, `${order}: disposed controller does not re-trigger wake`);
+    confirmWorkspaceSelection(null, null);
+  }
+});
+
+test("windowContext.inventory delivers active org rows via onGroupReady without waiting for slow inactive orgs", async () => {
+  let resolveSlow!: (v: unknown) => void;
+  const groups = [
+    { context: "ctx-active", org: "org-active", name: "Active Org", plan: "enterprise", email: "a@danil.ai" },
+    { context: "ctx-slow", org: "org-slow", name: "Slow Org", plan: "enterprise", email: "a@danil.ai" },
+  ];
+  const scope = windowContext({
+    factory: (context) => ({
+      list: () => context === "ctx-active"
+        ? Promise.resolve({ kind: "ok", value: [{ machine_id: "vm-active", organization_id: "org-active", name: "Active VM", state: "stopped", wakeable: true }] })
+        : new Promise((resolve) => { resolveSlow = resolve; }),
+    }) as never,
+    sessions: { handle: async () => ({ state: "connected" }) } as never,
+    groups: () => groups as never,
+    fallback: () => "ctx-active",
+    active: () => "ctx-active",
+    fleet: () => ({ pruneContexts() {} }) as never,
+    revision: () => 0,
+  });
+
+  const ready: string[] = [];
+  const pending = scope.inventory((group, rows) => {
+    ready.push(`${group.context}:${rows.map((r) => r.machine.machine_id).join(",")}`);
+  });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(ready, ["ctx-active:vm-active"], "active org resolves and triggers callback while slow org is still pending");
+  resolveSlow({ kind: "ok", value: [{ machine_id: "vm-slow", organization_id: "org-slow", name: "Slow VM", state: "stopped", wakeable: true }] });
+  const result = await pending;
+  assert.equal(result?.rows.length, 2);
 });
