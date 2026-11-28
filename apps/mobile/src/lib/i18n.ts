@@ -641,6 +641,21 @@ const es = {
   "task.files.table_truncated": "La tabla es larga: se muestran las primeras 1000 filas.",
   "task.tools.chat": "Chat",
   "space.delete_empty": "No tiene tareas abiertas.",
+  "drawer.open": "Abrir menú",
+  "drawer.close": "Cerrar menú",
+  "drawer.messaging": "Mensajería",
+  "drawer.projects": "Proyectos",
+  "drawer.projects_empty": "Sin proyectos todavía",
+  "drawer.new_task_in": "Nueva tarea en {name}",
+  "drawer.agents_empty": "Sin agentes todavía",
+  "drawer.tasks_count": "{count} tareas",
+  "drawer.task_single": "1 tarea",
+  "home.greeting": "¿Qué resolvemos?",
+  "home.greeting_name": "¿Qué resolvemos, {name}?",
+  "home.project": "Proyecto",
+  "home.no_project": "Sin proyecto",
+  "task.tools.open_menu": "Herramientas de la tarea",
+  "task.tools.close_menu": "Cerrar herramientas",
 } as const;
 
 type Key = keyof typeof es;
@@ -1285,6 +1300,21 @@ const en: Record<Key, string> = {
   "task.files.table_truncated": "The table is long: the first 1000 rows are shown.",
   "task.tools.chat": "Chat",
   "space.delete_empty": "It has no open tasks.",
+  "drawer.open": "Open menu",
+  "drawer.close": "Close menu",
+  "drawer.messaging": "Messaging",
+  "drawer.projects": "Projects",
+  "drawer.projects_empty": "No projects yet",
+  "drawer.new_task_in": "New task in {name}",
+  "drawer.agents_empty": "No agents yet",
+  "drawer.tasks_count": "{count} tasks",
+  "drawer.task_single": "1 task",
+  "home.greeting": "What shall we solve?",
+  "home.greeting_name": "What shall we solve, {name}?",
+  "home.project": "Project",
+  "home.no_project": "No project",
+  "task.tools.open_menu": "Task tools",
+  "task.tools.close_menu": "Close tools",
 };
 
 /** The language the app speaks, also for the words that come from `@terminus/design`. */
