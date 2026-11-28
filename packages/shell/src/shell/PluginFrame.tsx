@@ -235,7 +235,7 @@ export default function PluginFrame(props: {
         src={props.url}
         title={props.title}
         sandbox={PLUGIN_SANDBOX}
-        allow="clipboard-write"
+        allow="clipboard-write; microphone"
         referrerPolicy="no-referrer"
         class="block h-full w-full flex-1 border-0 bg-surface"
         onLoad={() => {
