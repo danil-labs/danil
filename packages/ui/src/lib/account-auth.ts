@@ -17,6 +17,22 @@ const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 
 export type ManualLoginMode = "code" | "hosted_code" | "callback_url";
 
+/** Contrato compartido del diálogo de conexión por navegador entre Configuración y Alta. */
+export type ConnectionDialogProps = {
+  etiqueta: string;
+  url: string | null;
+  aviso?: string | null;
+  porConfirmar: string | null;
+  pideCodigo: boolean;
+  enviandoCodigo?: boolean;
+  codigoEnviado?: boolean;
+  errorCodigo?: string | null;
+  onLimpiarErrorCodigo?: () => void;
+  salida: string[];
+  onCancelar: () => void;
+  onCodigo: (codigo: string) => void;
+};
+
 function parseRedirectUri(url: string | null | undefined): string | null {
   if (!url) return null;
   let parsed: URL;

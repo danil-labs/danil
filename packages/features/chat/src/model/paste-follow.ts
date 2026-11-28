@@ -19,6 +19,7 @@ import { HOLGURA, MARGEN_DE_FONDO } from "./paste-spring.ts";
 import { botonAbajo, subePorDentro, vigilarElRaton } from "./paste-mouse.ts";
 import type { Pegado } from "./paste-types.ts";
 import { crearAncla } from "./paste-anchor.ts";
+import { crearRastreadorDeDesplegables } from "./paste-disclosure.ts";
 import { crearBajada } from "./paste-scroll-down.ts";
 import { crearObservador } from "./paste-resize.ts";
 
@@ -60,24 +61,6 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   let escritoPorNosotros: number | undefined;
   let ultimoScrollTop: number | undefined;
   let ultimaRuedaArriba = 0;
-  let interaccionDesplegable: "abrir" | "cerrar" | null = null;
-  let limpiarInteraccion = 0;
-
-  const marcarInteraccion = (tipo: "abrir" | "cerrar") => {
-    interaccionDesplegable = tipo;
-    if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(limpiarInteraccion);
-    if (typeof requestAnimationFrame === "function") {
-      limpiarInteraccion = requestAnimationFrame(() => {
-        setTimeout(() => {
-          if (interaccionDesplegable === tipo) interaccionDesplegable = null;
-        }, 1);
-      });
-    } else {
-      setTimeout(() => {
-        if (interaccionDesplegable === tipo) interaccionDesplegable = null;
-      }, 1);
-    }
-  };
 
   const scrollTop = () => caja?.scrollTop ?? 0;
 
@@ -272,26 +255,10 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   // Más de un tercio de la caja en blanco se lee peor que el salto que evita.
   const topeDeRelleno = () => Math.round((caja?.clientHeight ?? 0) / 3);
 
-  /**
-   * Abrir un desplegable (`Pensando…`, `Trabajó durante…`, pasos, razonamiento,
-   * preguntas, visuales o detalles de historial) es un gesto de lectura de la
-   * persona, nunca streaming nuevo al final: soltar aquí en fase de captura
-   * clava la cabecera donde se pulsó y evita saltar a mitad de la caja.
-   */
-  const alInteractuar = (e: Event) => {
-    const target = e.target as Element | null;
-    const control = target?.closest?.("[aria-expanded], [data-disclosure-toggle]");
-    if (!control) return;
-    const estado = control.getAttribute("aria-expanded") ?? control.getAttribute("data-disclosure-toggle");
-    if (estado === "false" || estado === "open") {
-      soltar();
-      marcarInteraccion("abrir");
-    } else if (estado === "true" || estado === "close") {
-      marcarInteraccion("cerrar");
-    }
-  };
+  const desplegables = crearRastreadorDeDesplegables(soltar);
+  const { alInteractuar } = desplegables;
 
-  const { observador, diferenciaActual, olvidarAlto, sumarAntepuesto } = crearObservador({ cajaActual: () => caja, sigue, escapado, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual: () => relleno, ponRelleno, topeDeRelleno, ruedaArribaActiva: () => performance.now() - ultimaRuedaArriba < 250, interaccionActual: () => interaccionDesplegable });
+  const { observador, diferenciaActual, olvidarAlto, sumarAntepuesto } = crearObservador({ cajaActual: () => caja, sigue, escapado, enTurno, encogidoArriba, ponScrollTop, fondo, scrollTop, ponCerca, estaCerca, ponNuevos, restaurarAncla, pegar, tomarAncla, ponEscapado, ponSigue, rellenoActual: () => relleno, ponRelleno, topeDeRelleno, ruedaArribaActiva: () => performance.now() - ultimaRuedaArriba < 250, interaccionActual: desplegables.actual });
 
   /**
    * Los dos `ref` sueltan lo anterior antes de tomar lo nuevo: la caja de una
@@ -390,7 +357,7 @@ export function seguirElFondo(enTurno: () => boolean = () => true): Pegado {
   );
 
   onCleanup(() => {
-    if (typeof cancelAnimationFrame === "function") cancelAnimationFrame(limpiarInteraccion);
+    desplegables.limpiar();
     caja?.removeEventListener("scroll", alScrollear);
     caja?.removeEventListener("wheel", alRodar);
     dentro?.removeEventListener?.("click", alInteractuar, true);

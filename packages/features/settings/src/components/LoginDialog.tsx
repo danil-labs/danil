@@ -11,30 +11,17 @@ import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { Terminal, TerminalBody } from "../../../../ui/src/Terminal";
-import { isHeadlessCodeNotice, manualLoginMode } from "../../../../ui/src/lib/account-auth.ts";
+import { type ConnectionDialogProps, manualLoginMode } from "../../../../ui/src/lib/account-auth.ts";
 import "../../../../ui/src/locales/settingsPhrases";
-import { LoginCodeForm } from "../screens/LoginCodeForm";
 import { Paso } from "./ConnectionStep";
+import { LoginCodeStep } from "./LoginCodeStep";
 
 /**
  * La ventana de una conexión por navegador, la misma de Configuración: el enlace para
  * abrirlo otra vez o copiarlo, el código a confirmar, el código a pegar y lo que dice el CLI.
  * Solo se cierra con «cancelar»: un clic fuera no puede tirar un login con su proceso vivo.
  */
-export function DialogoDeConexion(props: {
-  etiqueta: string;
-  url: string | null;
-  aviso?: string | null;
-  porConfirmar: string | null;
-  pideCodigo: boolean;
-  enviandoCodigo?: boolean;
-  codigoEnviado?: boolean;
-  errorCodigo?: string | null;
-  onLimpiarErrorCodigo?: () => void;
-  salida: string[];
-  onCancelar: () => void;
-  onCodigo: (codigo: string) => void;
-}) {
+export function DialogoDeConexion(props: ConnectionDialogProps) {
   const modoCodigo = () => manualLoginMode(props.url, props.aviso);
   const tituloCodigo = () =>
     modoCodigo() === "callback_url"
@@ -121,38 +108,20 @@ export function DialogoDeConexion(props: {
         </Show>
 
         <Show when={props.pideCodigo}>
-          <Paso numero={props.url ? 2 : 1} titulo={tituloCodigo()}>
-            <Show when={modoCodigo() === "callback_url"}>
-              <p class="m-0 text-xs text-neutral-500" data-login-loopback-hint="">
-                {t("settings.accounts.step_callback_url_hint")}
-              </p>
-            </Show>
-            <Show when={modoCodigo() === "hosted_code"}>
-              <p class="m-0 text-xs text-neutral-500" data-login-hosted-hint="">
-                {t("settings.accounts.step_hosted_code_hint")}
-              </p>
-            </Show>
-            <Show
-              when={
-                props.aviso &&
-                modoCodigo() !== "callback_url" &&
-                !(modoCodigo() === "hosted_code" && isHeadlessCodeNotice(props.aviso))
-              }
-            >
-              <p class="m-0 text-xs text-neutral-500" data-login-notice="">{props.aviso}</p>
-            </Show>
-            <LoginCodeForm
-              value={codigo()}
-              onInput={(v) => {
-                setCodigo(v);
-                props.onLimpiarErrorCodigo?.();
-              }}
-              onSubmit={enviar}
-              submitting={props.enviandoCodigo}
-              error={props.errorCodigo}
-              mode={modoCodigo()}
-            />
-          </Paso>
+          <LoginCodeStep
+            numero={props.url ? 2 : 1}
+            titulo={tituloCodigo()}
+            modo={modoCodigo()}
+            aviso={props.aviso}
+            value={codigo()}
+            onInput={(v) => {
+              setCodigo(v);
+              props.onLimpiarErrorCodigo?.();
+            }}
+            onSubmit={enviar}
+            submitting={props.enviandoCodigo}
+            error={props.errorCodigo}
+          />
         </Show>
 
         <Show when={!props.pideCodigo && props.codigoEnviado}>

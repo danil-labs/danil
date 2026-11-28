@@ -74,6 +74,7 @@ const steps = [
   ["Tool rows keep command labels and disclose only additional output", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/step-row.test.ts")], root],
   ["Front modularization debt only decreases", process.execPath, [join(root, "scripts/guards/front-modularization.mjs")], root],
   ["Front modularization gates reject injected regressions", process.execPath, ["--test", join(root, "tests/unit/front-modularization.test.mjs")], root],
+  ["Front boundary guard keeps zero R3/R9 violations and zero shell/chat R6 violations", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/front-boundaries-regression.test.mjs")], root],
   ["Service capabilities are optional and versioned", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/web-service-capabilities.test.ts")], root],
   ["No legacy billing route in clients", process.execPath, [join(root, "scripts/guards/no-legacy-billing.mjs")], root],
   ["Legacy billing guard covers templates and absolute URLs in app and packages", process.execPath, ["--test", join(root, "tests/unit/no-legacy-billing.test.mjs")], root],
