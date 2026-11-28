@@ -685,7 +685,7 @@ export function Composer({
   const sendLabel = shell ? w("chat.composer.run") : w("chat.composer.send");
 
   return (
-    <View style={[styles.wrap, { paddingBottom: 8 + (bottomInset && !keyboard ? insets.bottom : 0) }]}>
+    <View style={[styles.wrap, { paddingBottom: (keyboard ? 10 : 20) + (bottomInset && !keyboard ? insets.bottom : 0) }]}>
       {slashOpen ? (
         <Suggestions>
           {!slashItems ? <Text style={[styles.hint, { color: theme.textMuted }]}>{t("composer.loading")}</Text> : null}
