@@ -140,6 +140,10 @@ export function edgeControlPlane(deployment: EdgeDeployment, options: EdgeOption
     async wake(id: string): Promise<boolean | "not_startable"> {
       return wokeOf(await machines.wake(id));
     },
+    async wakeWithAdmission(id: string): Promise<boolean | "not_startable" | { ok: true; admission: MachineAdmission }> {
+      const answer = await machines.wake(id);
+      return answer.kind === "ok" ? { ok: true, admission: answer.value } : wokeOf(answer);
+    },
     async admit(id: string): Promise<MachineAdmission> {
       const answer = await machines.admission(id);
       if (answer.kind !== "ok") {

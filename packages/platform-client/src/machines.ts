@@ -245,14 +245,14 @@ export function machinesClient(config: MachinesConfig) {
     /**
      * Enciende una VM apagada por una acción de la persona: `POST …/tickets {"wake": true}` con la MISMA
      * `Idempotency-Key` en cada intento. `503 machine_starting` pide esperar `Retry-After` y reintentar hasta el
-     * `201` (normalmente menos de 2 s). Nunca se llama al cargar, listar ni en segundo plano: sin `wake`, una
-     * VM apagada contesta `409 machine_stopped` y no se enciende. El ticket de esta respuesta se descarta.
+     * `201` (normalmente menos de 2 s). Devuelve el ticket ya validado para abrir el canal de datos de una vez,
+     * sin pedir un segundo ticket que pueda chocar con `409 machine_stopped`.
      */
-    async wake(id: string): Promise<MachinesAnswer<true>> {
+    async wake(id: string): Promise<MachinesAnswer<Admission>> {
       const key = newIdempotencyKey();
       const deadline = now() + (config.operationTimeoutMs ?? OPERATION_TIMEOUT_MS);
       for (;;) {
-        const answer = await call(false, "POST", `${idPath(id)}/tickets`, () => true as const, { ok: [200, 201], body: '{"wake":true}', key });
+        const answer = await issueAdmission(id, { body: '{"wake":true}', key });
         if (answer.kind !== "error" || answer.status !== 503 || answer.code !== "machine_starting") return answer;
         const wait = pollingDelay(answer.retryAfter, 2_000);
         if (now() + wait > deadline) return { kind: "error", status: 503, code: "operation_timeout" };
@@ -261,26 +261,35 @@ export function machinesClient(config: MachinesConfig) {
     },
 
     /** Un ticket de un solo uso para el canal de datos. Si la URL no pasa la validación, el ticket no sale de aquí. */
-    async admission(id: string): Promise<MachinesAnswer<Admission>> {
-      const issued = await call(
-        false,
-        "POST",
-        `${idPath(id)}/tickets`,
-        (body) => {
-          const b = body as MachineTicket | null;
-          if (typeof b?.ticket !== "string" || !b.ticket) throw new Error("invalid_admission");
-          return { ticket: b.ticket, url: b.url, session_expires_at: typeof b.session_expires_at === "string" ? b.session_expires_at : null,
-            ...(typeof b.protocol === "string" ? { protocol: b.protocol } : {}), ...(typeof b.expires_at === "string" ? { expires_at: b.expires_at } : {}) };
-        },
-        { ok: [200, 201] },
-      );
-      if (issued.kind !== "ok") return issued;
-      const url = admissionUrl(issued.value.url, id, origins);
-      if (!url) return { kind: "error", status: null, code: "invalid_admission_url" };
-      return { kind: "ok", value: { url, ticket: issued.value.ticket, session_expires_at: issued.value.session_expires_at,
-        ...(issued.value.protocol ? { protocol: issued.value.protocol } : {}), ...(issued.value.expires_at ? { expires_at: issued.value.expires_at } : {}) } };
-    },
+    admission: (id: string): Promise<MachinesAnswer<Admission>> => issueAdmission(id),
   };
+
+  async function issueAdmission(id: string, opts: { body?: string; key?: string } = {}): Promise<MachinesAnswer<Admission>> {
+    const issued = await call(
+      false,
+      "POST",
+      `${idPath(id)}/tickets`,
+      (body) => {
+        const b = body as MachineTicket | null;
+        if (typeof b?.ticket !== "string" || !b.ticket) throw new Error("invalid_admission");
+        return {
+          ticket: b.ticket, url: b.url, session_expires_at: typeof b.session_expires_at === "string" ? b.session_expires_at : null,
+          ...(typeof b.protocol === "string" ? { protocol: b.protocol } : {}), ...(typeof b.expires_at === "string" ? { expires_at: b.expires_at } : {}),
+        };
+      },
+      { ok: [200, 201], ...opts },
+    );
+    if (issued.kind !== "ok") return issued;
+    const validatedUrl = admissionUrl(issued.value.url, id, origins);
+    if (!validatedUrl) return { kind: "error", status: null, code: "invalid_admission_url" };
+    return {
+      kind: "ok",
+      value: {
+        url: validatedUrl, ticket: issued.value.ticket, session_expires_at: issued.value.session_expires_at,
+        ...(issued.value.protocol ? { protocol: issued.value.protocol } : {}), ...(issued.value.expires_at ? { expires_at: issued.value.expires_at } : {}),
+      },
+    };
+  }
 }
 
 /** Lo que la flota entiende de un encendido: encendida, no se pudo, o la nube no la enciende. */

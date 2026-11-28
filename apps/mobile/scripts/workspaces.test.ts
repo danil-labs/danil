@@ -195,7 +195,7 @@ test("foldersForNewTask prioriza el espacio activo y cae a todas las carpetas si
   );
 });
 
-test("wakeableStoppedHosts elige solo VMs administradas apagadas que aún no se intentaron encender", () => {
+test("wakeableStoppedHosts elige solo VMs administradas apagadas o arrancando que aún no se intentaron encender", () => {
   const mk = (id: string, managed: boolean, power: "on" | "off" | "starting" | "outdated", canAct: "now" | "wakes" | "asleep" | "outdated") => ({
     id,
     managed,
@@ -209,6 +209,6 @@ test("wakeableStoppedHosts elige solo VMs administradas apagadas que aún no se 
     mk("mch_laptop", false, "off", "asleep"),
     mk("mch_outdated", true, "outdated", "outdated"),
   ];
-  assert.deepEqual(wakeableStoppedHosts(hosts).map((h) => h.id), ["mch_nube"]);
-  assert.deepEqual(wakeableStoppedHosts(hosts, new Set(["mch_nube"])).map((h) => h.id), []);
+  assert.deepEqual(wakeableStoppedHosts(hosts).map((h) => h.id), ["mch_nube", "mch_starting"]);
+  assert.deepEqual(wakeableStoppedHosts(hosts, new Set(["mch_nube", "mch_starting"])).map((h) => h.id), []);
 });

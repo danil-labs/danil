@@ -138,7 +138,7 @@ async function read<T>(host: Host, command: Parameters<Host["call"]>[0], workspa
   }
 }
 
-/** Máquinas administradas detenidas que deben encenderse para leer un workspace sin copia viva. */
+/** Máquinas administradas detenidas o arrancando que deben completar el flujo `wake` para obtener ticket 201. */
 export function wakeableStoppedHosts<H extends Pick<Host, "id" | "managed" | "power" | "canAct">>(
   hosts: readonly H[],
   alreadyAttempted?: ReadonlySet<string>,
@@ -146,7 +146,7 @@ export function wakeableStoppedHosts<H extends Pick<Host, "id" | "managed" | "po
   return hosts.filter(
     (host) =>
       host.managed &&
-      host.power() === "off" &&
+      (host.power() === "off" || host.power() === "starting") &&
       host.canAct() === "wakes" &&
       !alreadyAttempted?.has(host.id),
   );

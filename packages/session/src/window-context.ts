@@ -62,14 +62,18 @@ export function windowContext(options: { factory: (context: string) => Client; s
     engine<T extends { handle: (command: string, args?: Record<string, unknown>, options?: { headers?: HeadersInit }) => Promise<unknown>; activeWorkspace?: () => string | null }>(engine: T) {
       return { handle: async (command: string, args?: Record<string, unknown>, init?: { headers?: HeadersInit }) => {
         const headers = new Headers(init?.headers);
-        if (OF_THE_WORKSPACE.has(command) && !headers.has("x-terminus-workspace"))
-          for (let waited = 0; !engine.activeWorkspace?.() && waited < 10_000; waited += 100) await new Promise((resolve) => setTimeout(resolve, 100));
+        if (OF_THE_WORKSPACE.has(command) && !headers.has("x-terminus-workspace")) {
+          const deadline = Date.now() + 10_000;
+          while (!engine.activeWorkspace?.() && Date.now() < deadline) {
+            await new Promise((resolve) => setTimeout(resolve, Math.min(100, Math.max(1, deadline - Date.now()))));
+          }
+        }
         if (command !== "list_workspace_attention" && !headers.has("x-danil-context")) headers.set("x-danil-context", options.active() ?? options.fallback() ?? "");
         return engine.handle(command, args, { ...init, headers });
       } };
     },
     /** Las máquinas de cada organización con su propio contexto; una que falla no borra las demás. */
-    async inventory(): Promise<{ answer: Answer; rows: ContextRow[] } | null> {
+    async inventory(onGroupReady?: (group: GroupAccount, rows: ContextRow[]) => void): Promise<{ answer: Answer; rows: ContextRow[] } | null> {
       const status = await options.sessions.handle("danil_session_status").catch(() => null) as WebSessionStatus | null;
       if (!status || status.state !== "connected") return null;
       const settled = groups();
@@ -77,9 +81,16 @@ export function windowContext(options: { factory: (context: string) => Client; s
       for (const id of [...clients.keys()]) if (!ids.includes(id)) clients.delete(id);
       options.fleet().pruneContexts(ids);
       options.onContextsSettled?.(ids);
-      const answers = await Promise.all(settled.map(async (group) => ({ group, answer: await client(group.context).list(undefined, { fresh: true }).catch(() => ({ kind: "unavailable", status: 0 }) as Answer) })));
-      // Un 401 de un contexto marca solo su grupo; uno que vuelve a contestar se desmarca.
-      for (const { group, answer } of answers) if (answer.kind === "ok" || answer.kind === "unauthorized") options.onContextState?.(group.context, answer.kind === "unauthorized");
+      const answers = await Promise.all(settled.map(async (group) => {
+        const answer = await client(group.context).list(undefined, { fresh: true }).catch(() => ({ kind: "unavailable", status: 0 }) as Answer);
+        // Un 401 de un contexto marca solo su grupo; uno que vuelve a contestar se desmarca.
+        if (answer.kind === "ok" || answer.kind === "unauthorized") options.onContextState?.(group.context, answer.kind === "unauthorized");
+        if (answer.kind === "ok") {
+          const groupRows = answer.value.filter((row) => row.organization_id === group.org).map((machine) => ({ machine, group }));
+          onGroupReady?.(group, groupRows);
+        }
+        return { group, answer };
+      }));
       const ok = answers.filter((a) => a.answer.kind === "ok");
       if (!ok.length && answers.length) return { answer: answers[0].answer, rows: [] };
       const rows = ok.flatMap(({ group, answer }) => (answer.kind === "ok" ? answer.value : []).filter((row) => row.organization_id === group.org).map((machine) => ({ machine, group })));

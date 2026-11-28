@@ -15,7 +15,7 @@ import { displayWorkspaceSnapshot, callEngine, requestedWorkspaceSnapshot } from
 import { capabilities, isNoMachines } from "../../../../host/src/platform";
 import { prosaDe } from "../../../../ui/src/Failure";
 import { batch, type Accessor, type Setter } from "solid-js";
-import type { ComposerPort, ContextSourcePort, DraftsPort, Hilo, MachinesPort, ProjectsPort, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
+import type { ComposerPort, ContextSourcePort, DraftsPort, Hilo, MachinesPort, ProjectsPort, ScopedReadErrorSetter, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createPanels } from "../../../../ui/src/lib/panels.ts";
 import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { sessionRefresh } from "../../../../session/src/sessionRefresh.ts";
@@ -39,9 +39,9 @@ export type AttachmentsDeps = { abrirSesion: ContextSourcePort["abrirSesion"]; a
   sessionId: Accessor<string | null>; sessionLists: ReturnType<typeof sessionRefresh>; setAlta: Setter<boolean>; setAviso: Setter<{ texto: string; boton?: string; ir?: () => void; } | null>;
   setBloqueo: Setter<Frase | null>; setCuentasTocadas: Setter<number>; setDesdeDeTurno: ReturnType<typeof createThreadStream>["setDesdeDeTurno"]; setDraftBases: Setter<Record<string, string>>;
   setEnCache: Setter<boolean>; setError: Setter<string | null>; setEscritorio: Setter<string | null>; setFolder: ReturnType<typeof createThreadStream>["setFolder"];
-  setMaterialError: Setter<string | null>; setProject: Setter<string>; setProjectReadError: Setter<string | null>; setProyectoAbierto: Setter<string | null>;
+  setMaterialError: Setter<string | null>; setProject: Setter<string>; setProjectReadError: ScopedReadErrorSetter; setProyectoAbierto: Setter<string | null>;
   setSesiones: Setter<Record<string, SessionRow[]>>; setSessionId: Setter<string | null>; setSettlingTurns: ReturnType<typeof createThreadStream>["setSettlingTurns"]; setSources: Setter<Source[]>;
-  setSpaces: Setter<Space[]>; setStartupReadError: Setter<string | null>; setTaskSourcesError: Setter<string | null>; setVentana: ReturnType<typeof createThreadStream>["setVentana"];
+  setSpaces: Setter<Space[]>; setStartupReadError: ScopedReadErrorSetter; setTaskSourcesError: Setter<string | null>; setVentana: ReturnType<typeof createThreadStream>["setVentana"];
   setVivas: ReturnType<typeof createThreadStream>["setVivas"]; shellCache: ShellSnapshot | null; soltarCola: ContextSourcePort["soltarCola"];
   taskQueues: ReturnType<typeof createThreadStream>["taskQueues"]; threads: ReturnType<typeof createThreadsStore>; workspaceActivo: Accessor<string | null>;
   workspaceContext: WorkspaceContextPort; };
@@ -116,15 +116,16 @@ export function createAttachments(deps: AttachmentsDeps) {
     const generation = workspaceContext.generation();
     const workspace = workspaceActivo();
     const request = ++startupRetryRequest;
+    const readToken = setStartupReadError.begin();
     const current = () => request === startupRetryRequest && generation === workspaceContext.generation() && workspace === workspaceActivo();
     try {
       const startup = await callEngine<Startup>("workspaces_startup");
       if (!current()) return;
       if (startup.bloqueo) { setBloqueo(startup.bloqueo); return; }
       if (workspace === null) await aplicar(startup);
-      else if (startup.active === workspace) setStartupReadError(null);
+      else if (startup.active === workspace) setStartupReadError.setFor(readToken, null);
     } catch (cause) {
-      if (current() && !asleep(cause) && !isNoMachines()) setStartupReadError(prosaDe(cause));
+      if (current() && !asleep(cause) && !isNoMachines()) setStartupReadError.setFor(readToken, prosaDe(cause));
     }
   }
 
@@ -138,6 +139,7 @@ export function createAttachments(deps: AttachmentsDeps) {
       setSources([]);
       return;
     }
+    const projectToken = setProjectReadError.begin();
     try {
       const arranque = await callEngine<Startup>("list_workspaces");
       if (!workspaceContext.currentMaterial(request)) return;
@@ -146,7 +148,7 @@ export function createAttachments(deps: AttachmentsDeps) {
       const root = current.context_root;
       const [, fuentes] = await Promise.all([
         projectCatalog.changed().then(rows => {
-          if (workspaceContext.currentMaterial(request)) setProjectReadError(null);
+          if (workspaceContext.currentMaterial(request)) setProjectReadError.setFor(projectToken, null);
           return rows;
         }),
         callEngine<Source[]>("list_sources"),

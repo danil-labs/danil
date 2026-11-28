@@ -15,3 +15,5 @@ export type { Startup } from "../../../../ui/src/lib/workspace-startup.ts";
 export type { createThreadsStore };
 export type Hilo = ReturnType<ReturnType<typeof createThreadsStore>["current"]>;
 export type MachineWait = ReturnType<ReturnType<typeof createThreadsStore>["machineWaits"]>[string];
+export type ReadErrorToken = { readonly workspace: string | null; readonly generation: number; readonly wakeEpoch: number; readonly starting: boolean; readonly seq: number };
+export type ScopedReadErrorSetter = import("solid-js").Setter<string | null> & { begin: () => ReadErrorToken; setFor: (token: ReadErrorToken, value: string | null) => void };

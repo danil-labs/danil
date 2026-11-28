@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createEffect, createRoot } from "solid-js";
+import { createEffect, createRoot, createSignal } from "solid-js";
 import { createResource } from "../../src/lib/resource.ts";
-import { createProjectsStore as projectsStore, type ProjectsScope } from "../../../../packages/features/projects/src/queries/store.ts";
+import { createWakeScopedReadErrors } from "../../../../packages/features/projects/src/model/scoped-read-error.ts";
+import { rereadProjectsCatalog } from "../../../../packages/features/workspaces/src/queries/reread-projects.ts";
+import { createProjectsStore as projectsStore, PROJECTS_READ_TIMEOUT, type ProjectsScope } from "../../../../packages/features/projects/src/queries/store.ts";
 import type { Project } from "../../src/lib/model.ts";
 
 function createProjectsStore(deps: Parameters<typeof projectsStore>[0]) {
@@ -186,4 +188,84 @@ test("cached projects and a stale reply cannot confirm another workspace", async
   const old = store.refresh(); const aborted = assert.rejects(old, { name: "AbortError" });
   scope = { workspace: "B", machine: null }; store.workspaceChanged();
   reply.resolve([]); await aborted; assert.equal(store.readyScope(), null); store.dispose();
+});
+
+test("default projects read timeout exceeds the transport wait + fleet read retry budget", () => {
+  assert.ok(PROJECTS_READ_TIMEOUT >= 45_000, `expected >= 45000ms, got ${PROJECTS_READ_TIMEOUT}`);
+});
+
+test("wake-scoped read errors suppress errors during starting, never flash pre-wake errors on on, and show post-wake failures", () => {
+  createRoot((dispose) => {
+    const [machines, setMachines] = createSignal([{ id: "vm", local: false, wakes: true, on: false, power: "off" }]);
+    const [workspace, setWorkspace] = createSignal<string | null>("ws-1");
+    let generation = 1;
+    const errors = createWakeScopedReadErrors({ machines, workspace, generation: () => generation });
+    const [readError, setReadError] = errors.createError();
+
+    // Error recorded while off disappears as soon as waking begins and NEVER flashes back when VM reaches `on`.
+    setReadError("pre-wake timeout");
+    assert.equal(readError(), "pre-wake timeout");
+    setMachines([{ id: "vm", local: false, wakes: true, on: false, power: "starting" }]);
+    assert.equal(readError(), null, "suppressed while starting");
+    setReadError("during-wake timeout");
+    assert.equal(readError(), null, "new errors during starting are ignored");
+    setMachines([{ id: "vm", local: false, wakes: true, on: true, power: "on" }]);
+    assert.equal(readError(), null, "pre-wake error never flashes on transition to on");
+
+    // A read started during `starting` that rejects AFTER the VM becomes `on` must NEVER produce a late toast.
+    setMachines([{ id: "vm", local: false, wakes: true, on: false, power: "starting" }]);
+    const duringStarting = setReadError.begin();
+    setMachines([{ id: "vm", local: false, wakes: true, on: true, power: "on" }]);
+    setReadError.setFor(duringStarting, "late timeout from starting");
+    assert.equal(readError(), null, "late rejection from a read started during starting is discarded after on");
+
+    // Competing post-wake reads: an older read finishing late cannot clear a newer read's error.
+    const olderPostWake = setReadError.begin();
+    const newerPostWake = setReadError.begin();
+    setReadError.setFor(newerPostWake, "post-wake failure");
+    assert.equal(readError(), "post-wake failure");
+    setReadError.setFor(olderPostWake, null);
+    assert.equal(readError(), "post-wake failure", "stale success cannot erase a newer read's failure");
+
+    // Workspace switch or generation advance clears the visible error.
+    setWorkspace("ws-2");
+    assert.equal(readError(), null, "workspace switch hides previous workspace error");
+    setWorkspace("ws-1");
+    generation = 2;
+    assert.equal(readError(), null, "generation advance invalidates stale read error");
+    dispose();
+  });
+});
+
+test("releerProyectos started before a newer read cannot clear the newer read's error or invalidate its in-flight token", async () => {
+  await createRoot(async (dispose) => {
+    const [machines, setMachines] = createSignal([{ id: "vm", local: false, wakes: true, on: false, power: "starting" }]);
+    const [workspace] = createSignal<string | null>("ws-1");
+    const errors = createWakeScopedReadErrors({ machines, workspace, generation: () => 1 });
+    const [projectReadError, setProjectReadError] = errors.createError();
+    const staleChanged = pending<unknown>();
+
+    // 1. Old releerProyectos starts during `starting`.
+    const oldReread = rereadProjectsCatalog({ changed: () => staleChanged.promise }, setProjectReadError);
+
+    // 2. VM becomes `on` and a fresh post-wake read starts.
+    setMachines([{ id: "vm", local: false, wakes: true, on: true, power: "on" }]);
+    const newerReadToken = setProjectReadError.begin();
+
+    // 3. Old releerProyectos resolves while newer read is still in flight -> must NOT invalidate newerReadToken.
+    staleChanged.resolve([]);
+    await oldReread;
+    setProjectReadError.setFor(newerReadToken, "fresh post-wake failure");
+    assert.equal(projectReadError(), "fresh post-wake failure", "stale releerProyectos did not invalidate newer in-flight token");
+
+    // 4. Another stale releerProyectos started before a subsequent failure cannot erase the newer error.
+    const olderChanged = pending<unknown>();
+    const oldReread2 = rereadProjectsCatalog({ changed: () => olderChanged.promise }, setProjectReadError);
+    const newestFailureToken = setProjectReadError.begin();
+    setProjectReadError.setFor(newestFailureToken, "current read error");
+    olderChanged.resolve([]);
+    await oldReread2;
+    assert.equal(projectReadError(), "current read error", "stale releerProyectos resolving after newer error cannot clear it");
+    dispose();
+  });
 });
