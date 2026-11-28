@@ -233,11 +233,11 @@ test("Detener con razonamiento activo apaga el spinner y escribir encima muestra
 });
 
 test("«Detener y enviar» con turno activo mantiene un único spinner y oculta el mensaje promovido de la lista de cola", async () => {
-  let resolverStop = null;
+  let _resolverStop = null;
   let vivos = ["t1"];
   const app = await boot("listo", "chat-stop-and-send-single-spinner", responses({
     list_active_turns: () => vivos,
-    stop_turn: () => new Promise((resolve) => { resolverStop = resolve; }),
+    stop_turn: () => new Promise((resolve) => { _resolverStop = resolve; }),
     send_message: () => "nuevo-turno",
   }));
   try {
@@ -346,7 +346,7 @@ test("si falla stop_turn tras Detener optimista no ofrece Reintentar el prompt y
 });
 
 test("con dos elementos en cola durante handoff se oculta «mandar» inerte y «Enviar de nuevo» incierto respeta la barrera", async () => {
-  let resolverStop = null;
+  let _resolverStop = null;
   let vivos = ["t1"];
   const enviados = [];
   const app = await boot("listo", "chat-stop-resend-and-two-queued", responses({
@@ -357,7 +357,7 @@ test("con dos elementos en cola durante handoff se oculta «mandar» inerte y «
           { id: "q2", text: "segundo incierto", provider: AGENTE, model: "deepseek", effort: null, permission_mode: null, attachments: [], uncertain: true },
         ]
       : [],
-    stop_turn: () => new Promise((resolve) => { resolverStop = resolve; }),
+    stop_turn: () => new Promise((resolve) => { _resolverStop = resolve; }),
     send_message: (args) => {
       enviados.push(args);
       return "nuevo-turno";
