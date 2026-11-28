@@ -30,7 +30,7 @@ export type AttachmentsDeps = { abrirSesion: ContextSourcePort["abrirSesion"]; a
   confirmContext: (token: Parameters<WorkspaceContextPort["confirmContext"]>[0], root: string | null, listed: Source[]) => void;
   deLaTarea: (id: string | null | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; documentosEn: (options: { headers: Record<string, string>; } | undefined) => boolean;
   draftOptions: () => { headers: { "x-terminus-machine": string; }; } | undefined; drafts: DraftsPort; enCache: Accessor<boolean>;
-  enMaquina: (machine: string | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; finishedTurns: ReturnType<typeof createThreadStream>["finishedTurns"];
+  enMaquina: (machine: string | undefined) => { headers: { "x-terminus-machine": string; }; } | undefined; escritorio: Accessor<string | null>; finishedTurns: ReturnType<typeof createThreadStream>["finishedTurns"];
   grupos: Accessor<string[]>; guardarCache: { save(snapshot: ShellSnapshot): void; flush: () => void; cancel(): void; }; handoff: ReturnType<typeof createThreadStream>["handoff"];
   hilos: Accessor<Record<string, Hilo>>; lifecycleRevision: number; loadThread: ContextSourcePort["loadThread"];
   loadWindowThreads: ContextSourcePort["loadWindowThreads"]; machineName: (id: string, local?: boolean) => string; machines: MachinesPort;
@@ -48,7 +48,7 @@ export type AttachmentsDeps = { abrirSesion: ContextSourcePort["abrirSesion"]; a
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 1724–2004, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createAttachments(deps: AttachmentsDeps) {
-  const { adjuntosEn, asentarEscritorio, asleep, composer, confirmContext, deLaTarea, documentosEn, draftOptions, drafts, enCache, enMaquina, finishedTurns, grupos, guardarCache, handoff, hilos, machineName, machines, paneles, pegadasEn, pestanas, projectCatalog, refetchMachines, refreshSessions, sessionId, sessionLists, setAlta, setAviso, setBloqueo, setCuentasTocadas, setDesdeDeTurno, setDraftBases, setEnCache, setError, setEscritorio, setFolder, setMaterialError, setProject, setProjectReadError, setProyectoAbierto, setSesiones, setSessionId, setSettlingTurns, setSources, setSpaces, setStartupReadError, setTaskSourcesError, setVentana, setVivas, shellCache, taskQueues, threads, workspaceActivo, workspaceContext } = deps;
+  const { adjuntosEn, asentarEscritorio, asleep, composer, confirmContext, deLaTarea, documentosEn, draftOptions, drafts, enCache, enMaquina, escritorio, finishedTurns, grupos, guardarCache, handoff, hilos, machineName, machines, paneles, pegadasEn, pestanas, projectCatalog, refetchMachines, refreshSessions, sessionId, sessionLists, setAlta, setAviso, setBloqueo, setCuentasTocadas, setDesdeDeTurno, setDraftBases, setEnCache, setError, setEscritorio, setFolder, setMaterialError, setProject, setProjectReadError, setProyectoAbierto, setSesiones, setSessionId, setSettlingTurns, setSources, setSpaces, setStartupReadError, setTaskSourcesError, setVentana, setVivas, shellCache, taskQueues, threads, workspaceActivo, workspaceContext } = deps;
   const abrirSesion = ((...a: Parameters<typeof deps.abrirSesion>) => deps.abrirSesion(...a)) as typeof deps.abrirSesion;
   const loadThread = ((...a: Parameters<typeof deps.loadThread>) => deps.loadThread(...a)) as typeof deps.loadThread;
   const loadWindowThreads = ((...a: Parameters<typeof deps.loadWindowThreads>) => deps.loadWindowThreads(...a)) as typeof deps.loadWindowThreads;
@@ -332,6 +332,12 @@ export function createAttachments(deps: AttachmentsDeps) {
     // sincronización con el historial se lleva la pestaña.
     const desk = await deskReady;
     if (generation !== workspaceContext.generation()) return;
+    // Si la persona cambió a otro espacio mientras el arranque esperaba `list_sources` o las
+    // primeras sesiones, el cambio de espacio ya asentó su tira y sus paneles: el arranque cede.
+    if (escritorio() !== desk) {
+      if (!isNoMachines()) await reconcileActiveTurns();
+      return;
+    }
     // Si la persona ya empezó a mandar una tarea nueva mientras arrancaba, no
     // sobrescribir su pestaña provisional con la tira guardada.
     const activaAlArrancar = pestanas.active();
@@ -362,7 +368,7 @@ export function createAttachments(deps: AttachmentsDeps) {
     }
     const enFrente = paneles.activeTabAt(paneles.activeSite());
     if (!isNoMachines()) await reconcileActiveTurns();
-    if (generation !== workspaceContext.generation()) return;
+    if (generation !== workspaceContext.generation() || escritorio() !== desk) return;
     // Lo que la persona abrió mientras se conciliaba gana: abrir la restaurada ahora le quitaría la ventana.
     if (sessionId() !== null || pestanas.active() !== null || paneles.activeTabAt(paneles.activeSite()) !== enFrente) return;
     if (delante) void abrirSesion(delante.project, delante.id);

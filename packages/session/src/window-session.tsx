@@ -154,7 +154,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       finally { later(ready ? POLL_MS : wait); }
     }
     const exit = sessionExit({
-      closed: () => stopped || signedOut(), cancel: () => clearTimeout(timer), logout: async () => { await signOutPlatform().catch(() => {}); await api.logout(); }, signedOut: () => { forgetMachineNames(); expired(); },
+      closed: () => stopped || signedOut(), cancel: () => clearTimeout(timer), logout: async () => { await signOutPlatform().catch(() => {}); await api.logout(); }, signedOut: () => { forgetMachineNames(); writeLastLoginOrg(null); expired(); },
       unavailable: () => { if (!gone()) { setPreparing(false); setError('web.platform.unavailable'); gate(); } },
     });
     /** La persona según `me` con el contexto de su organización personal (nunca el de por omisión). */

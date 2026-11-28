@@ -407,6 +407,32 @@ test('remembered WorkOS organization is forwarded on login, offers an escape hat
   const retry = [...edoc.querySelectorAll('[data-web-auth="workos"] a')].find(a => a.textContent === 'Continuar con tu correo');
   assert.equal(new URL(retry.href).searchParams.get('organization_id'), null, 'retry after error omits stale organization_id');
   assert.equal(edoc.querySelector('[data-web-auth-other-org]'), null, 'no other-org button when hint is cleared');
+
+  // Voluntary sign-out clears the remembered org so another user on the same browser does not inherit it.
+  const logoutFetcher = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
+    if (url.pathname === '/v1/identity/me') return new Response(null, { status: 503 });
+    if (url.pathname === '/v1/identity/csrf') return Response.json({ csrf_token: 'bound' });
+    if (url.pathname === '/v1/identity/logout') {
+      assert.equal(new Headers(init?.headers).get('X-CSRF-Token'), 'bound');
+      return new Response(null, { status: 204 });
+    }
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  logoutFetcher.__jsdomApp = true; globalThis.fetch = logoutFetcher;
+  const signedOutApp = await open(t, 'listo', 'remembered-login-org-voluntary-signout', {}, undefined, {
+    'danil.login.last-org': 'org_danil',
+  }, { web: true });
+  const sdoc = signedOutApp.w.document;
+  await until(() => sdoc.querySelector('[data-web-loading] [data-web-sign-out]'));
+  sdoc.querySelector('[data-web-loading] [data-web-sign-out]').click();
+  await until(() => sdoc.querySelector('[data-web-auth="workos"] a[href*="/v1/identity/login"]'));
+  assert.equal(signedOutApp.w.localStorage.getItem('danil.login.last-org'), null, 'voluntary sign-out forgets the remembered organization');
+  const freshLogin = [...sdoc.querySelectorAll('[data-web-auth="workos"] a')].find(a => a.textContent === 'Continuar con tu correo');
+  assert.equal(new URL(freshLogin.href).searchParams.get('organization_id'), null, 'after voluntary sign-out login omits organization_id');
+  assert.equal(sdoc.querySelector('[data-web-auth-other-org]'), null, 'no other-org escape hatch after voluntary sign-out');
 });
 
 for (const end of ['logout', '401']) test(`${end} revokes the mounted person's cached workspaces`, async t => {
