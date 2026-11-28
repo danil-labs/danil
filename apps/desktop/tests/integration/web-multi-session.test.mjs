@@ -471,6 +471,8 @@ test('startup still opens the workspace automatically when another organization 
 test('opening a cloud workspace wakes a stopped hosted VM even when a connected personal PC without that workspace is online', async t => {
   let cloudAwake = false;
   let cloudWakeCalls = 0;
+  let cloudPlainTicketsAfterWake = 0;
+  const cloudSocketProtocols = [];
   const echo = (context, body, init = {}) => Response.json(body, { ...init, headers: { 'X-Danil-Session-Applied': context, 'X-Danil-Session-Applied-Org': ORGS[context] } });
   const fetcher = async (input, init = {}) => {
     const url = new URL(String(input));
@@ -504,6 +506,7 @@ test('opening a cloud workspace wakes a stopped hosted VM even when a connected 
       if (!cloudAwake) {
         return echo(context, { code: 'machine_stopped', detail: 'machine_stopped', status: 409 }, { status: 409, headers: { 'content-type': 'application/problem+json' } });
       }
+      cloudPlainTicketsAfterWake++;
       return echo(context, { ticket: 'cloud-ticket', url: 'wss://connect.danil.ai/v1/machines/mx/session', expires_at: '2099-01-01T00:00:00Z' }, { status: 201 });
     }
     if (url.pathname === '/v1/machines/mlaptop/tickets') {
@@ -532,14 +535,24 @@ test('opening a cloud workspace wakes a stopped hosted VM even when a connected 
   } });
   class RoutingSocket {
     constructor(url, protocols) {
-      return url.includes('/mx/') ? new cloudRelay.Socket(url, protocols) : new laptopRelay.Socket(url, protocols);
+      if (url.includes('/mx/')) {
+        cloudSocketProtocols.push(protocols);
+        return new cloudRelay.Socket(url, protocols);
+      }
+      return new laptopRelay.Socket(url, protocols);
     }
   }
 
   const app = await open(t, 'web-wake-stopped-cloud-vm', { Socket: RoutingSocket }, '?workspace=wx1&org=org_x&account=user_a');
   const doc = app.w.document;
   await until(() => cloudWakeCalls >= 1, 'opening wx1 wakes stopped cloud VM via tickets wake:true');
+  assert.equal(doc.querySelector('[data-wake-machine]'), null, 'no manual wake button in the rail');
+  assert.equal(doc.querySelector('[data-machine-waking]'), null, 'no waking banner in the rail');
+  assert.equal(doc.querySelector('[data-machine-stopped]'), null, 'no stopped machine card in the rail');
   await until(() => doc.querySelector('[data-sesion="mx~t_cloud"]'), 'cloud VM tasks appear in the sidebar once awake');
+  assert.equal(cloudWakeCalls, 1, 'cloud VM wakes once');
+  assert.equal(cloudPlainTicketsAfterWake, 0, 'wake ticket is reused directly without a second plain ticket request');
+  assert.ok(cloudSocketProtocols.some(protocols => protocols?.includes('ticket.woke-ticket')), 'relay socket connects with the ticket returned by wake');
   assert.deepEqual(
     laptopRelay.calls.filter(call => call.workspace === 'wx1' && call.command !== 'list_workspace_attention').map(c => c.command),
     [],

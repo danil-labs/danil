@@ -1419,3 +1419,127 @@ test("live engine capabilities survive an inventory refresh and belong to their 
   assert.deepEqual(fleet.info("machine", "a")?.features, []);
   fleet.close();
 });
+
+test("wake forwards prefetched admission to link.retry, exposes starting power, lets untilOnline join and fails fast if re-blocked", async () => {
+  const receivedAdmissions: unknown[] = [];
+  let releaseWake!: (result: { ok: true; admission: { url: string; ticket: string } }) => void;
+  const link = fakeLink({ state: "stopped" });
+  const baseRetry = link.retry!.bind(link);
+  link.retry = (admission) => {
+    receivedAdmissions.push(admission);
+    baseRetry(admission);
+  };
+  const fleet = new Fleet({
+    connect: () => link,
+    wake: () => new Promise((resolve) => { releaseWake = resolve; }),
+    deadlines: { read: 40, action: 200, intent: 5_000 },
+  });
+  fleet.setMachines([VM]);
+  link.block("machine_stopped");
+
+  const waking = fleet.wake("cmp_vm");
+  assert.equal(fleet.power("cmp_vm"), "starting", "in-flight wake reports starting power");
+  const joined = fleet.untilOnline("cmp_vm");
+  const admission = { url: "wss://connect.danil.ai/v1/machines/cmp_vm/session", ticket: "wake-1" };
+  releaseWake({ ok: true, admission });
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(receivedAdmissions, [admission], "wake passes its admission ticket straight into link.retry");
+  link.setState("online");
+  await Promise.all([waking, joined]);
+  assert.equal(fleet.power("cmp_vm"), "on");
+
+  // If the link is re-blocked with machine_stopped during wake, startMember fails immediately without waiting 5s.
+  link.setState("stopped");
+  link.block("machine_stopped");
+  const startedAt = Date.now();
+  const blockedFleet = new Fleet({
+    connect: () => link,
+    wake: async () => {
+      setTimeout(() => link.block("machine_stopped"), 5);
+      return true;
+    },
+    deadlines: { read: 40, action: 200, intent: 5_000 },
+  });
+  blockedFleet.setMachines([VM]);
+  await assert.rejects(blockedFleet.wake("cmp_vm"), (e: FleetError) => e.code === "machine_off" && e.detail === "start_failed");
+  assert.ok(Date.now() - startedAt < 1_000, "re-blocked wake fails fast instead of hanging for intent deadline");
+  assert.equal(blockedFleet.power("cmp_vm"), "off");
+  fleet.close();
+  blockedFleet.close();
+});
+
+test("startMember requests admission even when inventory says starting, fails fast on rejected ticket or terminal close, and joins in-flight wake on send_message", async () => {
+  // 1. Inventory already reports `starting`, yet startMember still calls wake() to get a valid admission and bounds wait to action deadline.
+  let wakeCalls = 0;
+  const startingLink = fakeLink({ state: "starting" });
+  const startingFleet = new Fleet({
+    connect: () => startingLink,
+    wake: async () => {
+      wakeCalls += 1;
+      return { ok: true, admission: { url: "wss://connect.danil.ai/v1/machines/cmp_vm/session", ticket: "t1" } };
+    },
+    deadlines: { read: 40, action: 40, intent: 5_000 },
+  });
+  startingFleet.setMachines([VM]);
+  const startedAt = Date.now();
+  await assert.rejects(startingFleet.wake("cmp_vm"), (e: FleetError) => e.code === "machine_timeout" && e.detail === "start");
+  assert.equal(wakeCalls, 1, "inventory state=starting does not skip control plane wake/admission");
+  assert.ok(Date.now() - startedAt < 1_000, "post-admission wait uses action deadline, never 330s/intent");
+  startingFleet.close();
+
+  // 2. If link.retry(admission) returns false (e.g. full pool), wake fails immediately without hanging.
+  const fullLink = fakeLink({ state: "stopped" });
+  fullLink.retry = () => false;
+  const fullFleet = new Fleet({
+    connect: () => fullLink,
+    wake: async () => ({ ok: true, admission: { url: "wss://connect.danil.ai/v1/machines/cmp_vm/session", ticket: "t2" } }),
+    deadlines: { read: 40, action: 5_000, intent: 5_000 },
+  });
+  fullFleet.setMachines([VM]);
+  const fullStart = Date.now();
+  await assert.rejects(fullFleet.wake("cmp_vm"), (e: FleetError) => e.code === "machine_off" && e.detail === "start_failed");
+  assert.ok(Date.now() - fullStart < 1_000, "rejected ticket delivery fails fast");
+  fullFleet.close();
+
+  // 3. If link.onClose fires while waiting for online, wake fails immediately.
+  const closeListeners = new Set<() => void>();
+  const closingLink = fakeLink({ state: "stopped" });
+  closingLink.onClose = (listener) => { closeListeners.add(listener); return () => void closeListeners.delete(listener); };
+  const closingFleet = new Fleet({
+    connect: () => closingLink,
+    wake: async () => {
+      setTimeout(() => { for (const listener of closeListeners) listener(); }, 5);
+      return { ok: true, admission: { url: "wss://connect.danil.ai/v1/machines/cmp_vm/session", ticket: "t3" } };
+    },
+    deadlines: { read: 40, action: 5_000, intent: 5_000 },
+  });
+  closingFleet.setMachines([VM]);
+  const closeStart = Date.now();
+  await assert.rejects(closingFleet.wake("cmp_vm"), (e: FleetError) => e.code === "machine_lost");
+  assert.ok(Date.now() - closeStart < 1_000, "terminal link close terminates wake immediately");
+  closingFleet.close();
+
+  // 4. An intent (send_message) arriving while auto-wake is already in flight awaits it silently instead of failing or double-waking.
+  let intentWakes = 0;
+  let finishWake!: () => void;
+  const chatLink = fakeLink({ state: "stopped", answers: { send_message: "ok" } });
+  const chatFleet = new Fleet({
+    connect: () => chatLink,
+    wake: async () => {
+      intentWakes += 1;
+      await new Promise<void>((resolve) => { finishWake = resolve; });
+      chatLink.setState("online");
+      return true;
+    },
+    deadlines: { read: 40, action: 200, intent: 5_000 },
+  });
+  chatFleet.setMachines([VM]);
+  const autoWake = chatFleet.wake("cmp_vm");
+  const send = chatFleet.call({ machine: "cmp_vm", workspace: "w", command: "send_message", args: { prompt: "hola" } });
+  finishWake();
+  const [_, sent] = await Promise.all([autoWake, send]);
+  assert.equal(intentWakes, 1, "send_message shares the in-flight auto-wake");
+  assert.equal(sent, "cmp_vm~ok");
+  chatFleet.close();
+});

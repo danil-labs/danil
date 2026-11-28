@@ -42,6 +42,7 @@ export {
   type DeferredFrame,
   type EngineInfo,
   type EventsPage,
+  type RelayAdmission,
   type RelayConfig,
   type RelayFailure,
   type SocketFactory,

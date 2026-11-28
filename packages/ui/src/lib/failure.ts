@@ -12,6 +12,7 @@ const whatOf = (e: unknown): unknown => {
   if (!record(e)) return e;
   if ("what" in e) return e.what;
   if (typeof e.message_key === "string" && clavesConocidas().has(e.message_key)) return { clave: e.message_key };
+  if (e.name === "TimeoutError" && clavesConocidas().has("shell.service.failed")) return { clave: "shell.service.failed" };
   return e;
 };
 

@@ -9,7 +9,7 @@ import { claveDe, prosaDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
 import { TRANSPORTE } from "./sleepSession.ts";
 import { batch, createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
-import type { ComposerPort, ContextSourcePort, CreateBatchDelivery, Hilo, ListaBastaPort, ProjectsPort, ReconciliarPort, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
+import type { ComposerPort, ContextSourcePort, CreateBatchDelivery, Hilo, ListaBastaPort, ProjectsPort, ReconciliarPort, ScopedReadErrorSetter, SessionRow, Startup, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createAttachments } from "./attachments.ts";
 import type { createResyncCommands } from "./resync-commands.ts";
@@ -31,7 +31,7 @@ export type AttachmentsMountDeps = { advanceTurn: ReturnType<typeof createThread
   releerProyectos: ContextSourcePort["releerProyectos"]; releerUna: ReturnType<typeof createResync>["releerUna"]; sessionId: Accessor<string | null>;
   setBloqueo: Setter<Frase | null>; setEnCache: Setter<boolean>; setEnFondo: ReturnType<typeof createThreadStream>["setEnFondo"];
   setPermissions: ReturnType<typeof createThreadStream>["setPermissions"]; setSesiones: Setter<Record<string, SessionRow[]>>; setSettings: ReturnType<typeof createThreadSide>["setSettings"];
-  setSettlingTurns: ReturnType<typeof createThreadStream>["setSettlingTurns"]; setStartupReadError: Setter<string | null>; soltarHilo: (session: string) => void;
+  setSettlingTurns: ReturnType<typeof createThreadStream>["setSettlingTurns"]; setStartupReadError: ScopedReadErrorSetter; soltarHilo: (session: string) => void;
   soltarTerminal: ReturnType<typeof createResyncCommands>["soltarTerminal"]; tareaDelRiel: (id: string) => SenderTask | null; taskQueues: ReturnType<typeof createThreadStream>["taskQueues"];
   threads: ReturnType<typeof createThreadsStore>; turnRevisions: ReturnType<typeof createThreadStream>["turnRevisions"]; vivas: ReturnType<typeof createThreadStream>["vivas"];
   workspaceContext: WorkspaceContextPort; };
@@ -93,6 +93,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     // en una medición— y el primer intento de la ventana se pasa del plazo:
     // la app abría a medias y no se recuperaba sola.
     const arrancar = async (quedan: number) => {
+      const readToken = setStartupReadError.begin();
       try {
         const a = await callEngine<Startup>("workspaces_startup");
         arranqueLlego = true;
@@ -107,7 +108,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
           return;
         }
         if (workspaceRequest !== 0) return;
-        setStartupReadError(null);
+        setStartupReadError.setFor(readToken, null);
         // Lo que la lista ya pintó se queda si el arranque dice lo mismo:
         // volver a aplicar cerraría la tarea que la persona ya abrió.
         if (reconciliar(aplicadaDeLista, a) === "nada") return;
@@ -119,7 +120,7 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
           return;
         }
         // Una máquina apagada tiene su indicador; al conectarse trae sus workspaces.
-        if (!asleep(e) && !isNoMachines()) setStartupReadError(prosaDe(e));
+        if (!asleep(e) && !isNoMachines()) setStartupReadError.setFor(readToken, prosaDe(e));
         // La lista ya abrió la ventana: se dice el error y no se vacía lo que se está usando.
         if (aplicadaDeLista) return;
         if (enCache()) {
@@ -142,9 +143,14 @@ export function createAttachmentsMount(deps: AttachmentsMountDeps) {
     // pie del sidebar— sin tocar a nadie.
     const alMudar = () => {
       const request = ++workspaceRequest;
+      const readToken = setStartupReadError.begin();
       void callEngine<Startup>("list_workspaces")
-        .then((startup) => request === workspaceRequest ? aplicar(startup) : undefined)
-        .catch((e) => { if (request === workspaceRequest && !asleep(e) && !isNoMachines()) setStartupReadError(prosaDe(e)); });
+        .then((startup) => {
+          if (request !== workspaceRequest) return undefined;
+          setStartupReadError.setFor(readToken, null);
+          return aplicar(startup);
+        })
+        .catch((e) => { if (request === workspaceRequest && !asleep(e) && !isNoMachines()) setStartupReadError.setFor(readToken, prosaDe(e)); });
     };
     window.addEventListener("harness:workspace", alMudar);
     onCleanup(() => window.removeEventListener("harness:workspace", alMudar));

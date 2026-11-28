@@ -21,7 +21,7 @@ import {
 import {
   type Admission,
 } from "../../../../packages/platform-client/src/machines-config.ts";
-import { Fleet, relayLink, type FleetEvent, type Slice, type StorageLike, classOf, isFleetError, isRead } from "@terminus/fleet";
+import { Fleet, relayLink, type FleetEvent, type Slice, type StorageLike, type WakeResult, classOf, isFleetError, isRead } from "@terminus/fleet";
 import { type AppCommand, type AppFeature, COMMAND_NOT_HERE, COMMAND_UNSUPPORTED, CommandSupport, type EngineError, type EngineEvent, type Support, isAppCommand, isScopeRefusal } from "@terminus/protocol";
 
 export class HostError extends Error {
@@ -116,7 +116,7 @@ export const WAKES_FIRST: ReadonlySet<string> = new Set([
  * Pide al plano de control que encienda la computadora: `true` encendida, `false` no se pudo,
  * `not_startable` la nube no la enciende (`409 not_remotely_startable` del borde).
  */
-export type Waker = (computer: string) => Promise<boolean | "not_startable">;
+export type Waker = (computer: string) => Promise<WakeResult>;
 
 /** El ticket de un solo uso del canal de datos (`POST /v1/machines/{id}/tickets`). */
 export type Admitter = (computer: string) => Promise<Admission>;

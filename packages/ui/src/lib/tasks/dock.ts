@@ -14,6 +14,8 @@ export const DOCK_DEFAULT_CAPACITY = 7;
 
 export type DockAgent = {
   name: string;
+  /** Descripción corta declarada del agente para las tarjetas del riel. */
+  description?: string | null;
   /** Sin estado todavía se pinta dormido. */
   status?: AgentPresence;
   liveTasks: number;

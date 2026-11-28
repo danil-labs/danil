@@ -2,6 +2,7 @@ import { SignalDot } from "../../../ui/src/SignalDot";
 import FolderPlus from "lucide-solid/icons/folder-plus";
 import History from "lucide-solid/icons/history";
 import Plus from "lucide-solid/icons/plus";
+import Search from "lucide-solid/icons/search";
 import SquarePen from "lucide-solid/icons/square-pen";
 import { createEffect, createMemo, createSignal, lazy, Match, on, onCleanup, Show, Suspense, Switch } from "solid-js";
 import { puntoDelArrastre, tareaEnVuelo } from "../../../ui/src/lib/drag";
@@ -10,10 +11,7 @@ import { ariaDeAtajo } from "../../../ui/src/lib/shortcuts";
 import { cn } from "../../../ui/src/lib/utils";
 import { KeyedList } from "../../../ui/src/KeyedList";
 import { Pressable } from "../../../ui/src/Pressable";
-import { Spinner } from "../../../ui/src/Spinner";
 import { TeclaDeAtajo } from "../../../ui/src/Shortcut";
-import { machineAction } from "../../../host/src/machine-action";
-import { machineName, machines } from "../../../features/machines/src/queries/store";
 import {
   SidebarContent,
   SidebarMenu,
@@ -30,6 +28,8 @@ import {
   toggleRailSectionCollapsed,
 } from "./rail-layout";
 import { CollapsedRailButtons, RailButton, RailSection } from "./RailSection";
+import { AgentCollapsedStrip } from "./AgentCollapsedStrip";
+import ProjectsDock from "./ProjectsDock";
 import { TasksFilterMenu } from "./SidebarFilter";
 import { createTareasDelRiel } from "./sidebar-groups";
 import { createDockDelRiel } from "./sidebar-dock";
@@ -57,6 +57,7 @@ const AgentDock = lazy(() => import("./AgentDock"));
  */
 export default function Sidebar(props: SidebarProps) {
   const [creatingAgentIn, setCreatingAgentIn] = createSignal<{ id: string; name: string } | null>(null);
+  const [agentSearchOpen, setAgentSearchOpen] = createSignal(false);
   let listViewport: HTMLDivElement | undefined;
   // Colapsado, el historial no desaparece: se abre al lado del riel.
   const [desplegado, setDesplegado] = createSignal(false);
@@ -98,43 +99,13 @@ export default function Sidebar(props: SidebarProps) {
   const { carpetaActual, agentesDelDock, carpetasDelAgente, rosterListo, perfilDe, filtro } = createDockDelRiel(props, tareas);
   const { FilaDeClon, Grupo } = createFilas(props, tareas, { setDesplegado, setCreatingAgentIn });
   const seccionesVisibles = createMemo(() => resolvedRailSections().filter((section) => section.visible));
-  const algunAgenteTrabajando = createMemo(() => agentesDelDock().some((a) => a.status === "working"));
-  const asleepMachine = createMemo(() => {
-    const rows = machines().filter((m) => !m.local && m.wakes && !m.refuses);
-    return rows.find((m) => m.power === "starting") ?? rows.find((m) => m.power === "off") ?? null;
-  });
 
   /** La misma lista, montada en dos sitios: expandida y en el desplegable. */
   const Lista = () => (
     <div data-sidebar-tasks class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-[14px]">
       <Show when={props.clon}>{(c) => <FilaDeClon clon={c()} />}</Show>
 
-      <Show when={asleepMachine()}>
-        {(machine) => (
-          <Show
-            when={machine().power === "starting"}
-            fallback={
-              <div class="mx-1 flex flex-col items-start gap-1.5 rounded-md border border-border bg-surface px-2.5 py-2 text-caption text-neutral-600" data-machine-stopped={machine().id}>
-                <p class="m-0">{t("web.machines.off_wakes", { name: machineName(machine().id) })}</p>
-                <Pressable
-                  class="rounded-md bg-neutral-200 px-2 py-1 text-caption font-medium text-neutral-950 hover:bg-neutral-300 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
-                  data-wake-machine={machine().id}
-                  onClick={() => machineAction()}
-                >
-                  {t("web.machines.wake")}
-                </Pressable>
-              </div>
-            }
-          >
-            <div class="mx-1 flex items-center gap-2 rounded-md border border-border bg-surface px-2.5 py-2 text-caption text-neutral-600" data-machine-waking={machine().id}>
-              <Spinner size={13} class="shrink-0 text-neutral-500" />
-              <span class="min-w-0 truncate">{t("web.machines.starting", { name: machineName(machine().id) })}</span>
-            </div>
-          </Show>
-        )}
-      </Show>
-
-      <Show when={todas().length === 0 && !hayCarpetasVacias() && !asleepMachine()}>
+      <Show when={todas().length === 0 && !hayCarpetasVacias()}>
         <Show
           when={props.projects.length === 0}
           fallback={<p class="m-0 px-2 pt-1 text-xs text-neutral-500" data-sidebar-empty="">{t("shell.sidebar.empty")}</p>}
@@ -287,31 +258,85 @@ export default function Sidebar(props: SidebarProps) {
                 <KeyedList each={seccionesVisibles()} by={(section) => section.id}>
                   {(section) => (
                     <Switch>
+                      <Match when={section().id === CORE_RAIL_SECTION_IDS.PROJECTS}>
+                        <RailSection
+                          id={section().id}
+                          title={section().descriptor.label()}
+                          collapsed={section().collapsed}
+                          onToggle={() => toggleRailSectionCollapsed(section().id)}
+                          actions={
+                            <Show when={props.onAddProject}>
+                              {(addProject) => (
+                                <Pressable
+                                  class="relative grid size-6 shrink-0 place-items-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
+                                  aria-label={t("projects.add.title")}
+                                  title={t("projects.add.title")}
+                                  onClick={() => addProject()()}
+                                >
+                                  <Plus size={14} aria-hidden="true" />
+                                </Pressable>
+                              )}
+                            </Show>
+                          }
+                        >
+                          <ProjectsDock
+                            projects={props.projects}
+                            activeProjectId={props.proyectoAbierto ?? props.carpetaDelBorrador ?? null}
+                            taskCountOf={(id) => (props.sessions[id] ?? []).filter((r) => !r.archived).length}
+                            onOpenProject={(id) => props.onAbrirProyecto(id)}
+                            onNewTaskIn={(id) => { props.onNuevaTareaEn(id); setDesplegado(false); }}
+                          />
+                        </RailSection>
+                      </Match>
+
                       <Match when={section().id === CORE_RAIL_SECTION_IDS.AGENTS}>
                         <RailSection
                           id={section().id}
                           title={section().descriptor.label()}
                           collapsed={section().collapsed}
                           onToggle={() => toggleRailSectionCollapsed(section().id)}
-                          badge={
-                            section().collapsed && algunAgenteTrabajando() ? (
-                              <SignalDot tone="working" pulse class="ml-0.5 motion-reduce:animate-none" />
-                            ) : undefined
-                          }
                           actions={
-                            <Pressable
-                              class="relative grid size-6 shrink-0 place-items-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
-                              aria-label={t("projects.agents.new_open")}
-                              title={t("projects.agents.new_open")}
-                              onClick={() => setCreatingAgentIn({ id: carpetaActual() ?? "", name: "" })}
-                            >
-                              <Plus size={14} aria-hidden="true" />
-                            </Pressable>
+                            <div class="flex shrink-0 items-center gap-1">
+                              <Show
+                                when={section().collapsed}
+                                fallback={
+                                  <Pressable
+                                    class={cn(
+                                      "relative grid size-6 shrink-0 place-items-center rounded-md border-0 p-0 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary",
+                                      agentSearchOpen() ? "bg-neutral-200 text-neutral-950" : "bg-transparent",
+                                    )}
+                                    aria-label={t("chat.search.placeholder")}
+                                    aria-pressed={agentSearchOpen()}
+                                    title={t("chat.search.placeholder")}
+                                    onClick={() => setAgentSearchOpen((open) => !open)}
+                                  >
+                                    <Search size={13} aria-hidden="true" />
+                                  </Pressable>
+                                }
+                              >
+                                <AgentCollapsedStrip
+                                  agents={agentesDelDock()}
+                                  foldersOf={carpetasDelAgente}
+                                  currentFolder={carpetaActual()}
+                                  profileOf={perfilDe}
+                                  onTalk={props.onHablarCon}
+                                />
+                              </Show>
+                              <Pressable
+                                class="relative grid size-6 shrink-0 place-items-center rounded-md border-0 bg-transparent p-0 text-neutral-500 transition-colors hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-primary"
+                                aria-label={t("projects.agents.new_open")}
+                                title={t("projects.agents.new_open")}
+                                onClick={() => setCreatingAgentIn({ id: carpetaActual() ?? "", name: "" })}
+                              >
+                                <Plus size={14} aria-hidden="true" />
+                              </Pressable>
+                            </div>
                           }
                         >
                           <Suspense fallback={<div class="h-24 rounded-lg border border-border bg-surface motion-safe:animate-pulse" aria-busy="true" />}>
                             <AgentDock
                               embedded
+                              searchOpen={agentSearchOpen()}
                               agents={agentesDelDock()}
                               selected={vista().agent}
                               foldersOf={carpetasDelAgente}

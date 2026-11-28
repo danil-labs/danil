@@ -193,17 +193,17 @@ test("reactive registry and store persist changes and notify memos immediately",
       ),
     );
 
-    assert.deepEqual(summary(), ["agents:v:e", "tasks:v:e", "plugin:bookmarks:v:e"]);
+    assert.deepEqual(summary(), ["projects:v:c", "agents:v:c", "tasks:v:e", "plugin:bookmarks:v:e"]);
 
     moveRailSection("plugin:bookmarks", "up", key);
     toggleRailSectionVisible("agents", key);
     toggleRailSectionCollapsed("tasks", key);
 
-    assert.deepEqual(summary(), ["agents:h:e", "plugin:bookmarks:v:e", "tasks:v:c"]);
+    assert.deepEqual(summary(), ["projects:v:c", "agents:h:c", "plugin:bookmarks:v:e", "tasks:v:c"]);
 
     // Persisted cleanly to localStorage
     const persisted = loadRailLayout(key);
-    assert.deepEqual(persisted.order, ["agents", "plugin:bookmarks", "tasks"]);
+    assert.deepEqual(persisted.order, ["projects", "agents", "plugin:bookmarks", "tasks"]);
     assert.equal(persisted.visible.agents, false);
     assert.equal(persisted.collapsed.tasks, true);
 
@@ -213,7 +213,7 @@ test("reactive registry and store persist changes and notify memos immediately",
 
     // Reset restores defaults
     resetRailLayout(key);
-    assert.deepEqual(summary(), ["agents:v:e", "tasks:v:e", "plugin:bookmarks:v:e"]);
+    assert.deepEqual(summary(), ["projects:v:c", "agents:v:c", "tasks:v:e", "plugin:bookmarks:v:e"]);
   } finally {
     noop();
     disposePlugin();
@@ -222,7 +222,7 @@ test("reactive registry and store persist changes and notify memos immediately",
 
   assert.deepEqual(
     registeredRailSections().map((s) => s.id),
-    [CORE_RAIL_SECTION_IDS.AGENTS, CORE_RAIL_SECTION_IDS.TASKS],
+    [CORE_RAIL_SECTION_IDS.PROJECTS, CORE_RAIL_SECTION_IDS.AGENTS, CORE_RAIL_SECTION_IDS.TASKS],
   );
 });
 
@@ -245,7 +245,7 @@ test("button-kind rail plugins integrate with ordering and visibility in the org
 
   try {
     const initial = resolvedRailSections(key);
-    assert.deepEqual(initial.map((s) => s.id), ["plugin:messaging", "agents", "tasks"]);
+    assert.deepEqual(initial.map((s) => s.id), ["plugin:messaging", "projects", "agents", "tasks"]);
     assert.equal(initial[0]?.descriptor.kind, "button");
     initial[0]?.descriptor.onActivate?.();
     assert.equal(activated, 1);
@@ -253,7 +253,7 @@ test("button-kind rail plugins integrate with ordering and visibility in the org
     moveRailSection("plugin:messaging", "down", key);
     toggleRailSectionVisible("plugin:messaging", key);
     const updated = resolvedRailSections(key);
-    assert.deepEqual(updated.map((s) => s.id), ["agents", "plugin:messaging", "tasks"]);
+    assert.deepEqual(updated.map((s) => s.id), ["projects", "plugin:messaging", "agents", "tasks"]);
     assert.equal(updated[1]?.visible, false);
   } finally {
     dispose();

@@ -9,9 +9,9 @@
 import type { MachineState } from "../../../../platform-client/src/machine.ts";
 import { relayArgs } from "../model/mcp-block.ts";
 import { EventRecovery } from "../model/event-recovery.ts";
-import { SUBPROTOCOL, MACHINE_SESSION_PROTOCOL, OPEN, BACKOFF, PING_EVERY, MISSED_PINGS, CALL_TIMEOUT, REPLACED, REVOKED, ADMISSION_RENEW_BEFORE, ADMISSION_RENEW_WAIT, TICKET_CONTEXT_REVOKED, RENEW_BEFORE, RENEW_RETRY, sessionUrl, tokenExpiry, timeOf, requestId, defaultFactory, type RelayConfig, type Blocked, type EngineInfo, type RelayFailure, type Cached, type CallResult, type DeferredAction, type DeferredFrame, type EventsPage, type SocketLike, type SocketFactory, type Pending } from "../model/relay-frames.ts";
+import { SUBPROTOCOL, MACHINE_SESSION_PROTOCOL, OPEN, BACKOFF, PING_EVERY, MISSED_PINGS, CALL_TIMEOUT, REPLACED, REVOKED, ADMISSION_RENEW_BEFORE, ADMISSION_RENEW_WAIT, TICKET_CONTEXT_REVOKED, RENEW_BEFORE, RENEW_RETRY, sessionUrl, tokenExpiry, timeOf, requestId, defaultFactory, type RelayAdmission, type RelayConfig, type Blocked, type EngineInfo, type RelayFailure, type Cached, type CallResult, type DeferredAction, type DeferredFrame, type EventsPage, type SocketLike, type SocketFactory, type Pending } from "../model/relay-frames.ts";
 export { SUBPROTOCOL, CALL_TIMEOUT, WAKE_TIMEOUT, TOKEN_EXPIRED, sessionUrl, tokenExpiry, requestId, cachedAt } from "../model/relay-frames.ts";
-export type { RelayConfig, Blocked, EngineInfo, RelayFailure, Cached, CallResult, DeferredAction, DeferredFrame, EventsPage, SocketLike, SocketFactory } from "../model/relay-frames.ts";
+export type { RelayAdmission, RelayConfig, Blocked, EngineInfo, RelayFailure, Cached, CallResult, DeferredAction, DeferredFrame, EventsPage, SocketLike, SocketFactory } from "../model/relay-frames.ts";
 
 export class RelaySession {
   private socket: SocketLike | null = null;
@@ -28,10 +28,13 @@ export class RelaySession {
   private pinger: ReturnType<typeof setInterval> | undefined;
   private retryTimer: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
+  private connectEpoch = 0;
+  private prefetchedAdmission: RelayAdmission | null = null;
   private machine: MachineState = "unknown";
   private engineInfo: EngineInfo | null = null;
   private stopped: Blocked | null = null;
   private blockedListeners = new Set<(blocked: Blocked | null) => void>();
+  private closeListeners = new Set<() => void>();
   /** El token de la sesión abierta y cuándo vence, para renovarlo con `auth` antes. */
   private token: string | null = null;
   private renew: ReturnType<typeof setTimeout> | undefined;
@@ -82,12 +85,29 @@ export class RelaySession {
     return () => void this.blockedListeners.delete(listener);
   }
 
-  /** «Reintentar»: vuelve a abrir una sesión detenida (por ejemplo, tras activar la licencia). */
-  retry() {
-    if (this.closed || !this.stopped) return;
+  /** «Reintentar»: vuelve a abrir una sesión detenida o aprovecha un ticket recién emitido por `wake`. */
+  retry(admission?: RelayAdmission): boolean {
+    if (this.closed) return false;
+    if (admission) {
+      // Si el canal ya está abierto, descartamos el ticket prefijado para no consumirlo vencido en otro reconnect.
+      if (this.connected()) return true;
+      this.prefetchedAdmission = admission;
+      clearTimeout(this.retryTimer);
+      this.setBlocked(null);
+      this.attempt = 0;
+      void this.connect();
+      return true;
+    }
+    if (!this.stopped) return false;
     this.setBlocked(null);
     this.attempt = 0;
     void this.connect();
+    return true;
+  }
+
+  onClose(listener: () => void): () => void {
+    this.closeListeners.add(listener);
+    return () => void this.closeListeners.delete(listener);
   }
 
   /** El motor de la computadora según su último `hello`; `null` si el relay aún no lo dijo. */
@@ -157,7 +177,10 @@ export class RelaySession {
   }
 
   close() {
+    if (this.closed) return;
     this.closed = true;
+    this.connectEpoch += 1;
+    this.prefetchedAdmission = null;
     clearTimeout(this.retryTimer);
     clearTimeout(this.renew);
     clearTimeout(this.waiting?.timer);
@@ -171,6 +194,7 @@ export class RelaySession {
       call.reject({ code: "app_unavailable" });
       this.pending.delete(id);
     }
+    for (const listener of [...this.closeListeners]) listener();
   }
 
   private send(message: object) {
@@ -179,18 +203,22 @@ export class RelaySession {
 
   private async connect() {
     if (this.closed || this.stopped) return;
-    if (this.attempt > 0 && this.config.beforeReconnect) {
+    const epoch = ++this.connectEpoch;
+    const prefetched = this.prefetchedAdmission;
+    this.prefetchedAdmission = null;
+    if (!prefetched && this.attempt > 0 && this.config.beforeReconnect) {
       const go = await this.config.beforeReconnect().catch(() => true);
+      if (this.closed || epoch !== this.connectEpoch) return;
       if (!go) return this.close();
-      if (this.closed) return;
     }
     let token: string;
     let protocol = SUBPROTOCOL;
     let sessionExpires: number | null = null;
     let target = sessionUrl(this.config.endpoint, this.config.computerId, this.config.contracts);
     try {
-      if (this.config.getAdmission) {
-        const admission = await this.config.getAdmission();
+      if (prefetched || this.config.getAdmission) {
+        const admission = prefetched ?? await this.config.getAdmission!();
+        if (this.closed || epoch !== this.connectEpoch) return;
         token = admission.ticket;
         // La URL validada del ticket viene sin query: se le suma `?contracts=` (opcional en machine-session.v1).
         const query = target.includes("?") ? target.slice(target.indexOf("?")) : "";
@@ -198,9 +226,12 @@ export class RelaySession {
         protocol = admission.protocol ?? MACHINE_SESSION_PROTOCOL;
         sessionExpires = timeOf(admission.session_expires_at);
         if (protocol !== MACHINE_SESSION_PROTOCOL) throw new Error("unsupported_machine_protocol");
-      } else if (this.config.getToken) token = await this.config.getToken();
-      else throw new Error("relay_admission_required");
+      } else if (this.config.getToken) {
+        token = await this.config.getToken();
+        if (this.closed || epoch !== this.connectEpoch) return;
+      } else throw new Error("relay_admission_required");
     } catch (error) {
+      if (this.closed || epoch !== this.connectEpoch) return;
       // VM apagada: no se reintenta en bucle. Queda detenida hasta que una acción la encienda y llame a `retry()`.
       if ((error as { code?: unknown } | null)?.code === "machine_stopped") {
         this.machine = "stopped";
@@ -209,7 +240,7 @@ export class RelaySession {
       }
       return this.reconnectLater();
     }
-    if (this.closed) return;
+    if (this.closed || epoch !== this.connectEpoch) return;
     // Un WebSocket de navegador no puede poner Authorization; el relay rechaza el token en la query.
     const protocols = [protocol, `${this.config.getAdmission ? "ticket" : "bearer"}.${token}`];
     let socket: SocketLike;
@@ -217,6 +248,12 @@ export class RelaySession {
       socket = this.factory(target, protocols);
     } catch {
       return this.reconnectLater();
+    }
+    // Si una admisión de encendido toma el control mientras un socket viejo sigue en CONNECTING, lo sustituimos directo.
+    if (prefetched && this.socket !== null && this.socket.readyState !== OPEN) {
+      const stale = this.socket;
+      this.socket = null;
+      stale.close(1000);
     }
     // Relevo (machine-session.v1, «sin renovación»): el socket vivo sigue recibiendo hasta que el nuevo abre.
     const handover = this.socket !== null;
@@ -261,14 +298,28 @@ export class RelaySession {
     };
     socket.onerror = () => {};
     socket.onclose = (event) => {
+      // Revocación, licencia o reemplazo: terminales también en el socket de relevo (machine-session.v1, «Vida del socket»).
+      const terminal = event.code === REVOKED || event.code === REPLACED || (this.config.getAdmission !== undefined && event.code === TICKET_CONTEXT_REVOKED);
       if (this.next === socket) {
-        // El relevo falló antes de abrir: la sesión viva sigue y se reintenta con otro ticket.
         this.next = null;
+        if (terminal) {
+          const previous = this.socket;
+          this.socket = null;
+          clearInterval(this.pinger);
+          clearTimeout(this.renew);
+          clearTimeout(this.waiting?.timer);
+          this.waiting = null;
+          if (previous) {
+            previous.close(1000);
+            for (const listener of this.linkListeners) listener(false);
+          }
+          if (event.code === REVOKED && event.reason === "license_required") return this.setBlocked("license_required");
+          if (event.code === REVOKED || (this.config.getAdmission && event.code === TICKET_CONTEXT_REVOKED)) this.config.onUnauthorized?.();
+          return this.close();
+        }
+        // El relevo falló antes de abrir por causa no terminal: la sesión viva sigue y se reintenta con otro ticket.
         if (this.socket) return this.reconnectLater();
       } else if (this.socket !== socket) return;
-      // Revocación, licencia o reemplazo: terminales también durante un relevo (machine-session.v1,
-      // «Vida del socket»); el socket pendiente se cancela y nunca toma la sesión.
-      const terminal = event.code === REVOKED || event.code === REPLACED || (this.config.getAdmission !== undefined && event.code === TICKET_CONTEXT_REVOKED);
       if (terminal && this.next) {
         this.next.close(1000);
         this.next = null;

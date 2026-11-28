@@ -62,7 +62,7 @@ export function createSessionCloud(rpc: Invoke, onProblem?: (error: unknown) => 
       start: (id: string, context?: string) => target(id, context).start(id),
       wake: (id: string, context?: string) => target(id, context).wake(id),
     },
-    async rows(allowLegacy = true) {
+    async rows(allowLegacy = true, onContextReady?: (contextId: string, computers: ContextComputer[], renewInChannel: boolean) => void) {
       const version = ++epoch;
       unsupported = false;
       validated = null;
@@ -86,7 +86,20 @@ export function createSessionCloud(rpc: Invoke, onProblem?: (error: unknown) => 
       const list = [...new Map(status.sessions!.flatMap((s) => s.contexts).map((c) => [c.context_id, c])).values()];
       contexts = new Map(list.map((c) => [c.context_id, c]));
       clients = new Map([...clients].filter(([id]) => contexts?.has(id)));
-      const [answers] = await Promise.all([Promise.all(list.map(async (context) => ({ context, answer: await child(context.context_id).rows() }))), here?.read()]);
+      const hereRead = here?.read();
+      const [answers] = await Promise.all([
+        Promise.all(list.map(async (context) => {
+          const answer = await child(context.context_id).rows();
+          if (version === epoch && !unsupported && answer.state === "ready") {
+            const contextRows = mergeContextMachines([{ context, computers: answer.computers }], here?.own());
+            for (const [k, v] of current) if (v.context === context.context_id) current.delete(k);
+            for (const row of contextRows) current.set(contextMachineKey(row.computer_id, row.context), row);
+            onContextReady?.(context.context_id, contextRows, answer.renewInChannel);
+          }
+          return { context, answer };
+        })),
+        hereRead,
+      ]);
       if (version !== epoch) return { state: "retrying" as const };
       if (unsupported) {
         contexts = null;

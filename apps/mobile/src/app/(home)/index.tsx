@@ -1,427 +1,654 @@
-import { folderByKey } from "../../lib/folderIcon";
-import { RADIUS, TEXT } from "@terminus/design";
-import { applySidebarView, groupCardOptions, workStateOf, folderCounts, groupKey, groupLabel, isPinned, type SidebarView } from "@terminus/tasks";
-import { router } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { TEXT } from "@terminus/design";
+import * as Crypto from "expo-crypto";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
+import { Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAccount } from "../../lib/account";
-import { ALPHA_DEMO, ALPHA_ORDINARY } from "../../lib/alpha-mode";
-import { cardOf, cardTask, marksOf, familyTasks } from "../../lib/cards";
-import { useCustomization } from "../../lib/customization";
-import { archiveTask, failureText, setPinned, type Task, taskInSpace, taskKey } from "../../lib/engine";
-import { lang, t, w } from "../../lib/i18n";
-import { decodeFolded, FOLDED_KEY, toggleFolded } from "../../lib/foldedGroups";
-import { useInbox } from "../../lib/inbox";
+import { carryForNewTask } from "../../lib/carry";
+import {
+  baseBranchesOf,
+  createTask,
+  foldersForNewTask,
+  runShell,
+  shareSpace,
+  suggestedDefaults,
+  usableProviders,
+  type BranchList,
+  type Folder,
+} from "../../lib/engine";
+import { failureKey } from "../../lib/failureNotice";
+import { HostError } from "../../lib/hosts";
+import { hasKey, t, w } from "../../lib/i18n";
 import { useMachines } from "../../lib/machines";
-import { Notifications } from "../../lib/notifications";
-import { can, ready, renameSpace } from "../../lib/pending";
 import { store } from "../../lib/store";
-import { effectiveGit } from "../../lib/taskGit";
-import { useTaskGit } from "../../lib/useTaskGit";
-import { shortWhen } from "../../lib/when";
 import { spaceName, useWorkspaces } from "../../lib/workspaces";
+import { AddFolderSheets, type AddFolderMode } from "../../ui/AddFolder";
 import { AgentAvatar } from "../../ui/AgentAvatar";
-import { openPreview, openTask } from "../../ui/components";
-import { Icon, type IconName } from "../../ui/Icon";
-import { CountBadge, Group, GroupHeader, ListRow, pageColor, Tap } from "../../ui/list";
+import { BrandMark } from "../../ui/BrandMark";
+import { openTask } from "../../ui/components";
+import { Composer, SelectorChip, type Submission } from "../../ui/Composer";
+import { HeaderToolsDial } from "../../ui/HeaderToolsDial";
+import { Icon } from "../../ui/Icon";
+import { KeyboardScreen } from "../../ui/KeyboardScreen";
 import { MachineNote } from "../../ui/MachineNote";
-import { type MenuItem, Popover, useMenuAnchor } from "../../ui/Popover";
-import { SpaceMenu } from "../../ui/SpaceMenu";
-import { DeleteSpaceSheet, NewSpaceSheet } from "../../ui/SpaceSheets";
-import { spaceTitle } from "../../ui/spaceTitle";
-import { SwipeRow } from "../../ui/SwipeRow";
-import { TaskCard } from "../../ui/TaskCard";
+import { MobileDrawer } from "../../ui/MobileDrawer";
+import { matches, NoMatch } from "../../ui/Search";
+import { Sheet, SheetOption } from "../../ui/Sheet";
 import { useTheme } from "../../ui/theme";
-import { WorkspaceAvatar } from "../../ui/WorkspaceAvatar";
 
-const NEEDS_YOU = new Set(["approving", "asked", "failed"]);
-
-/** Las secciones de Personalizar que Inicio enseña arriba, con su ícono y su ruta. */
-const SECTIONS: Record<string, { icon: IconName; color: string; route: string }> = {
-  inbox: { icon: "inbox", color: "#6539f5", route: "/inbox" },
-  broadcasts: { icon: "megaphone", color: "#ec4899", route: "/broadcasts" },
-  agents: { icon: "bot", color: "#10b981", route: "/attention-agents" },
-  channels: { icon: "radio", color: "#0ea5e9", route: "/channels" },
+const firstNameOf = (name: string | null | undefined) => {
+  const clean = (name ?? "").trim();
+  if (!clean) return null;
+  return clean.split(/\s+/)[0] || null;
 };
 
-const initials = (text: string | null | undefined) =>
-  (text ?? "").split(/[@\s._-]+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "?";
-
 /**
- * Inicio (listas nativas v2): la raíz y la única pantalla sin atrás. Arriba el
- * workspace, la lupa, Personalizar, Nueva tarea y el avatar; el título grande
- * es el espacio y abre su menú. Debajo, las secciones elegidas en Personalizar
- * y Agentes; después las tareas en grupos, cada una en su tarjeta de dos
- * líneas. Deslizar a la izquierda enseña Fijar y Archivar; la pulsación larga,
- * el menú de la tarea. Las subtareas no salen aquí: viven en su chat y en
- * Buscar. Nada flota.
+ * Chat-first mobile home screen (Claude-style):
+ *   - Minimal 2-button header: left `=` opens `MobileDrawer`; right `[⊞]` expands
+ *     into 3 individual animated floating buttons (Search, Subtasks, Files).
+ *   - Centered real Danil brand mark + warm greeting.
+ *   - Slim mobile `Composer` pill at the bottom with Machine & Project selector
+ *     chips directly above it.
  */
 export default function Home() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const customization = useCustomization();
-  const inbox = useInbox();
-  const { email, name } = useAccount();
-  const { attention, hosts, hostOf, fleet } = useMachines();
-  const { list, current, snapshot, loading, reload, space, selectSpace, view } = useWorkspaces();
-  const [askNotifications, setAskNotifications] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [renaming, setRenaming] = useState<string | null>(null);
-  const [newSpace, setNewSpace] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [folded, setFolded] = useState<string[]>([]);
-  useEffect(() => {
-    void store.get(FOLDED_KEY).then((raw) => setFolded((now) => (now.length ? now : decodeFolded(raw)))).catch(() => {});
-  }, []);
-  const toggleGroup = (key: string) => setFolded((now) => {
-    const next = toggleFolded(now, key);
-    void store.set(FOLDED_KEY, JSON.stringify(next)).catch(() => {});
-    return next;
-  });
+  const params = useLocalSearchParams<{ folder?: string; agent?: string; host?: string }>();
+  const { name } = useAccount();
+  const { hosts, fleet, preferred, rememberMachine, tick } = useMachines();
+  const { current, snapshot, loading, space, spaceCatalogManaged, recordTaskSpace, hostsOfCurrent, reload } =
+    useWorkspaces();
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [hostId, setHostId] = useState<string | null>(null);
+  const [folder, setFolder] = useState<string | null>(null);
+  const [agent, setAgent] = useState<string | null>(null);
+  const [branch, setBranch] = useState<string | null>(null);
+  const [branches, setBranches] = useState<BranchList | null>(null);
+  const [picker, setPicker] = useState<"machine" | "folder" | "branch" | "agent" | AddFolderMode | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [waking, setWaking] = useState(false);
+  const [pending, setPending] = useState<string | null>(null);
 
   useEffect(() => {
-    void Notifications?.getPermissionsAsync().then((p) => setAskNotifications(p.canAskAgain && !p.granted));
-  }, []);
+    if (params.folder) setFolder(params.folder);
+    if (params.host) setHostId(params.host);
+    if (params.agent !== undefined) setAgent(params.agent || null);
+  }, [params.folder, params.agent, params.host]);
+
+  const host = hostsOfCurrent.find((h) => h.id === hostId) ?? preferred(hostsOfCurrent);
+  const folders = foldersForNewTask(snapshot?.folders ?? [], space, host?.id);
+  const target = folders.find((f) => f.id === folder) ?? folders[0] ?? null;
+  const folderId = target?.id ?? "";
+  const workspace = host ? (current?.members.get(host.id) ?? null) : null;
+  const agents = (snapshot?.agents ?? []).filter((a) =>
+    a.places.some((p) => p.host === host?.id && p.folder === folderId),
+  );
+  const chosenAgent = agents.some((a) => a.name === agent) ? agent : null;
+  const act = host?.canAct();
+  const power = host?.power();
+  const defaults =
+    host && workspace
+      ? suggestedDefaults(snapshot?.tasks ?? [], host.id, workspace, chosenAgent)
+      : { provider: null, model: null };
+  const hostProviders = host ? (snapshot?.providers[host.id] ?? []) : [];
+  const hasProvider = Boolean(defaults.provider || usableProviders(hostProviders).length);
+  void tick;
+
   useEffect(() => {
-    if (!notice) return;
-    const timer = setTimeout(() => setNotice(null), 4000);
-    return () => clearTimeout(timer);
-  }, [notice]);
+    setBranches(null);
+    setBranch(null);
+    if (!host || !workspace || !target || power !== "on") return;
+    let alive = true;
+    void baseBranchesOf(host, workspace, target.id).then((b) => alive && setBranches(b));
+    return () => {
+      alive = false;
+    };
+  }, [host, workspace, target?.id, power]);
 
-  const marks = useMemo(() => marksOf(attention, current?.members, snapshot?.live ?? new Set()), [attention, current?.members, snapshot?.live]);
-  const locals = new Set(current ? [...current.members.values()] : []);
-  const otherPending = Object.values(attention)
-    .flat()
-    .filter((x) => !locals.has(x.workspace))
-    .reduce((sum, x) => sum + x.tasks.filter((task) => NEEDS_YOU.has(task.state)).length, 0);
+  const selectedBranch = branch ?? branches?.selected ?? null;
+  const branchLabel = branches?.branches.find((b) => b.reference === selectedBranch)?.name ?? selectedBranch;
+  const spaceOn = (id: string | undefined) => (id ? (space?.on[id] ?? null) : null);
 
-  const spaces = snapshot?.spaces ?? [];
-  const inSpace = (key: string) => !space || key.endsWith("/") || space.folders.includes(key);
-  const tasks = familyTasks((snapshot?.tasks ?? []).filter((task) => taskInSpace(task, space)), snapshot?.delegated ?? [], marks);
-  const counts = folderCounts(tasks.map((task) => ({ project: task.folderKey, row: task })));
-  const kept = view.folders.filter((f) => (counts.get(f) ?? 0) > 0);
-  const effective: SidebarView = kept.length === view.folders.length ? view : { ...view, folders: kept };
-  const folderIdOf = (key: string) => snapshot?.folders.find((f) => f.key === key)?.id ?? key.slice(key.indexOf("/") + 1);
-  const git = useTaskGit(hostOf, tasks);
-  const groups = applySidebarView(tasks.map((task) => ({ ...cardTask(task, marks), task })), { ...effective, folders: effective.folders.map(folderIdOf) }, {
-    live: marks.live,
-    approving: [...marks.attention].filter(([, s]) => s === "approving").map(([k]) => k),
-    folderOf: (row) => row.task.folder,
-    machineOf: (row) => row.task.host,
-    workStateOf: (row) => workStateOf(effectiveGit(git, row.task, snapshot?.tasks ?? [])),
-  });
-  const groupFolderName = (id: string) => snapshot?.folders.find((f) => f.id === id)?.name ?? id;
-  const machineName = (id: string) => hosts.find((h) => h.id === id)?.label ?? id;
-  // El dock de la lista es el del workspace (los tres niveles: los de una carpeta
-  // o su repositorio se ven dentro de esa carpeta, no aquí).
-  const agents = (snapshot?.agents ?? []).filter((a) => a.workspace);
-  const working = agents.filter((a) => a.status === "working").length;
-
-  // Los espacios se crean, renombran y eliminan en la primera máquina del workspace (la VM administrada).
-  const firstHost = current ? [...current.members.keys()].map(hostOf).find(Boolean) ?? null : null;
-  const target = firstHost && current ? { host: firstHost, workspace: current.members.get(firstHost.id)! } : null;
-  const spaceTarget = (s: typeof space) => {
-    const on = s ? Object.entries(s.on)[0] : undefined;
-    const host = on ? hostOf(on[0]) : undefined;
-    return host && on && current?.members.has(host.id) ? { host, workspace: current.members.get(host.id)!, id: on[1] } : null;
-  };
-  const title = space ? spaceName(space, t("space.general")) : current?.name ?? w("common.brand_name");
-  const manage = !!target && ready("spaces", target.host);
-  const spaceItems: MenuItem[] = [
-    ...(spaces.length > 1 ? spaces.map((s) => ({
-      key: `space-${s.id}`,
-      label: spaceName(s, t("space.general")),
-      checked: s.id === space?.id,
-      count: (snapshot?.tasks ?? []).filter((task) => taskInSpace(task, s)).length,
-      onPress: () => selectSpace(s.id),
-    })) : []),
-    ...(manage ? [
-      { key: "new", label: w("spaces.new.title"), icon: "plus" as const, section: true, onPress: () => setNewSpace(true) },
-      ...(space ? [
-        { key: "rename", label: w("spaces.menu.rename"), icon: "pencil" as const, onPress: () => setRenaming(spaceName(space, "")) },
-        { key: "delete", label: w("spaces.menu.delete"), icon: "trash-2" as const, destructive: true, onPress: () => setDeleting(true) },
-      ] : []),
-    ] : []),
-  ];
-  const saveName = async () => {
-    const name = renaming?.trim();
-    setRenaming(null);
-    const at = spaceTarget(space);
-    if (!name || !at || name === title) return;
+  async function start(s: Submission) {
+    if (!host || workspace === null) return false;
+    setNote(null);
+    const wakes = act === "wakes" && power !== "on";
+    setWaking(wakes);
+    if (wakes) setPending(s.shell ? `!${s.command}` : s.prompt);
     try {
-      await renameSpace(at.host, at.workspace, at.id, name);
-      void reload();
-    } catch (cause) {
-      setNotice(failureText(cause));
+      const clientMessageId = Crypto.randomUUID();
+      let spaceId: string | null = null;
+      if (!spaceCatalogManaged) {
+        spaceId = spaceOn(host.id);
+        const owner = !spaceId && space ? Object.entries(space.on)[0] : undefined;
+        const keeper = owner ? hostsOfCurrent.find((h) => h.id === owner[0]) : undefined;
+        const keeperWs = keeper ? current?.members.get(keeper.id) : undefined;
+        if (owner && keeper && keeperWs) {
+          spaceId = await shareSpace(keeper, keeperWs, owner[1]).then(
+            () => owner[1],
+            () => null,
+          );
+        }
+      }
+      let baseRef = branch;
+      let unwrapSnapshot = false;
+      const from = target && target.host !== host.id ? hostsOfCurrent.find((h) => h.id === target.host) : undefined;
+      const fromWorkspace = from ? (current?.members.get(from.id) ?? null) : null;
+      if (target && from && fromWorkspace && from.power() === "on" && !s.shell) {
+        setNote(t("new.carrying", { from: from.label, to: host.label }));
+        const carried = await carryForNewTask({
+          source: { host: from, workspace: fromWorkspace },
+          target: { host, workspace },
+          folder: target,
+          targetHasFolder: false,
+          pins: { get: (m) => store.get(`carry.key.${m}`), set: (m, key) => store.set(`carry.key.${m}`, key) },
+          newId: () => Crypto.randomUUID(),
+        });
+        if (carried) {
+          baseRef = carried.baseRef;
+          unwrapSnapshot = carried.unwrapSnapshot;
+        }
+        setNote(null);
+      }
+      const id = s.shell
+        ? (
+            await runShell(host, workspace, {
+              folder: folderId,
+              session: null,
+              command: s.command,
+              provider: s.provider,
+              model: s.model,
+              effort: s.effort,
+              permissionMode: s.permissionMode,
+              space: spaceId,
+              agent: chosenAgent,
+              baseRef,
+            })
+          ).session
+        : await createTask(host, workspace, {
+            folder: folderId,
+            prompt: s.prompt,
+            provider: s.provider,
+            model: s.model,
+            effort: s.effort,
+            permissionMode: s.permissionMode,
+            attachments: s.attachments,
+            agent: chosenAgent,
+            space: spaceId,
+            baseRef,
+            unwrapSnapshot,
+            clientMessageId,
+          });
+      if (spaceCatalogManaged) void recordTaskSpace(id, space?.id ?? null);
+      rememberMachine(host.id);
+      openTask(host.id, workspace, folderId, id, false);
+      return true;
+    } catch (error) {
+      if (error instanceof HostError && error.code === "key_changed") {
+        setNote(t("new.carry_key_changed", { name: host.label }));
+      } else if (error instanceof HostError && error.code === "machine_asleep") {
+        setNote(w("web.machines.off_action", { name: host.label }));
+      } else if (error instanceof HostError && error.code === "machine_outdated") {
+        setNote(w("web.machines.outdated_action", { name: host.label }));
+      } else if (error instanceof HostError && (error.code === "start_failed" || error.code === "start_timeout")) {
+        setNote(t("machines.start_failed", { name: host.label }));
+      } else {
+        const clave = failureKey(error);
+        if (clave && hasKey(clave)) setNote(t(clave));
+        else setNote(t("task.error", { detail: error instanceof Error ? error.message : String(error) }));
+      }
+      return false;
+    } finally {
+      setWaking(false);
+      setPending(null);
     }
+  }
+
+  const stateOf = (h: typeof host) =>
+    !h
+      ? ""
+      : h.power() === "on"
+        ? w("web.computers.state.online")
+        : h.power() === "starting"
+          ? w("web.computers.state.starting")
+          : h.power() === "outdated"
+            ? w("web.computers.state.outdated")
+            : w("web.computers.state.offline");
+
+  const notice = !host
+    ? current
+      ? t("new.no_workspace")
+      : null
+    : waking
+      ? w("shell.machines.waking", { name: host.label })
+      : act === "asleep"
+        ? w("web.machines.off_action", { name: host.label })
+        : act === "outdated"
+          ? w("web.machines.outdated_action", { name: host.label })
+          : act === "wakes" && power === "off"
+            ? w("shell.machines.asleep_notice", { name: host.label })
+            : !loading && snapshot && power === "on" && !hasProvider
+              ? t("new.no_provider")
+              : null;
+
+  const firstName = firstNameOf(name);
+  const greeting = firstName ? t("home.greeting_name", { name: firstName }) : t("home.greeting");
+  const subtitle = [current?.name, space ? spaceName(space, t("space.general")) : null]
+    .filter(Boolean)
+    .join(" · ");
+
+  const selectProjectForNewTask = (proj: Folder) => {
+    setHostId(proj.host);
+    setFolder(proj.id);
+    setAgent(null);
+    setNote(null);
   };
 
-  const act = async (work: () => Promise<unknown>) => {
-    try {
-      await work();
-      void reload();
-    } catch (cause) {
-      setNotice(failureText(cause));
-    }
+  const resetDraft = () => {
+    setAgent(null);
+    setBranch(null);
+    setNote(null);
   };
-  const pin = (task: Task) => {
-    const host = hostOf(task.host);
-    if (host) void act(() => setPinned(host, task.workspace, task.folder, task.id, !isPinned(task)));
-  };
-  const archive = (task: Task) => {
-    const host = hostOf(task.host);
-    if (host) void act(async () => {
-      const result = await archiveTask(host, task.workspace, task.folder, task.id);
-      if ("blocked" in result) setNotice(t("task.actions.blocked"));
-    });
-  };
-  const rowMenu = (task: Task): MenuItem[] => [
-    { key: "pin", label: w(isPinned(task) ? "projects.sessions.unpin" : "projects.sessions.pin"), icon: "pin", onPress: () => pin(task) },
-    { key: "rename", label: w("shell.sidebar.rename"), icon: "pencil", onPress: () => openPreview(task.host, task.id) },
-    ...(can("move_task_to_space") && spaces.length > 1 ? [{ key: "move", label: w("spaces.move.to"), icon: "layers" as const, onPress: () => openPreview(task.host, task.id) }] : []),
-    { key: "archive", label: w("projects.hover_card.archive"), icon: "archive", onPress: () => archive(task) },
-    { key: "finish", label: w("projects.sessions.finish"), icon: "trash-2", destructive: true, onPress: () => openPreview(task.host, task.id, "finish") },
-  ];
 
-  const sections = process.env.EXPO_PUBLIC_TERMINUS_ALPHA === "1" && !ALPHA_ORDINARY ? customization.entries.filter((entry) => entry.selected && SECTIONS[entry.id]) : [];
-  const unread = inbox.rows.reduce((sum, row) => sum + row.unread_count, 0);
-  const iosSearch = Platform.OS === "ios";
-
-  return (
-    <View style={[styles.page, { backgroundColor: pageColor(theme) }]}>
-      <View style={[styles.top, { paddingTop: insets.top + 6 }]}>
-        {renaming !== null ? (
-          <>
-            <View style={[styles.chip, { opacity: 0.5, backgroundColor: theme.surface }]}>
-              <WorkspaceAvatar id={current?.id} name={current?.name ?? "T"} size={24} />
-              <Text numberOfLines={1} style={[styles.chipText, { color: theme.text }]}>{current?.name ?? w("common.brand_name")}</Text>
-            </View>
-            <Tap testID="rename-done" accessibilityRole="button" onPress={() => void saveName()} style={[styles.done, { backgroundColor: theme.text }]}>
-              <Text style={{ color: theme.onPrimary, fontWeight: "700", fontSize: TEXT.lead }}>{t("attention.close")}</Text>
-            </Tap>
-          </>
-        ) : (
-          <>
-            <Tap testID="workspace-switcher" accessibilityRole="button" accessibilityLabel={t("home.switch")} onPress={() => router.push("/workspaces")} style={[styles.chip, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <WorkspaceAvatar id={current?.id} name={current?.name ?? "T"} size={24} />
-              <Text numberOfLines={1} style={[styles.chipText, { color: theme.text }]}>{current?.name ?? w("common.brand_name")}</Text>
-              <Icon name="chevron-down" size={14} color={theme.textMuted} />
-            </Tap>
-            <View style={[styles.tools, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <Tap testID="search" accessibilityRole="button" accessibilityLabel={w("search.title")} onPress={() => router.push("/search")} style={styles.tool}>
-                <Icon name="search" size={20} color={theme.text} />
-              </Tap>
-              <Tap testID="personalize" accessibilityRole="button" accessibilityLabel={t("attention.personalize")} onPress={() => router.push("/personalize")} style={styles.tool}>
-                <Icon name="sliders-horizontal" size={20} color={theme.text} />
-              </Tap>
-              <Tap testID="new-task" accessibilityRole="button" accessibilityLabel={w("shell.sidebar.new_task")} onPress={() => router.push("/new")} style={styles.tool}>
-                <Icon name="square-pen" size={20} color={theme.text} />
-              </Tap>
-            </View>
-            <Tap testID="profile" accessibilityRole="button" accessibilityLabel={t("profile.title")} onPress={() => router.push("/profile")} style={styles.avatarTap}>
-              <View style={[styles.avatar, { backgroundColor: theme.merged }]}>
-                <Text style={styles.avatarText}>{initials(email ?? name)}</Text>
-              </View>
-              {otherPending ? <View style={[styles.avatarDot, { backgroundColor: theme.approving, borderColor: pageColor(theme) }]} /> : null}
-            </Tap>
-          </>
-        )}
-      </View>
-
-      <ScrollView
-        testID="home-list"
-        refreshControl={Platform.OS === "web" ? undefined : <RefreshControl refreshing={loading} onRefresh={reload} />}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
-        contentOffset={iosSearch ? { x: 0, y: 52 } : undefined}
-        keyboardShouldPersistTaps="handled"
-      >
-        {iosSearch ? (
-          <Tap testID="pull-search" accessibilityRole="search" onPress={() => router.push("/search")} style={[styles.pullSearch, { backgroundColor: theme.dark ? theme.surface : theme.border }]}>
-            <Icon name="search" size={16} color={theme.textMuted} />
-            <Text style={{ color: theme.textMuted, fontSize: 16 }}>{w("search.placeholder")}</Text>
-          </Tap>
-        ) : null}
-
-        {renaming !== null ? (
-          <View style={spaceTitle.wrap}>
-            <TextInput
-              testID="space-rename"
-              autoFocus
-              selectTextOnFocus
-              value={renaming}
-              onChangeText={setRenaming}
-              onSubmitEditing={() => void saveName()}
-              onBlur={() => setRenaming(null)}
-              onKeyPress={(event) => { if (event.nativeEvent.key === "Escape") setRenaming(null); }}
-              returnKeyType="done"
-              style={[spaceTitle.text, styles.renameInput, { color: theme.text, borderColor: theme.primary, backgroundColor: `${theme.merged}22` }]}
-            />
-          </View>
-        ) : spaceItems.length ? (
-          <SpaceMenu title={title} items={spaceItems} label={t("home.space_menu")} />
-        ) : (
-          <View style={spaceTitle.wrap}><Text accessibilityRole="header" numberOfLines={1} style={[spaceTitle.text, { color: theme.text }]}>{title}</Text></View>
-        )}
-
-        <View style={{ opacity: renaming !== null ? 0.45 : 1 }} pointerEvents={renaming !== null ? "none" : "auto"}>
-          <MachineNote hosts={hosts} fleet={fleet} />
-          {notice ? <Text accessibilityRole="alert" style={[styles.notice, { color: theme.text, backgroundColor: theme.surface }]}>{notice}</Text> : null}
-          {askNotifications ? (
-            <Group style={{ marginBottom: 12 }}>
-              <ListRow
-                testID="enable-notifications"
-                icon={{ name: "bell", color: theme.approving }}
-                title={t("notify.enable")}
-                right={<Text style={{ color: theme.merged, fontWeight: "600" }}>{t("notify.enable_button")}</Text>}
-                onPress={() => void Notifications?.requestPermissionsAsync().then(() => setAskNotifications(false))}
-              />
-            </Group>
-          ) : null}
-
-          <Group inset={56}>
-            {sections.map((entry) => (
-              <ListRow
-                key={entry.id}
-                testID={`section-${entry.id}`}
-                icon={{ name: SECTIONS[entry.id].icon, color: SECTIONS[entry.id].color }}
-                title={entry.title}
-                right={entry.id === "inbox" ? <CountBadge count={unread} /> : undefined}
-                chevron
-                onPress={() => router.push((ALPHA_DEMO ? `${SECTIONS[entry.id].route}?demo=1` : SECTIONS[entry.id].route) as never)}
-              />
-            ))}
-            {Platform.OS === "web" ? (
-              <ListRow
-                testID="messaging"
-                icon={{ name: "inbox", color: theme.merged }}
-                title="Mensajería"
-                chevron
-                onPress={() => router.push("/chats" as never)}
-              />
-            ) : null}
-            {agents.length ? (
-              <ListRow
-                testID="agents"
-                icon={{ name: "users", color: theme.dark ? "#3f3f46" : "#334155" }}
-                title={w("shell.agent_dock.title")}
-                right={
-                  <View style={styles.faces}>
-                    <View style={styles.faceRow}>
-                      {agents.slice(0, 3).map((agent, i) => (
-                        <View key={agent.name} style={{ marginLeft: i ? -8 : 0, borderRadius: 12, borderWidth: 2, borderColor: theme.surface }}>
-                          <AgentAvatar name={agent.name} size={20} />
-                        </View>
-                      ))}
-                    </View>
-                    {working ? <Text style={{ color: theme.textMuted, fontSize: TEXT.body }}>{t("home.agents_working", { count: working })}</Text> : null}
-                  </View>
-                }
-                chevron
-                onPress={() => router.push("/agents")}
-              />
-            ) : null}
-          </Group>
-
-          {groups.map((group) => {
-            const key = groupKey(group);
-            const isFolded = folded.includes(key);
-            const name = groupLabel(lang, group, groupFolderName, machineName);
-            const needing = isFolded ? group.tasks.filter(({ task }) => NEEDS_YOU.has(marks.attention.get(taskKey(task)) ?? "")).length : 0;
-            return (
-            <View key={key}>
-              <GroupHeader
-                strong
-                count={group.tasks.length}
-                folded={isFolded}
-                onToggle={() => toggleGroup(key)}
-                foldLabel={t(isFolded ? "home.group.expand" : "home.group.collapse", { name })}
-                right={needing ? <CountBadge count={needing} /> : undefined}
-              >{name}</GroupHeader>
-              {isFolded ? null : <Group inset={46}>
-                {group.tasks.map(({ task }) => (
-                  <TaskRow
-                    key={taskKey(task)}
-                    task={task}
-                    menu={rowMenu(task)}
-                    onPin={() => pin(task)}
-                    onArchive={() => archive(task)}
-                    render={(onLongPress) => (
-                      <TaskCard
-                        task={task}
-                        card={cardOf(task, marks, groupCardOptions(group).hideFolder, groupCardOptions(group).hideMachine)}
-                        git={effectiveGit(git, task, snapshot?.tasks ?? [])}
-                        folderOf={(key) => folderByKey(snapshot?.folders ?? [], key)}
-                        when={shortWhen(task.last_turn_at ?? task.updated_at, lang)}
-                        onPress={() => openTask(task.host, task.workspace, task.folder, task.id)}
-                        onLongPress={onLongPress}
-                        onFinish={() => openPreview(task.host, task.id, "finish")}
-                        online={hostOf(task.host)?.power() === "on" && hostOf(task.host)?.canAct() === "now"}
-                      />
-                    )}
-                  />
-                ))}
-              </Group>}
-              {!isFolded && !group.tasks.length ? <Text style={[styles.empty, { color: theme.textMuted }]}>{t("folder.empty")}</Text> : null}
-            </View>
-            );
-          })}
-          {/* Sin hosts, `MachineNote` ya dice qué hacer: «Este Danil no tiene workspaces» hablaría de un Danil que no hay. */}
-          {list.length === 0 && !loading && fleet === "ok" && hosts.length > 0 ? (
-            <Text style={[styles.empty, { color: theme.textMuted }]}>{t(hosts.some((h) => h.linked) ? "home.no_linked_workspaces" : "home.no_workspaces")}</Text>
-          ) : null}
-        </View>
-      </ScrollView>
-
-      <NewSpaceSheet target={newSpace ? target : null} onClose={() => setNewSpace(false)} onCreated={(id) => { void reload().then(() => selectSpace(id)); }} />
-      <DeleteSpaceSheet
-        target={deleting && space ? spaceTarget(space) : null}
-        space={deleting && space ? { id: spaceTarget(space)?.id ?? space.id, name: title } : null}
-        onClose={() => setDeleting(false)}
-        onDeleted={() => void reload()}
+  const composerHeader = (
+    <View style={styles.selectors}>
+      {host ? (
+        <SelectorChip
+          testID="pick-machine"
+          icon="server"
+          value={host.label}
+          onPress={() => setPicker("machine")}
+        />
+      ) : null}
+      <SelectorChip
+        testID="pick-folder"
+        value={target?.name ?? t("home.no_project")}
+        muted={!target}
+        onPress={host && workspace ? () => setPicker("folder") : undefined}
       />
+      {branches?.branches.length ? (
+        <SelectorChip
+          testID="pick-branch"
+          icon="git-branch"
+          value={branchLabel ?? w("worktrees.base.choose")}
+          onPress={() => setPicker("branch")}
+        />
+      ) : null}
+      {agents.length ? (
+        <SelectorChip
+          testID="pick-agent"
+          left={
+            chosenAgent ? (
+              <AgentAvatar name={chosenAgent} size={15} host={host?.id} folder={target?.id} />
+            ) : (
+              <Icon name="user-round" size={13} color={theme.textMuted} />
+            )
+          }
+          value={chosenAgent ?? t("new.agent")}
+          muted={!chosenAgent}
+          onPress={() => setPicker("agent")}
+        />
+      ) : null}
     </View>
   );
-}
 
-/** Una tarea de Inicio: se desliza (Fijar · Archivar) y su pulsación larga abre el menú junto a ella. */
-function TaskRow({ task, menu, onPin, onArchive, render }: { task: Task; menu: MenuItem[]; onPin: () => void; onArchive: () => void; render: (onLongPress: () => void) => React.ReactNode }) {
-  const theme = useTheme();
-  const anchor = useMenuAnchor();
-  const opened = useRef(false);
-  opened.current = !!anchor.rect;
   return (
-    <View ref={anchor.ref} collapsable={false}>
-      <SwipeRow
-        testID={`swipe-${task.host}-${task.id}`}
-        actions={[
-          { key: "pin", label: w(isPinned(task) ? "projects.sessions.unpin" : "projects.sessions.pin"), icon: "pin", color: theme.approving, onPress: onPin },
-          { key: "archive", label: w("projects.hover_card.archive"), icon: "archive", color: theme.merged, onPress: onArchive },
-        ]}
+    <KeyboardScreen style={{ backgroundColor: theme.bg }}>
+      {/* Minimal 2-button mobile header: left `=` drawer trigger + right `[⊞]` speed-dial */}
+      <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
+        <Pressable
+          testID="home-open-drawer"
+          accessibilityRole="button"
+          accessibilityLabel={t("drawer.open")}
+          onPress={() => {
+            Keyboard.dismiss();
+            setDrawerOpen(true);
+          }}
+          style={({ pressed }) => [
+            styles.headerBtn,
+            {
+              backgroundColor: pressed ? theme.muted : theme.surface,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <Icon name="menu" size={20} color={theme.text} />
+        </Pressable>
+
+        <HeaderToolsDial
+          testID="home-tools-dial"
+          actions={[
+            {
+              id: "search",
+              testID: "dial-search",
+              icon: "search",
+              label: w("search.title"),
+              onPress: () => router.push("/search"),
+            },
+            {
+              id: "subtasks",
+              testID: "dial-subtasks",
+              icon: "git-fork",
+              label: t("task.tools.subtasks_title"),
+              disabled: true,
+              onPress: () => {},
+            },
+            {
+              id: "files",
+              testID: "dial-files",
+              icon: "folder",
+              label: t("task.tools.files"),
+              disabled: true,
+              onPress: () => {},
+            },
+          ]}
+        />
+      </View>
+
+      {/* Center hero stage: real Danil logo + greeting */}
+      <View style={styles.hero} testID="home-chat-stage">
+        <MachineNote hosts={hosts} fleet={fleet} />
+        <View style={styles.heroCenter}>
+          <View style={[styles.logoBadge, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <BrandMark id="danil" size={30} color={theme.text} />
+          </View>
+          <Text style={[styles.greeting, { color: theme.text }]}>{greeting}</Text>
+          {subtitle ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push("/workspaces")}
+              style={({ pressed }) => [styles.contextPill, { opacity: pressed ? 0.65 : 1 }]}
+            >
+              <Text numberOfLines={1} style={[styles.contextText, { color: theme.textMuted }]}>
+                {subtitle}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+
+      {pending && waking ? (
+        <View style={[styles.pending, { backgroundColor: theme.userBubble, borderColor: theme.border }]}>
+          <Text style={{ color: theme.text, fontSize: TEXT.lead, lineHeight: 21 }}>{pending}</Text>
+        </View>
+      ) : null}
+      {notice || note ? (
+        <View style={styles.notes}>
+          {notice ? <Text style={{ color: theme.textMuted, fontSize: TEXT.ui }}>{notice}</Text> : null}
+          {note ? <Text style={{ color: theme.error, fontSize: TEXT.ui }}>{note}</Text> : null}
+        </View>
+      ) : null}
+
+      {/* Existing thin mobile Composer pill with Machine & Project selector chips */}
+      <Composer
+        testID="new-message"
+        host={host ?? undefined}
+        workspace={workspace}
+        folder={host && workspace !== null ? folderId : null}
+        session={null}
+        providers={host ? (snapshot?.providers[host.id] ?? []) : []}
+        provider={defaults.provider}
+        model={defaults.model}
+        permissionMode={current?.defaultPermissionMode ?? null}
+        disabled={!host || workspace === null || act === "asleep" || act === "outdated" || waking}
+        placeholder={t("new.placeholder")}
+        header={composerHeader}
+        onSubmit={start}
+        onAccounts={() => router.push("/accounts")}
+      />
+
+      {/* Left slide-over Claude-style navigation drawer */}
+      <MobileDrawer
+        visible={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        activeProjectId={target?.id ?? null}
+        onNewTask={resetDraft}
+        onNewTaskInProject={selectProjectForNewTask}
+        onAddProject={host && workspace ? () => setPicker("new-folder") : undefined}
+      />
+
+      {/* Pickers for Machine, Project, Branch, Agent, and Create/Clone Project */}
+      <Sheet
+        visible={picker === "machine"}
+        title={w("shell.machines.label")}
+        search={t("search.machines")}
+        onClose={() => setPicker(null)}
       >
-        {render(() => void anchor.open(true))}
-      </SwipeRow>
-      <Popover testID={`menu-${task.host}-${task.id}`} anchor={anchor.rect} items={menu} onClose={anchor.close} align="end" />
-    </View>
+        {(query) => {
+          const shown = hostsOfCurrent.filter((h) => matches(query, h.label));
+          return shown.length ? (
+            shown.map((h) => (
+              <SheetOption
+                key={h.id}
+                testID={`machine-${h.id}`}
+                icon="server"
+                label={h.label}
+                detail={`${stateOf(h)} · ${h.managed ? t("machines.managed") : t("machines.own")}`}
+                selected={h.id === host?.id}
+                onPress={() => {
+                  setHostId(h.id);
+                  setFolder(null);
+                  setPicker(null);
+                }}
+              />
+            ))
+          ) : (
+            <NoMatch />
+          );
+        }}
+      </Sheet>
+
+      <Sheet
+        visible={picker === "folder"}
+        title={t("home.project")}
+        search={t("search.folders")}
+        onClose={() => setPicker(null)}
+      >
+        {(query) => {
+          const shown = folders.filter((f) => matches(query, f.name, f.working_directory));
+          return (
+            <>
+              {shown.length ? (
+                shown.map((f) => (
+                  <SheetOption
+                    key={f.key}
+                    testID={`folder-${f.id}`}
+                    label={f.name}
+                    detail={
+                      f.host === host?.id
+                        ? (f.working_directory ?? null)
+                        : t("new.carry_from", {
+                            name: hostsOfCurrent.find((h) => h.id === f.host)?.label ?? f.host,
+                          })
+                    }
+                    selected={f.id === target?.id}
+                    onPress={() => {
+                      setFolder(f.id);
+                      setPicker(null);
+                    }}
+                  />
+                ))
+              ) : (
+                <NoMatch />
+              )}
+              <SheetOption
+                testID="add-folder"
+                icon="plus"
+                label={t("folder.new")}
+                disabled={act === "asleep" || act === "outdated"}
+                onPress={() => setPicker("new-folder")}
+              />
+              <SheetOption
+                testID="add-clone"
+                icon="git-branch"
+                label={t("clone.title")}
+                disabled={act === "asleep" || act === "outdated"}
+                onPress={() => setPicker("clone")}
+              />
+            </>
+          );
+        }}
+      </Sheet>
+
+      <AddFolderSheets
+        mode={picker === "clone" || picker === "new-folder" ? picker : null}
+        host={host ?? undefined}
+        workspace={workspace}
+        space={spaceOn(host?.id)}
+        onClose={() => setPicker(null)}
+        onDone={(project) => {
+          setFolder(project.id);
+          setPicker(null);
+          void reload();
+        }}
+      />
+
+      <Sheet
+        visible={picker === "branch"}
+        title={w("worktrees.base.from")}
+        search={t("search.branches")}
+        onClose={() => setPicker(null)}
+      >
+        {(query) => {
+          const shown = (branches?.branches ?? []).filter((b) => matches(query, b.name, b.detail));
+          return shown.length ? (
+            shown.map((b) => (
+              <SheetOption
+                key={b.reference}
+                icon="git-branch"
+                label={b.name}
+                detail={b.detail}
+                selected={b.reference === selectedBranch}
+                onPress={() => {
+                  setBranch(b.reference === branches?.selected ? null : b.reference);
+                  setPicker(null);
+                }}
+              />
+            ))
+          ) : (
+            <NoMatch />
+          );
+        }}
+      </Sheet>
+
+      <Sheet
+        visible={picker === "agent"}
+        title={t("new.agent")}
+        search={t("search.agents")}
+        onClose={() => setPicker(null)}
+      >
+        {(query) => {
+          const shown = agents.filter((a) => matches(query, a.name, a.description));
+          return (
+            <>
+              {query.trim() ? null : (
+                <SheetOption
+                  icon="user-round"
+                  label={t("new.no_agent")}
+                  selected={!chosenAgent}
+                  onPress={() => {
+                    setAgent(null);
+                    setPicker(null);
+                  }}
+                />
+              )}
+              {shown.length ? (
+                shown.map((a) => (
+                  <SheetOption
+                    key={a.name}
+                    testID={`agent-${a.name}`}
+                    left={<AgentAvatar name={a.name} size={22} />}
+                    label={a.name}
+                    detail={a.description}
+                    selected={chosenAgent === a.name}
+                    onPress={() => {
+                      setAgent(a.name);
+                      setPicker(null);
+                    }}
+                  />
+                ))
+              ) : (
+                <NoMatch />
+              )}
+            </>
+          );
+        }}
+      </Sheet>
+    </KeyboardScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1 },
-  top: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingBottom: 6 },
-  chip: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 40, paddingLeft: 6, paddingRight: 12, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, flexShrink: 1, marginRight: "auto" },
-  chipText: { fontSize: TEXT.lead, fontWeight: "700", flexShrink: 1 },
-  tools: { flexDirection: "row", borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
-  tool: { width: 44, height: 40, alignItems: "center", justifyContent: "center" },
-  avatarTap: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 22 },
-  avatar: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  avatarText: { color: "#ffffff", fontWeight: "700", fontSize: TEXT.body },
-  avatarDot: { position: "absolute", top: 3, right: 3, width: 12, height: 12, borderRadius: RADIUS.md, borderWidth: 2 },
-  done: { marginLeft: "auto", minHeight: 40, paddingHorizontal: 18, borderRadius: 20, justifyContent: "center" },
-  pullSearch: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 16, marginBottom: 8, height: 44, borderRadius: 12, paddingHorizontal: 12 },
-  renameInput: { borderWidth: 1.5, borderRadius: RADIUS.lg, paddingHorizontal: 6, minHeight: 48 },
-  faces: { flexDirection: "row", alignItems: "center", gap: 8 },
-  faceRow: { flexDirection: "row" },
-  notice: { marginHorizontal: 16, marginBottom: 12, padding: 12, borderRadius: 12, fontSize: TEXT.body },
-  empty: { paddingHorizontal: 32, paddingVertical: 8, fontSize: TEXT.body },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingBottom: 6,
+    zIndex: 50,
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  hero: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  heroCenter: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingBottom: 24,
+  },
+  logoBadge: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  greeting: {
+    fontSize: 24,
+    fontWeight: "600",
+    letterSpacing: -0.4,
+    textAlign: "center",
+  },
+  contextPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  contextText: {
+    fontSize: TEXT.ui,
+    textAlign: "center",
+  },
+  notes: {
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+    gap: 4,
+  },
+  pending: {
+    alignSelf: "flex-end",
+    maxWidth: "92%",
+    marginHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 14,
+    padding: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  selectors: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    paddingHorizontal: 2,
+  },
 });

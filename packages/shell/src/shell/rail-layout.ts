@@ -56,6 +56,7 @@ export interface ResolvedRailSection {
 export const RAIL_LAYOUT_KEY = "sidebar.rail.layout";
 
 export const CORE_RAIL_SECTION_IDS = {
+  PROJECTS: "projects",
   AGENTS: "agents",
   TASKS: "tasks",
 } as const;
@@ -68,11 +69,20 @@ export const DEFAULT_RAIL_LAYOUT: RailLayoutState = {
 
 const CORE_RAIL_SECTIONS: readonly RailSectionDescriptor[] = [
   {
+    id: CORE_RAIL_SECTION_IDS.PROJECTS,
+    label: () => t("settings.general.section.projects"),
+    defaultOrder: 8,
+    defaultVisible: true,
+    defaultCollapsed: true,
+    hideable: true,
+    source: "core",
+  },
+  {
     id: CORE_RAIL_SECTION_IDS.AGENTS,
     label: () => t("shell.agent_dock.team"),
     defaultOrder: 10,
     defaultVisible: true,
-    defaultCollapsed: false,
+    defaultCollapsed: true,
     hideable: true,
     source: "core",
   },
