@@ -12,6 +12,7 @@ import type { Project, Source } from "../../../../ui/src/lib/model.ts";
 import type { Frase } from "../../../../ui/src/lib/prose.ts";
 import type { Machine, ProjectPlace } from "../../../../ui/src/lib/project-block-types.ts";
 import { activeTaskCounts, activityByProject, hiddenIn, type HiddenProjects, type PickedAt, picksIn, rememberPick, setHidden, storedPicks } from "../model/recent.ts";
+import { createWakeScopedReadErrors } from "../model/scoped-read-error.ts";
 import type { SessionRow } from "./Sessions.tsx";
 
 export type AttentionState = "unseen" | "asked" | "approving" | "failed";
@@ -78,9 +79,10 @@ export function createWorkspaceSession(deps: WorkspaceSessionDeps) {
   });
   const [materialError, setMaterialError] = createSignal<string | null>(null);
   const [taskSourcesError, setTaskSourcesError] = createSignal<string | null>(null);
-  const [draftProjectError, setDraftProjectError] = createSignal<string | null>(null);
-  const [projectReadError, setProjectReadError] = createSignal<string | null>(null);
-  const [startupReadError, setStartupReadError] = createSignal<string | null>(null);
+  const readErrors = createWakeScopedReadErrors({ machines, workspace: workspaceActivo, generation: workspaceContext.generation });
+  const [draftProjectError, setDraftProjectError] = readErrors.createError();
+  const [projectReadError, setProjectReadError] = readErrors.createError();
+  const [startupReadError, setStartupReadError] = readErrors.createError();
   const [connectionError, setConnectionError] = createSignal<string | null>(null);
   const [readRevision, setReadRevision] = createSignal(0);
   const draftMachineOn = () => machines().find(m => m.id === draftMachine())?.on;
@@ -98,8 +100,9 @@ export function createWorkspaceSession(deps: WorkspaceSessionDeps) {
     }
     let current = true;
     onCleanup(() => { current = false; });
+    const readToken = setDraftProjectError.begin();
     void projectCatalog.readForMachine(machine).then(rows => {
-      if (current) { setDraftProjectError(null); setDraftProjects({ workspace, machine, rows: rows.map(row => ({
+      if (current) { setDraftProjectError.setFor(readToken, null); setDraftProjects({ workspace, machine, rows: rows.map(row => ({
         ...row, machines: projectList().find(p => p.id === row.id)?.machines ?? [machine],
       })) }); }
     }).catch(e => {
@@ -107,7 +110,7 @@ export function createWorkspaceSession(deps: WorkspaceSessionDeps) {
       // Se apagó entre la lista de máquinas y la pregunta, o la pregunta la está
       // encendiendo: lo mismo que apagada.
       if (asleep(e)) setDraftProjects({ workspace, machine, rows: null });
-      else if (!isNoMachines()) setDraftProjectError(prosaDe(e));
+      else if (!isNoMachines()) setDraftProjectError.setFor(readToken, prosaDe(e));
     });
   }));
   createEffect(on(draftMachine, (machine, before) => {

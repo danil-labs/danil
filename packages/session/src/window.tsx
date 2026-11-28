@@ -5,7 +5,7 @@ import { readContextSpaces } from "../../platform-client/src/workspace-spaces.ts
 import type { MachinesQuery } from "../../features/machines/src/queries/machines-query.ts";
 import { Fleet, memberKey, relayLink, type StorageLike, unwrap } from "../../features/machines/src/model/fleet/index.ts";
 import { createSignal, lazy, Suspense } from "solid-js";
-import { createContextRelayPool, createRemoteGuestManager, deriveMachineAvailability, isRemoteGuestMachine, type MachineAvailability, machinesListed, mergeByMachineId } from "../../features/machines/src";
+import { createAutoWaker, createContextRelayPool, createRemoteGuestManager, deriveMachineAvailability, isRemoteGuestMachine, type MachineAvailability, machinesListed, mergeByMachineId } from "../../features/machines/src";
 import { sessionRailState } from "../../shell/src/shell";
 import { createRouter, type SliceChange } from "../../features/machines/src/queries/router";
 import type { AccountProfileSource } from "../../features/settings/src/model/account-profile";
@@ -21,7 +21,7 @@ import type { EdgeTransport } from "../../platform-client/src/edge";
 import { browser, takeSettingsParam } from "./window-browser";
 import { webMachineCall } from "./workspace-runtime";
 import { MACHINE_ACTION } from "../../host/src/machine-action";
-import { windowContext } from "./window-context";
+import { windowContext, type ContextRow } from "./window-context";
 import { openWorkspaceUrl } from "./open-workspace-url";
 import { activeWorkspaceContext } from "./workspace-context";
 
@@ -47,14 +47,13 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const [permitted, setPermitted] = createSignal(true);
   const [revision, bump] = createSignal(0);
   let listed = new Map<string, Machine>();
+  const rowsByContext = new Map<string, ContextRow[]>();
   const powers = new Map<string, string>();
-  const waking = new Map<string, Promise<void>>();
-  const autoWoken = new Set<string>();
   const unavailable = () => ({ what: t("web.machines.unavailable"), detail: "machines_unavailable" });
   const notifyMachines = () => window.dispatchEvent(new CustomEvent("harness:machines"));
   const pool = createContextRelayPool();
   const remoteGuests = createRemoteGuestManager({ onChange: () => { if (!stopped) { fleet.setMachines(remoteGuests.syncHosts()); bump(n => n + 1); notifyMachines(); } } });
-  const scope = windowContext({ factory: base.contextMachines, sessions: base.sessions, groups: () => base.active.groups(), fallback: () => base.active.current()?.context ?? null, active: () => active.activeContext(), fleet: () => fleet, revision, onContextsSettled: contexts => { active.pruneContexts(contexts); bump(n => n + 1); }, onContextState: (context, expired) => sessionRailState()?.sessions.noteContext(context, expired) });
+  const scope = windowContext({ factory: base.contextMachines, sessions: base.sessions, groups: () => base.active.groups(), fallback: () => base.active.current()?.context ?? null, active: () => active.activeContext(), fleet: () => fleet, revision, onContextsSettled: contexts => { const valid = new Set(contexts); for (const id of [...rowsByContext.keys()]) if (!valid.has(id)) rowsByContext.delete(id); autoWaker.pruneContexts(contexts); active.pruneContexts(contexts); bump(n => n + 1); }, onContextState: (context, expired) => sessionRailState()?.sessions.noteContext(context, expired) });
   const fleet: Fleet = new Fleet({ self: null, storage: mounted.storage,
     connect: info => {
       if (isRemoteGuestMachine(info.id)) return remoteGuests.connect(info);
@@ -82,7 +81,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       if (!base.permits("machines.start")) return "not_startable";
       const answer = await scope.client(context).wake(id);
       if (answer.kind === "unauthorized") void refresh();
-      if (answer.kind === "ok") { void refresh(); return true; }
+      if (answer.kind === "ok") { void refresh(); return { ok: true, admission: answer.value }; }
       return answer.kind === "error" && answer.code === "not_remotely_startable" ? "not_startable" : false;
     },
     onChange: (id, context) => {
@@ -90,10 +89,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
       const power = fleet.power(id, context);
       const key = memberKey(id, context);
       const changed = powers.get(key) !== power;
-      if (power === "on") autoWoken.delete(key);
+      autoWaker.onPowerChange(id, context, power);
       if (power === "on" && powers.get(key) !== "on" && active.unlisted()) window.dispatchEvent(new CustomEvent("harness:workspace"));
       powers.set(key, power);
-      if (changed && !isRemoteGuestMachine(id)) void refresh();
+      if (changed && power !== "starting" && !isRemoteGuestMachine(id)) void refresh();
       bump(n => n + 1);
       void import("../../features/machines/src/queries/store").then(({ machineNamesChanged, refetchMachines }) => {
         if (stopped) return;
@@ -106,6 +105,15 @@ export function mountWindow(base: Base, mounted: Mounted) {
       if (!context || scope.info(context)) active.events(_id, events, metadata ? { ...metadata, gap } : { resync: gap }, context);
     },
     onSlice: () => bump(n => n + 1),
+  });
+  const autoWaker = createAutoWaker({
+    fleet: () => fleet,
+    activeTarget: () => ({ context: confirmedActiveContext(), workspace: active.activeWorkspace() }),
+    onAwake: () => {
+      slicesChanged(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]);
+      for (const name of ["harness:workspace-name", "harness:machines", "harness:service-resync"]) window.dispatchEvent(new CustomEvent(name));
+    },
+    onSettled: () => bump(n => n + 1),
   });
   const stopListing = fleet.onListing(() => bump(n => n + 1));
   const contextCatalog = (context: string) => {
@@ -165,12 +173,44 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const several = () => (revision(), fleet.machines().length > 1);
   // El chip de la VM en Cuentas de IA se ve aunque sea la única: «Ejecutar en» sí pide más de una.
   const any = () => (revision(), fleet.machines().length > 0);
+  const confirmedActiveContext = (): string | null => {
+    const candidate = active.activeContext() ?? scope.current()?.context ?? base.active.current()?.context ?? null;
+    return candidate && scope.info(candidate) ? candidate : null;
+  };
+  const applyInventoryRows = (rows: ContextRow[], settle: boolean) => {
+    listed = new Map(rows.map(({ machine, group }) => [memberKey(machine.machine_id, group.context), machine]));
+    setServiceError(false);
+    if (settle) setSettled(true);
+    fleet.setMachines(remoteGuests.syncHosts(rows.map(({ machine, group }) => ({
+      id: machine.machine_id,
+      name: scope.machineName(machine, group, rows),
+      wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"),
+      kind: scope.fleetKind(machine, group),
+      hosted: scope.hosted(machine),
+      context: group.context,
+      organizationId: machine.organization_id ?? null,
+    }))));
+    for (const { machine, group } of rows) fleet.observe(machine.machine_id, machineToComputer(machine).state, group.context);
+    bump(n => n + 1);
+    machinesListed(fleet);
+    fleet.subscribeEvents();
+    active.registryChanged();
+  };
   async function update() {
     if (stopped) return false;
-    if (!base.permits("machines")) { setPermitted(false); setServiceError(false); setSettled(true); fleet.setMachines(remoteGuests.syncHosts([])); return false; }
+    if (!base.permits("machines")) { setPermitted(false); setServiceError(false); setSettled(true); rowsByContext.clear(); fleet.setMachines(remoteGuests.syncHosts([])); return false; }
     setPermitted(true);
-    const inventory = await scope.inventory();
-    if (!inventory) { setServiceError(true); setSettled(true); fleet.setMachines(remoteGuests.syncHosts([])); bump(n => n + 1); return false; }
+    const inventory = await scope.inventory((group, groupRows) => {
+      if (stopped) return;
+      rowsByContext.set(group.context, groupRows);
+      // El contexto activo se registra y enciende al instante sin esperar organizaciones inactivas lentas.
+      const activeContext = confirmedActiveContext();
+      if (activeContext && group.context === activeContext) {
+        applyInventoryRows([...rowsByContext.values()].flat(), groupRows.length > 0);
+        autoWaker.wake(activeContext, active.activeWorkspace(), { auto: true });
+      }
+    });
+    if (!inventory) { setServiceError(true); setSettled(true); rowsByContext.clear(); fleet.setMachines(remoteGuests.syncHosts([])); bump(n => n + 1); return false; }
     const { answer, rows } = inventory;
     if (stopped) return false;
     if (answer.kind !== "ok") {
@@ -178,24 +218,20 @@ export function mountWindow(base: Base, mounted: Mounted) {
       if (transient && settled()) { bump(n => n + 1); return false; }
       setServiceError(true);
       setSettled(true);
-      if (!transient) fleet.setMachines(remoteGuests.syncHosts([]));
+      if (!transient) { rowsByContext.clear(); fleet.setMachines(remoteGuests.syncHosts([])); }
       bump(n => n + 1);
       return false;
     }
-    listed = new Map(rows.map(({ machine, group }) => [memberKey(machine.machine_id, group.context), machine]));
-    setServiceError(false);
-    setSettled(true);
-    fleet.setMachines(remoteGuests.syncHosts(rows.map(({ machine, group }) => ({ id: machine.machine_id, name: scope.machineName(machine, group, rows),
-      wakes: machineToComputer(machine).wakeable === true && base.permits("machines.start"), kind: scope.fleetKind(machine, group), hosted: scope.hosted(machine), context: group.context, organizationId: machine.organization_id ?? null,
-    }))));
-    for (const { machine, group } of rows) fleet.observe(machine.machine_id, machineToComputer(machine).state, group.context);
-    bump(n => n + 1);
-    machinesListed(fleet);
-    fleet.subscribeEvents();
-    active.registryChanged();
+    rowsByContext.clear();
+    for (const row of rows) {
+      const list = rowsByContext.get(row.group.context) ?? [];
+      list.push(row);
+      rowsByContext.set(row.group.context, list);
+    }
+    applyInventoryRows(rows, true);
     for (const name of ["harness:workspace-name", "harness:service-resync", "harness:machines"]) window.dispatchEvent(new CustomEvent(name));
-    const openWorkspace = active.activeWorkspace();
-    if (openWorkspace) wakeWorkspaceMachines(active.activeContext() ?? scope.current()?.context ?? undefined, openWorkspace, { auto: true });
+    const activeContext = confirmedActiveContext();
+    if (activeContext) autoWaker.wake(activeContext, active.activeWorkspace(), { auto: true });
     return true;
   }
   function refresh(): Promise<boolean> {
@@ -220,7 +256,9 @@ export function mountWindow(base: Base, mounted: Mounted) {
       const remotes = fleet.remotes(context);
       const task = unwrap(id, remotes);
       if (!task) return !settled() || remotes.size === 0;
-      return remoteGuests.canContinue(fleet, task.machine, context);
+      if (remoteGuests.canContinue(fleet, task.machine, context)) return true;
+      const info = fleet.info(task.machine, context);
+      return !!info?.wakes && fleet.power(task.machine, context) !== "outdated";
     },
     taskMachine: id => unwrap(id, fleet.remotes(scope.current()?.context))?.machine ?? null,
     windowMachine: () => { const id = active.createsOn(null)?.machine; return id ? { id, name: fleet.name(id, scope.current()?.context), local: false } : undefined; },
@@ -254,37 +292,13 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const github = base.origin && base.transport
     ? webEdgeGithubAccount(base.origin, base.transport, () => window.location.href)
     : undefined;
-  // Abrir una pantalla o un workspace que necesita la VM es una acción: se enciende una vez (`wake: true`) y se vuelve a leer.
-  const wakeWorkspaceMachines = (context: string | undefined, workspace: string | null, opts?: { auto?: boolean }) => {
-    for (const m of fleet.machines(context)) {
-      const key = memberKey(m.id, m.context);
-      const power = fleet.power(m.id, m.context);
-      if (!m.wakes || m.child || power === "on" || power === "starting" || power === "outdated" || waking.has(key)) continue;
-      if (workspace) {
-        if (m.hosted === false && fleet.lists(m.id, workspace) !== true) continue;
-        if (m.organization && !m.organization.workspaces.some((w) => w.id === workspace)) continue;
-        if (m.linked && !m.linked.has(workspace)) continue;
-      }
-      if (opts?.auto) {
-        if (autoWoken.has(key)) continue;
-        autoWoken.add(key);
-      }
-      waking.set(key, fleet.wake(m.id, m.context)
-        .then(() => {
-          slicesChanged(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]);
-          for (const name of ["harness:workspace-name", "harness:machines", "harness:service-resync"]) window.dispatchEvent(new CustomEvent(name));
-        })
-        .catch(() => {})
-        .finally(() => { waking.delete(key); bump(n => n + 1); }));
-    }
-  };
   const engine = scope.engine(active);
   const ipcEngine = {
     handle: async (command: string, args?: Record<string, unknown>, init?: { headers?: HeadersInit }) => {
       const result = await engine.handle(command, args, init);
       if (command === "set_active_workspace" && typeof args?.id === "string" && args.id) {
-        const ctx = new Headers(init?.headers).get("x-danil-context") || active.activeContext() || scope.current()?.context;
-        wakeWorkspaceMachines(ctx ?? undefined, args.id, { auto: true });
+        const ctx = confirmedActiveContext();
+        if (ctx) autoWaker.wake(ctx, args.id, { auto: true });
       }
       return result;
     },
@@ -298,9 +312,14 @@ export function mountWindow(base: Base, mounted: Mounted) {
     if (stopped) disposeApp();
   }).catch(base.onUnavailable);
   window.addEventListener("pagehide", () => fleet.close(), { once: true });
-  const onMachineAction = () => wakeWorkspaceMachines(scope.current()?.context ?? active.activeContext() ?? undefined, active.activeWorkspace());
+  const onMachineAction = () => {
+    const ctx = confirmedActiveContext();
+    if (ctx) autoWaker.wake(ctx, active.activeWorkspace());
+  };
   const onFocus = () => {
     if (availability().kind === "no_machines") void refresh();
+    const ctx = confirmedActiveContext();
+    if (ctx) autoWaker.wake(ctx, active.activeWorkspace(), { auto: true });
   };
   window.addEventListener("focus", onFocus);
   window.addEventListener(MACHINE_ACTION, onMachineAction);
@@ -316,5 +335,5 @@ export function mountWindow(base: Base, mounted: Mounted) {
       </>
     ), layer);
   });
-  return { refresh, close: () => { stopped = true; window.removeEventListener("focus", onFocus); window.removeEventListener(MACHINE_ACTION, onMachineAction); stopListing(); remoteGuests.close(); url.close(); active.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
+  return { refresh, close: () => { stopped = true; autoWaker.close(); window.removeEventListener("focus", onFocus); window.removeEventListener(MACHINE_ACTION, onMachineAction); stopListing(); remoteGuests.close(); url.close(); active.close(); disposeApp?.(); disposeNotice?.(); noticeLayer?.remove(); } };
 }

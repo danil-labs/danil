@@ -255,7 +255,7 @@ export default function Accounts() {
               <Text style={{ color: theme.text }}>{t("accounts.connected", { name: login.host.label })}</Text>
             ) : !login.url && !login.confirm && !login.askCode ? (
               <Text style={{ color: theme.textMuted }}>
-                {login.host.power() !== "on" ? w("shell.machines.waking", { name: login.host.label }) : t("accounts.opening", { provider: login.provider.label })}
+                {t("accounts.opening", { provider: login.provider.label })}
               </Text>
             ) : null}
             {!login.done && login.url ? (

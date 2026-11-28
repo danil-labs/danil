@@ -1,5 +1,5 @@
 import { FleetError } from "../model/fleet/index.ts";
-import { rememberWorkspaceSnapshot, setActiveWorkspaceContext } from "../../../../session/src/workspace-context.ts";
+import { confirmWorkspaceSelection, rememberWorkspaceSnapshot, setActiveWorkspaceContext } from "../../../../session/src/workspace-context.ts";
 import { createContextAttention } from "./context-attention.ts";
 import type { CatalogWorkspaceEntry, Invoke, RouterConfig } from "../model/router-config.ts";
 import { scopedFleet } from "./scoped-fleet.ts";
@@ -94,7 +94,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     let clean = options?.headers ? { ...options, headers: Object.fromEntries(headers) } : options;
     if (/^danil_|^radiant_|^agents_session_/.test(command)) return legacy.handle(command, args, clean);
     if (command === "set_active_workspace" && args.id === null) {
-      cleared = true; activeContext = undefined; setActiveWorkspaceContext(null); return null;
+      cleared = true; activeContext = undefined; confirmWorkspaceSelection(null, null); return null;
     }
     if (cleared && !["set_active_workspace", "list_workspaces", "workspaces_startup", "list_workspace_attention", "service_poll", "machine_list", "list_surfaces", "list_providers", "list_accounts", "list_git_hosts", "check_environment", "install_provider"].includes(command) && !headers.has("x-terminus-machine"))
       throw new FleetError("unknown_machine", null);
@@ -113,7 +113,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     }
     const value = await router.handle(command, args, clean);
     if (command === "list_workspace_attention") return attention.project(value, selected);
-    if (command === "set_active_workspace") { if (selected && typeof args.id === "string") selectedWorkspaces.set(selected, args.id); cleared = false; activeContext = selected; setActiveWorkspaceContext(selected ?? null); }
+    if (command === "set_active_workspace") { if (selected && typeof args.id === "string") selectedWorkspaces.set(selected, args.id); cleared = false; activeContext = selected; confirmWorkspaceSelection(typeof args.id === "string" ? args.id : null, selected ?? null); }
     if ((command === "list_workspaces" || command === "workspaces_startup") && value && typeof value === "object") {
       const snapshot = selectionCleared ? { ...value, active: null } : router === legacy && selected ? { ...value, active: selectedWorkspaces.get(selected) ?? core(selected).activeWorkspace() } : value;
       return rememberWorkspaceSnapshot(snapshot, selectionCleared ? null : selected ?? null);
@@ -154,6 +154,13 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
       const keep = new Set(valid);
       attention.prune(keep);
       for (const [context, router] of contexts) if (!keep.has(context)) { router.close(); contexts.delete(context); placement.delete(context); selectedWorkspaces.delete(context); attention.forget(context); }
+    },
+    restoreSelection(context: string, workspace: string | null) {
+      if (cleared || !config.contextInfo?.(context)) return false;
+      activeContext = context;
+      if (workspace) selectedWorkspaces.set(context, workspace);
+      setActiveWorkspaceContext(context);
+      return true;
     },
     createsOn(workspace: string | null) { return cleared || activeContext && !config.contextInfo?.(activeContext) ? null : core(activeContext).createsOn(workspace ?? (activeContext ? selectedWorkspaces.get(activeContext) ?? null : null)); },
     activeWorkspace: currentWorkspace,

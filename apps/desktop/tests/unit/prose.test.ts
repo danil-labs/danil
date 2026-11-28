@@ -206,3 +206,13 @@ test("los rechazos de set_session_model y model_required pintan su frase en las 
   }
   elegirLengua("es");
 });
+
+test("TimeoutError from createResource localizes cleanly without leaking raw English text", () => {
+  const timeout = new DOMException("Resource deadline exceeded", "TimeoutError");
+  elegirLengua("es");
+  assert.equal(prosaDe(timeout), saltillo(es["shell.service.failed"]));
+  assert.ok(!prosaDe(timeout).includes("Resource deadline exceeded"));
+  elegirLengua("en");
+  assert.equal(prosaDe(timeout), saltillo(en["shell.service.failed"]));
+  elegirLengua("es");
+});

@@ -1,10 +1,13 @@
 import { createMemo, createSignal, untrack } from "solid-js";
 import { createResource } from "../model/resource.ts";
-import { conservar, READ_TIMEOUT } from "../../../../session/src/sessionRefresh.ts";
+import { conservar } from "../../../../session/src/sessionRefresh.ts";
 import type { Project } from "../../../../ui/src/lib/model.ts";
 import { callEngine } from "../../../../engine-client/src/client.ts";
 
 export { callEngine as invoke };
+
+/** Por encima del presupuesto real de transporte (espera de contexto 10 s + lectura y reintento de flota 30 s). */
+export const PROJECTS_READ_TIMEOUT = 45_000;
 
 export type ProjectsScope = { workspace: string | null; machine: string | null };
 type ReadyScope = ProjectsScope & { revision: number };
@@ -29,7 +32,7 @@ export function createProjectsStore(deps: { scope: () => ProjectsScope; invoke: 
       if (scopeKey(scope) !== key) return Promise.reject(new DOMException("Project scope changed", "AbortError"));
       return rpc<Project[]>("list_projects", {}, route(scope));
     },
-    timeoutMs: deps.timeoutMs ?? READ_TIMEOUT,
+    timeoutMs: deps.timeoutMs ?? PROJECTS_READ_TIMEOUT,
     reconcile: (previous, incoming) => conservar(previous, incoming, row => row.id),
   });
   const empty: Project[] = [];
@@ -93,7 +96,7 @@ export function createProjectsStore(deps: { scope: () => ProjectsScope; invoke: 
           signal.throwIfAborted();
           if (currentScope().workspace !== scope.workspace) return Promise.reject(new DOMException("Project scope changed", "AbortError"));
           return rpc<Project[]>("list_projects", {}, route(scope));
-        }, timeoutMs: deps.timeoutMs ?? READ_TIMEOUT, reconcile: (previous, incoming) => conservar(previous, incoming, row => row.id) });
+        }, timeoutMs: deps.timeoutMs ?? PROJECTS_READ_TIMEOUT, reconcile: (previous, incoming) => conservar(previous, incoming, row => row.id) });
         routed.set(key, reader);
       }
       return reader.read(key);
