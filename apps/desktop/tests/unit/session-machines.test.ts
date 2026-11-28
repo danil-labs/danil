@@ -651,10 +651,12 @@ test("createAutoWaker runs all 3 scheduled retries (5s/15s/30s), admits inventor
   waker.close();
 });
 
-test("Desk cold start with linked account restores selection and emits wake POST before slow inactive org resolves in both arrival orders", async () => {
-  for (const order of ["selection-first", "inventory-first"] as const) {
+test("Desk cold start with linked account restores selection and emits wake POST before slow inactive org resolves in all arrival orders", async () => {
+  for (const order of ["selection-first", "inventory-first", "selection-resolves-after-install"] as const) {
     confirmWorkspaceSelection(null, null);
     let resolveSlow!: (v: unknown) => void;
+    let resolvePreInstallSelect!: () => void;
+    let preInstallSelection: Promise<void> | null = null;
     const woken: { ctx: string; body: unknown }[] = [];
     const cloudIds = new Set<string>();
     const cloud = createSessionCloud(async (command, args) => {
@@ -689,8 +691,13 @@ test("Desk cold start with linked account restores selection and emits wake POST
     });
 
     if (order === "selection-first") {
-      // Confirmed selection arrived BEFORE Desk installed the router (e.g. WorkspaceColumn startup before account.tsx mounted).
+      // Confirmed selection arrived BEFORE Desk installed the router.
       confirmWorkspaceSelection("ws-fast", "ctx-fast");
+    } else if (order === "selection-resolves-after-install") {
+      // cambiarA() started set_active_workspace on the pre-install native route and stays pending until after install() + list_workspaces finish.
+      preInstallSelection = new Promise<void>((resolve) => { resolvePreInstallSelect = resolve; }).then(() => {
+        confirmWorkspaceSelection("ws-fast", "ctx-fast");
+      });
     }
 
     const linkedKey = JSON.stringify(["cmp_home", "acc_1", "https://edge.danil.ai"]);
@@ -747,7 +754,6 @@ test("Desk cold start with linked account restores selection and emits wake POST
             isCloudMachine: (id) => cloudIds.has(id),
           });
           fleet.setMachines(initialRows.map(infoOf));
-          // Exact same sequence as account.tsx install(): autoWake.wakeActive() runs right after setMachines without test-side wake calls.
           autoWake.wakeActive();
           installed = { key: linkedKey, fleet, router, autoWake };
         },
@@ -763,6 +769,13 @@ test("Desk cold start with linked account restores selection and emits wake POST
       assert.equal(woken.length, 0, "inventory-first waits for confirmed active context before emitting wake");
       await installed!.autoWake.route("set_active_workspace", { id: "ws-fast" }, { headers: { "x-danil-context": "ctx-fast" } });
       await new Promise((resolve) => setTimeout(resolve, 15));
+    } else if (order === "selection-resolves-after-install") {
+      // Initial list_workspaces completes while selection is still pending and slow org is still unresolved.
+      await installed!.router.handle("list_workspaces", {});
+      assert.equal(woken.length, 0, "no wake before pre-install selection confirms");
+      resolvePreInstallSelect();
+      await preInstallSelection;
+      await new Promise((resolve) => setTimeout(resolve, 15));
     }
 
     assert.equal(woken.length, 1, `${order}: active org wake POST left automatically before slow inactive org resolved`);
@@ -775,6 +788,10 @@ test("Desk cold start with linked account restores selection and emits wake POST
     assert.equal(final.state, "ready");
     installed!.autoWake.close();
     installed!.router.close();
+    // Disposed controller ignores subsequent selection confirmations.
+    confirmWorkspaceSelection("ws-fast", "ctx-fast");
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    assert.equal(woken.length, 1, `${order}: disposed controller does not re-trigger wake`);
     confirmWorkspaceSelection(null, null);
   }
 });

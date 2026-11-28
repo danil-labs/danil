@@ -1,5 +1,5 @@
 import type { Computer } from "../../../../platform-client/src/api.ts";
-import { confirmedWorkspaceSelection } from "../../../../session/src/workspace-context.ts";
+import { confirmedWorkspaceSelection, onConfirmedWorkspaceSelection } from "../../../../session/src/workspace-context.ts";
 import { createAutoWaker } from "./auto-wake.ts";
 import type { Fleet, MachineInfo } from "./fleet/index.ts";
 import type { Router } from "../queries/router.ts";
@@ -59,12 +59,25 @@ export function createDeskAutoWakeController(options: {
     return result;
   };
 
+  let closed = false;
+  const stopSelection = onConfirmedWorkspaceSelection((selection) => {
+    if (closed || !selection.context || !hasContextInfo(selection.context)) return;
+    if (router.activeContext() !== selection.context || router.activeWorkspace() !== selection.workspace) {
+      router.restoreSelection(selection.context, selection.workspace);
+    }
+    wakeActive();
+  });
+
   return {
     wakeActive,
     route,
     onPowerChange: (id: string, context: string | undefined, power: string) => autoWaker.onPowerChange(id, context, power),
     pruneContexts: (contexts: readonly string[]) => autoWaker.pruneContexts(contexts),
-    close: () => autoWaker.close(),
+    close: () => {
+      closed = true;
+      stopSelection();
+      autoWaker.close();
+    },
   };
 }
 

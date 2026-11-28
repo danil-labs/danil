@@ -5,10 +5,17 @@ export type WorkspaceSelection = { workspace: string | null; context: string | n
 export const [activeWorkspaceContext, setActiveWorkspaceContext] = createSignal<string | null>(null);
 export const [displayWorkspaceContext, setDisplayWorkspaceContext] = createSignal<string | null>(null);
 const [confirmedSelection, setConfirmedSelection] = createSignal<WorkspaceSelection>({ workspace: null, context: null });
+const selectionListeners = new Set<(selection: WorkspaceSelection) => void>();
 export const confirmedWorkspaceSelection = confirmedSelection;
+export function onConfirmedWorkspaceSelection(listener: (selection: WorkspaceSelection) => void): () => void {
+  selectionListeners.add(listener);
+  return () => { selectionListeners.delete(listener); };
+}
 export function confirmWorkspaceSelection(workspace: string | null, context: string | null) {
-  setConfirmedSelection({ workspace, context });
+  const next = { workspace, context };
+  setConfirmedSelection(next);
   setActiveWorkspaceContext(context);
+  for (const listener of [...selectionListeners]) listener(next);
 }
 const snapshots = new WeakMap<object, string | null>();
 export function rememberWorkspaceSnapshot<T>(value: T, context: string | null): T {
