@@ -163,6 +163,7 @@ export function createColumnasDePrincipal(deps: ColumnasDePrincipalDeps) {
               projects={proyectosDelRiel()}
               modelos={modelosParaAgentes()} createFreeRouterConsent={createFreeRouterConsent}
               sessions={sesionesDelRiel()}
+              sessionsReady={"" in sesiones() && projectList().every((p) => p.id in sesiones())}
               viewKey={sidebarViewKey(workspaceActivo(), escritorio())}
               onHablarCon={hablarConEncargado}
               onAgentProfile={openAgentProfile}

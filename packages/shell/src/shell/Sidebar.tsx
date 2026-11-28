@@ -101,7 +101,7 @@ export default function Sidebar(props: SidebarProps) {
   const seccionesVisibles = createMemo(() => resolvedRailSections().filter((section) => section.visible));
 
   const sesionesCargadas = () =>
-    "" in props.sessions && props.projects.every((p) => p.id in props.sessions);
+    props.sessionsReady ?? ("" in props.sessions && props.projects.every((p) => p.id in props.sessions));
 
   /** La misma lista, montada en dos sitios: expandida y en el desplegable. */
   const Lista = () => (

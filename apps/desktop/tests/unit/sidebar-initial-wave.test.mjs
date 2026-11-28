@@ -273,3 +273,85 @@ test("si la persona cambia de espacio mientras list_sources sigue pendiente, el 
     app.w.close();
   }
 });
+
+test("un espacio activo no muestra estado vacío mientras carga una carpeta fuera de su lista que trae tareas del espacio", async () => {
+  const pending = new Map();
+  let sawEmpty = false;
+  const ws = "w-space-partial";
+  const app = await boot("listo", "sidebar-active-space-partial-load", {
+    window_ready: null,
+    window_vitals: null,
+    setup_required: false,
+    service_poll: { cursor: 0, gap: false, replay: false, runtime: "lab", reset: false },
+    list_machines: [{ id: "local", name: "Local", local: true, online: true, features: ["light_state_v1"] }],
+    list_providers: [{ id: "opencode", label: "OpenCode", available: true, driver: true }],
+    list_workspaces: { workspaces: [{ id: ws, name: "SpacePartial", context_root: null }], active: ws },
+    workspaces_startup: { workspaces: [{ id: ws, name: "SpacePartial", context_root: null }], active: ws },
+    list_projects: () => [
+      { id: "p1", name: "Agregada", working_directory: "/lab/p1", kind: "git", portfolio: null, sources: [] },
+      { id: "p2", name: "Externa", working_directory: "/lab/p2", kind: "git", portfolio: null, sources: [] },
+    ],
+    list_portfolios: [],
+    list_sources: [],
+    // El espacio s1 solo agrega p1 (y ni siquiera tiene carpetas si está vacío); p2 no está agregada pero trae una tarea de s1.
+    list_spaces: () => [
+      { id: "s1", name: "Espacio Uno", folders: [], created_at: 1, updated_at: 1 },
+    ],
+    list_live_sessions: ({ project }) => new Promise((resolve) => {
+      pending.set(project, resolve);
+    }),
+    list_agents: { agents: [], rechazados: [] },
+    list_agent_status: [],
+    list_mentions: { fuentes: [], archivos: [] },
+    list_models: { provider: "opencode", models: [], fallback: false },
+    list_surfaces: [],
+    session_folder: "/tmp",
+    list_task_trees: [],
+    watch_task_tree: "watch",
+    unwatch_task_tree: null,
+    list_live_turns: [],
+    list_active_turns: [],
+    load_queue: [],
+    save_queue: null,
+    queue_ready: true,
+    session_usage: null,
+    list_session_git: {},
+  }, undefined, {
+    [`space.${ws}`]: JSON.stringify("s1"),
+    [`sidebar.view.${ws}.s1`]: JSON.stringify({ folders: [], agent: null, group: "none" }),
+  });
+
+  try {
+    await waitFor(
+      () => pending.has("") && pending.has("p1") && pending.has("p2"),
+      "se consultaron todas las carpetas del workspace",
+      2500,
+    );
+    const doc = app.w.document;
+    const observer = new app.w.MutationObserver(() => {
+      if (doc.querySelector("[data-sidebar-empty]") || doc.querySelector("[data-desk-empty]")) sawEmpty = true;
+    });
+    observer.observe(doc.querySelector("[data-sidebar-tasks]"), { childList: true, subtree: true });
+
+    // "" y p1 contestan vacías rápido; p2 (no agregada al espacio) tarda más que coalesce (250 ms).
+    pending.get("")([]);
+    pending.get("p1")([]);
+    await sleep(340);
+    assert.equal(doc.querySelector("[data-sidebar-empty]"), null);
+    assert.equal(doc.querySelector("[data-desk-empty]"), null);
+    assert.equal(sawEmpty, false, "el espacio activo no muestra estado vacío mientras p2 sigue pendiente");
+
+    // p2 llega tarde con una tarea asignada a s1.
+    pending.get("p2")([{ ...row("t-s1", 500), space: "s1" }]);
+    await waitFor(
+      () => doc.querySelector('[data-sidebar-tasks] [data-sesion="t-s1"]'),
+      "la tarea de p2 asignada al espacio s1 aparece sin parpadeo vacío previo",
+      2000,
+    );
+    observer.disconnect();
+    assert.equal(sawEmpty, false);
+  } finally {
+    for (const resolve of pending.values()) resolve([]);
+    app.w.close();
+  }
+});
