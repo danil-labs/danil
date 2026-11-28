@@ -15,7 +15,7 @@ import { Icon, type IconName } from "./Icon";
 import { useTheme } from "./theme";
 
 const SPRING = { damping: 18, stiffness: 280, mass: 0.75 } as const;
-const ITEM_STEP = 48;
+const ITEM_STEP = 42;
 
 export type HeaderDialAction = {
   id: string;
@@ -29,13 +29,9 @@ export type HeaderDialAction = {
 };
 
 /**
- * Right-hand header speed-dial (`[⊞]` → `[✕]` + 3 individual vertical floating
- * buttons with staggered spring animation, no enclosing mini-panel box).
- *
- * Actions in order:
- *   1. Search (`search`)
- *   2. Subtasks (`git-fork`, with count badge when > 0)
- *   3. Files (`folder` → navigates to existing `task-files.tsx` with `SlideIn`)
+ * Right-hand header speed-dial: bare icon trigger (`[⊞]` ↔ `[✕]`) with no
+ * background, border, or rounded box, expanding into 3 individual bare vertical
+ * icons with staggered spring animation.
  */
 export function HeaderToolsDial({
   actions,
@@ -79,20 +75,15 @@ export function HeaderToolsDial({
 
       <Pressable
         testID={testID}
+        hitSlop={10}
         accessibilityRole="button"
         accessibilityLabel={open ? t("task.tools.close_menu") : t("task.tools.open_menu")}
         accessibilityState={{ expanded: open }}
         onPress={toggle}
-        style={({ pressed }) => [
-          styles.button,
-          {
-            backgroundColor: open ? theme.text : pressed ? theme.muted : theme.surface,
-            borderColor: open ? theme.text : theme.border,
-          },
-        ]}
+        style={({ pressed }) => [styles.iconBtn, { opacity: pressed ? 0.5 : 1 }]}
       >
         <Animated.View style={triggerIconStyle}>
-          <Icon name={open ? "x" : "layout-grid"} size={18} color={open ? theme.onPrimary : theme.text} />
+          <Icon name={open ? "x" : "layout-grid"} size={22} color={theme.text} />
         </Animated.View>
       </Pressable>
 
@@ -151,28 +142,24 @@ function DialFloatingItem({
     <Animated.View style={[styles.itemWrap, animatedStyle]} pointerEvents={open ? "auto" : "none"}>
       <Pressable
         testID={action.testID}
+        hitSlop={10}
         disabled={action.disabled}
         accessibilityRole="button"
         accessibilityLabel={action.label}
         accessibilityState={{ selected: action.active, disabled: action.disabled }}
         onPress={onSelect}
         style={({ pressed }) => [
-          styles.button,
-          styles.floatingShadow,
-          {
-            backgroundColor: action.active ? theme.text : pressed ? theme.muted : theme.raised,
-            borderColor: action.active ? theme.text : theme.borderStrong,
-            opacity: action.disabled ? 0.42 : 1,
-          },
+          styles.iconBtn,
+          { opacity: action.disabled ? 0.35 : pressed ? 0.5 : 1 },
         ]}
       >
         <Icon
           name={action.icon}
-          size={18}
-          color={action.active ? theme.onPrimary : theme.text}
+          size={21}
+          color={action.active ? theme.primary : theme.text}
         />
         {action.badge && action.badge > 0 ? (
-          <View style={[styles.badge, { backgroundColor: theme.text, borderColor: theme.raised }]}>
+          <View style={[styles.badge, { backgroundColor: theme.text, borderColor: theme.bg }]}>
             <Text style={[styles.badgeText, { color: theme.onPrimary }]}>
               {action.badge > 9 ? "9+" : action.badge}
             </Text>
@@ -186,8 +173,8 @@ function DialFloatingItem({
 const styles = StyleSheet.create({
   anchor: {
     position: "relative",
-    width: 40,
-    height: 40,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 50,
@@ -207,7 +194,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     right: 0,
-    width: 40,
+    width: 28,
     alignItems: "center",
     zIndex: 60,
   },
@@ -216,31 +203,22 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
   },
-  button: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
+  iconBtn: {
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 55,
   },
-  floatingShadow: {
-    shadowColor: "#000",
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
   badge: {
     position: "absolute",
-    top: -4,
-    right: -4,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
+    top: -6,
+    right: -7,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 1.5,
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
     alignItems: "center",
     justifyContent: "center",
   },
