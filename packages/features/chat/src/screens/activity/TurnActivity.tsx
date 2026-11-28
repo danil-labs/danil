@@ -1,5 +1,5 @@
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { createEffect, createMemo, createUniqueId, For, Index, type JSX, Match, onCleanup, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createUniqueId, Index, type JSX, Match, onCleanup, Show, Switch } from "solid-js";
 import { t } from "../../../../../ui/src/lib/i18n";
 import { sharedLazy } from "../../../../../ui/src/lib/sharedLazy";
 import { partesDelTramo, type Paso } from "../../../../../ui/src/lib/steps";
@@ -13,7 +13,7 @@ import McpAppView from "../McpAppView";
 import type { Msg, Razonamiento } from "../../model/messageTypes";
 import LineaDeTiempo, { SUPERFICIE_DE_EJECUCION } from "../../components/Timeline";
 import { currentActivityAction, isConcreteActivityLabel, presentActivity, type ActivityAction } from "../../model/activityPresentation";
-import { buildActivityTimeline } from "../../model/activityTimeline";
+import { buildActivityTimeline, type ActivityTimelineItem } from "../../model/activityTimeline";
 import type { TurnOutcome } from "../../model/turnActivity";
 import { Pressable } from "../../../../../ui/src/Pressable";
 type Avance = ActivityChunk<Msg>;
@@ -143,7 +143,7 @@ export function RegistroDeTrabajo(props: {
               {(tramo, index) => (
                 <>
                   <Show when={tramo().pasos.length > 0}>
-                    <LineaDeTiempo pasos={tramo().pasos} active={presentation().animate && !props.stopping} individual />
+                    <LineaDeTiempo pasos={tramo().pasos} slot={`avance-${index}`} active={presentation().animate && !props.stopping} individual />
                   </Show>
                   {/* La fila de siempre y no prosa suelta: dentro del pliegue
                       una ráfaga sin su rótulo se lee como algo que el agente dijo. */}
@@ -156,24 +156,29 @@ export function RegistroDeTrabajo(props: {
                 </>
               )}
             </Index>
-            <For each={timeline()}>
+            {/* `<Index>` + boolean `<Match>` + deterministic `slot` keep existing
+                tool and reasoning rows mounted and expanded as new items arrive. */}
+            <Index each={timeline()}>
               {(item, index) => (
                 <Switch>
-                  <Match when={item.kind === "steps" ? item : null}>
-                    {(entry) => <LineaDeTiempo pasos={entry().pasos} active={presentation().animate && !props.stopping} individual />}
+                  <Match when={item().kind === "steps"}>
+                    <LineaDeTiempo
+                      pasos={item().kind === "steps" ? (item() as Extract<ActivityTimelineItem, { kind: "steps" }>).pasos : []}
+                      slot={`timeline-${index}`}
+                      active={presentation().animate && !props.stopping}
+                      individual
+                    />
                   </Match>
-                  <Match when={item.kind === "reasoning" ? item : null}>
-                    {(entry) => (
-                      <Reasoning
-                        bloques={entry().bloques}
-                        slot={`timeline-${index()}`}
-                        active={presentation().animate && !props.stopping && action()?.kind === "thinking" && index() === timeline().length - 1}
-                      />
-                    )}
+                  <Match when={item().kind === "reasoning"}>
+                    <Reasoning
+                      bloques={item().kind === "reasoning" ? (item() as Extract<ActivityTimelineItem, { kind: "reasoning" }>).bloques : []}
+                      slot={`timeline-${index}`}
+                      active={presentation().animate && !props.stopping && action()?.kind === "thinking" && index === timeline().length - 1}
+                    />
                   </Match>
                 </Switch>
               )}
-            </For>
+            </Index>
       <Index each={todos()}>
         {(step) => (
           <Show when={!step().corriendo && !isInteractiveMcpApp(step().mcpApp) ? step().mcpApp : undefined}>

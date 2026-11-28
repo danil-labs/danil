@@ -1,5 +1,5 @@
 import ChevronRight from "lucide-solid/icons/chevron-right";
-import { createSignal, For, Match, Show, Switch } from "solid-js";
+import { createMemo, createSignal, For, Index, Match, Show, Switch } from "solid-js";
 import { createRowSignal } from "../model/threadRow";
 import { t } from "../../../../ui/src/lib/i18n";
 import { flechaDeLista } from "../../../../ui/src/lib/shortcuts";
@@ -39,14 +39,14 @@ function claveDeFila(fila: Fila, i: number) {
  * no en `FilaDePaso`: `agrupar` fabrica filas nuevas con cada delta, el `For`
  * remonta sus componentes y una fila abierta se cerraría sola.
  */
-export default function LineaDeTiempo(props: { pasos: Paso[]; individual?: boolean; active?: boolean }) {
+export default function LineaDeTiempo(props: { pasos: Paso[]; slot?: string; individual?: boolean; active?: boolean }) {
   let marco: HTMLDivElement | undefined;
   const [foco, setFoco] = createSignal(0);
-  const [abiertas, setAbiertas] = createRowSignal<Record<string, boolean>>("steps", {});
+  const [abiertas, setAbiertas] = createRowSignal<Record<string, boolean>>("steps", {}, props.slot);
 
   const filas = () => props.individual ? props.pasos.map(paso => ({ clase: paso.clase, pasos: [paso] })) : agrupar(props.pasos);
 
-  const conIndice = () => {
+  const conIndice = createMemo(() => {
     let n = 0;
     const lista = filas().map((fila, i) => ({
       fila,
@@ -54,7 +54,7 @@ export default function LineaDeTiempo(props: { pasos: Paso[]; individual?: boole
       tecla: desplegable(fila) ? n++ : -1,
     }));
     return { lista, total: n };
-  };
+  });
   const activo = () =>
     Math.min(foco(), Math.max(0, conIndice().total - 1));
 
@@ -95,22 +95,22 @@ export default function LineaDeTiempo(props: { pasos: Paso[]; individual?: boole
          entera se iba de lado. */
       class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-0.5"
     >
-      {/* `<For>` reconcilia por identidad del elemento del array. Una fila que
-          cambia de forma es un objeto nuevo y se monta como tal. */}
-      <For each={conIndice().lista}>
-        {({ fila, clave, tecla }) => (
+      {/* `<Index>` evita desmontar filas abiertas cuando llegan nuevos pasos al tramo. */}
+      <Index each={conIndice().lista}>
+        {(entry) => (
           <FilaDePaso
-            fila={fila}
+            fila={entry().fila}
             active={props.active}
-            abierta={Boolean(abiertas()[clave])}
-            enfocada={tecla === activo()}
-            onAlternar={() =>
-              setAbiertas({ ...abiertas(), [clave]: !abiertas()[clave] })
-            }
-            onFoco={() => setFoco(tecla)}
+            abierta={Boolean(abiertas()[entry().clave])}
+            enfocada={entry().tecla === activo()}
+            onAlternar={() => {
+              const clave = entry().clave;
+              setAbiertas({ ...abiertas(), [clave]: !abiertas()[clave] });
+            }}
+            onFoco={() => setFoco(entry().tecla)}
           />
         )}
-      </For>
+      </Index>
     </div>
   );
 }
