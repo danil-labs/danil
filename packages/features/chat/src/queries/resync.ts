@@ -7,7 +7,7 @@ import { isNoMachines } from "../../../../host/src/platform.ts";
 import { claveDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
 import { type LiveTurn } from "./sleepSession.ts";
-import { createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
+import { batch, createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 import type { CreateServiceStream, MachinesPort, ServicePage, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
@@ -93,17 +93,23 @@ export function createResync(deps: ResyncDeps) {
   onMount(serviceStream.start);
   onCleanup(serviceStream.dispose);
 
+  let reconcileSeq = 0;
+  let lastAppliedReconcile = 0;
+
   async function reconcileActiveTurns() {
     const workspace = workspaceActivo();
     if (!workspace || isNoMachines()) return;
+    const seq = ++reconcileSeq;
     const revision = deps.lifecycleRevision;
     const generation = workspaceContext.generation();
+    const presenceSnapshot = handoff.presenceSnapshot();
     try {
       const [active, timing] = await Promise.all([
         callEngine<string[]>("list_active_turns", { workspace }),
         callEngine<LiveTurn[]>("list_live_turns").catch(() => []),
       ]);
-      if (generation !== workspaceContext.generation() || revision !== deps.lifecycleRevision) return;
+      if (generation !== workspaceContext.generation() || revision !== deps.lifecycleRevision || seq < lastAppliedReconcile) return;
+      lastAppliedReconcile = seq;
       const enVuelo = timing.filter((turn) => turn.workspace === workspace && active.includes(turn.session));
       setDesdeDeTurno((previous) => ({ ...previous, ...Object.fromEntries(
         enVuelo.map((turn) => [turn.session, turn.started_at]),
@@ -126,8 +132,11 @@ export function createResync(deps: ResyncDeps) {
       const nuevas = active.filter((id) => !vivas().includes(id));
       const finished = vivas().filter((id) => !active.includes(id) && !pendingStarts.has(id));
       for (const id of nuevas) void reponerGates(id);
-      for (const id of active) if (!settlingTurns().includes(id) && !handoff.view(conversationScope(id)).stopping) { marcarViva(id, undefined, true); handoff.observe({ kind: "started", scope: conversationScope(id) }); }
-      for (const id of finished) void settleTurn(id);
+      batch(() => {
+        for (const id of active) if (!settlingTurns().includes(id) && !handoff.view(conversationScope(id)).stopping) { marcarViva(id, undefined, true); handoff.observe({ kind: "started", scope: conversationScope(id) }); }
+        for (const id of finished) void settleTurn(id);
+        handoff.presenceApplied(presenceSnapshot);
+      });
     } catch {
       // Un IPC fallido no demuestra que el turno haya terminado.
     }
@@ -149,8 +158,9 @@ export function createResync(deps: ResyncDeps) {
   }
   onCleanup(() => clearTimeout(reconcileTimer));
   createEffect(() => {
-    if (turnosPorEventos()) return;
-    const timer = setInterval(() => void reconcileActiveTurns(), 5000);
+    const verifyingStop = handoff.hasPendingStopVerification();
+    if (!verifyingStop && turnosPorEventos()) return;
+    const timer = setInterval(() => void reconcileActiveTurns(), verifyingStop ? 1000 : 5000);
     onCleanup(() => clearInterval(timer));
   });
 

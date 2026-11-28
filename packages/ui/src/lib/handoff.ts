@@ -7,6 +7,10 @@ export type HandoffView = { stopping: boolean; pending: { queueItemId: string; p
 export type HandoffFact = { scope: ConversationScope } & ({ kind: "terminal" | "started" | "accepted" } | { kind: "dispatching"; itemIds: readonly string[] } | { kind: "rejected"; error: unknown } | { kind: "queue-removed"; queueItemId: string });
 export type ConversationHandoffDeps = {
   current: () => { workspace: string | null; generation: number };
-  runtime: { active: (scope: ConversationScope) => boolean; stop: (scope: ConversationScope) => Promise<unknown> };
+  runtime: {
+    active: (scope: ConversationScope) => boolean;
+    stop: (scope: ConversationScope) => Promise<unknown>;
+    onStopSettled?: (scope: ConversationScope, outcome: "acknowledged" | "declined" | "failed") => void;
+  };
   queue: { message: (scope: ConversationScope, id: string) => { text: string; attachments?: readonly string[] } | undefined; select: (scope: ConversationScope, id: string) => boolean; release: (scope: ConversationScope, id: string) => void; failed: (scope: ConversationScope, id: string, error: unknown) => void };
 };

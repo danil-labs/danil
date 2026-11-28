@@ -172,6 +172,7 @@ export function createInlineComposer(
     const projectId = target.project();
     if (!id || !vivas().includes(id)) return;
     const scope = conversationScope(id, projectId);
+    if (handoff.view(scope).stopping) return;
     const hadPending = Boolean(handoff.view(scope).pending);
     const stopPromise = handoff.requestStop(scope);
     if (!hadPending) marcarQuieta(id, "interrupted");
