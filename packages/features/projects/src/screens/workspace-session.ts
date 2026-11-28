@@ -100,8 +100,9 @@ export function createWorkspaceSession(deps: WorkspaceSessionDeps) {
     }
     let current = true;
     onCleanup(() => { current = false; });
+    const readToken = setDraftProjectError.begin();
     void projectCatalog.readForMachine(machine).then(rows => {
-      if (current) { setDraftProjectError(null); setDraftProjects({ workspace, machine, rows: rows.map(row => ({
+      if (current) { setDraftProjectError.setFor(readToken, null); setDraftProjects({ workspace, machine, rows: rows.map(row => ({
         ...row, machines: projectList().find(p => p.id === row.id)?.machines ?? [machine],
       })) }); }
     }).catch(e => {
@@ -109,7 +110,7 @@ export function createWorkspaceSession(deps: WorkspaceSessionDeps) {
       // Se apagó entre la lista de máquinas y la pregunta, o la pregunta la está
       // encendiendo: lo mismo que apagada.
       if (asleep(e)) setDraftProjects({ workspace, machine, rows: null });
-      else if (!isNoMachines()) setDraftProjectError(prosaDe(e));
+      else if (!isNoMachines()) setDraftProjectError.setFor(readToken, prosaDe(e));
     });
   }));
   createEffect(on(draftMachine, (machine, before) => {

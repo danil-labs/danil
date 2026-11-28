@@ -559,22 +559,27 @@ test("pool returns false from retry(admission) when all slots are busy, propagat
   waiter.close();
 });
 
-test("createAutoWaker schedules bounded retries for recoverable failures, cancels on online/context-switch/close, and stops on not_remotely_startable", async () => {
+test("createAutoWaker runs all 3 scheduled retries (5s/15s/30s), admits inventory starting, re-evaluates active workspace, cancels on online/context-switch/close, and stops on not_remotely_startable", async () => {
   const timers = new Map<number, { fn: () => void; ms: number }>();
   let nextTimer = 1;
   let attempts = 0;
+  let powerState: "off" | "starting" | "on" = "starting";
+  let currentWorkspace: string | null = "ws-a";
+  const checkedWorkspaces: (string | null)[] = [];
   let nextError: unknown = new FleetError("machine_timeout", "vm1", "start");
   const fleet = {
-    machines: (ctx?: string) => ctx === "ctx-a" ? [{ id: "vm1", name: "VM", wakes: true, hosted: true, context: "ctx-a" }] : [],
-    power: () => "off" as const,
-    lists: () => true,
+    machines: (ctx?: string) => ctx === "ctx-a" ? [{ id: "vm1", name: "VM", wakes: true, hosted: true, context: "ctx-a", linked: new Set(["ws-a", "ws-b"]) }] : [],
+    power: () => powerState,
+    lists: (_id: string, ws: string) => { checkedWorkspaces.push(ws); return true; },
     wake: async () => {
       attempts += 1;
+      checkedWorkspaces.push(currentWorkspace);
       if (nextError) throw nextError;
     },
   } as unknown as Fleet;
   const waker = createAutoWaker({
     fleet: () => fleet,
+    activeTarget: () => ({ context: "ctx-a", workspace: currentWorkspace }),
     setTimer: (fn, ms) => { const id = nextTimer++; timers.set(id, { fn, ms }); return id as unknown as ReturnType<typeof setTimeout>; },
     clearTimer: (h) => { timers.delete(h as unknown as number); },
   });
@@ -583,45 +588,112 @@ test("createAutoWaker schedules bounded retries for recoverable failures, cancel
   waker.wake(undefined, null, { auto: true });
   assert.equal(attempts, 0);
 
-  // Recoverable machine_timeout (whose canWake defaults to false!) schedules 5s retry instead of Infinity lockout.
-  waker.wake("ctx-a", null, { auto: true });
+  // Inventory already showing `starting` STILL enters auto-wake to acquire the 201 ticket, and runs all 3 scheduled retries (5s, 15s, 30s -> 4 total attempts).
+  waker.wake("ctx-a", "ws-a", { auto: true });
   await Promise.resolve(); await Promise.resolve();
-  assert.equal(attempts, 1);
+  assert.equal(attempts, 1, "inventory power=starting triggers initial auto-wake");
   assert.deepEqual([...timers.values()].map((t) => t.ms), [5_000]);
 
-  // Firing the scheduled timer retries and schedules 15s backoff on machine_lost.
+  // Switch workspace within the same org before timer #1 fires -> timer re-evaluates live activeTarget (`ws-b`), not stale `ws-a`.
+  currentWorkspace = "ws-b";
   nextError = new FleetError("machine_lost", "vm1");
-  const first = [...timers.values()][0];
-  timers.clear();
-  first.fn();
+  const t1 = [...timers.values()][0]; timers.clear();
+  t1.fn();
   await Promise.resolve(); await Promise.resolve();
   assert.equal(attempts, 2);
+  assert.equal(checkedWorkspaces.at(-1), "ws-b", "timer re-evaluates live workspace on retry");
   assert.deepEqual([...timers.values()].map((t) => t.ms), [15_000]);
 
-  // Power becoming "on" cancels pending retry timers and resets failure budget.
+  // Timer #2 (15s) -> attempt #3, schedules timer #3 (30s).
+  const t2 = [...timers.values()][0]; timers.clear();
+  t2.fn();
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(attempts, 3);
+  assert.deepEqual([...timers.values()].map((t) => t.ms), [30_000]);
+
+  // Timer #3 (30s) MUST execute attempt #4 and then stop scheduling further retries.
+  const t3 = [...timers.values()][0]; timers.clear();
+  t3.fn();
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(attempts, 4, "final 30s scheduled retry executes");
+  assert.equal(timers.size, 0, "no further retries after all 3 backoff steps");
+  waker.wake("ctx-a", "ws-b", { auto: true });
+  await Promise.resolve();
+  assert.equal(attempts, 4, "exhausted budget stays stopped until power=on or manual action");
+
+  // Power becoming "on" resets failure budget cleanly.
+  powerState = "off";
   waker.onPowerChange("vm1", "ctx-a", "on");
-  assert.equal(timers.size, 0);
 
   // Explicit not_remotely_startable (`machine_off`, canWake: false) stops automatic retries permanently.
   nextError = new FleetError("machine_off", "vm1", null, false);
-  waker.wake("ctx-a", null, { auto: true });
+  waker.wake("ctx-a", "ws-b", { auto: true });
   await Promise.resolve(); await Promise.resolve();
-  assert.equal(attempts, 3);
+  assert.equal(attempts, 5);
   assert.equal(timers.size, 0);
-  waker.wake("ctx-a", null, { auto: true });
+  waker.wake("ctx-a", "ws-b", { auto: true });
   await Promise.resolve();
-  assert.equal(attempts, 3, "not_remotely_startable does not re-trigger automatically");
+  assert.equal(attempts, 5, "not_remotely_startable does not re-trigger automatically");
 
   // Context switch cancels pending timers cleanly.
   nextError = new FleetError("machine_timeout", "vm1", "start");
-  waker.wake("ctx-a", null); // manual wake clears unstartable
+  waker.wake("ctx-a", "ws-b"); // manual wake clears unstartable
   await Promise.resolve(); await Promise.resolve();
-  waker.wake("ctx-a", null, { auto: true });
+  waker.wake("ctx-a", "ws-b", { auto: true });
   await Promise.resolve(); await Promise.resolve();
   assert.equal(timers.size, 1);
   waker.wake("ctx-b", null, { auto: true });
   assert.equal(timers.size, 0, "switching active context cancels old org retry timer");
   waker.close();
+});
+
+test("Desk createSessionCloud.rows delivers active context via onContextReady and allows immediate wake while slow inactive org is pending", async () => {
+  let resolveSlow!: (v: unknown) => void;
+  const readyContexts: string[] = [];
+  const woken: string[] = [];
+  const cloud = createSessionCloud(async (command, args) => {
+    if (command === "danil_session_status") {
+      return {
+        state: "connected",
+        sessions: [{
+          contexts: [
+            { context_id: "ctx-fast", org: "org-fast", plan: "enterprise" },
+            { context_id: "ctx-slow", org: "org-slow", plan: "enterprise" },
+          ],
+        }],
+      };
+    }
+    const ctx = args?.context as string;
+    const path = args?.path as string;
+    const echo = { "x-danil-session-applied": ctx, "x-danil-session-applied-org": ctx === "ctx-fast" ? "org-fast" : "org-slow" };
+    if (path === "/v1/capabilities") {
+      return { status: 200, headers: echo, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } };
+    }
+    if (path === "/v1/machines" && ctx === "ctx-fast") {
+      return { status: 200, headers: echo, body: { items: [{ machine_id: "vm-fast", organization_id: "org-fast", name: "Fast VM", state: "stopped", kind: "organization", wakeable: true }] } };
+    }
+    if (path === "/v1/machines" && ctx === "ctx-slow") {
+      return await new Promise((resolve) => { resolveSlow = resolve; });
+    }
+    if (path === "/v1/machines/vm-fast/tickets") {
+      woken.push(ctx);
+      return { status: 201, headers: echo, body: { ticket: "t-fast", url: "wss://connect.danil.ai/v1/machines/vm-fast/session", protocol: "danil.machine-session.v1" } };
+    }
+    return { status: 404, headers: echo, body: {} };
+  });
+
+  const pending = cloud.rows(false, (contextId, rows) => {
+    readyContexts.push(`${contextId}:${rows.map((r) => r.computer_id).join(",")}`);
+  });
+  await new Promise((resolve) => setTimeout(resolve, 15));
+  assert.deepEqual(readyContexts, ["ctx-fast:vm-fast"], "active context rows arrive while slow inactive org is still pending");
+  const wakeAnswer = await cloud.client.wake("vm-fast", "ctx-fast");
+  assert.equal(wakeAnswer.kind, "ok", "active context can emit wake immediately before slow org resolves");
+  assert.deepEqual(woken, ["ctx-fast"]);
+
+  resolveSlow({ status: 200, headers: { "x-danil-session-applied": "ctx-slow", "x-danil-session-applied-org": "org-slow" }, body: { items: [] } });
+  const final = await pending;
+  assert.equal(final.state, "ready");
 });
 
 test("windowContext.inventory delivers active org rows via onGroupReady without waiting for slow inactive orgs", async () => {

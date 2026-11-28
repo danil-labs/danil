@@ -108,6 +108,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
   });
   const autoWaker = createAutoWaker({
     fleet: () => fleet,
+    activeTarget: () => ({ context: confirmedActiveContext(), workspace: active.activeWorkspace() }),
     onAwake: () => {
       slicesChanged(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]);
       for (const name of ["harness:workspace-name", "harness:machines", "harness:service-resync"]) window.dispatchEvent(new CustomEvent(name));

@@ -211,9 +211,22 @@ test("wake-scoped read errors suppress errors during starting, never flash pre-w
     setMachines([{ id: "vm", local: false, wakes: true, on: true, power: "on" }]);
     assert.equal(readError(), null, "pre-wake error never flashes on transition to on");
 
-    // A genuine post-wake read failure DOES display, and clears on workspace switch or generation advance.
-    setReadError("post-wake failure");
+    // A read started during `starting` that rejects AFTER the VM becomes `on` must NEVER produce a late toast.
+    setMachines([{ id: "vm", local: false, wakes: true, on: false, power: "starting" }]);
+    const duringStarting = setReadError.begin();
+    setMachines([{ id: "vm", local: false, wakes: true, on: true, power: "on" }]);
+    setReadError.setFor(duringStarting, "late timeout from starting");
+    assert.equal(readError(), null, "late rejection from a read started during starting is discarded after on");
+
+    // Competing post-wake reads: an older read finishing late cannot clear a newer read's error.
+    const olderPostWake = setReadError.begin();
+    const newerPostWake = setReadError.begin();
+    setReadError.setFor(newerPostWake, "post-wake failure");
     assert.equal(readError(), "post-wake failure");
+    setReadError.setFor(olderPostWake, null);
+    assert.equal(readError(), "post-wake failure", "stale success cannot erase a newer read's failure");
+
+    // Workspace switch or generation advance clears the visible error.
     setWorkspace("ws-2");
     assert.equal(readError(), null, "workspace switch hides previous workspace error");
     setWorkspace("ws-1");

@@ -321,7 +321,7 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
       } else if (
         autoWakeUnstartable.current.has(host.id) ||
         autoWakeTimers.current.has(host.id) ||
-        (autoWakeFailures.current.get(host.id) ?? 0) >= AUTO_WAKE_BACKOFF_MS.length
+        (autoWakeFailures.current.get(host.id) ?? 0) > AUTO_WAKE_BACKOFF_MS.length
       ) {
         skip.add(host.id);
       }
@@ -344,8 +344,8 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
             return;
           }
           const count = autoWakeFailures.current.get(host.id) ?? 0;
-          if (count >= AUTO_WAKE_BACKOFF_MS.length) return;
           autoWakeFailures.current.set(host.id, count + 1);
+          if (count >= AUTO_WAKE_BACKOFF_MS.length) return;
           const delay = AUTO_WAKE_BACKOFF_MS[count];
           const prev = autoWakeTimers.current.get(host.id);
           if (prev !== undefined) clearTimeout(prev);

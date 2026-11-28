@@ -21,7 +21,7 @@ import { onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 
 
 /** Lo que el bloque usaba del cuerpo de App. */
-export type ServiceListenersDeps = { abrirEnlace: (url: string) => Promise<void>; abrirRuta: (path: string, rel?: string) => Promise<void>; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; agent: Accessor<string>; alEventoDeChat: ReturnType<typeof T_createChatEvents>["alEventoDeChat"]; aplicar: (a: Startup) => Promise<void>; carpetasDeTarea: (session: string, project?: string | null) => string[]; composer: ReturnType<typeof T_createDeskStrip>["composer"]; esDeLaAbierta: (session: string) => boolean; esDelWorkspaceAbierto: (ws?: string) => boolean; filaDe: (id: string) => SessionRow | undefined; grupos: Accessor<string[]>; input: () => string; leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; mandarTexto: (texto: string) => Promise<boolean>; pestanas: { pinned: Accessor<ReadonlySet<string>>; isPinned: (id: string) => boolean; pin: (id: string) => void; restorable: () => string[]; replacePreviews(groups: readonly (readonly string[])[], visible: readonly (string | null)[]): void; open: Accessor<Tab[]>; active: Accessor<string | null>; activeTab: () => Tab | null; load(ws: string | null, desk?: string | null): string | null; ensure(p: { id: string; project: string; titulo: string; }): void; commitDraft(draft: string, p: { id: string; project: string; titulo: string; }): void; openScreen(machine: string, title: string): void; openContent(p: ContentTab): void; activate: (id: string | null) => void; close: (id: string) => Tab | null; closeMany: (ids: readonly string[], opts?: { remember?: boolean; }) => Tab | null; canReopen: () => boolean; reopen(alive: (p: Tab) => boolean): Tab | null; attachPreviewFiles: (project: string, session: string, tree: string) => [string, string][]; renameFiles: (session: string, tree: string, from: string, end: string) => [string, string][]; navigate(id: string, url: string): void; moveToProject(session: string, project: string): void; markChanged: (id: string) => void; dirty: Accessor<ReadonlySet<string>>; setDirty: (id: string, dirty: boolean) => void; registerSaver: (id: string, save: (() => Promise<boolean>) | null) => void; dirtyTabsToClose: (ids: string | readonly string[]) => FileTab[]; saveFiles: (ids: string[]) => Promise<boolean>; sync(find: (id: string) => { project: string; titulo: string; } | null): string[]; }; project: Accessor<string>; projectCatalog: ReturnType<typeof T_createWorkspaceSession>["projectCatalog"]; reconcileSoon: () => void; refreshSessions: (proyectos: string[]) => Promise<void>; refreshSessionsOnEvent: (proyectos: string[]) => Promise<void>; refreshTaskCandidates: () => Promise<void>; releerTrasHueco: () => void; reloadSpaces: () => Promise<void>; serviceListenersReady: Promise<unknown>; sessionId: Accessor<string | null>; setCuentasTocadas: Setter<number>; setError: Setter<string | null>; setProjectReadError: Setter<string | null>; setStartupReadError: Setter<string | null>; setVentana: Setter<Ventana>; threads: ReturnType<typeof T_createDeskStrip>["threads"]; vivas: Accessor<string[]>; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceStore };
+export type ServiceListenersDeps = { abrirEnlace: (url: string) => Promise<void>; abrirRuta: (path: string, rel?: string) => Promise<void>; abrirSesion: (proyecto: string, id: string, activar?: string, propagateError?: boolean) => Promise<void>; agent: Accessor<string>; alEventoDeChat: ReturnType<typeof T_createChatEvents>["alEventoDeChat"]; aplicar: (a: Startup) => Promise<void>; carpetasDeTarea: (session: string, project?: string | null) => string[]; composer: ReturnType<typeof T_createDeskStrip>["composer"]; esDeLaAbierta: (session: string) => boolean; esDelWorkspaceAbierto: (ws?: string) => boolean; filaDe: (id: string) => SessionRow | undefined; grupos: Accessor<string[]>; input: () => string; leerTarea: (project: string, id: string, before?: number | null | undefined) => Promise<Session>; loadResult: (id: string, session: Session, clear: boolean, generation: number) => void; mandarTexto: (texto: string) => Promise<boolean>; pestanas: { pinned: Accessor<ReadonlySet<string>>; isPinned: (id: string) => boolean; pin: (id: string) => void; restorable: () => string[]; replacePreviews(groups: readonly (readonly string[])[], visible: readonly (string | null)[]): void; open: Accessor<Tab[]>; active: Accessor<string | null>; activeTab: () => Tab | null; load(ws: string | null, desk?: string | null): string | null; ensure(p: { id: string; project: string; titulo: string; }): void; commitDraft(draft: string, p: { id: string; project: string; titulo: string; }): void; openScreen(machine: string, title: string): void; openContent(p: ContentTab): void; activate: (id: string | null) => void; close: (id: string) => Tab | null; closeMany: (ids: readonly string[], opts?: { remember?: boolean; }) => Tab | null; canReopen: () => boolean; reopen(alive: (p: Tab) => boolean): Tab | null; attachPreviewFiles: (project: string, session: string, tree: string) => [string, string][]; renameFiles: (session: string, tree: string, from: string, end: string) => [string, string][]; navigate(id: string, url: string): void; moveToProject(session: string, project: string): void; markChanged: (id: string) => void; dirty: Accessor<ReadonlySet<string>>; setDirty: (id: string, dirty: boolean) => void; registerSaver: (id: string, save: (() => Promise<boolean>) | null) => void; dirtyTabsToClose: (ids: string | readonly string[]) => FileTab[]; saveFiles: (ids: string[]) => Promise<boolean>; sync(find: (id: string) => { project: string; titulo: string; } | null): string[]; }; project: Accessor<string>; projectCatalog: ReturnType<typeof T_createWorkspaceSession>["projectCatalog"]; reconcileSoon: () => void; refreshSessions: (proyectos: string[]) => Promise<void>; refreshSessionsOnEvent: (proyectos: string[]) => Promise<void>; refreshTaskCandidates: () => Promise<void>; releerTrasHueco: () => void; reloadSpaces: () => Promise<void>; serviceListenersReady: Promise<unknown>; sessionId: Accessor<string | null>; setCuentasTocadas: Setter<number>; setError: Setter<string | null>; setProjectReadError: ReturnType<typeof T_createWorkspaceSession>["setProjectReadError"]; setStartupReadError: ReturnType<typeof T_createWorkspaceSession>["setStartupReadError"]; setVentana: Setter<Ventana>; threads: ReturnType<typeof T_createDeskStrip>["threads"]; vivas: Accessor<string[]>; workspaceActivo: Accessor<string | null>; workspaceContext: WorkspaceStore };
 
 /** Movido tal cual de packages/shell/src/app/App.tsx (líneas 484–718, tarea 2.5). Lo que usaba del cuerpo de App llega por `deps`. */
 export function createServiceListeners(deps: ServiceListenersDeps) {
@@ -159,9 +159,9 @@ export function createServiceListeners(deps: ServiceListenersDeps) {
       if (changes.includes("spaces")) void reloadSpaces();
       if (changes.includes("mentions") && input().includes("@")) void refreshTaskCandidates();
       if (changes.includes("projects")) {
-        const workspace = workspaceActivo();
+        const readToken = setProjectReadError.begin();
         void projectCatalog.changed().then(() => {
-          if (workspace === workspaceActivo()) setProjectReadError(null);
+          setProjectReadError.setFor(readToken, null);
         }).catch(() => {});
       }
     };
@@ -182,9 +182,10 @@ export function createServiceListeners(deps: ServiceListenersDeps) {
       window.dispatchEvent(new CustomEvent("harness:workspace-name"));
       if (!esDelWorkspaceAbierto(e.payload.workspace ?? undefined)) return;
       const workspace = workspaceActivo();
+      const projectToken = setProjectReadError.begin();
       void projectCatalog.changed().then(() => {
-        if (workspace === workspaceActivo()) setProjectReadError(null);
-      }).catch((error) => { if (workspace === workspaceActivo() && !asleep(error)) setProjectReadError(prosaDe(error)); });
+        setProjectReadError.setFor(projectToken, null);
+      }).catch((error) => { if (!asleep(error)) setProjectReadError.setFor(projectToken, prosaDe(error)); });
       void reloadSpaces();
       void composer.refreshSurfaces(false);
       setCuentasTocadas((n) => n + 1);
@@ -197,13 +198,14 @@ export function createServiceListeners(deps: ServiceListenersDeps) {
       }
       if (e.payload.command === "config.set") {
         const modeGeneration = workspaceContext.generation();
+        const startupToken = setStartupReadError.begin();
         void callShellEngine<Startup>("list_workspaces").then((startup) => {
           if (workspace !== workspaceActivo()) return;
           const current = startup.workspaces.find((w) => w.id === workspace);
           aplicarLenguaDeWorkspace(current?.lengua ?? null);
           workspaceContext.modeChanged(workspace, current?.default_permission_mode ?? null, modeGeneration);
-          setStartupReadError(null);
-        }).catch((error) => { if (workspace === workspaceActivo() && !asleep(error)) setStartupReadError(prosaDe(error)); });
+          setStartupReadError.setFor(startupToken, null);
+        }).catch((error) => { if (!asleep(error)) setStartupReadError.setFor(startupToken, prosaDe(error)); });
       }
     });
     onCleanup(() => void cliChanged.then((stop) => stop()));

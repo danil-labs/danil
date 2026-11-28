@@ -100,11 +100,16 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
   const native: Invoke = internals.invoke.bind(internals);
   let token: ClientToken | null = null;
   // Las máquinas de la organización por el borde (`/v1/machines`); el motor local sigue por su RPC.
+  const cloudRowsByContext = new Map<string, Computer[]>();
   const cloud = createSessionCloud(native, (e) => {
     // `403 organization_selection_required`: se abre el selector de organización (si esta ventana lo tiene).
     const organizations = (capabilities() as { organizations?: () => Promise<{ report: (e: unknown) => unknown }> }).organizations;
     void organizations?.().then((selector) => selector.report(e));
-  }, undefined, contexts => { installed?.pruneContexts(contexts); installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts); }, createConnectedStatus(native));
+  }, undefined, contexts => {
+    const valid = new Set(contexts);
+    for (const id of [...cloudRowsByContext.keys()]) if (!valid.has(id)) cloudRowsByContext.delete(id);
+    installed?.pruneContexts(contexts); installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts);
+  }, createConnectedStatus(native));
   let cloudIds = new Set<string>();
   /** `machines.session.renew` anunciada por el borde: el relay renueva dentro del canal. */
   let cloudRenew = false;
@@ -121,6 +126,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     cloudRetry = null;
     cloudRead = null;
     lastCloudRows = [];
+    cloudRowsByContext.clear();
     cloudIds = new Set();
     cloudRenew = false;
     cloudRetrying = false;
@@ -128,12 +134,18 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     syncing = null;
     again = false;
   }
-  function readCloud(allowLegacy = true): Promise<Computer[]> {
+  function readCloud(allowLegacy = true, onContextReady?: (contextId: string, rows: Computer[]) => void): Promise<Computer[]> {
     if (cloudRead) return cloudRead;
     const epoch = cloudEpoch;
     cloudRead = (async () => {
       try {
-        const answer = await cloud.rows(allowLegacy);
+        const answer = await cloud.rows(allowLegacy, (contextId, rows, renew) => {
+          if (epoch !== cloudEpoch) return;
+          cloudRowsByContext.set(contextId, rows);
+          for (const row of rows) cloudIds.add(row.computer_id);
+          if (renew) cloudRenew = true;
+          onContextReady?.(contextId, rows);
+        });
         if (epoch !== cloudEpoch) return [];
         cloudRetrying = answer.state === "retrying" || ("retrying" in answer && answer.retrying === true);
         if (!cloudRetrying) setCloudInventory("settled");
@@ -143,6 +155,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
           cloudIds = new Set(lastCloudRows.map(c => c.computer_id));
         } else if (!cloudRetrying) {
           lastCloudRows = [];
+          cloudRowsByContext.clear();
           cloudRenew = false;
           cloudIds = new Set();
         }
@@ -274,6 +287,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     });
     const autoWaker = createAutoWaker({
       fleet: () => fleet,
+      activeTarget: () => ({ context: router.activeContext() ?? null, workspace: router.activeWorkspace() }),
       onAwake: () => {
         slicesChanged(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]);
         refresh();
@@ -440,12 +454,22 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     homeOs = systemOf(mine?.os) ?? windowSystem();
     homeFeatures = mine ? serviceFeatures(mine) : [];
     homeVersion = mine?.host_version ?? null;
-    const cloudRows = await readCloud();
+    const key = JSON.stringify([self, account, client.endpoint]);
+    const cloudRows = await readCloud(true, (contextId) => {
+      if (epoch !== cloudEpoch || installed?.key !== key) return;
+      const early = orderComputers(mergeBridgeInventory(legacyRows, [...cloudRowsByContext.values()].flat()).filter((c) => c.computer_id !== self));
+      installed.fleet.setMachines([...early.map(infoOf), ...guestMachines()]);
+      observeEngine(installed.fleet);
+      machinesListed(installed.fleet);
+      if (installed.router.activeContext() === contextId) installed.wakeActive();
+      readCloudWorkspaces(contextId);
+      machineNamesChanged();
+      void refetchMachines();
+    });
     if (epoch !== cloudEpoch) return;
     const others = orderComputers(mergeBridgeInventory(legacyRows, cloudRows).filter((c) => c.computer_id !== self));
     await readGuestMachines();
     if (epoch !== cloudEpoch) return;
-    const key = JSON.stringify([self, account, client.endpoint]);
 
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
     if (installed?.key === key) {
@@ -465,7 +489,25 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
   async function installLocal(epoch: number, allowLegacy: boolean) {
     const guests = await readGuestMachines();
     if (epoch !== cloudEpoch) return;
-    const cloudRows = (await readCloud(allowLegacy)).filter((row) => allowLegacy || "context" in row);
+    // Cada contexto entra al instante sin esperar organizaciones inactivas lentas.
+    const cloudRows = (await readCloud(allowLegacy, (contextId) => {
+      if (epoch !== cloudEpoch) return;
+      const partial = [...cloudRowsByContext.values()].flat().filter((row) => allowLegacy || "context" in row);
+      if (!installed) {
+        if (!partial.length && !guests.length) return;
+        setSelfName(null); homeWakes = false; homeOs = windowSystem(); homeFeatures = []; homeVersion = null;
+        install(LOCAL, null, partial, LOCAL_KEY);
+        return;
+      }
+      if (installed.key === LOCAL_KEY) {
+        installed.fleet.setMachines([...partial.map(infoOf), ...guests]);
+        machinesListed(installed.fleet);
+        if (installed.router.activeContext() === contextId) installed.wakeActive();
+        readCloudWorkspaces(contextId);
+        machineNamesChanged();
+        void refetchMachines();
+      }
+    })).filter((row) => allowLegacy || "context" in row);
     if (epoch !== cloudEpoch) return;
     // Un contexto Free corre en este motor: sin VM ni huéspedes, el router sigue para conservar la pareja activa de la ventana.
     if (!guests.length && !cloudRows.length && !cloud.validatedContexts()?.length) return disconnect();

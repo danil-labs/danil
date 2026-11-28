@@ -6,6 +6,8 @@ type Timer = ReturnType<typeof setTimeout>;
 
 export type AutoWakeOptions = {
   fleet: () => Fleet;
+  /** Lectura en vivo del contexto y workspace activos al vencer un reintento programado. */
+  activeTarget?: () => { context: string | null; workspace: string | null };
   onAwake?: (machine: MachineInfo) => void;
   onSettled?: () => void;
   setTimer?: (run: () => void, ms: number) => Timer;
@@ -25,6 +27,7 @@ export function createAutoWaker(options: AutoWakeOptions) {
   const timers = new Map<string, Timer>();
   const unstartable = new Set<string>();
   let activeScope: string | null = null;
+  let activeWorkspace: string | null = null;
   let closed = false;
 
   const cancelTimer = (key: string) => {
@@ -50,15 +53,19 @@ export function createAutoWaker(options: AutoWakeOptions) {
     opts?: { auto?: boolean; filter?: (machine: MachineInfo) => boolean },
   ) => {
     if (closed || !context) return;
-    if (opts?.auto && activeScope !== context) {
-      cancelAllTimers();
-      activeScope = context;
+    if (opts?.auto) {
+      if (activeScope !== context) {
+        cancelAllTimers();
+        activeScope = context;
+      }
+      activeWorkspace = workspace;
     }
     const fleet = options.fleet();
     for (const m of fleet.machines(context)) {
       const key = memberKey(m.id, m.context);
       const power = fleet.power(m.id, m.context);
-      if (!m.wakes || m.child || power === "on" || power === "starting" || power === "outdated" || inflight.has(key)) continue;
+      // Admitimos `starting` del inventario para pedir el ticket 201; `inflight` y `Fleet` deduplican encendidos locales.
+      if (!m.wakes || m.child || power === "on" || power === "outdated" || inflight.has(key)) continue;
       if (opts?.filter && !opts.filter(m)) continue;
       if (workspace) {
         if (m.hosted === false && fleet.lists(m.id, workspace) !== true) continue;
@@ -69,7 +76,7 @@ export function createAutoWaker(options: AutoWakeOptions) {
       }
       if (opts?.auto) {
         if (unstartable.has(key) || timers.has(key)) continue;
-        if ((failures.get(key) ?? 0) >= AUTO_WAKE_BACKOFF_MS.length) continue;
+        if ((failures.get(key) ?? 0) > AUTO_WAKE_BACKOFF_MS.length) continue;
       } else {
         unstartable.delete(key);
         resetKey(key);
@@ -95,16 +102,18 @@ export function createAutoWaker(options: AutoWakeOptions) {
             }
             if (!opts?.auto) return;
             const count = failures.get(key) ?? 0;
-            if (count >= AUTO_WAKE_BACKOFF_MS.length) return;
             failures.set(key, count + 1);
+            if (count >= AUTO_WAKE_BACKOFF_MS.length) return;
             const delay = AUTO_WAKE_BACKOFF_MS[count];
             cancelTimer(key);
             timers.set(
               key,
               setTimer(() => {
                 timers.delete(key);
-                if (closed || activeScope !== context) return;
-                wake(context, workspace, opts);
+                if (closed) return;
+                const live = options.activeTarget ? options.activeTarget() : { context: activeScope, workspace: activeWorkspace };
+                if (!live.context || live.context !== context) return;
+                wake(live.context, live.workspace, opts);
               }, delay),
             );
           })
