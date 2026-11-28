@@ -111,6 +111,9 @@ export const ICONS = {
   "share": [{"kind":"path","d":"M12 2v13"},{"kind":"path","d":"m16 6-4-4-4 4"},{"kind":"path","d":"M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"}],
   "download": [{"kind":"path","d":"M12 15V3"},{"kind":"path","d":"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"},{"kind":"path","d":"m7 10 5 5 5-5"}],
   "presentation": [{"kind":"path","d":"M2 3h20"},{"kind":"path","d":"M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"},{"kind":"path","d":"m7 21 5-5 5 5"}],
+  "menu": [{"kind":"line","x1":4,"y1":8,"x2":20,"y2":8},{"kind":"line","x1":4,"y1":16,"x2":14,"y2":16}],
+  "layout-grid": [{"kind":"rect","width":7,"height":7,"x":3,"y":3,"rx":1.5},{"kind":"rect","width":7,"height":7,"x":14,"y":3,"rx":1.5},{"kind":"rect","width":7,"height":7,"x":14,"y":14,"rx":1.5},{"kind":"rect","width":7,"height":7,"x":3,"y":14,"rx":1.5}],
+  "message-square": [{"kind":"path","d":"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"}],
 } satisfies Record<string, LucideShape[]>;
 
 export type IconName = keyof typeof ICONS;

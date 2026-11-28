@@ -54,10 +54,11 @@ import { Icon } from "../../../../../ui/Icon";
 import { openTask } from "../../../../../ui/components";
 import { KeyboardScreen } from "../../../../../ui/KeyboardScreen";
 import { PermissionCard } from "../../../../../ui/PermissionCard";
+import { marksOf } from "../../../../../lib/cards";
+import { HeaderToolsDial } from "../../../../../ui/HeaderToolsDial";
+import { MobileDrawer } from "../../../../../ui/MobileDrawer";
 import { TaskHeader } from "../../../../../ui/TaskHeader";
-import { TaskTools } from "../../../../../ui/TaskTools";
-import { effectiveGit } from "../../../../../lib/taskGit";
-import { useTaskGit } from "../../../../../lib/useTaskGit";
+import { TaskSubtasksSheet } from "../../../../../ui/TaskSubtasksSheet";
 import { BrandMark } from "../../../../../ui/BrandMark";
 import { Avatar } from "../../../../../ui/components";
 import { SlideIn } from "../../../../../ui/SlideIn";
@@ -92,11 +93,13 @@ export default function TaskScreen() {
   const params = useLocalSearchParams<{ host: string; workspace: string; folder: string; id: string }>();
   const { workspace, id } = params;
   const folder = params.folder === "_" ? "" : params.folder;
-  const { hostOf, subscribe, setOpenTask, titleOf, registry } = useMachines();
+  const { attention, hosts, hostOf, subscribe, setOpenTask, titleOf, registry } = useMachines();
   const { getToken, plane } = useAccount();
   const accountBackground = registry?.find((w) => w.id === workspace)?.background_url ?? null;
   const host = hostOf(params.host);
-  const { snapshot, list: workspaces, reload } = useWorkspaces();
+  const { current, snapshot, list: workspaces, reload } = useWorkspaces();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [subtasksOpen, setSubtasksOpen] = useState(false);
   const [view, setView] = useState<TaskView | null>(null);
   const [questionsCollapsed, setQuestionsCollapsed] = useState(false);
   const [live, setLive] = useState<readonly LivePiece[]>([]);
@@ -633,9 +636,10 @@ export default function TaskScreen() {
     });
   }, []);
 
-  const folderRow = snapshot?.folders.find((f) => f.host === params.host && f.id === folder) ?? null;
-  const gitBook = useTaskGit(hostOf, [{ host: params.host, workspace, folder, id }]);
-  const git = effectiveGit(gitBook, { id, host: params.host, workspace, folder }, snapshot?.tasks ?? []);
+  const marks = useMemo(
+    () => marksOf(attention, current?.members, snapshot?.live ?? new Set()),
+    [attention, current?.members, snapshot?.live],
+  );
   const visible = useMemo(() => needle ? lines.filter((line) => lineMatches(line, needle)) : lines, [lines, needle]);
   const first = webWindow.scope === webScope ? visible.findIndex((line) => line.key === webWindow.first) : -1;
   const webStart = first < 0 ? Math.max(0, visible.length - TAIL_PAGE_SIZE) : first;
@@ -750,22 +754,70 @@ export default function TaskScreen() {
         task={taskRow ?? undefined}
         tasks={machineTasks}
         running={running || waking}
+        onOpenDrawer={() => setDrawerOpen(true)}
         onChanged={() => { void reload(); }}
         onFinished={() => { void reload(); router.replace("/"); }}
+        right={
+          <HeaderToolsDial
+            testID="task-tools-dial"
+            actions={[
+              {
+                id: "find",
+                testID: "chat-find",
+                icon: "search",
+                label: t("task.tools.find"),
+                active: finding !== null,
+                onPress: () => setFinding((prev) => (prev === null ? "" : null)),
+              },
+              {
+                id: "subtasks",
+                testID: "chat-subtasks",
+                icon: "git-fork",
+                label: t("task.tools.subtasks", { count: delegated.length }),
+                badge: delegated.length,
+                onPress: () => setSubtasksOpen(true),
+              },
+              {
+                id: "files",
+                testID: "chat-tree",
+                icon: "folder",
+                label: t("task.tools.files"),
+                onPress: () =>
+                  router.push({
+                    pathname: "/task-files",
+                    params: { host: params.host, workspace, folder: params.folder, id },
+                  }),
+              },
+            ]}
+          />
+        }
       />
-      <TaskTools
-        host={host}
-        workspace={workspace}
-        machine={host?.label ?? params.host}
-        folder={folderRow}
-        branch={git?.branch ?? null}
-        provider={view?.session.provider ?? null}
-        subtasks={delegated.length}
-        finding={finding}
-        onFind={setFinding}
-        onTools={() => router.push({ pathname: "/task-tools", params: { host: params.host, workspace, folder: params.folder, id } })}
-        onFiles={() => router.push({ pathname: "/task-files", params: { host: params.host, workspace, folder: params.folder, id } })}
-      />
+      {finding !== null ? (
+        <View style={[styles.findWrap, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+          <View style={[styles.findBar, { backgroundColor: theme.muted }]}>
+            <Icon name="search" size={14} color={theme.textMuted} />
+            <TextInput
+              testID="chat-find-input"
+              autoFocus
+              value={finding}
+              onChangeText={setFinding}
+              placeholder={t("task.tools.find_placeholder")}
+              placeholderTextColor={theme.textMuted}
+              autoCorrect={false}
+              autoCapitalize="none"
+              style={[styles.findInput, { color: theme.text }]}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("search.clear")}
+              onPress={() => setFinding(null)}
+              style={styles.findClose}
+            >
+              <Icon name="x" size={14} color={theme.textMuted} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
       <View style={styles.thread}>
       <FlatList
         ref={list}
@@ -861,6 +913,24 @@ export default function TaskScreen() {
         onAccounts={() => router.push("/accounts")}
       />
       </View>
+      <TaskSubtasksSheet
+        visible={subtasksOpen}
+        subtasks={delegated}
+        marks={marks}
+        folders={snapshot?.folders ?? []}
+        machineLabelOf={(hostId) => hosts.find((h) => h.id === hostId)?.label ?? hostId}
+        onClose={() => setSubtasksOpen(false)}
+      />
+      <MobileDrawer
+        visible={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        activeTaskId={id}
+        activeProjectId={folder || null}
+        onNewTask={() => router.replace("/")}
+        onNewTaskInProject={(proj) =>
+          router.replace({ pathname: "/", params: { folder: proj.id, host: proj.host } })
+        }
+      />
       </ChatScopeContext.Provider>
     </KeyboardScreen>
     </SlideIn>
@@ -1110,6 +1180,10 @@ function QuestionCard({
 }
 
 const styles = StyleSheet.create({
+  findWrap: { paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  findBar: { flexDirection: "row", alignItems: "center", gap: 8, height: 38, borderRadius: 10, paddingLeft: 12 },
+  findInput: { flex: 1, fontSize: TEXT.lead, minWidth: 0, ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null) },
+  findClose: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
   banner: { padding: 8, borderRadius: RADIUS.lg, fontSize: TEXT.ui },
   thread: { flex: 1 },
   delegated: { marginHorizontal: 12, marginTop: 8, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth },
