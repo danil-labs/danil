@@ -40,7 +40,7 @@ export function edgeMachinesPlane(edge: EdgeControlPlane, scope: string | null =
     workspaces: () => edge.workspaces(),
     workspaceSpaces: (accountWorkspaceId) => edge.workspaceSpaces(accountWorkspaceId),
     assignTaskSpace: (accountWorkspaceId, taskId, spaceId) => edge.assignTaskSpace(accountWorkspaceId, taskId, spaceId),
-    wake: (computer) => edge.wake(computer),
+    wake: (computer) => edge.wakeWithAdmission(computer),
     relay: { endpoint: edge.relayOrigin, admit: (computer) => edge.admit(computer) },
     bearerServices: false,
     limitToRegistry: true,

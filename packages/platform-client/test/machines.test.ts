@@ -344,3 +344,31 @@ test("the retired machine service and alias never receive inventory requests", a
   }
   assert.deepEqual(calls, []);
 });
+
+test("wake reuses Idempotency-Key across 503 machine_starting and returns the validated admission ticket", async () => {
+  const { fetch, calls } = edge({
+    "POST /machines/cmp_1/tickets": [
+      { status: 503, headers: { "Retry-After": "1" }, body: { code: "machine_starting" } },
+      { status: 201, body: { ticket: "t_wake", url: "wss://connect.danil.ai/v1/machines/cmp_1/session", protocol: "danil.machine-session.v1", session_expires_at: "2099-01-01T00:00:00Z" } },
+    ],
+  });
+  const answer = await client(fetch).wake("cmp_1");
+  assert.equal(answer.kind, "ok");
+  if (answer.kind === "ok") {
+    assert.deepEqual(answer.value, {
+      url: "wss://connect.danil.ai/v1/machines/cmp_1/session",
+      ticket: "t_wake",
+      protocol: "danil.machine-session.v1",
+      session_expires_at: "2099-01-01T00:00:00Z",
+    });
+  }
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].body, '{"wake":true}');
+  assert.equal(calls[1].body, '{"wake":true}');
+  assert.equal(calls[0].headers["Idempotency-Key"], calls[1].headers["Idempotency-Key"]);
+
+  const badOrigin = edge({
+    "POST /machines/cmp_1/tickets": [{ status: 201, body: { ticket: "t_bad", url: "wss://evil.example/v1/machines/cmp_1/session" } }],
+  });
+  assert.deepEqual(await client(badOrigin.fetch).wake("cmp_1"), { kind: "error", status: null, code: "invalid_admission_url" });
+});

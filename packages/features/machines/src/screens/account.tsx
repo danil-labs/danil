@@ -245,7 +245,10 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       // sigue en servicio y solo falla la orden que no conoce (nunca la máquina entera).
       wake: async (id, context) => {
         if (isGuestMachine(id)) return wakeGuestMachine(id);
-        if (cloudIds.has(id)) return wokeOf(await cloud.client.wake(id, context));
+        if (cloudIds.has(id)) {
+          const answer = await cloud.client.wake(id, context);
+          return answer.kind === "ok" ? { ok: true, admission: answer.value } : wokeOf(answer);
+        }
         if (endpoint === null) throw { code: "unknown_machine", detail: id };
         return startedOf(await startComputer(endpoint, (await getToken()).token, id));
       },

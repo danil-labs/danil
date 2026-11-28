@@ -1,10 +1,10 @@
 import type { MachineState } from "../../../../platform-client/src/machine.ts";
-import type { Blocked, DeferredFrame, EngineInfo, EventsPage } from "../model/relay-frames.ts";
+import type { Blocked, DeferredFrame, EngineInfo, EventsPage, RelayAdmission } from "../model/relay-frames.ts";
 import type { Link } from "../model/fleet/index.ts";
 
 type Clock = { now(): number; set(callback: () => void, ms: number): unknown; clear(timer: unknown): void };
 const clock: Clock = { now: Date.now, set: setTimeout, clear: (timer) => clearTimeout(timer as ReturnType<typeof setTimeout>) };
-type Entry = { machine: string; relay: Link | null; busy: number; used: number; open(): Link; suspend(): void };
+type Entry = { machine: string; relay: Link | null; busy: number; used: number; open(admission?: RelayAdmission): Link; suspend(): void };
 
 /** El límite es por máquina física; los enlaces y sus listeners siguen perteneciendo a cada contexto. */
 export function createContextRelayPool(time: Clock = clock, limit = 4) {
@@ -52,9 +52,12 @@ export function createContextRelayPool(time: Clock = clock, limit = 4) {
           buffered = [];
           if (hadRelay && !closed) hooks.onSuspend?.();
         },
-        open() {
+        open(admission?: RelayAdmission) {
           if (closed) throw { code: "unknown_machine", detail: machine };
-          if (entry.relay) return entry.relay;
+          if (entry.relay) {
+            if (admission) entry.relay.retry?.(admission);
+            return entry.relay;
+          }
           const relay = create();
           entry.relay = relay;
           try {
@@ -63,9 +66,24 @@ export function createContextRelayPool(time: Clock = clock, limit = 4) {
             if (relay.onEngine) stops.push(relay.onEngine((value) => { for (const listener of engines) listener(value); }));
             if (relay.onBlocked) stops.push(relay.onBlocked((value) => { for (const listener of blocked) listener(value); }));
             if (relay.onDeferred) stops.push(relay.onDeferred((value) => { for (const listener of deferred) listener(value); }));
+            // Si la sesión interna cerró definitivamente (revocada/reemplazada), se suelta para no dejar un zombi.
+            if (relay.onClose) {
+              stops.push(relay.onClose(() => {
+                if (entry.relay !== relay) return;
+                for (const stop of stops) stop();
+                stops = [];
+                state = relay.state();
+                entry.relay = null;
+                buffered = [];
+                recovering = false;
+                if (!closed) hooks.onSuspend?.();
+                signal();
+              }));
+            }
             recovering = opened;
             opened = true;
-            relay.start();
+            if (admission && relay.retry) relay.retry(admission);
+            else relay.start();
             if (recovering) {
               entry.busy++;
               ready = Promise.resolve().then(async () => {
@@ -132,7 +150,7 @@ export function createContextRelayPool(time: Clock = clock, limit = 4) {
         deferred: () => entry.relay?.deferred?.() ?? { actions: [], done: [] },
         subscribe(value) { after = value; if (!recovering) entry.relay?.subscribe(value); },
         start() { if (!closed && !entry.relay && [...entries].filter((other) => other.machine === machine && other.relay).length < limit) entry.open(); },
-        retry() { if (entry.relay) entry.relay.retry?.(); else if (!closed && capacity(entry)) entry.open(); },
+        retry(admission) { if (entry.relay) entry.relay.retry?.(admission); else if (!closed && capacity(entry)) entry.open(admission); },
         close() { closed = true; entry.suspend(); entries.delete(entry); signal(); },
       };
     },

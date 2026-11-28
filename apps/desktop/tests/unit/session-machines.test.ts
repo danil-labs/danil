@@ -414,3 +414,54 @@ test("a caller waiting on a reopened relay's attention read gives up at its own 
     assert.ok(Date.now() - started < 1_000, "the reopen read's 30 s limit does not extend the caller's 50 ms");
   } finally { for (const link of links) link.close(); }
 });
+
+test("a terminally closed relay session is dropped from the pool so subsequent calls and retries open a fresh session", async () => {
+  const pool = createContextRelayPool();
+  let created = 0;
+  const retries: unknown[] = [];
+  const closers: Array<() => void> = [];
+  let suspended = 0;
+  const link = pool.link("machine", () => {
+    const id = ++created;
+    let dead = false;
+    const onCloseListeners = new Set<() => void>();
+    closers.push(() => {
+      dead = true;
+      for (const listener of onCloseListeners) listener();
+    });
+    return {
+      state: () => "online",
+      onState: () => () => {},
+      onEvents: () => () => {},
+      onClose: (listener) => { onCloseListeners.add(listener); return () => void onCloseListeners.delete(listener); },
+      subscribe() {},
+      start() {},
+      retry(admission) { retries.push([id, admission]); },
+      close() { dead = true; },
+      async call(_reqId, command) {
+        if (dead) throw { code: "app_unavailable" };
+        if (command === "list_workspace_attention") return { value: [], cached: null };
+        return { value: `session-${id}`, cached: null };
+      },
+    };
+  }, { onSuspend: () => { suspended += 1; } });
+
+  try {
+    assert.equal((await link.call("1", "list_workspaces", null, null, {})).value, "session-1");
+    // Simulate terminal close (4001 REPLACED / 4003 REVOKED / 4008 TICKET_CONTEXT_REVOKED) on session-1.
+    closers[0]();
+    assert.equal(suspended, 1, "pool marks attention suspended when relay closes terminally");
+    // Next call must NOT hit the dead zombie session-1; it must create session-2.
+    assert.equal((await link.call("2", "stop_turn", null, null, {})).value, "session-2");
+    assert.equal(created, 2);
+
+    // If session-2 also closes terminally, retry(admission) opens session-3 with that prefetched admission.
+    closers[1]();
+    const admission = { url: "wss://connect.danil.ai/v1/machines/machine/session", ticket: "fresh-ticket" };
+    link.retry?.(admission);
+    assert.equal(created, 3);
+    assert.deepEqual(retries.at(-1), [3, admission]);
+  } finally {
+    link.close();
+  }
+});

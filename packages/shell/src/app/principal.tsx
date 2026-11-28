@@ -88,9 +88,10 @@ export function createPrincipal(deps: PrincipalDeps) {
         />
         {/* Una lectura que falló va a la pila y no al riel: encima de «Nueva
             tarea» se quedaba fija tras un gesto fallido. La conexión no tiene
-            cruz: se quita sola al volver el motor. */}
-        <Show when={startupReadError() ?? draftProjectError() ?? projectReadError() ?? connectionError()}>{failure => {
-          const lectura = () => !!(startupReadError() || draftProjectError() || projectReadError());
+            cruz: se quita sola al volver el motor. Mientras una VM administrada
+            despierta en segundo plano, no se alarma con errores de lectura. */}
+        <Show when={(machines().some((m) => !m.local && m.wakes && m.power === "starting") ? null : (startupReadError() ?? draftProjectError() ?? projectReadError())) ?? connectionError()}>{failure => {
+          const lectura = () => !machines().some((m) => !m.local && m.wakes && m.power === "starting") && !!(startupReadError() || draftProjectError() || projectReadError());
           return <Toast data-read-status="" onDismiss={lectura() ? () => { setStartupReadError(null); setDraftProjectError(null); setProjectReadError(null); } : undefined}>
             <Show when={lectura()}><p class="m-0 text-xs font-medium text-neutral-950">{t("shell.read.failed")}</p></Show>
             <Show when={!lectura() || failure() !== t("shell.service.failed")}><p class="m-0 break-words text-xs text-neutral-500">{failure()}</p></Show>

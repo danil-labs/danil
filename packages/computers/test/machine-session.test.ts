@@ -190,3 +190,61 @@ test('finite recovery paints one journal delivery and does not classify subseque
   const subscribe = app.sockets[0].sent.map(frame => JSON.parse(frame)).find(frame => frame.type === 'subscribe');
   assert.equal(subscribe.recovery, 1);
 });
+
+test('retry with a prefetched wake admission connects immediately without a second ticket and ignores a stale 409', async t => {
+  const sockets: Array<SocketLike & { protocol: string; protocols?: string[]; sent: string[]; closed: boolean }> = [];
+  let rejectInitial!: (error: unknown) => void;
+  let ticketCalls = 0;
+  const session = new RelaySession({
+    endpoint: 'wss://connect.danil.ai',
+    computerId: 'm',
+    getAdmission: () => {
+      ticketCalls += 1;
+      return new Promise((_resolve, reject) => { rejectInitial = reject; });
+    },
+  }, (_url, protocols) => {
+    const socket = {
+      protocol: 'danil.machine-session.v1', protocols, readyState: 1,
+      onopen: null, onclose: null, onmessage: null, onerror: null,
+      sent: [] as string[], closed: false,
+      send(data: string) { this.sent.push(data); },
+      close() { this.closed = true; },
+    };
+    sockets.push(socket);
+    return socket;
+  });
+  t.after(() => session.close());
+
+  session.start();
+  await turn();
+  assert.equal(ticketCalls, 1, 'initial connect asks for admission');
+
+  session.retry({ url: 'wss://connect.danil.ai/v1/machines/m/session', ticket: 'wake-ticket', protocol: 'danil.machine-session.v1' });
+  await turn();
+  assert.equal(ticketCalls, 1, 'prefetched wake ticket skips a second getAdmission call');
+  assert.equal(sockets.length, 1);
+  assert.deepEqual(sockets[0].protocols, ['danil.machine-session.v1', 'ticket.wake-ticket']);
+
+  // Stale initial getAdmission rejects with 409 machine_stopped after retry(admission) already opened the socket.
+  rejectInitial({ code: 'machine_stopped' });
+  await turn();
+  assert.equal(session.blocked(), null, 'stale 409 cannot re-block the newer connection');
+  sockets[0].onopen?.({});
+  sockets[0].onmessage?.({ data: JSON.stringify({ type: 'state', state: 'online' }) });
+  assert.equal(session.state(), 'online');
+});
+
+test('onClose fires once when a ticket session closes terminally (4001/4003/4008)', async t => {
+  for (const code of [4001, 4003, 4008]) {
+    const app = setup();
+    t.after(() => app.session.close());
+    let closed = 0;
+    app.session.onClose(() => { closed += 1; });
+    await turn();
+    app.sockets[0].onopen?.({});
+    app.sockets[0].onclose?.({ code });
+    assert.equal(closed, 1, `onClose fires once on ${code}`);
+    app.session.close();
+    assert.equal(closed, 1, 'subsequent close() is idempotent');
+  }
+});

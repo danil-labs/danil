@@ -106,7 +106,8 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
   const [spaceCatalogs, setSpaceCatalogs] = useState<Record<string, WorkspaceSpaceCatalog>>({});
   const hasSnapshot = useRef(false);
   hasSnapshot.current = snapshot !== null;
-  const autoWoken = useRef<Set<string>>(new Set());
+  const autoWaking = useRef<Set<string>>(new Set());
+  const autoWakeRetryAt = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
     catalogs.current = { scope: plane.scope, byEntry: new Map() };
@@ -294,15 +295,28 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
   const current = list.find((w) => w.id === currentId) ?? null;
   const hostsOfCurrent = useMemo(() => hosts.filter((h) => current?.members.has(h.id)), [hosts, current]);
 
-  // Abrir un workspace cuya VM administrada está detenida la despierta una vez para cargar sus tareas.
+  // Abrir un workspace cuya VM administrada está detenida la despierta en segundo plano y reintenta tras un fallo pasajero.
   useEffect(() => {
+    const now = Date.now();
+    const skip = new Set<string>(autoWaking.current);
     for (const host of hosts) {
-      if (host.power() === "on") autoWoken.current.delete(host.id);
+      if (host.power() === "on") autoWakeRetryAt.current.delete(host.id);
+      else if ((autoWakeRetryAt.current.get(host.id) ?? 0) > now) skip.add(host.id);
     }
     const targets = hostsOfCurrent.length ? hostsOfCurrent : hosts;
-    for (const host of wakeableStoppedHosts(targets, autoWoken.current)) {
-      autoWoken.current.add(host.id);
-      void host.wake().then(() => refresh()).catch(() => {});
+    for (const host of wakeableStoppedHosts(targets, skip)) {
+      autoWaking.current.add(host.id);
+      void host.wake()
+        .then(() => {
+          autoWakeRetryAt.current.delete(host.id);
+          return refresh();
+        })
+        .catch(() => {
+          autoWakeRetryAt.current.set(host.id, Date.now() + 15_000);
+        })
+        .finally(() => {
+          autoWaking.current.delete(host.id);
+        });
     }
   }, [hosts, hostsOfCurrent, tick, refresh]);
 

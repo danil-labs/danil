@@ -3,7 +3,7 @@ import type { Machine } from "../../platform-client/src/machines.ts";
 import { machineToComputer } from "../../platform-client/src/machines.ts";
 import { readContextSpaces } from "../../platform-client/src/workspace-spaces.ts";
 import type { MachinesQuery } from "../../features/machines/src/queries/machines-query.ts";
-import { Fleet, memberKey, relayLink, type StorageLike, unwrap } from "../../features/machines/src/model/fleet/index.ts";
+import { Fleet, FleetError, memberKey, relayLink, type StorageLike, unwrap } from "../../features/machines/src/model/fleet/index.ts";
 import { createSignal, lazy, Suspense } from "solid-js";
 import { createContextRelayPool, createRemoteGuestManager, deriveMachineAvailability, isRemoteGuestMachine, type MachineAvailability, machinesListed, mergeByMachineId } from "../../features/machines/src";
 import { sessionRailState } from "../../shell/src/shell";
@@ -49,7 +49,8 @@ export function mountWindow(base: Base, mounted: Mounted) {
   let listed = new Map<string, Machine>();
   const powers = new Map<string, string>();
   const waking = new Map<string, Promise<void>>();
-  const autoWoken = new Set<string>();
+  const AUTO_WAKE_RETRY_MS = 15_000;
+  const autoWakeRetryAt = new Map<string, number>();
   const unavailable = () => ({ what: t("web.machines.unavailable"), detail: "machines_unavailable" });
   const notifyMachines = () => window.dispatchEvent(new CustomEvent("harness:machines"));
   const pool = createContextRelayPool();
@@ -82,7 +83,7 @@ export function mountWindow(base: Base, mounted: Mounted) {
       if (!base.permits("machines.start")) return "not_startable";
       const answer = await scope.client(context).wake(id);
       if (answer.kind === "unauthorized") void refresh();
-      if (answer.kind === "ok") { void refresh(); return true; }
+      if (answer.kind === "ok") { void refresh(); return { ok: true, admission: answer.value }; }
       return answer.kind === "error" && answer.code === "not_remotely_startable" ? "not_startable" : false;
     },
     onChange: (id, context) => {
@@ -90,10 +91,10 @@ export function mountWindow(base: Base, mounted: Mounted) {
       const power = fleet.power(id, context);
       const key = memberKey(id, context);
       const changed = powers.get(key) !== power;
-      if (power === "on") autoWoken.delete(key);
+      if (power === "on") autoWakeRetryAt.delete(key);
       if (power === "on" && powers.get(key) !== "on" && active.unlisted()) window.dispatchEvent(new CustomEvent("harness:workspace"));
       powers.set(key, power);
-      if (changed && !isRemoteGuestMachine(id)) void refresh();
+      if (changed && power !== "starting" && !isRemoteGuestMachine(id)) void refresh();
       bump(n => n + 1);
       void import("../../features/machines/src/queries/store").then(({ machineNamesChanged, refetchMachines }) => {
         if (stopped) return;
@@ -195,7 +196,8 @@ export function mountWindow(base: Base, mounted: Mounted) {
     active.registryChanged();
     for (const name of ["harness:workspace-name", "harness:service-resync", "harness:machines"]) window.dispatchEvent(new CustomEvent(name));
     const openWorkspace = active.activeWorkspace();
-    if (openWorkspace) wakeWorkspaceMachines(active.activeContext() ?? scope.current()?.context ?? undefined, openWorkspace, { auto: true });
+    const activeContext = active.activeContext() ?? scope.current()?.context ?? base.active.current()?.context ?? undefined;
+    if (activeContext) wakeWorkspaceMachines(activeContext, openWorkspace, { auto: true });
     return true;
   }
   function refresh(): Promise<boolean> {
@@ -220,7 +222,9 @@ export function mountWindow(base: Base, mounted: Mounted) {
       const remotes = fleet.remotes(context);
       const task = unwrap(id, remotes);
       if (!task) return !settled() || remotes.size === 0;
-      return remoteGuests.canContinue(fleet, task.machine, context);
+      if (remoteGuests.canContinue(fleet, task.machine, context)) return true;
+      const info = fleet.info(task.machine, context);
+      return !!info?.wakes && fleet.power(task.machine, context) !== "outdated";
     },
     taskMachine: id => unwrap(id, fleet.remotes(scope.current()?.context))?.machine ?? null,
     windowMachine: () => { const id = active.createsOn(null)?.machine; return id ? { id, name: fleet.name(id, scope.current()?.context), local: false } : undefined; },
@@ -254,8 +258,9 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const github = base.origin && base.transport
     ? webEdgeGithubAccount(base.origin, base.transport, () => window.location.href)
     : undefined;
-  // Abrir una pantalla o un workspace que necesita la VM es una acción: se enciende una vez (`wake: true`) y se vuelve a leer.
+  // Entrar a la organización activa o abrir un workspace enciende su VM de inmediato en segundo plano.
   const wakeWorkspaceMachines = (context: string | undefined, workspace: string | null, opts?: { auto?: boolean }) => {
+    const now = Date.now();
     for (const m of fleet.machines(context)) {
       const key = memberKey(m.id, m.context);
       const power = fleet.power(m.id, m.context);
@@ -264,17 +269,21 @@ export function mountWindow(base: Base, mounted: Mounted) {
         if (m.hosted === false && fleet.lists(m.id, workspace) !== true) continue;
         if (m.organization && !m.organization.workspaces.some((w) => w.id === workspace)) continue;
         if (m.linked && !m.linked.has(workspace)) continue;
+      } else if (m.hosted === false) {
+        continue;
       }
-      if (opts?.auto) {
-        if (autoWoken.has(key)) continue;
-        autoWoken.add(key);
-      }
+      if (opts?.auto && (autoWakeRetryAt.get(key) ?? 0) > now) continue;
       waking.set(key, fleet.wake(m.id, m.context)
         .then(() => {
+          autoWakeRetryAt.delete(key);
           slicesChanged(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]);
           for (const name of ["harness:workspace-name", "harness:machines", "harness:service-resync"]) window.dispatchEvent(new CustomEvent(name));
         })
-        .catch(() => {})
+        .catch((error) => {
+          if (!opts?.auto) return;
+          const retryAt = error instanceof FleetError && !error.canWake ? Number.POSITIVE_INFINITY : Date.now() + AUTO_WAKE_RETRY_MS;
+          autoWakeRetryAt.set(key, retryAt);
+        })
         .finally(() => { waking.delete(key); bump(n => n + 1); }));
     }
   };
@@ -301,6 +310,8 @@ export function mountWindow(base: Base, mounted: Mounted) {
   const onMachineAction = () => wakeWorkspaceMachines(scope.current()?.context ?? active.activeContext() ?? undefined, active.activeWorkspace());
   const onFocus = () => {
     if (availability().kind === "no_machines") void refresh();
+    const ctx = active.activeContext() ?? scope.current()?.context ?? base.active.current()?.context ?? undefined;
+    if (ctx) wakeWorkspaceMachines(ctx, active.activeWorkspace(), { auto: true });
   };
   window.addEventListener("focus", onFocus);
   window.addEventListener(MACHINE_ACTION, onMachineAction);

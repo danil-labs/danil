@@ -25,7 +25,7 @@ import { type Slice, SliceBook } from "./slices.ts";
 import { listedWorkspaces } from "./workspace-listing.ts";
 import { serves, alwaysOn, normalized, OFF, OUTDATED, RETRY_ACTION, RETRY_READ, sameLinks, type Row, type MachineInfo, type Listed, type Power, type Envelope, type FleetConfig, type Member } from "./fleet-types.ts";
 export { relayLink } from "./fleet-types.ts";
-export type { MachineInfo, Listed, Power, Envelope, Link, FleetEvent, FleetConfig } from "./fleet-types.ts";
+export type { MachineInfo, Listed, Power, Envelope, Link, FleetEvent, FleetConfig, WakeResult } from "./fleet-types.ts";
 
 export class Fleet {
   readonly self: string | null;
@@ -262,6 +262,7 @@ export class Fleet {
     if (!member) return "off";
     if (this.isOutdated(member)) return "outdated";
     if (this.online(member)) return "on";
+    if (this.starting.has(memberKey(member.info.id, member.info.context))) return "starting";
     const state = this.stateOf(member);
     // Un endpoint de organización no se enciende desde aquí: solo un `offline` de su relay lo apaga.
     if (alwaysOn(member.info)) return OFF.includes(state) ? "off" : "on";
@@ -545,6 +546,8 @@ export class Fleet {
     const member = this.member(machine, context);
     if (!member) throw new FleetError("unknown_machine", machine);
     if (this.online(member) || (alwaysOn(member.info) && !OFF.includes(this.stateOf(member)))) return;
+    const inflight = this.starting.get(memberKey(member.info.id, member.info.context));
+    if (inflight) return inflight;
     if (member.link.state() !== "starting") throw new FleetError("machine_off", machine, null, member.info.wakes);
     await new Promise<void>((resolve, reject) => {
       const done = (ok: boolean) => {
@@ -711,8 +714,18 @@ export class Fleet {
     const key = memberKey(member.info.id, member.info.context);
     const running = this.starting.get(key);
     if (running) return running;
-    const start = this.startMember(member).finally(() => this.starting.delete(key));
+    const before = this.power(member.info.id, member.info.context);
+    const start = this.startMember(member).finally(() => {
+      const prev = this.power(member.info.id, member.info.context);
+      this.starting.delete(key);
+      if (this.power(member.info.id, member.info.context) !== prev) {
+        this.config.onChange?.(member.info.id, member.info.context);
+      }
+    });
     this.starting.set(key, start);
+    if (this.power(member.info.id, member.info.context) !== before) {
+      this.config.onChange?.(member.info.id, member.info.context);
+    }
     return start;
   }
 
@@ -720,20 +733,35 @@ export class Fleet {
     const { id } = member.info;
     if (alwaysOn(member.info)) throw new FleetError("machine_off", id, null, false);
     if (!this.config.wake) throw new FleetError("machine_off", id, null, true);
-    const started = member.link.state() === "starting" || (await this.config.wake(id, member.info.context).catch(() => false));
+    const alreadyStarting = member.link.state() === "starting" && member.link.blocked?.() !== "machine_stopped";
+    const started = alreadyStarting ? true : await this.config.wake(id, member.info.context).catch(() => false as const);
     if (started === "not_startable") throw new FleetError("machine_off", id, "not_remotely_startable", false);
     if (!started) throw new FleetError("machine_off", id, "start_failed", true);
-    // La sesión se detuvo al ver la VM apagada (409): ya encendida, vuelve a pedir su ticket.
-    if (member.link.blocked?.() === "machine_stopped") member.link.retry?.();
+    // Si `wake` devolvió el ticket recién emitido, la sesión lo usa directo sin volver a pedir ticket.
+    const admission = typeof started === "object" && started !== null && started.ok ? started.admission : undefined;
+    if (admission) member.link.retry?.(admission);
+    else if (member.link.blocked?.() === "machine_stopped") member.link.retry?.();
     await new Promise<void>((resolve, reject) => {
-      const done = (ok: boolean) => {
+      let settled = false;
+      const done = (error: FleetError | null) => {
+        if (settled) return;
+        settled = true;
         clearTimeout(timer);
-        stop();
-        ok ? resolve() : reject(new FleetError("machine_timeout", id, "start"));
+        stopState();
+        stopBlocked();
+        stopClose();
+        error ? reject(error) : resolve();
       };
-      const timer = setTimeout(() => done(false), this.deadlines.intent);
-      const stop = member.link.onState((state) => state === "online" && done(true));
-      if (member.link.state() === "online") done(true);
+      const timer = setTimeout(() => done(new FleetError("machine_timeout", id, "start")), this.deadlines.intent);
+      const stopState = member.link.onState((state) => {
+        if (state === "online") done(null);
+      });
+      const stopBlocked = member.link.onBlocked?.((blocked) => {
+        if (blocked === "license_required") done(new FleetError("license_required", id));
+        else if (blocked === "machine_stopped") done(new FleetError("machine_off", id, "start_failed", true));
+      }) ?? (() => {});
+      const stopClose = member.link.onClose?.(() => done(new FleetError("machine_lost", id, "start"))) ?? (() => {});
+      if (this.online(member)) done(null);
     });
   }
 

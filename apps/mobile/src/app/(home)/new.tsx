@@ -153,17 +153,13 @@ export default function NewTask() {
     ? current
       ? t("new.no_workspace")
       : null
-    : waking
-      ? w("shell.machines.waking", { name: host.label })
-      : act === "asleep"
-        ? w("web.machines.off_action", { name: host.label })
-        : act === "outdated"
-          ? w("web.machines.outdated_action", { name: host.label })
-          : act === "wakes" && power === "off"
-            ? w("shell.machines.asleep_notice", { name: host.label })
-            : !loading && snapshot && power === "on" && !hasProvider
-              ? t("new.no_provider")
-              : null;
+    : act === "asleep"
+      ? w("web.machines.off_action", { name: host.label })
+      : act === "outdated"
+        ? w("web.machines.outdated_action", { name: host.label })
+        : !loading && snapshot && power === "on" && !hasProvider
+          ? t("new.no_provider")
+          : null;
 
   const header = (
     <View style={styles.selectors}>

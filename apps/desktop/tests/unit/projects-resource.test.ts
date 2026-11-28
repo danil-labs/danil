@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createEffect, createRoot } from "solid-js";
 import { createResource } from "../../src/lib/resource.ts";
-import { createProjectsStore as projectsStore, type ProjectsScope } from "../../../../packages/features/projects/src/queries/store.ts";
+import { createProjectsStore as projectsStore, PROJECTS_READ_TIMEOUT, type ProjectsScope } from "../../../../packages/features/projects/src/queries/store.ts";
 import type { Project } from "../../src/lib/model.ts";
 
 function createProjectsStore(deps: Parameters<typeof projectsStore>[0]) {
@@ -186,4 +186,8 @@ test("cached projects and a stale reply cannot confirm another workspace", async
   const old = store.refresh(); const aborted = assert.rejects(old, { name: "AbortError" });
   scope = { workspace: "B", machine: null }; store.workspaceChanged();
   reply.resolve([]); await aborted; assert.equal(store.readyScope(), null); store.dispose();
+});
+
+test("default projects read timeout exceeds the transport wait + fleet read retry budget", () => {
+  assert.ok(PROJECTS_READ_TIMEOUT >= 45_000, `expected >= 45000ms, got ${PROJECTS_READ_TIMEOUT}`);
 });

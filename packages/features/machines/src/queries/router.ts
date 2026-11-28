@@ -329,6 +329,10 @@ function createRouterCore(config: RouterConfig) {
         return { what: t("web.machines.timeout", { name }), detail: "machine_timeout" };
       case "machine_lost":
         return { what: t("web.machines.lost", { name }), detail: "machine_lost" };
+      case "app_unavailable":
+        return name
+          ? { what: t("web.machines.lost", { name }), detail: "app_unavailable" }
+          : { what: { clave: "shell.service.unreachable" }, detail: "app_unavailable" };
       case "license_required":
         return { what: t("web.machines.license_required"), detail: "license_required" };
       case "workspace_mismatch":

@@ -1,4 +1,4 @@
-import { type Blocked, type CallResult, type DeferredFrame, type EngineInfo, type EventsPage, type MachineState, type SystemId } from "../../../../../computers/src/index.ts";
+import { type Blocked, type CallResult, type DeferredFrame, type EngineInfo, type EventsPage, type MachineState, type RelayAdmission, type SystemId } from "../../../../../computers/src/index.ts";
 import { type Deadlines } from "./deadlines.ts";
 import { type StorageLike } from "./slices.ts";
 import { type ListedWorkspace } from "./workspace-listing.ts";
@@ -52,6 +52,8 @@ export type Power = "on" | "off" | "starting" | "outdated";
 
 export type Envelope = { context?: string; machine: string; workspace: string | null; command: string; args?: Row };
 
+export type WakeResult = boolean | "not_startable" | { ok: true; admission: RelayAdmission };
+
 /** Lo que la flota usa de una sesión de relay (`RelaySession` de `@terminus/computers`). */
 export type Link = {
   state(): MachineState;
@@ -66,7 +68,9 @@ export type Link = {
   /** Detenida sin reintentar sola (`license_required`) hasta `retry()`; una sesión de antes no lo tiene. */
   blocked?(): Blocked | null;
   onBlocked?(listener: (blocked: Blocked | null) => void): () => void;
-  retry?(): void;
+  retry?(admission?: RelayAdmission): void;
+  /** La sesión terminó definitivamente (revocada, reemplazada o cerrada): el pool la suelta. */
+  onClose?(listener: () => void): () => void;
   /** Cada cambio de la cola de acciones aplazadas de la máquina; una sesión de antes no lo tiene. */
   onDeferred?(listener: (frame: DeferredFrame) => void): () => void;
   deferred?(): DeferredFrame;
@@ -82,7 +86,8 @@ export function relayLink(relay: Required<Link>, state: Link["state"]): Link {
     onEngine: (listener) => relay.onEngine(listener),
     blocked: () => relay.blocked(),
     onBlocked: (listener) => relay.onBlocked(listener),
-    retry: () => relay.retry(),
+    retry: (admission) => relay.retry(admission),
+    onClose: (listener) => relay.onClose(listener),
     onDeferred: (listener) => relay.onDeferred(listener),
     deferred: () => relay.deferred(),
     subscribe: (after) => relay.subscribe(after),
@@ -101,8 +106,8 @@ export type FleetConfig = {
   connect(info: MachineInfo): Link;
   /** Si este cliente habla el contrato de un motor: `null` si no se sabe. */
   compatible?(contract: string | null): boolean | null;
-  /** Enciende una VM por el plano de control; `false` si no se pudo, `not_startable` si no es suya de encender. */
-  wake?(machine: string, context?: string): Promise<boolean | "not_startable">;
+  /** Enciende una VM por el plano de control; puede devolver el ticket recién emitido para evitar una segunda petición. */
+  wake?(machine: string, context?: string): Promise<WakeResult>;
   storage?: StorageLike | null;
   deadlines?: Partial<Deadlines>;
   /** Una máquina cambió de estado, o se agregó, quitó o renombró. */

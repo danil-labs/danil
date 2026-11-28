@@ -1419,3 +1419,52 @@ test("live engine capabilities survive an inventory refresh and belong to their 
   assert.deepEqual(fleet.info("machine", "a")?.features, []);
   fleet.close();
 });
+
+test("wake forwards prefetched admission to link.retry, exposes starting power, lets untilOnline join and fails fast if re-blocked", async () => {
+  const receivedAdmissions: unknown[] = [];
+  let releaseWake!: (result: { ok: true; admission: { url: string; ticket: string } }) => void;
+  const link = fakeLink({ state: "stopped" });
+  const baseRetry = link.retry!.bind(link);
+  link.retry = (admission) => {
+    receivedAdmissions.push(admission);
+    baseRetry(admission);
+  };
+  const fleet = new Fleet({
+    connect: () => link,
+    wake: () => new Promise((resolve) => { releaseWake = resolve; }),
+    deadlines: { read: 40, action: 200, intent: 5_000 },
+  });
+  fleet.setMachines([VM]);
+  link.block("machine_stopped");
+
+  const waking = fleet.wake("cmp_vm");
+  assert.equal(fleet.power("cmp_vm"), "starting", "in-flight wake reports starting power");
+  const joined = fleet.untilOnline("cmp_vm");
+  const admission = { url: "wss://connect.danil.ai/v1/machines/cmp_vm/session", ticket: "wake-1" };
+  releaseWake({ ok: true, admission });
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(receivedAdmissions, [admission], "wake passes its admission ticket straight into link.retry");
+  link.setState("online");
+  await Promise.all([waking, joined]);
+  assert.equal(fleet.power("cmp_vm"), "on");
+
+  // If the link is re-blocked with machine_stopped during wake, startMember fails immediately without waiting 5s.
+  link.setState("stopped");
+  link.block("machine_stopped");
+  const startedAt = Date.now();
+  const blockedFleet = new Fleet({
+    connect: () => link,
+    wake: async () => {
+      setTimeout(() => link.block("machine_stopped"), 5);
+      return true;
+    },
+    deadlines: { read: 40, action: 200, intent: 5_000 },
+  });
+  blockedFleet.setMachines([VM]);
+  await assert.rejects(blockedFleet.wake("cmp_vm"), (e: FleetError) => e.code === "machine_off" && e.detail === "start_failed");
+  assert.ok(Date.now() - startedAt < 1_000, "re-blocked wake fails fast instead of hanging for intent deadline");
+  assert.equal(blockedFleet.power("cmp_vm"), "off");
+  fleet.close();
+  blockedFleet.close();
+});
