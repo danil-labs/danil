@@ -205,7 +205,7 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
               </Button>
             </Show>
             <Show when={!modoTerminal() || props.busy}>
-            <ComposerAction busy={props.busy} stopping={props.stopping} hasMessage={Boolean(props.input.trim() || props.adjuntos.length)} canSend={listo()} onStop={props.onStop} />
+            <ComposerAction busy={props.busy || Boolean(props.handoff && props.stopping)} stopping={props.stopping} hasMessage={Boolean(props.input.trim() || props.adjuntos.length)} canSend={listo()} onStop={props.onStop} />
             </Show>
           </div>
         </div>

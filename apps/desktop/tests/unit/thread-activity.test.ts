@@ -449,3 +449,23 @@ for (const field of ["turno", "tramo"] as const) test(`replayed output with a kn
   assert.deepEqual(activities.find(activity => activity.key === oldKey)?.messages, [replay]);
   assert.deepEqual(activities.find(activity => activity.active)?.messages, [current]);
 });
+
+test("an optimistically interrupted turn keeps its interrupted outcome and never anchors below trailing stop failures", () => {
+  const emptyModel = createActivityProjection();
+  emptyModel.begin("A", "s", 1_000, []);
+  emptyModel.finish("A", "s", "interrupted");
+  assert.deepEqual(emptyModel.project("A", "s", []), [], "interrupted turn without work is hidden");
+
+  const model = createActivityProjection();
+  model.begin("A", "s", 1_000, []);
+  const tool = message("Read a.ts", { role: "system", meta: "usó" });
+  model.observe("A", "s", [], [tool]);
+  assert.equal(model.project("A", "s", [tool])[0].messages.length, 1);
+  model.finish("A", "s", "interrupted");
+  const persisted = message("Compilando…", { turno: "t1", duration_ms: 8_000 });
+  const stopFailure = message("No se pudo detener el turno", { role: "system", meta: "fallo", fallo: { clase: "stop_failed", detail: "" } });
+  const projected = model.project("A", "s", [persisted, stopFailure]);
+  assert.equal(projected.length, 1);
+  assert.equal(projected[0].outcome, "interrupted");
+  assert.equal(projected[0].anchorIndex, 1, "detached closed activity stays before trailing failure row");
+});

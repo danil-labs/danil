@@ -311,10 +311,15 @@ export function createShellCommand(deps: ShellCommandDeps) {
   function mandarCola() {
     const id = sessionId(), view = handoffAt(id);
     if (!id) return;
+    const scope = conversationScope(id);
     const libres = cola().filter((item) => !item.uncertain && !injecting().some((q) => q.session === id && q.id === item.id));
     const next = libres.find(interrumpible), head = libres[0];
     if (busy()) { if (next) void detenerYEnviar(next.id); return; }
-    if (view?.error && view.pending?.phase === "waiting-close") return void handoff.replaceWithQueued(conversationScope(id), view.pending.queueItemId);
+    if (view?.error && view.pending?.phase === "waiting-close") return void handoff.replaceWithQueued(scope, view.pending.queueItemId);
+    if (handoff.blocked(scope) || (view?.pending && !view.error)) {
+      if (next && !view?.pending) void handoff.replaceWithQueued(scope, next.id);
+      return;
+    }
     if (head && esDeLaTerminal(head)) void ejecutarDeLaCola(head);
     else if (engineCanDispatch(id)) void reanudarCola(id);
     else if (head) void enviarDeLaCola(id, head.id);

@@ -228,14 +228,19 @@ export function createThreadStream(deps: ThreadStreamDeps) {
         const stopped = shell ? await callEngine<boolean>("stop_shell_command", { session: id }, scope.route) : await stopTurn(scope);
         if (current()) {
           if (shell && stopped === false) detenidos.delete(id);
-          if (!shell) { void reconcileActiveTurns(); if (stopped !== false) setPermissions(ps => ps.filter(p => p.session !== id)); }
+          if (!shell) {
+            queueMicrotask(() => { if (current()) void reconcileActiveTurns(); });
+            if (stopped !== false) setPermissions(ps => ps.filter(p => p.session !== id));
+          }
         }
         return stopped;
       } catch (error) {
         if (current()) {
           if (shell) detenidos.delete(id);
-          void reconcileActiveTurns();
-          threads.appendLive(id, [{ role: "system", text: t("shell.turn.stop_failed", { error: prosaDe(error) }), meta: "fallo" }]);
+          // Reconcilia tras actualizar la barrera de handoff (`stopping = false`) para que
+          // un turno que siguió vivo tras fallar Detener recupere su estado activo.
+          queueMicrotask(() => { if (current()) void reconcileActiveTurns(); });
+          threads.appendLive(id, [{ role: "system", text: t("shell.turn.stop_failed", { error: prosaDe(error) }), meta: "fallo", fallo: { clase: "stop_failed", detail: "" } }]);
         }
         throw error;
       }

@@ -179,7 +179,7 @@ export function createChatBlocks(props: ChatProps, deps: ChatBlocksDeps) {
   // Cuando ya hay un `TurnActivity` activo en la proyección semántica, él es el único dueño
   // del indicador vivo: una tira heredada de `pasos` jamás debe girar a la vez como «Preparando…».
   const hasActiveActivity = () => Boolean(props.activities?.some((a) => a.active));
-  const esLaTiraViva = (bloque: Bloque) => Boolean(props.busy) && !hasActiveActivity() && bloque === bloques().at(-1);
+  const esLaTiraViva = (bloque: Bloque) => Boolean(props.busy) && !hasActiveActivity() && !props.handoff && bloque === bloques().at(-1);
   // Pasos que llegan tras la respuesta abren otro tramo, y el de la respuesta deja de correr.
   const registroCorre = (bloque: Bloque) => fromWork(bloque, (t) => esElVivo(t.msg), false) && esLaTiraViva(bloque);
 

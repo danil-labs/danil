@@ -113,6 +113,10 @@ test("un mensaje que no se pudo mandar ofrece reintentarlo, solo el vigente", ()
   assert.equal(rowAction({ ...rechazo, fallo: { clase: "contexto_lleno", detail: "" } }, true), null);
   // El turno corrió y no se guardó: repetirlo haría el trabajo dos veces.
   assert.equal(rowAction({ ...rechazo, text: "chat.turn.unsaved" }, true), null);
+  // Fallar al detener no ofrece reintentar el último prompt del usuario.
+  const stopFailed = { meta: "fallo", text: "No se pudo detener el turno: sin conexión", fallo: { clase: "stop_failed", detail: "" } };
+  assert.equal(rowAction(stopFailed, true), null);
+  assert.equal(failureText(stopFailed), stopFailed.text);
   // Un aviso no es un fallo.
   assert.equal(rowAction({ meta: "aviso", text: "Hola" }, true), null);
 });

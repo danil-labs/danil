@@ -7,7 +7,7 @@ import Play from "lucide-solid/icons/play";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import X from "lucide-solid/icons/x";
-import { createSignal, For, onCleanup, Show } from "solid-js";
+import { createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
 import type { Agent } from "../../../../ui/src/lib/model";
 import { cn } from "../../../../ui/src/lib/utils";
@@ -95,11 +95,13 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
   // Una razón o una edición abierta se ven igual porque significan lo mismo:
   // de aquí no sale nada hasta que alguien haga algo.
   const parada = () => props.retenida !== null || editando() !== null;
+  // El mensaje promovido a handoff ya se pinta en el hilo; no se repite en la cola como «Preparando…».
+  const visibleItems = createMemo(() => props.items.filter((item) => item.id !== props.handoffItemId || editando() === item.id));
 
   return (
-    <Show when={props.items.length > 0}>
+    <Show when={visibleItems().length > 0}>
       <div class={cn("mb-1.5 w-full", props.compact ? "px-1 py-1" : "rounded-md border border-border bg-surface p-1.5")}>
-        <Show when={props.items.length > 0}>
+        <Show when={visibleItems().length > 0}>
           <div class="flex items-center gap-2 px-1 pb-1">
             <Show when={parada()}>
               <Pause
@@ -110,7 +112,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
             </Show>
             <span class={cn("text-xs", props.compact ? "font-medium text-neutral-500" : "font-semibold text-neutral-700")}>
               {t("chat.queue.label")} ·{" "}
-              <span class="tabular-nums">{props.items.length}</span>
+              <span class="tabular-nums">{visibleItems().length}</span>
             </span>
             <Show when={props.retenida === "manual"}>
               <span class="truncate text-xs text-neutral-500">{t("chat.queue.manual")}</span>
@@ -140,7 +142,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
         </Show>
 
         <ol class={cn("m-0 grid list-none gap-0.5 p-0", props.compact && "max-h-40 overflow-y-auto")}>
-          <For each={props.items}>
+          <For each={visibleItems()}>
             {(it, i) => (
               <Show
                 when={editando() === it.id}
@@ -176,7 +178,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                         )}
                         title={props.compact ? it.text : undefined}
                       >
-                        {props.handoffItemId === it.id ? t("chat.activity.preparing") : it.text}
+                        {it.text}
                       </span>
                     </span>
 

@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { boot, sleep } from "../helpers/jsdom-app.mjs";
+import { waitFor } from "../helpers/wait-for.mjs";
 
 const TEXTO = "mejor detente y hazlo así";
 const AGENTE = "opencode";
@@ -159,6 +160,185 @@ test("«Detener» en Pensando apaga el turno al instante en el frente antes de q
     await sleep(200);
     assert.equal(porTitulo(app, "Detener turno"), null);
     assert.ok(porTitulo(app, "Preguntar"));
+  } finally {
+    app.w.close();
+  }
+});
+
+test("Detener con razonamiento activo apaga el spinner y escribir encima muestra un solo spinner sin «Preparando…» en la cola", async () => {
+  let resolverStop = null;
+  let vivos = ["t1"];
+  const enviados = [];
+  const app = await boot("listo", "chat-stop-reasoning-single-spinner", responses({
+    list_active_turns: () => vivos,
+    stop_turn: () => new Promise((resolve) => { resolverStop = resolve; }),
+    send_message: (args) => {
+      enviados.push(args);
+      return "nuevo-turno";
+    },
+  }));
+  try {
+    await sleep(600);
+    app.w.document.querySelector('[data-sesion="t1"]').click();
+    await sleep(400);
+
+    app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+    app.emit("chat", { kind: "reasoning", session: "t1", workspace: "w", text: "**Verificando estado de máquinas**\nRevisando el scope." });
+    await sleep(150);
+
+    assert.equal(
+      app.w.document.querySelectorAll("[data-activity-slot]:not(.activity-dots-exited)").length,
+      1,
+      "un solo spinner mientras el turno razona",
+    );
+
+    const btnDetener = porTitulo(app, "Detener turno");
+    assert.ok(btnDetener, "debe verse Detener turno");
+    btnDetener.click();
+    await sleep(40);
+
+    assert.equal(
+      app.w.document.querySelectorAll("[data-activity-slot]:not(.activity-dots-exited)").length,
+      0,
+      "Detener apaga también el spinner de un turno que ya tenía razonamiento",
+    );
+    assert.ok(porTitulo(app, "Preguntar"), "sin handoff pendiente el botón vuelve a Preguntar");
+
+    // Un `started` rezagado del turno moribundo no resucita el spinner ni el botón Detener.
+    app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+    await sleep(40);
+    assert.equal(app.w.document.querySelectorAll("[data-activity-slot]:not(.activity-dots-exited)").length, 0);
+
+    // La persona escribe otro mensaje mientras `stop_turn` sigue en vuelo:
+    await encolar(app);
+    assert.equal(
+      app.w.document.querySelectorAll("[data-activity-slot]:not(.activity-dots-exited)").length,
+      1,
+      "nunca deben girar dos spinners a la vez entre TurnActivity y PendingHandoff",
+    );
+    assert.ok(!app.w.document.body.textContent.includes("en cola"), "el mensaje ya mostrado en el hilo no se repite como «Preparando…» en la cola");
+    assert.equal(porTitulo(app, "Preguntar"), null, "mientras PendingHandoff gira esperando el cierre no se pinta ↑");
+    assert.ok(porTitulo(app, "Deteniendo…"), "el botón refleja que sigue deteniendo el turno previo");
+    assert.equal(enviados.length, 0, "no se envía antes del recibo y el cierre");
+
+    vivos = [];
+    resolverStop(null);
+    app.emit("chat", { kind: "done", session: "t1", workspace: "w", ok: false });
+    await waitFor(() => enviados.length === 1, "el mensaje encolado no salió tras ACK y done", 2000);
+    assert.equal(enviados[0].prompt, TEXTO);
+  } finally {
+    app.w.close();
+  }
+});
+
+test("«Detener y enviar» con turno activo mantiene un único spinner y oculta el mensaje promovido de la lista de cola", async () => {
+  let resolverStop = null;
+  let vivos = ["t1"];
+  const app = await boot("listo", "chat-stop-and-send-single-spinner", responses({
+    list_active_turns: () => vivos,
+    stop_turn: () => new Promise((resolve) => { resolverStop = resolve; }),
+    send_message: () => "nuevo-turno",
+  }));
+  try {
+    await sleep(600);
+    app.w.document.querySelector('[data-sesion="t1"]').click();
+    await sleep(400);
+
+    app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+    app.emit("chat", { kind: "reasoning", session: "t1", workspace: "w", text: "**Analizando cambios**\nDetalles." });
+    await sleep(150);
+
+    await encolar(app);
+    const detenerYEnviar = porTitulo(app, "Interrumpir y enviar");
+    assert.ok(detenerYEnviar, "debe ofrecer Interrumpir y enviar");
+    detenerYEnviar.click();
+    await sleep(80);
+
+    assert.equal(
+      app.w.document.querySelectorAll("[data-activity-slot]:not(.activity-dots-exited)").length,
+      1,
+      "TurnActivity y PendingHandoff no giran a la vez",
+    );
+    assert.ok(!app.w.document.body.textContent.includes("en cola"), "la cola no muestra una fila duplicada de «Preparando…»");
+    assert.ok(app.w.document.body.textContent.includes(TEXTO), "el texto del mensaje sigue visible en el globo pendiente");
+  } finally {
+    app.w.close();
+  }
+});
+
+test("pulsar mandar en la cola durante un Detener optimista en vuelo no salta la barrera de handoff", async () => {
+  let resolverStop = null;
+  let vivos = ["t1"];
+  const enviados = [];
+  const app = await boot("listo", "chat-stop-queue-mandar-barrier", responses({
+    list_active_turns: () => vivos,
+    load_queue: ({ session }) => session === "t1"
+      ? [{ id: "q1", text: TEXTO, provider: AGENTE, model: "deepseek", effort: null, permission_mode: null, attachments: [] }]
+      : [],
+    stop_turn: () => new Promise((resolve) => { resolverStop = resolve; }),
+    send_message: (args) => {
+      enviados.push(args);
+      return "nuevo-turno";
+    },
+  }));
+  try {
+    await sleep(600);
+    app.w.document.querySelector('[data-sesion="t1"]').click();
+    await sleep(400);
+    app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+    await sleep(150);
+
+    // Detener optimista con un elemento ya en cola (sin haberlo promovido todavía).
+    porTitulo(app, "Detener turno").click();
+    await sleep(40);
+    const btnMandar = [...app.w.document.querySelectorAll("button")].find((el) => el.textContent?.trim() === "mandar");
+    assert.ok(btnMandar, "se ofrece el botón mandar para la cola manual");
+    btnMandar.click();
+    await sleep(100);
+    assert.equal(enviados.length, 0, "mandar en la cola no puede disparar send_message mientras stop_turn sigue en vuelo");
+
+    vivos = [];
+    resolverStop(null);
+    app.emit("chat", { kind: "done", session: "t1", workspace: "w", ok: false });
+    await waitFor(() => enviados.length === 1, "tras ACK y cierre sale el mensaje elegido", 2000);
+    assert.equal(enviados[0].prompt, TEXTO);
+  } finally {
+    app.w.close();
+  }
+});
+
+test("si falla stop_turn tras Detener optimista no ofrece Reintentar el prompt y reconcilia el turno que siguió vivo", async () => {
+  let rechazarStop = null;
+  const vivos = ["t1"];
+  const enviados = [];
+  const app = await boot("listo", "chat-stop-failure-reconciles", responses({
+    list_active_turns: () => vivos,
+    stop_turn: () => new Promise((_resolve, reject) => { rechazarStop = reject; }),
+    send_message: (args) => {
+      enviados.push(args);
+      return "duplicado";
+    },
+  }));
+  try {
+    await sleep(600);
+    app.w.document.querySelector('[data-sesion="t1"]').click();
+    await sleep(400);
+
+    app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+    app.emit("chat", { kind: "reasoning", session: "t1", workspace: "w", text: "**Revisando**\nPaso 1." });
+    await sleep(150);
+
+    porTitulo(app, "Detener turno").click();
+    await sleep(40);
+    assert.equal(porTitulo(app, "Detener turno"), null);
+
+    rechazarStop(new Error("El motor no respondió"));
+    await waitFor(() => app.w.document.body.textContent.includes("No se pudo detener el turno"), "se avisa que Detener falló", 2000);
+    await waitFor(() => porTitulo(app, "Detener turno"), "tras fallar Detener, la reconciliación restaura el turno que siguió activo", 2000);
+
+    const retryButtons = [...app.w.document.querySelectorAll("button")].filter((el) => el.textContent?.trim() === "Reintentar");
+    assert.equal(retryButtons.length, 0, "un fallo de Detener no ofrece Reintentar el último prompt");
+    assert.equal(enviados.length, 0);
   } finally {
     app.w.close();
   }
