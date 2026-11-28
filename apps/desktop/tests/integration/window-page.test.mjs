@@ -366,6 +366,49 @@ test('a sign-in return error stays visible with its button active while the sess
   assert.equal(doc.querySelector('[data-web-loading]'), null);
 });
 
+test('remembered WorkOS organization is forwarded on login, offers an escape hatch, and clears on sign-in error', async t => {
+  const fetcher = async input => {
+    const url = new URL(String(input));
+    if (url.origin === 'http://localhost' && url.pathname.includes('/assets/')) return new Response('');
+    if (['/v1/capabilities', '/v1/identity/organizations', '/v1/machines'].includes(url.pathname)) return new Response(null, { status: 404 });
+    if (url.pathname === '/v1/identity/me') return new Response(null, { status: 401 });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  fetcher.__jsdomApp = true; globalThis.fetch = fetcher;
+
+  const app = await open(t, 'listo', 'remembered-login-org', {}, undefined, {
+    'danil.login.last-org': 'org_danil',
+    'danil.web.previous.11.tasks': 'private',
+  }, { web: true });
+  const doc = app.w.document;
+  await until(() => doc.querySelector('[data-web-auth="workos"]'));
+  const screen = doc.querySelector('[data-web-auth="workos"]');
+  assert.equal(app.w.localStorage.getItem('danil.web.previous.11.tasks'), null, 'session caches still clear on 401');
+  assert.equal(app.w.localStorage.getItem('danil.login.last-org'), 'org_danil', 'login org hint survives 401 cache wipe');
+
+  const go = [...screen.querySelectorAll('a')].find(a => a.textContent === 'Continuar con tu correo');
+  assert.ok(go, 'primary login button exists');
+  assert.equal(new URL(go.href).searchParams.get('organization_id'), 'org_danil', 'primary login forwards remembered WorkOS org');
+
+  const other = screen.querySelector('[data-web-auth-other-org]');
+  assert.ok(other, 'escape hatch to choose another organization is visible');
+  assert.equal(new URL(other.href).searchParams.get('organization_id'), null, 'other organization omits organization_id');
+  other.addEventListener('click', (event) => event.preventDefault());
+  other.click();
+  assert.equal(app.w.localStorage.getItem('danil.login.last-org'), null, 'clicking other organization forgets the remembered org');
+
+  // If the sign-in callback returns with ?error=, any stale remembered org is cleared so login cannot loop.
+  const errored = await open(t, 'listo', 'remembered-login-org-error', {}, undefined, {
+    'danil.login.last-org': 'org_revoked',
+  }, { web: true, beforeImport(w) { w.history.replaceState(null, '', '/?error=access_required'); } });
+  const edoc = errored.w.document;
+  await until(() => edoc.querySelector('[data-web-auth="workos"] [role="alert"]'));
+  assert.equal(errored.w.localStorage.getItem('danil.login.last-org'), null, 'sign-in error clears stale org hint');
+  const retry = [...edoc.querySelectorAll('[data-web-auth="workos"] a')].find(a => a.textContent === 'Continuar con tu correo');
+  assert.equal(new URL(retry.href).searchParams.get('organization_id'), null, 'retry after error omits stale organization_id');
+  assert.equal(edoc.querySelector('[data-web-auth-other-org]'), null, 'no other-org button when hint is cleared');
+});
+
 for (const end of ['logout', '401']) test(`${end} revokes the mounted person's cached workspaces`, async t => {
   const calls = [];
   let expired = false;

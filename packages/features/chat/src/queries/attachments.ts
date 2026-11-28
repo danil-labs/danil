@@ -280,7 +280,10 @@ export function createAttachments(deps: AttachmentsDeps) {
       setSources([]);
       return;
     }
-    const pedidas = callEngine<Space[]>("list_spaces").catch(() => null);
+    const activeWorkspace = a.active;
+    const deskReady = callEngine<Space[]>("list_spaces")
+      .catch(() => null)
+      .then((lista) => (generation === workspaceContext.generation() ? asentarEscritorio(activeWorkspace, lista) : null));
     if (isNoMachines()) {
       setSources([]);
       setMaterialError(null);
@@ -327,9 +330,8 @@ export function createAttachments(deps: AttachmentsDeps) {
     // que hace un navegador al arrancar. Si su pestaña apunta a una tarea que
     // ya no existe, `abrirSesion` lo dice en la conversación y la
     // sincronización con el historial se lleva la pestaña.
-    const lista = await pedidas;
+    const desk = await deskReady;
     if (generation !== workspaceContext.generation()) return;
-    const desk = asentarEscritorio(a.active, lista);
     // Si la persona ya empezó a mandar una tarea nueva mientras arrancaba, no
     // sobrescribir su pestaña provisional con la tira guardada.
     const activaAlArrancar = pestanas.active();

@@ -24,7 +24,7 @@ import { organizationMachine, windowBilling } from './window-billing';
 import { webSessionCommands, type WebSessionStatus } from './web-session-contexts';
 import { webRailCatalog } from './web-rail-catalog';
 import { windowActiveContext } from './window-active-context';
-import { readLastWorkspace, requestedWorkspaceFromSearch } from './last-workspace';
+import { isWorkosOrganizationId, readLastLoginOrg, readLastWorkspace, requestedWorkspaceFromSearch, writeLastLoginOrg } from './last-workspace';
 import { freeModelScope } from './free-model-policy';
 import { freeRouterEngine, freeRouterWebEdge } from '../../features/settings/src/queries/free-router-adapters';
 import { setFreeRouterHost, signOutPlatform } from '../../features/settings/src/queries/free-router-session';
@@ -61,6 +61,7 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
     const [identified, setIdentified] = createSignal(false);
     const [reauthFailed, setReauthFailed] = createSignal(false);
     const returnError = signInError(window.location.search);
+    if (returnError) writeLastLoginOrg(null);
     let windowApp: ReturnType<typeof mountWindow> | undefined;
     let unsubscribePicker: (() => void) | undefined;
     let disposeGate: (() => void) | undefined;
@@ -114,7 +115,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       windowApp = undefined;
       disposeGate?.();
       root.replaceChildren();
-      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(loginReturn.href)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
+      const loginOrg = () => {
+        if (returnError) return null;
+        const fromLink = returnSearch.get('org');
+        return isWorkosOrganizationId(fromLink) ? fromLink : readLastLoginOrg();
+      };
+      disposeGate = render(() => <Show when={identified() && !signedOut() && !preparing()} fallback={<><ToastStack><UpdateNotice /></ToastStack><Show when={signedOut() || returnError} fallback={<SessionLoading onSignOut={preparing() ? () => void exit.leave() : undefined} />}><WorkosAuthPage loginUrl={api.loginUrl(loginReturn.href, loginOrg() ?? undefined)} otherOrgUrl={loginOrg() ? api.loginUrl(loginReturn.href) : undefined} onOtherOrg={() => writeLastLoginOrg(null)} error={returnError} /></Show></>}><main class="flex h-full flex-col gap-4 overflow-y-auto bg-bg p-10 text-neutral-950" data-web-gate="">
         <ToastStack><UpdateNotice /></ToastStack>
         <h1 class="m-0 font-display text-lead font-bold">{t('common.brand_name')}</h1>
         <Show when={error()}><p role="alert">{t(error())}</p><Button onClick={() => void load()}>{t('web.computers.retry')}</Button></Show>
@@ -187,6 +193,12 @@ export function startWindow(options: WebSessionDeployment, root: HTMLElement) {
       mounted = true;
       setPreparing(false);
       setIdentified(true);
+      const activeOrg = active.current();
+      if (activeOrg && !activeOrg.personal) writeLastLoginOrg(activeOrg.org);
+      else {
+        const storedOrg = readLastLoginOrg();
+        if (storedOrg && !active.groups().some((g) => !g.personal && g.org === storedOrg)) writeLastLoginOrg(null);
+      }
       cache = workspaceCache(localStorage, profile.id, 'contexts');
       setShellCacheScope({ mine: () => false, prefer: null });
       disposeGate?.();
