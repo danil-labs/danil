@@ -24,6 +24,8 @@ import { type ComandoEnVivo } from "../../../features/chat/src/components/ShellC
 import { type AlMargen } from "../../../features/chat/src/components/SideQuestion.tsx";
 import { type Lectura } from "../../../features/chat/src/model/threadWindow.ts";
 import { openChatVisual, readChatVisual } from "../../../features/chat/src/queries/readVisual";
+import { activeWorkspaceContext, displayWorkspaceContext } from "../../../session/src/workspace-context";
+import { resolveActivePlatformContext } from "../shell/session-groups";
 import { type createPanelDeChatParts as T_createPanelDeChatParts } from "./panel-de-chat-parts.tsx";
 import { type createPanelDeChatState as T_createPanelDeChatState } from "./panel-de-chat-state.ts";
 import { type createCloneFolder, type createCloneFolder as T_createCloneFolder, type createDeskStrip as T_createDeskStrip, type createSessionMutations, type createWorkspaceSession } from "../../../features/projects/src";
@@ -304,6 +306,7 @@ export function createPanelDeChatCell(deps: PanelDeChatCellDeps) {
         onReference={inline ? inline.onReference : drafts.reference}
         onInput={inline ? inline.setInput : setInput}
         onSend={inline ? inline.mandar : mandar} renderAvatar={renderAvatar} renderPdf={renderPdf} createFreeRouterConsent={createFreeRouterConsent} machineOf={machineOf}
+        workspaceId={resolveActivePlatformContext(visualWorkspace, activeWorkspaceContext() ?? displayWorkspaceContext()).workspaceId}
         onRespuestaRapida={inline ? inline.mandarTexto : mandarTexto}
         visualScope={JSON.stringify([visualWorkspace, pp.proyecto ?? "", pp.sesion])}
         readVisual={(file) => readChatVisual({ workspace: visualWorkspace, project: pp.proyecto ?? "", session: pp.sesion ?? "", machine: machineOf(pp.sesion) }, file)}

@@ -44,6 +44,8 @@ export function RegistroDeTrabajo(props: {
   animando?: boolean;
   /** Con él, «Editó N archivos» abre los cambios en el panel de la tarea. */
   onVerCambios?: () => void;
+  /** Identificador numérico de workspace de plataforma para tarjetas MCP. */
+  workspaceId?: string | null;
 }) {
   const panelId = createUniqueId();
   // Sin contar los pasos con error: fallar y reintentar es normal en un turno
@@ -182,7 +184,7 @@ export function RegistroDeTrabajo(props: {
       <Index each={todos()}>
         {(step) => (
           <Show when={!step().corriendo && !isInteractiveMcpApp(step().mcpApp) ? step().mcpApp : undefined}>
-            {(call) => <McpAppView call={call()} />}
+            {(call) => <McpAppView call={call()} workspaceId={props.workspaceId} />}
           </Show>
         )}
       </Index>
@@ -195,7 +197,7 @@ export function RegistroDeTrabajo(props: {
       <Index each={todos()}>
         {(step) => (
           <Show when={!step().corriendo && isInteractiveMcpApp(step().mcpApp) ? step().mcpApp : undefined}>
-            {(call) => <McpAppView call={call()} />}
+            {(call) => <McpAppView call={call()} workspaceId={props.workspaceId} />}
           </Show>
         )}
       </Index>

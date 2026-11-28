@@ -9,16 +9,16 @@ import { currentEdgeOrigin, edgeFetch, platformFetch, type EdgeMethod } from "./
 import { newIdempotencyKey } from "./idempotency.ts";
 
 const ALLOWED_METHODS = new Set<EdgeMethod>(["GET", "POST", "PATCH", "PUT", "DELETE"]);
-const ALLOWED_PREFIXES = ["/v1/messaging/", "/v1/agents/"] as const;
-const ALLOWED_EXACT = new Set(["/v1/messaging", "/v1/agents"]);
+const ALLOWED_PREFIXES = ["/v1/messaging/", "/v1/agents/", "/v1/inventory/"] as const;
+const ALLOWED_EXACT = new Set(["/v1/messaging", "/v1/agents", "/v1/inventory"]);
 const FORWARDED_REQUEST_HEADERS = new Set([
   "accept",
   "content-type",
   "idempotency-key",
   "last-event-id",
-  "x-danil-workspace",
   "x-request-id",
 ]);
+const NUMERIC_WORKSPACE_RE = /^[1-9][0-9]{0,18}$/;
 
 export type PluginProxyHttpRequest = {
   method?: string;
@@ -75,14 +75,17 @@ export function normalizePluginProxyPath(raw: string): string | null {
   const queryIndex = trimmed.indexOf("?");
   const pathname = queryIndex >= 0 ? trimmed.slice(0, queryIndex) : trimmed;
   const search = queryIndex >= 0 ? trimmed.slice(queryIndex) : "";
-  if (pathname.includes("..") || pathname.includes("\\") || pathname.includes("#")) return null;
+  if (/%(?:2e|2f|5c)/i.test(pathname) || pathname.includes("..") || pathname.includes("\\") || pathname.includes("#")) {
+    return null;
+  }
+  const canonical = new URL(pathname, "https://edge.invalid").pathname;
 
   const allowed =
-    ALLOWED_EXACT.has(pathname) ||
-    ALLOWED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+    ALLOWED_EXACT.has(canonical) ||
+    ALLOWED_PREFIXES.some((prefix) => canonical.startsWith(prefix));
   if (!allowed) return null;
 
-  return `${pathname}${search}`;
+  return `${canonical}${search}`;
 }
 
 export function normalizeProxyMethod(raw: string | undefined): EdgeMethod | null {
@@ -111,7 +114,7 @@ export function sanitizeProxyHeaders(
   if (options.method !== "GET" && !hasKey("idempotency-key")) {
     out["Idempotency-Key"] = newIdempotencyKey();
   }
-  if (options.workspaceId && /^\d+$/.test(options.workspaceId) && !hasKey("x-danil-workspace")) {
+  if (options.workspaceId && NUMERIC_WORKSPACE_RE.test(options.workspaceId)) {
     out["X-Danil-Workspace"] = options.workspaceId;
   }
   return out;
@@ -246,7 +249,7 @@ export async function readConnectSession(
   };
 }
 
-/** Completa una sesión `cs_...` (OAuth `code`+`state`, `selected_asset_id` de Messenger o config Web). */
+/** Completa una sesión `cs_...` (OAuth `code`+`state`, `page_id` de Messenger o config Web). */
 export async function completeConnectSession(
   sessionId: string,
   payload: Record<string, unknown>,
@@ -262,10 +265,26 @@ export async function completeConnectSession(
     signal: options.signal,
   });
   const body = reply.body && typeof reply.body === "object" ? (reply.body as Record<string, unknown>) : null;
+  const innerSession =
+    body?.connect_session && typeof body.connect_session === "object"
+      ? (body.connect_session as Record<string, unknown>)
+      : body;
+  const channel =
+    body?.channel && typeof body.channel === "object" ? (body.channel as Record<string, unknown>) : null;
+  const channelCfg =
+    channel?.config && typeof channel.config === "object" ? (channel.config as Record<string, unknown>) : null;
+  const session =
+    reply.ok && innerSession
+      ? ({
+          ...innerSession,
+          channel_name: innerSession.channel_name ?? channel?.name ?? null,
+          publishable_key: innerSession.publishable_key ?? channelCfg?.publishable_key ?? null,
+        } as unknown as ConnectSessionState)
+      : null;
   return {
     ok: reply.ok,
     status: reply.status,
-    session: reply.ok && body ? (body as unknown as ConnectSessionState) : null,
+    session,
     problem: !reply.ok ? body : null,
   };
 }
@@ -306,10 +325,18 @@ export function parseSseChunk(
   return { events, rest };
 }
 
-/**
- * Suscribe el stream SSE `GET /v1/messaging/events` con reconexión acotada (`Last-Event-ID`).
- * Se detiene automáticamente ante 401/403/404/501 para evitar bucles si el servicio aún no está activo.
- */
+/** Desenvuelve `PluginSseEvent` al `SignalEvent` plano que espera el iframe del conector. */
+export function unwrapPluginSseEvent(event: PluginSseEvent): Record<string, unknown> {
+  if (event.data && typeof event.data === "object" && !Array.isArray(event.data)) {
+    return {
+      ...(event.id ? { id: event.id } : {}),
+      ...(event.data as Record<string, unknown>),
+    };
+  }
+  return { id: event.id, type: event.event, data: event.data };
+}
+
+/** Suscribe `GET /v1/messaging/events` con reconexión acotada (`Last-Event-ID`). */
 export function subscribeMessagingEvents(options: {
   onEvent: (event: PluginSseEvent) => void;
   workspaceId?: string | null;
@@ -324,7 +351,6 @@ export function subscribeMessagingEvents(options: {
   let stopped = false;
   let lastEventId: string | null = null;
   let attempt = 0;
-
   const query = options.channelId ? `?channel_id=${encodeURIComponent(options.channelId)}` : "";
   const url = `${origin}/v1/messaging/events${query}`;
 
@@ -333,16 +359,9 @@ export function subscribeMessagingEvents(options: {
       try {
         const headers: Record<string, string> = { Accept: "text/event-stream" };
         if (lastEventId) headers["Last-Event-ID"] = lastEventId;
-        if (options.workspaceId && /^\d+$/.test(options.workspaceId)) {
-          headers["X-Danil-Workspace"] = options.workspaceId;
-        }
+        if (options.workspaceId && NUMERIC_WORKSPACE_RE.test(options.workspaceId)) headers["X-Danil-Workspace"] = options.workspaceId;
         const res = await fetcher(url, {
-          method: "GET",
-          credentials: "include",
-          cache: "no-store",
-          redirect: "error",
-          headers,
-          signal: controller.signal,
+          method: "GET", credentials: "include", cache: "no-store", redirect: "error", headers, signal: controller.signal,
         });
         if (!res.ok || !res.body) {
           if ([401, 403, 404, 501].includes(res.status)) return;
@@ -369,17 +388,11 @@ export function subscribeMessagingEvents(options: {
       const delayMs = Math.min(30_000, 1000 * 2 ** Math.min(attempt++, 5)) + Math.floor(Math.random() * 500);
       await new Promise<void>((resolve) => {
         const timer = setTimeout(resolve, delayMs);
-        controller.signal.addEventListener("abort", () => {
-          clearTimeout(timer);
-          resolve();
-        }, { once: true });
+        controller.signal.addEventListener("abort", () => { clearTimeout(timer); resolve(); }, { once: true });
       });
     }
   };
 
   void run();
-  return () => {
-    stopped = true;
-    controller.abort();
-  };
+  return () => { stopped = true; controller.abort(); };
 }

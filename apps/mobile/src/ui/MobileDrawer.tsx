@@ -177,6 +177,10 @@ export function MobileDrawer({
       router.push((ALPHA_DEMO ? "/inbox?demo=1" : "/inbox") as never);
       return;
     }
+    if (Platform.OS === "web") {
+      router.push("/chats" as never);
+      return;
+    }
     void Linking.openURL(MESSAGING_URL);
   };
 

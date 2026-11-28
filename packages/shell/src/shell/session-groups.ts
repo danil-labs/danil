@@ -22,12 +22,40 @@ import { createAddedSync } from "./workspace-added-sync.ts";
 import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-added-transport.ts";
 import { sendIdentityMe } from "../../../platform-client/src/identity.ts";
 
-type WorkspaceRow = { id: string; name: string; logo?: string | null };
+type WorkspaceRow = { id: string; name: string; logo?: string | null; account?: string | null };
 export type SessionRailGroup = ContextGroup & { available: readonly WorkspaceRow[] | null; added: ReadonlySet<string> | null; person: string | null; org_type?: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null; settled?: boolean };
 let instance: ReturnType<typeof wire> | undefined;
 export const [sessionRailState, setSessionRailState] = createRoot(() => createSignal<ReturnType<typeof wire>>());
 export const hasSessionGroups = () => !!instance?.groups();
 export const sessionRail = (hidden: () => ReadonlySet<string>, seeded: (ids: readonly string[]) => void, shown: () => readonly string[] = () => []) => instance ??= createRoot(() => { const next = wire(hidden, seeded, shown); setSessionRailState(next); return next; });
+
+const NUMERIC_PLATFORM_WORKSPACE_RE = /^[1-9][0-9]{0,18}$/;
+
+/** Resuelve `orgId` y el `account_id` numérico de plataforma a partir del workspace del motor activo. */
+export function resolveActivePlatformContext(
+  engineWorkspaceId: string | null | undefined,
+  contextId?: string | null,
+): { orgId: string | null; workspaceId: string | null } {
+  const groups = sessionRailState()?.groups() ?? [];
+  const activeGroup =
+    (contextId ? groups.find((g) => g.context_id === contextId) : undefined) ??
+    (engineWorkspaceId
+      ? groups.find((g) => g.available?.some((w) => w.id === engineWorkspaceId))
+      : undefined) ??
+    groups[0];
+  const orgId = activeGroup?.org ?? null;
+  if (engineWorkspaceId && NUMERIC_PLATFORM_WORKSPACE_RE.test(engineWorkspaceId)) {
+    return { orgId, workspaceId: engineWorkspaceId };
+  }
+  const match = engineWorkspaceId
+    ? activeGroup?.available?.find((w) => w.id === engineWorkspaceId)
+    : undefined;
+  const accountId =
+    match?.account && NUMERIC_PLATFORM_WORKSPACE_RE.test(match.account)
+      ? match.account
+      : null;
+  return { orgId, workspaceId: accountId };
+}
 
 function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string[]) => void, shown: () => readonly string[]) {
   const [revision, bump] = createSignal(0);
@@ -68,7 +96,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
         const row = item as Workspace | null;
         const id = row?.engine_workspace_id;
         return row?.org === group.org && typeof id === "string" && id
-          ? [{ id, name: typeof row.name === "string" ? row.name : id }]
+          ? [{ id, name: typeof row.name === "string" ? row.name : id, account: typeof row.id === "string" ? row.id : null }]
           : [];
       }));
       changed();
