@@ -7,7 +7,7 @@ import { isNoMachines } from "../../../../host/src/platform.ts";
 import { claveDe } from "../../../../ui/src/Failure";
 import { type Session } from "../model/transcript.ts";
 import { type LiveTurn } from "./sleepSession.ts";
-import { createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
+import { batch, createEffect, on, onCleanup, onMount, type Accessor, type Setter } from "solid-js";
 import type { CreateServiceStream, MachinesPort, ServicePage, WorkspaceContextPort, createThreadsStore } from "./types.ts";
 import type { createTabs } from "../../../../ui/src/lib/tabs.ts";
 import type { createAttachmentsMount } from "./attachments-mount.ts";
@@ -98,6 +98,7 @@ export function createResync(deps: ResyncDeps) {
     if (!workspace || isNoMachines()) return;
     const revision = deps.lifecycleRevision;
     const generation = workspaceContext.generation();
+    const presenceSnapshot = handoff.presenceSnapshot();
     try {
       const [active, timing] = await Promise.all([
         callEngine<string[]>("list_active_turns", { workspace }),
@@ -126,8 +127,11 @@ export function createResync(deps: ResyncDeps) {
       const nuevas = active.filter((id) => !vivas().includes(id));
       const finished = vivas().filter((id) => !active.includes(id) && !pendingStarts.has(id));
       for (const id of nuevas) void reponerGates(id);
-      for (const id of active) if (!settlingTurns().includes(id) && !handoff.view(conversationScope(id)).stopping) { marcarViva(id, undefined, true); handoff.observe({ kind: "started", scope: conversationScope(id) }); }
-      for (const id of finished) void settleTurn(id);
+      batch(() => {
+        for (const id of active) if (!settlingTurns().includes(id) && !handoff.view(conversationScope(id)).stopping) { marcarViva(id, undefined, true); handoff.observe({ kind: "started", scope: conversationScope(id) }); }
+        for (const id of finished) void settleTurn(id);
+        handoff.presenceApplied(presenceSnapshot);
+      });
     } catch {
       // Un IPC fallido no demuestra que el turno haya terminado.
     }

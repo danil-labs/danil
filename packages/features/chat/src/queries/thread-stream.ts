@@ -220,10 +220,10 @@ export function createThreadStream(deps: ThreadStreamDeps) {
   });
   const shellStops = new WeakSet<ConversationScope>();
   const [reconcilingStops, setReconcilingStops] = createSignal<string[]>([]);
-  const stopVerifyTokens = new Map<string, symbol>();
-  const clearStopVerify = (id: string, token?: symbol) => {
-    if (token && stopVerifyTokens.get(id) !== token) return;
-    stopVerifyTokens.delete(id);
+  let stopVerifySeq = 0;
+  const stopVerifyMarks = new Map<string, number>();
+  const clearStopVerify = (id: string) => {
+    stopVerifyMarks.delete(id);
     setReconcilingStops((ids) => (ids.includes(id) ? ids.filter((item) => item !== id) : ids));
   };
   const handoffCore = createConversationHandoff({
@@ -250,11 +250,8 @@ export function createThreadStream(deps: ThreadStreamDeps) {
       if (shellStops.has(scope)) return;
       if (scope.workspace !== workspaceActivo() || scope.generation !== workspaceContext.generation()) return;
       if (outcome === "failed" || outcome === "declined") {
-        const token = Symbol();
-        stopVerifyTokens.set(scope.session, token);
+        stopVerifyMarks.set(scope.session, ++stopVerifySeq);
         setReconcilingStops((ids) => (ids.includes(scope.session) ? ids : [...ids, scope.session]));
-        void reconcileActiveTurns().finally(() => clearStopVerify(scope.session, token));
-        return;
       }
       void reconcileActiveTurns();
     } },
@@ -262,19 +259,28 @@ export function createThreadStream(deps: ThreadStreamDeps) {
       select: (scope, id: string) => { if (scope.session !== sessionId() || !taskQueues.items().some(item => item.id === id)) return false; taskQueues.prioritize(id); return true; },
       release: (scope) => mandarElegido(scope.session), failed: () => {} },
   });
-  const handoff: typeof handoffCore = {
+  const handoff = {
     ...handoffCore,
-    observe: (fact) => {
+    observe: (fact: Parameters<typeof handoffCore.observe>[0]) => {
       if (fact.kind === "terminal" && fact.scope.workspace === workspaceActivo() && fact.scope.generation === workspaceContext.generation()) {
         clearStopVerify(fact.scope.session);
       }
       handoffCore.observe(fact);
     },
-    blocked: (scope) =>
+    presenceSnapshot: () => stopVerifySeq,
+    presenceApplied: (snapshot: number) => {
+      const remaining: string[] = [];
+      for (const [id, mark] of [...stopVerifyMarks]) {
+        if (mark <= snapshot) stopVerifyMarks.delete(id);
+        else remaining.push(id);
+      }
+      setReconcilingStops((ids) => (ids.length === remaining.length && ids.every((id, i) => id === remaining[i]) ? ids : remaining));
+    },
+    blocked: (scope: ConversationScope) =>
       handoffCore.blocked(scope) ||
       (scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation() && reconcilingStops().includes(scope.session)),
-    reset: () => { stopVerifyTokens.clear(); setReconcilingStops([]); handoffCore.reset(); },
-    dispose: () => { stopVerifyTokens.clear(); setReconcilingStops([]); handoffCore.dispose(); },
+    reset: () => { stopVerifyMarks.clear(); setReconcilingStops([]); handoffCore.reset(); },
+    dispose: () => { stopVerifyMarks.clear(); setReconcilingStops([]); handoffCore.dispose(); },
   };
   onCleanup(handoff.dispose);
   const handoffAt = (id: string | null, projectId?: string) => id ? handoff.view(conversationScope(id, projectId)) : null;

@@ -394,13 +394,18 @@ test("con dos elementos en cola durante handoff se oculta «mandar» inerte y «
   }
 });
 
-test("si stop_turn falla tras Detener optimista mantiene bloqueado «Enviar de nuevo» mientras list_active_turns sigue pendiente", async () => {
+test("si stop_turn falla tras Detener optimista mantiene bloqueado «Enviar de nuevo» ante reconciliación pendiente, fallida o descartada", async () => {
   let rechazarStop = null;
-  let holdPresence = false;
+  let presenceMode = "ok";
   const presenceResolvers = [];
   const enviados = [];
   const app = await boot("listo", "chat-stop-failed-holds-resend-during-reconcile", responses({
-    list_active_turns: () => holdPresence ? new Promise((resolve) => presenceResolvers.push(resolve)) : ["t1"],
+    list_active_turns: () => {
+      if (presenceMode === "reject") return Promise.reject(new Error("presence offline"));
+      if (presenceMode === "hold") return new Promise((resolve) => presenceResolvers.push(resolve));
+      if (presenceMode === "closed") return [];
+      return ["t1"];
+    },
     load_queue: ({ session }) => session === "t1"
       ? [{ id: "q1", text: "incierto durante fallo", provider: AGENTE, model: "deepseek", effort: null, permission_mode: null, attachments: [], uncertain: true }]
       : [],
@@ -420,27 +425,40 @@ test("si stop_turn falla tras Detener optimista mantiene bloqueado «Enviar de n
     porTitulo(app, "Detener turno").click();
     await sleep(40);
 
-    // Bloquea la reconciliación de presencia y hace fallar stop_turn.
-    holdPresence = true;
+    // Caso 1: la reconciliación de presencia rechaza (error IPC) tras fallar stop_turn.
+    presenceMode = "reject";
     rechazarStop(new Error("stop falló"));
     await waitFor(() => app.w.document.body.textContent.includes("No se pudo detener el turno"), "aviso de fallo de stop", 2000);
-    await waitFor(() => presenceResolvers.length > 0, "la reconciliación salió tras fallar stop", 2000);
+    await sleep(80);
 
     const reenviar = app.w.document.querySelector('button[aria-label*="Enviar de nuevo"], button[title="Enviar de nuevo"]');
     assert.ok(reenviar, "la fila incierta sigue visible");
-    assert.equal(reenviar.disabled, true, "Enviar de nuevo sigue bloqueado mientras list_active_turns no confirma el cierre");
+    assert.equal(reenviar.disabled, true, "una reconciliación fallida no reabre «Enviar de nuevo»");
     reenviar.click();
     await sleep(60);
-    assert.equal(enviados.length, 0, "no se puede emitir send_message antes de confirmar si el turno cerró");
+    assert.equal(enviados.length, 0, "no se emite send_message tras una reconciliación fallida");
 
-    // La reconciliación confirma que t1 sigue vivo: continúa bloqueado y vuelve Detener turno.
-    holdPresence = false;
-    for (const resolve of presenceResolvers) resolve(["t1"]);
-    await waitFor(() => porTitulo(app, "Detener turno"), "restaura Detener turno cuando t1 siguió vivo", 2000);
+    // Caso 2: otra lectura de presencia queda pendiente y se descarta por un cambio de lifecycleRevision.
+    presenceMode = "hold";
+    app.w.dispatchEvent(new app.w.Event("focus"));
+    await waitFor(() => presenceResolvers.length > 0, "la segunda reconciliación salió", 2000);
+    app.emit("chat", { kind: "started", session: "otra-tarea", workspace: "w" });
+    await sleep(40);
+    for (const resolve of presenceResolvers.splice(0)) resolve([]);
+    await sleep(80);
+    assert.equal(reenviar.disabled, true, "una lectura descartada por lifecycleRevision tampoco libera el bloqueo");
+    reenviar.click();
+    await sleep(60);
+    assert.equal(enviados.length, 0);
+
+    // Caso 3: una lectura válida y vigente confirma que t1 sigue vivo y restaura Detener turno.
+    presenceMode = "ok";
+    app.w.dispatchEvent(new app.w.Event("focus"));
+    await waitFor(() => porTitulo(app, "Detener turno"), "una lectura válida restaura Detener turno cuando t1 siguió vivo", 2000);
     assert.equal(reenviar.disabled, true);
     assert.equal(enviados.length, 0);
   } finally {
-    holdPresence = false;
+    presenceMode = "closed";
     for (const resolve of presenceResolvers) resolve([]);
     app.w.close();
   }
