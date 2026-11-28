@@ -10,9 +10,9 @@ export type ThreadRowScope = {
 export const ThreadRowContext = createContext<ThreadRowScope>();
 
 /** Como `createSignal`, y el valor vuelve con la fila si el hilo la desmontó. */
-export function createRowSignal<T>(name: string, initial: T): [Accessor<T>, (value: T) => void] {
+export function createRowSignal<T>(name: string, initial: T, slot?: string): [Accessor<T>, (value: T) => void] {
   const row = useContext(ThreadRowContext);
-  const key = row ? `${name}:${row.nextSlot()}` : "";
+  const key = row ? `${name}:${slot ?? row.nextSlot()}` : "";
   const [value, setValue] = createSignal<T>(row?.state.has(key) ? row.state.get(key) as T : initial);
   return [value, (next: T) => {
     setValue(() => next);
