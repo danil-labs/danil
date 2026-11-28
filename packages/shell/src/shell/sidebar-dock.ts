@@ -74,6 +74,7 @@ export function createDockDelRiel(props: SidebarProps, tareas: TareasDelRiel) {
         const status = fila?.status;
         juntos.set(a.name, {
           name: a.name,
+          description: a.description?.trim() || antes?.description,
           status: !antes?.status || (status && RANGO[status] > RANGO[antes.status]) ? status ?? antes?.status : antes.status,
           liveTasks: (antes?.liveTasks ?? 0) + (fila?.live_tasks ?? 0),
           minutesSinceLastTurn: fila?.minutes_since_last_turn ?? antes?.minutesSinceLastTurn ?? null,
