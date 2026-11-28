@@ -3,6 +3,8 @@ import test from "node:test";
 import { mergeBridgeInventory } from "../../../../packages/features/machines/src/model/bridge-inventory.ts";
 import { createContextRelayPool } from "../../../../packages/features/machines/src/queries/context-relay-pool.ts";
 import { createAutoWaker } from "../../../../packages/features/machines/src/model/auto-wake.ts";
+import { applyDeskCloudContextReady } from "../../../../packages/features/machines/src/model/desk-cloud-sync.ts";
+import { infoOf } from "../../../../packages/features/machines/src/model/machine-info.ts";
 import { Fleet, FleetError } from "../../../../packages/features/machines/src/model/fleet/index.ts";
 import { windowContext } from "../../../../packages/session/src/window-context.ts";
 import { createSessionCloud, mergeContextMachines } from "../../../../packages/features/machines/src/queries/session-cloud.ts";
@@ -647,10 +649,9 @@ test("createAutoWaker runs all 3 scheduled retries (5s/15s/30s), admits inventor
   waker.close();
 });
 
-test("Desk createSessionCloud.rows delivers active context via onContextReady and allows immediate wake while slow inactive org is pending", async () => {
+test("Desk cold start with linked account installs partial fleet on onContextReady and emits wake POST before slow inactive org resolves", async () => {
   let resolveSlow!: (v: unknown) => void;
-  const readyContexts: string[] = [];
-  const woken: string[] = [];
+  const woken: { ctx: string; body: unknown }[] = [];
   const cloud = createSessionCloud(async (command, args) => {
     if (command === "danil_session_status") {
       return {
@@ -676,24 +677,75 @@ test("Desk createSessionCloud.rows delivers active context via onContextReady an
       return await new Promise((resolve) => { resolveSlow = resolve; });
     }
     if (path === "/v1/machines/vm-fast/tickets") {
-      woken.push(ctx);
+      woken.push({ ctx, body: args?.body });
       return { status: 201, headers: echo, body: { ticket: "t-fast", url: "wss://connect.danil.ai/v1/machines/vm-fast/session", protocol: "danil.machine-session.v1" } };
     }
     return { status: 404, headers: echo, body: {} };
   });
 
-  const pending = cloud.rows(false, (contextId, rows) => {
-    readyContexts.push(`${contextId}:${rows.map((r) => r.computer_id).join(",")}`);
-  });
-  await new Promise((resolve) => setTimeout(resolve, 15));
-  assert.deepEqual(readyContexts, ["ctx-fast:vm-fast"], "active context rows arrive while slow inactive org is still pending");
-  const wakeAnswer = await cloud.client.wake("vm-fast", "ctx-fast");
-  assert.equal(wakeAnswer.kind, "ok", "active context can emit wake immediately before slow org resolves");
-  assert.deepEqual(woken, ["ctx-fast"]);
+  // Simulate Desk cold start with a linked account (`installed === null`, `expectedKey = linkedKey`).
+  const linkedKey = JSON.stringify(["cmp_home", "acc_1", "https://edge.danil.ai"]);
+  let installed: { key: string; fleet: Fleet; waker: ReturnType<typeof createAutoWaker> } | null = null;
+  let slowResolved = false;
 
+  const pending = cloud.rows(true, (contextId, rows) => {
+    applyDeskCloudContextReady({
+      contextId,
+      expectedKey: linkedKey,
+      rows,
+      hasGuests: false,
+      installed: installed
+        ? {
+            key: installed.key,
+            applyMachines: (next) => installed!.fleet.setMachines(next.map(infoOf)),
+            activeContext: () => "ctx-fast",
+            wakeActive: () => installed!.waker.wake("ctx-fast", null, { auto: true }),
+          }
+        : null,
+      install: (initialRows) => {
+        const fleet = new Fleet({
+          self: "cmp_home",
+          connect: () => {
+            const stateListeners = new Set<(s: "stopped" | "online") => void>();
+            let state: "stopped" | "online" = "stopped";
+            return {
+              state: () => state,
+              call: async () => ({ value: null, cached: null }),
+              onState: (l) => { stateListeners.add(l as never); return () => void stateListeners.delete(l as never); },
+              onEvents: () => () => {},
+              subscribe() {},
+              start() {},
+              retry: () => { state = "online"; for (const l of stateListeners) l("online"); return true; },
+              close() {},
+            };
+          },
+          wake: async (id, ctx) => {
+            const answer = await cloud.client.wake(id, ctx);
+            return answer.kind === "ok" ? { ok: true, admission: answer.value } : false;
+          },
+        });
+        const waker = createAutoWaker({ fleet: () => fleet });
+        fleet.setMachines(initialRows.map(infoOf));
+        installed = { key: linkedKey, fleet, waker };
+        // Confirmed active context triggers wake immediately upon partial cold install.
+        waker.wake("ctx-fast", null, { auto: true });
+      },
+      onUpdated: () => {},
+    });
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  assert.equal(slowResolved, false, "slow inactive org is still unresolved");
+  assert.equal(installed !== null, true, "linked-account cold start installed partial fleet immediately");
+  assert.equal(woken.length, 1, "active org wake POST left before slow inactive org resolved");
+  assert.equal(woken[0].ctx, "ctx-fast");
+
+  slowResolved = true;
   resolveSlow({ status: 200, headers: { "x-danil-session-applied": "ctx-slow", "x-danil-session-applied-org": "org-slow" }, body: { items: [] } });
   const final = await pending;
   assert.equal(final.state, "ready");
+  installed?.waker.close();
+  installed?.fleet.close();
 });
 
 test("windowContext.inventory delivers active org rows via onGroupReady without waiting for slow inactive orgs", async () => {

@@ -3,6 +3,7 @@ import test from "node:test";
 import { createEffect, createRoot, createSignal } from "solid-js";
 import { createResource } from "../../src/lib/resource.ts";
 import { createWakeScopedReadErrors } from "../../../../packages/features/projects/src/model/scoped-read-error.ts";
+import { rereadProjectsCatalog } from "../../../../packages/features/workspaces/src/queries/reread-projects.ts";
 import { createProjectsStore as projectsStore, PROJECTS_READ_TIMEOUT, type ProjectsScope } from "../../../../packages/features/projects/src/queries/store.ts";
 import type { Project } from "../../src/lib/model.ts";
 
@@ -232,6 +233,39 @@ test("wake-scoped read errors suppress errors during starting, never flash pre-w
     setWorkspace("ws-1");
     generation = 2;
     assert.equal(readError(), null, "generation advance invalidates stale read error");
+    dispose();
+  });
+});
+
+test("releerProyectos started before a newer read cannot clear the newer read's error or invalidate its in-flight token", async () => {
+  await createRoot(async (dispose) => {
+    const [machines, setMachines] = createSignal([{ id: "vm", local: false, wakes: true, on: false, power: "starting" }]);
+    const [workspace] = createSignal<string | null>("ws-1");
+    const errors = createWakeScopedReadErrors({ machines, workspace, generation: () => 1 });
+    const [projectReadError, setProjectReadError] = errors.createError();
+    const staleChanged = pending<unknown>();
+
+    // 1. Old releerProyectos starts during `starting`.
+    const oldReread = rereadProjectsCatalog({ changed: () => staleChanged.promise }, setProjectReadError);
+
+    // 2. VM becomes `on` and a fresh post-wake read starts.
+    setMachines([{ id: "vm", local: false, wakes: true, on: true, power: "on" }]);
+    const newerReadToken = setProjectReadError.begin();
+
+    // 3. Old releerProyectos resolves while newer read is still in flight -> must NOT invalidate newerReadToken.
+    staleChanged.resolve([]);
+    await oldReread;
+    setProjectReadError.setFor(newerReadToken, "fresh post-wake failure");
+    assert.equal(projectReadError(), "fresh post-wake failure", "stale releerProyectos did not invalidate newer in-flight token");
+
+    // 4. Another stale releerProyectos started before a subsequent failure cannot erase the newer error.
+    const olderChanged = pending<unknown>();
+    const oldReread2 = rereadProjectsCatalog({ changed: () => olderChanged.promise }, setProjectReadError);
+    const newestFailureToken = setProjectReadError.begin();
+    setProjectReadError.setFor(newestFailureToken, "current read error");
+    olderChanged.resolve([]);
+    await oldReread2;
+    assert.equal(projectReadError(), "current read error", "stale releerProyectos resolving after newer error cannot clear it");
     dispose();
   });
 });

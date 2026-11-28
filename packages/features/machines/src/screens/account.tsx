@@ -21,6 +21,7 @@ import { settledContextIds } from "../../../../session/src/settled-contexts.ts";
 import { cancelEdgeWrites, isRetiredComputersEndpoint, listComputers, readContextSpaces, sessionProbe, setMachineRoute, startComputer, startedOf, wokeOf } from "../queries";
 import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
 import { createAutoWaker } from "../model/auto-wake.ts";
+import { applyDeskCloudContextReady } from "../model/desk-cloud-sync.ts";
 import { createRoot, createSignal } from "solid-js";
 import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
 import { whenConnected } from "../../../../session/src/engineConnection.ts";
@@ -454,22 +455,42 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     homeOs = systemOf(mine?.os) ?? windowSystem();
     homeFeatures = mine ? serviceFeatures(mine) : [];
     homeVersion = mine?.host_version ?? null;
+    await readGuestMachines();
+    if (epoch !== cloudEpoch) return;
     const key = JSON.stringify([self, account, client.endpoint]);
     const cloudRows = await readCloud(true, (contextId) => {
-      if (epoch !== cloudEpoch || installed?.key !== key) return;
+      if (epoch !== cloudEpoch) return;
       const early = orderComputers(mergeBridgeInventory(legacyRows, [...cloudRowsByContext.values()].flat()).filter((c) => c.computer_id !== self));
-      installed.fleet.setMachines([...early.map(infoOf), ...guestMachines()]);
-      observeEngine(installed.fleet);
-      machinesListed(installed.fleet);
-      if (installed.router.activeContext() === contextId) installed.wakeActive();
-      readCloudWorkspaces(contextId);
-      machineNamesChanged();
-      void refetchMachines();
+      applyDeskCloudContextReady({
+        contextId,
+        expectedKey: key,
+        rows: early,
+        hasGuests: guestMachines().length > 0,
+        installed: installed
+          ? {
+              key: installed.key,
+              applyMachines: (rows) => {
+                installed!.fleet.setMachines([...rows.map(infoOf), ...guestMachines()]);
+                observeEngine(installed!.fleet);
+                machinesListed(installed!.fleet);
+              },
+              activeContext: () => installed!.router.activeContext(),
+              wakeActive: () => installed!.wakeActive(),
+            }
+          : null,
+        install: (rows) => {
+          uninstall();
+          install(self, client.endpoint, rows, key);
+        },
+        onUpdated: (ctx) => {
+          readCloudWorkspaces(ctx);
+          machineNamesChanged();
+          void refetchMachines();
+        },
+      });
     });
     if (epoch !== cloudEpoch) return;
     const others = orderComputers(mergeBridgeInventory(legacyRows, cloudRows).filter((c) => c.computer_id !== self));
-    await readGuestMachines();
-    if (epoch !== cloudEpoch) return;
 
     // The same account: machines that came, left or changed name are applied live, without tearing the rest down.
     if (installed?.key === key) {
@@ -493,20 +514,33 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     const cloudRows = (await readCloud(allowLegacy, (contextId) => {
       if (epoch !== cloudEpoch) return;
       const partial = [...cloudRowsByContext.values()].flat().filter((row) => allowLegacy || "context" in row);
-      if (!installed) {
-        if (!partial.length && !guests.length) return;
-        setSelfName(null); homeWakes = false; homeOs = windowSystem(); homeFeatures = []; homeVersion = null;
-        install(LOCAL, null, partial, LOCAL_KEY);
-        return;
-      }
-      if (installed.key === LOCAL_KEY) {
-        installed.fleet.setMachines([...partial.map(infoOf), ...guests]);
-        machinesListed(installed.fleet);
-        if (installed.router.activeContext() === contextId) installed.wakeActive();
-        readCloudWorkspaces(contextId);
-        machineNamesChanged();
-        void refetchMachines();
-      }
+      applyDeskCloudContextReady({
+        contextId,
+        expectedKey: LOCAL_KEY,
+        rows: partial,
+        hasGuests: guests.length > 0,
+        installed: installed
+          ? {
+              key: installed.key,
+              applyMachines: (rows) => {
+                installed!.fleet.setMachines([...rows.map(infoOf), ...guests]);
+                machinesListed(installed!.fleet);
+              },
+              activeContext: () => installed!.router.activeContext(),
+              wakeActive: () => installed!.wakeActive(),
+            }
+          : null,
+        install: (rows) => {
+          setSelfName(null); homeWakes = false; homeOs = windowSystem(); homeFeatures = []; homeVersion = null;
+          uninstall();
+          install(LOCAL, null, rows, LOCAL_KEY);
+        },
+        onUpdated: (ctx) => {
+          readCloudWorkspaces(ctx);
+          machineNamesChanged();
+          void refetchMachines();
+        },
+      });
     })).filter((row) => allowLegacy || "context" in row);
     if (epoch !== cloudEpoch) return;
     // Un contexto Free corre en este motor: sin VM ni huéspedes, el router sigue para conservar la pareja activa de la ventana.

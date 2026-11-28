@@ -12,6 +12,7 @@ import { chipModel as modeloDeSubtarea } from "../../../../ui/src/lib/tasks/surf
 import { prosaDe } from "../../../../ui/src/Failure.tsx";
 import type { Startup } from "../../../../ui/src/lib/workspace-startup.ts";
 import { batch, createEffect, createMemo, on, onCleanup } from "solid-js";
+import { rereadProjectsCatalog } from "./reread-projects.ts";
 
 type Deps = {
   adjuntas: () => string[];
@@ -24,7 +25,7 @@ type Deps = {
 } & Record<"abrirBorradorDeAgente" | "aplicar" | "cambiarEscritorio" | "cola" | "composer" | "deLaTarea" | "drafts" | "engineCanDispatch" | "escritorio" | "filaDe" | "hilos" | "leerTarea" | "loadResult" | "nuevaSesion" | "open" | "paneles" | "proyectoAbierto" | "refreshFolder" | "refreshSessions" | "releerCola" | "reloadSpaces" | "restoreDraftConfiguration" | "restoreSessionConfiguration" | "setError" | "setFolder" | "setHablandoCon" | "setMentionSources" | "setProject" | "setProjectReadError" | "setProyectoAbierto" | "setSessionId" | "setVentana" | "spaces" | "taskQueues" | "threads" | "workspaceActivo" | "workspaceContext", any>;
 
 export function createContextSource(deps: Deps) {
-  const { abrirBorradorDeAgente, adjuntas, aplicar, cambiarEscritorio, cola, composer, deLaTarea, drafts, engineCanDispatch, escritorio, excludedSourceIds, filaDe, hilos, leerTarea, loadResult, nuevaSesion, open, paneles, pestanas, project, projectCatalog, proyectoAbierto, refreshFolder, refreshSessions, releerCola, reloadSpaces, sessionId, setError, setFolder, setHablandoCon, setMentionSources, setProject, setProjectReadError, setProyectoAbierto, setSessionId, setVentana, sourceIds, spaces, taskQueues, threads, workspaceActivo, workspaceContext } = deps;
+  const { abrirBorradorDeAgente, adjuntas, aplicar, cambiarEscritorio, cola, composer, deLaTarea, drafts, engineCanDispatch, escritorio, excludedSourceIds, filaDe, hilos, leerTarea, loadResult, nuevaSesion, open, paneles, pestanas, project, projectCatalog, proyectoAbierto, refreshFolder, refreshSessions, releerCola, reloadSpaces, sessionId, setError, setFolder, setHablandoCon, setMentionSources, setProject, setProjectReadError, setProyectoAbierto, setSessionId, setVentana, sourceIds, spaces, taskQueues, threads, workspaceContext } = deps;
   const restoreDraftConfiguration = (...a: Parameters<typeof deps.restoreDraftConfiguration>) => deps.restoreDraftConfiguration(...a);
   const restoreSessionConfiguration = (...a: Parameters<typeof deps.restoreSessionConfiguration>) => deps.restoreSessionConfiguration(...a);
   /**
@@ -96,14 +97,8 @@ export function createContextSource(deps: Deps) {
    * seguía viendo como carpeta hasta reabrir la app, y sin repositorio no hay
    * ni árbol propio ni rama base.
    */
-  async function releerProyectos() {
-    const workspace = workspaceActivo();
-    try {
-      await projectCatalog.changed();
-      if (workspace === workspaceActivo()) setProjectReadError(null);
-    } catch {
-      // La lista anterior sigue sirviendo: releer es una puesta al día.
-    }
+  function releerProyectos() {
+    return rereadProjectsCatalog(projectCatalog, setProjectReadError);
   }
 
   async function renombrarProyecto(id: string, name: string) {
