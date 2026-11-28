@@ -1,8 +1,15 @@
 import { createSignal } from "solid-js";
 
+export type WorkspaceSelection = { workspace: string | null; context: string | null };
 /** El contexto activo pertenece a la ventana; nunca se persiste en el motor. */
 export const [activeWorkspaceContext, setActiveWorkspaceContext] = createSignal<string | null>(null);
 export const [displayWorkspaceContext, setDisplayWorkspaceContext] = createSignal<string | null>(null);
+const [confirmedSelection, setConfirmedSelection] = createSignal<WorkspaceSelection>({ workspace: null, context: null });
+export const confirmedWorkspaceSelection = confirmedSelection;
+export function confirmWorkspaceSelection(workspace: string | null, context: string | null) {
+  setConfirmedSelection({ workspace, context });
+  setActiveWorkspaceContext(context);
+}
 const snapshots = new WeakMap<object, string | null>();
 export function rememberWorkspaceSnapshot<T>(value: T, context: string | null): T {
   if (value && typeof value === "object") snapshots.set(value, context);

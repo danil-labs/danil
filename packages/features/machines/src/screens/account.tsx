@@ -20,8 +20,7 @@ import { createScreenAccess } from "../queries/screen-access.ts";
 import { settledContextIds } from "../../../../session/src/settled-contexts.ts";
 import { cancelEdgeWrites, isRetiredComputersEndpoint, listComputers, readContextSpaces, sessionProbe, setMachineRoute, startComputer, startedOf, wokeOf } from "../queries";
 import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
-import { createAutoWaker } from "../model/auto-wake.ts";
-import { applyDeskCloudContextReady } from "../model/desk-cloud-sync.ts";
+import { applyDeskCloudContextReady, createDeskAutoWakeController } from "../model/desk-cloud-sync.ts";
 import { createRoot, createSignal } from "solid-js";
 import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
 import { whenConnected } from "../../../../session/src/engineConnection.ts";
@@ -269,7 +268,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       },
       storage: localStorage,
       onChange: (id, context) => {
-        autoWaker.onPowerChange(id, context, fleet.power(id, context));
+        autoWake.onPowerChange(id, context, fleet.power(id, context));
         bump((n) => n + 1);
         window.dispatchEvent(new CustomEvent("harness:machines"));
         void refetchMachines();
@@ -286,23 +285,6 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
         }
       },
     });
-    const autoWaker = createAutoWaker({
-      fleet: () => fleet,
-      activeTarget: () => ({ context: router.activeContext() ?? null, workspace: router.activeWorkspace() }),
-      onAwake: () => {
-        slicesChanged(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]);
-        refresh();
-      },
-      onSettled: () => bump((n) => n + 1),
-    });
-    const wakeActive = () => {
-      const ctx = router.activeContext();
-      if (!ctx || !cloud.contextInfo(ctx)) return;
-      autoWaker.wake(ctx, router.activeWorkspace(), {
-        auto: true,
-        filter: (machine) => cloudIds.has(machine.id) && machine.kind === "organization",
-      });
-    };
     const router = createRouter({
       self, contextInfo: cloud.contextInfo,
       readContextSpaces: readContextSpaces(native),
@@ -315,6 +297,17 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       engineFeatures: engineWorkspaces.features,
       home: () => ({ wakes: homeWakes, os: homeOs, features: homeFeatures, version: homeVersion }),
     });
+    const autoWake = createDeskAutoWakeController({
+      fleet: () => fleet,
+      router,
+      hasContextInfo: (ctx) => Boolean(cloud.contextInfo(ctx)),
+      isCloudMachine: (id) => cloudIds.has(id),
+      onAwake: () => {
+        slicesChanged(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]);
+        refresh();
+      },
+      onSettled: () => bump((n) => n + 1),
+    });
     fleet.setMachines([...others.map(infoOf), ...guestMachines()]);
     const validatedContexts = cloud.validatedContexts();
     if (validatedContexts !== null) { router.pruneContexts(validatedContexts); fleet.pruneContexts(validatedContexts); }
@@ -323,6 +316,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     fleet.subscribeEvents();
     const stopListing = fleet.onListing((_machine, context) => { if (context) refresh(); });
     for (const context of validatedContexts ?? []) readCloudWorkspaces(context);
+    autoWake.wakeActive();
     const screens =
       endpoint === null
         ? null
@@ -380,22 +374,17 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
         refresh();
       },
     });
-    const route = async (command: string, args?: unknown, options?: { headers?: HeadersInit }) => {
-      const result = await router.handle(command, (args ?? {}) as Record<string, unknown>, options);
-      if (command === "set_active_workspace") wakeActive();
-      return result;
-    };
-    setMachineRoute(route);
+    setMachineRoute(autoWake.route);
     const onPageHide = () => fleet.flush();
     window.addEventListener("pagehide", onPageHide);
     installed = {
       key,
       fleet,
       router,
-      wakeActive,
-      pruneContexts: (contexts) => autoWaker.pruneContexts(contexts),
+      wakeActive: autoWake.wakeActive,
+      pruneContexts: autoWake.pruneContexts,
       restore: () => {
-        autoWaker.close();
+        autoWake.close();
         screens?.close();
         stopListing();
         setMachineRoute(null);
@@ -410,7 +399,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       .catch(() => null)
       .then(() => {
         if (installed?.router === router) {
-          wakeActive();
+          autoWake.wakeActive();
           refresh();
         }
       });

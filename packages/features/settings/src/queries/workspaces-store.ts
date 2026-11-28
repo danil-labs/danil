@@ -10,7 +10,7 @@
 import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { callEngine } from "../../../../engine-client/src/client.ts";
 import { createNavigationOrder } from "../../../../ui/src/lib/navigation-order";
-import { activeWorkspaceContext, requestedWorkspaceSnapshot, workspaceContextOptions } from "../../../../session/src/workspace-context.ts";
+import { activeWorkspaceContext, confirmWorkspaceSelection, requestedWorkspaceSnapshot, workspaceContextOptions } from "../../../../session/src/workspace-context.ts";
 import { asFailure, type Failure } from "../../../../ui/src/Failure";
 import type { Workspace, MemoriaProveedor, Startup } from "../../../../ui/src/lib/workspace-startup.ts"; export type { Workspace, MemoriaProveedor, Startup };
 
@@ -107,6 +107,8 @@ export function createWorkspaces() {
     ++solicitud;
     try {
       await callEngine("set_active_workspace", { id }, workspaceContextOptions(context ?? null));
+      // Si el router de máquinas aún no estaba instalado, esta confirmación permite restaurar la pareja al montarse.
+      confirmWorkspaceSelection(id, context ?? null);
       // Una lista pedida antes del cambio trae el anterior como activo; los
       // demás montajes la heredarían y un clic de vuelta a él no haría nada.
       enVuelo = null;

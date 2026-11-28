@@ -3,9 +3,11 @@ import test from "node:test";
 import { mergeBridgeInventory } from "../../../../packages/features/machines/src/model/bridge-inventory.ts";
 import { createContextRelayPool } from "../../../../packages/features/machines/src/queries/context-relay-pool.ts";
 import { createAutoWaker } from "../../../../packages/features/machines/src/model/auto-wake.ts";
-import { applyDeskCloudContextReady } from "../../../../packages/features/machines/src/model/desk-cloud-sync.ts";
+import { applyDeskCloudContextReady, createDeskAutoWakeController } from "../../../../packages/features/machines/src/model/desk-cloud-sync.ts";
 import { infoOf } from "../../../../packages/features/machines/src/model/machine-info.ts";
+import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
 import { Fleet, FleetError } from "../../../../packages/features/machines/src/model/fleet/index.ts";
+import { confirmWorkspaceSelection } from "../../../../packages/session/src/workspace-context.ts";
 import { windowContext } from "../../../../packages/session/src/window-context.ts";
 import { createSessionCloud, mergeContextMachines } from "../../../../packages/features/machines/src/queries/session-cloud.ts";
 import { createAccountWorkspaces } from "../../../../packages/shell/src/shell/session-account-workspaces.ts";
@@ -649,103 +651,132 @@ test("createAutoWaker runs all 3 scheduled retries (5s/15s/30s), admits inventor
   waker.close();
 });
 
-test("Desk cold start with linked account installs partial fleet on onContextReady and emits wake POST before slow inactive org resolves", async () => {
-  let resolveSlow!: (v: unknown) => void;
-  const woken: { ctx: string; body: unknown }[] = [];
-  const cloud = createSessionCloud(async (command, args) => {
-    if (command === "danil_session_status") {
-      return {
-        state: "connected",
-        sessions: [{
-          contexts: [
-            { context_id: "ctx-fast", org: "org-fast", plan: "enterprise" },
-            { context_id: "ctx-slow", org: "org-slow", plan: "enterprise" },
-          ],
-        }],
-      };
-    }
-    const ctx = args?.context as string;
-    const path = args?.path as string;
-    const echo = { "x-danil-session-applied": ctx, "x-danil-session-applied-org": ctx === "ctx-fast" ? "org-fast" : "org-slow" };
-    if (path === "/v1/capabilities") {
-      return { status: 200, headers: echo, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } };
-    }
-    if (path === "/v1/machines" && ctx === "ctx-fast") {
-      return { status: 200, headers: echo, body: { items: [{ machine_id: "vm-fast", organization_id: "org-fast", name: "Fast VM", state: "stopped", kind: "organization", wakeable: true }] } };
-    }
-    if (path === "/v1/machines" && ctx === "ctx-slow") {
-      return await new Promise((resolve) => { resolveSlow = resolve; });
-    }
-    if (path === "/v1/machines/vm-fast/tickets") {
-      woken.push({ ctx, body: args?.body });
-      return { status: 201, headers: echo, body: { ticket: "t-fast", url: "wss://connect.danil.ai/v1/machines/vm-fast/session", protocol: "danil.machine-session.v1" } };
-    }
-    return { status: 404, headers: echo, body: {} };
-  });
-
-  // Simulate Desk cold start with a linked account (`installed === null`, `expectedKey = linkedKey`).
-  const linkedKey = JSON.stringify(["cmp_home", "acc_1", "https://edge.danil.ai"]);
-  let installed: { key: string; fleet: Fleet; waker: ReturnType<typeof createAutoWaker> } | null = null;
-  let slowResolved = false;
-
-  const pending = cloud.rows(true, (contextId, rows) => {
-    applyDeskCloudContextReady({
-      contextId,
-      expectedKey: linkedKey,
-      rows,
-      hasGuests: false,
-      installed: installed
-        ? {
-            key: installed.key,
-            applyMachines: (next) => installed!.fleet.setMachines(next.map(infoOf)),
-            activeContext: () => "ctx-fast",
-            wakeActive: () => installed!.waker.wake("ctx-fast", null, { auto: true }),
-          }
-        : null,
-      install: (initialRows) => {
-        const fleet = new Fleet({
-          self: "cmp_home",
-          connect: () => {
-            const stateListeners = new Set<(s: "stopped" | "online") => void>();
-            let state: "stopped" | "online" = "stopped";
-            return {
-              state: () => state,
-              call: async () => ({ value: null, cached: null }),
-              onState: (l) => { stateListeners.add(l as never); return () => void stateListeners.delete(l as never); },
-              onEvents: () => () => {},
-              subscribe() {},
-              start() {},
-              retry: () => { state = "online"; for (const l of stateListeners) l("online"); return true; },
-              close() {},
-            };
-          },
-          wake: async (id, ctx) => {
-            const answer = await cloud.client.wake(id, ctx);
-            return answer.kind === "ok" ? { ok: true, admission: answer.value } : false;
-          },
-        });
-        const waker = createAutoWaker({ fleet: () => fleet });
-        fleet.setMachines(initialRows.map(infoOf));
-        installed = { key: linkedKey, fleet, waker };
-        // Confirmed active context triggers wake immediately upon partial cold install.
-        waker.wake("ctx-fast", null, { auto: true });
-      },
-      onUpdated: () => {},
+test("Desk cold start with linked account restores selection and emits wake POST before slow inactive org resolves in both arrival orders", async () => {
+  for (const order of ["selection-first", "inventory-first"] as const) {
+    confirmWorkspaceSelection(null, null);
+    let resolveSlow!: (v: unknown) => void;
+    const woken: { ctx: string; body: unknown }[] = [];
+    const cloudIds = new Set<string>();
+    const cloud = createSessionCloud(async (command, args) => {
+      if (command === "danil_session_status") {
+        return {
+          state: "connected",
+          sessions: [{
+            contexts: [
+              { context_id: "ctx-fast", org: "org-fast", plan: "enterprise" },
+              { context_id: "ctx-slow", org: "org-slow", plan: "enterprise" },
+            ],
+          }],
+        };
+      }
+      const ctx = args?.context as string;
+      const path = args?.path as string;
+      const echo = { "x-danil-session-applied": ctx, "x-danil-session-applied-org": ctx === "ctx-fast" ? "org-fast" : "org-slow" };
+      if (path === "/v1/capabilities") {
+        return { status: 200, headers: echo, body: { contract: "mvp-v1", items: [{ name: "machines", version: 1, status: "available" }] } };
+      }
+      if (path === "/v1/machines" && ctx === "ctx-fast") {
+        return { status: 200, headers: echo, body: { items: [{ machine_id: "vm-fast", organization_id: "org-fast", name: "Fast VM", state: "stopped", kind: "organization", wakeable: true }] } };
+      }
+      if (path === "/v1/machines" && ctx === "ctx-slow") {
+        return await new Promise((resolve) => { resolveSlow = resolve; });
+      }
+      if (path === "/v1/machines/vm-fast/tickets") {
+        woken.push({ ctx, body: args?.body });
+        return { status: 201, headers: echo, body: { ticket: "t-fast", url: "wss://connect.danil.ai/v1/machines/vm-fast/session", protocol: "danil.machine-session.v1" } };
+      }
+      return { status: 404, headers: echo, body: {} };
     });
-  });
 
-  await new Promise((resolve) => setTimeout(resolve, 25));
-  assert.equal(slowResolved, false, "slow inactive org is still unresolved");
-  assert.equal(installed !== null, true, "linked-account cold start installed partial fleet immediately");
-  assert.equal(woken.length, 1, "active org wake POST left before slow inactive org resolved");
-  assert.equal(woken[0].ctx, "ctx-fast");
+    if (order === "selection-first") {
+      // Confirmed selection arrived BEFORE Desk installed the router (e.g. WorkspaceColumn startup before account.tsx mounted).
+      confirmWorkspaceSelection("ws-fast", "ctx-fast");
+    }
 
-  slowResolved = true;
-  resolveSlow({ status: 200, headers: { "x-danil-session-applied": "ctx-slow", "x-danil-session-applied-org": "org-slow" }, body: { items: [] } });
-  const final = await pending;
-  assert.equal(final.state, "ready");
-  installed?.waker.close();
-  installed?.fleet.close();
+    const linkedKey = JSON.stringify(["cmp_home", "acc_1", "https://edge.danil.ai"]);
+    let installed: { key: string; fleet: Fleet; router: ReturnType<typeof createRouter>; autoWake: ReturnType<typeof createDeskAutoWakeController> } | null = null;
+    let slowResolved = false;
+
+    const pending = cloud.rows(true, (contextId, rows) => {
+      for (const row of rows) cloudIds.add(row.computer_id);
+      applyDeskCloudContextReady({
+        contextId,
+        expectedKey: linkedKey,
+        rows,
+        hasGuests: false,
+        installed: installed
+          ? {
+              key: installed.key,
+              applyMachines: (next) => installed!.fleet.setMachines(next.map(infoOf)),
+              activeContext: () => installed!.router.activeContext(),
+              wakeActive: () => installed!.autoWake.wakeActive(),
+            }
+          : null,
+        install: (initialRows) => {
+          const fleet = new Fleet({
+            self: "cmp_home",
+            connect: () => {
+              const stateListeners = new Set<(s: "stopped" | "online") => void>();
+              let state: "stopped" | "online" = "stopped";
+              return {
+                state: () => state,
+                call: async () => ({ value: null, cached: null }),
+                onState: (l) => { stateListeners.add(l as never); return () => void stateListeners.delete(l as never); },
+                onEvents: () => () => {},
+                subscribe() {},
+                start() {},
+                retry: () => { state = "online"; for (const l of stateListeners) l("online"); return true; },
+                close() {},
+              };
+            },
+            wake: async (id, ctx) => {
+              const answer = await cloud.client.wake(id, ctx);
+              return answer.kind === "ok" ? { ok: true, admission: answer.value } : false;
+            },
+          });
+          const router = createRouter({
+            self: "cmp_home",
+            contextInfo: cloud.contextInfo,
+            fleet,
+            native: async (command) => command === "list_workspaces" ? { active: "ws-fast", workspaces: [{ id: "ws-fast", name: "Fast" }] } : null,
+          });
+          const autoWake = createDeskAutoWakeController({
+            fleet: () => fleet,
+            router,
+            hasContextInfo: (ctx) => Boolean(cloud.contextInfo(ctx)),
+            isCloudMachine: (id) => cloudIds.has(id),
+          });
+          fleet.setMachines(initialRows.map(infoOf));
+          // Exact same sequence as account.tsx install(): autoWake.wakeActive() runs right after setMachines without test-side wake calls.
+          autoWake.wakeActive();
+          installed = { key: linkedKey, fleet, router, autoWake };
+        },
+        onUpdated: () => {},
+      });
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    assert.equal(slowResolved, false, `${order}: slow inactive org is still unresolved`);
+    assert.ok(installed, `${order}: linked-account cold start installed partial fleet`);
+
+    if (order === "inventory-first") {
+      assert.equal(woken.length, 0, "inventory-first waits for confirmed active context before emitting wake");
+      await installed!.autoWake.route("set_active_workspace", { id: "ws-fast" }, { headers: { "x-danil-context": "ctx-fast" } });
+      await new Promise((resolve) => setTimeout(resolve, 15));
+    }
+
+    assert.equal(woken.length, 1, `${order}: active org wake POST left automatically before slow inactive org resolved`);
+    assert.equal(woken[0].ctx, "ctx-fast");
+    assert.deepEqual(typeof woken[0].body === "string" ? JSON.parse(woken[0].body) : woken[0].body, { wake: true });
+
+    slowResolved = true;
+    resolveSlow({ status: 200, headers: { "x-danil-session-applied": "ctx-slow", "x-danil-session-applied-org": "org-slow" }, body: { items: [] } });
+    const final = await pending;
+    assert.equal(final.state, "ready");
+    installed!.autoWake.close();
+    installed!.router.close();
+    confirmWorkspaceSelection(null, null);
+  }
 });
 
 test("windowContext.inventory delivers active org rows via onGroupReady without waiting for slow inactive orgs", async () => {
