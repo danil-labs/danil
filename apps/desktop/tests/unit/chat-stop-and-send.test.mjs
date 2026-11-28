@@ -394,13 +394,20 @@ test("con dos elementos en cola durante handoff se oculta «mandar» inerte y «
   }
 });
 
-test("si stop_turn falla tras Detener optimista mantiene bloqueado «Enviar de nuevo» ante reconciliación pendiente, fallida o descartada", async () => {
+test("si stop_turn falla tras Detener optimista mantiene bloqueado «Enviar de nuevo» y recupera solo con light_state_v1 ante reconciliación fallida o descartada", async () => {
   let rechazarStop = null;
   let presenceMode = "ok";
+  let presenceReads = 0;
   const presenceResolvers = [];
   const enviados = [];
+  const ws = "w-light";
   const app = await boot("listo", "chat-stop-failed-holds-resend-during-reconcile", responses({
-    list_active_turns: () => {
+    list_workspaces: { workspaces: [{ id: ws, name: "W Light", context_root: null }], active: ws },
+    workspaces_startup: { workspaces: [{ id: ws, name: "W Light", context_root: null }], active: ws },
+    list_machines: [{ id: "local", name: "Local", local: true, online: true, features: ["light_state_v1"] }],
+    list_active_turns: (args) => {
+      if (args?.workspace !== ws) return [];
+      presenceReads += 1;
       if (presenceMode === "reject") return Promise.reject(new Error("presence offline"));
       if (presenceMode === "hold") return new Promise((resolve) => presenceResolvers.push(resolve));
       if (presenceMode === "closed") return [];
@@ -419,7 +426,7 @@ test("si stop_turn falla tras Detener optimista mantiene bloqueado «Enviar de n
     await sleep(600);
     app.w.document.querySelector('[data-sesion="t1"]').click();
     await sleep(400);
-    app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+    app.emit("chat", { kind: "started", session: "t1", workspace: ws });
     await sleep(150);
 
     porTitulo(app, "Detener turno").click();
@@ -438,11 +445,11 @@ test("si stop_turn falla tras Detener optimista mantiene bloqueado «Enviar de n
     await sleep(60);
     assert.equal(enviados.length, 0, "no se emite send_message tras una reconciliación fallida");
 
-    // Caso 2: otra lectura de presencia queda pendiente y se descarta por un cambio de lifecycleRevision.
+    // Caso 2: sin eventos focus y con light_state_v1 activo, se programa un reintento automático;
+    // su lectura queda pendiente y se descarta por un cambio de lifecycleRevision.
     presenceMode = "hold";
-    app.w.dispatchEvent(new app.w.Event("focus"));
-    await waitFor(() => presenceResolvers.length > 0, "la segunda reconciliación salió", 2000);
-    app.emit("chat", { kind: "started", session: "otra-tarea", workspace: "w" });
+    await waitFor(() => presenceResolvers.length > 0, "el reintento automático de reconciliación salió con light_state_v1", 2500);
+    app.emit("chat", { kind: "started", session: "otra-tarea", workspace: ws });
     await sleep(40);
     for (const resolve of presenceResolvers.splice(0)) resolve([]);
     await sleep(80);
@@ -451,12 +458,16 @@ test("si stop_turn falla tras Detener optimista mantiene bloqueado «Enviar de n
     await sleep(60);
     assert.equal(enviados.length, 0);
 
-    // Caso 3: una lectura válida y vigente confirma que t1 sigue vivo y restaura Detener turno.
+    // Caso 3: el siguiente reintento automático confirma que t1 sigue vivo y restaura Detener turno.
     presenceMode = "ok";
-    app.w.dispatchEvent(new app.w.Event("focus"));
-    await waitFor(() => porTitulo(app, "Detener turno"), "una lectura válida restaura Detener turno cuando t1 siguió vivo", 2000);
+    await waitFor(() => porTitulo(app, "Detener turno"), "una lectura automática válida restaura Detener turno cuando t1 siguió vivo", 2500);
     assert.equal(reenviar.disabled, true);
     assert.equal(enviados.length, 0);
+
+    // Una vez confirmada la presencia, el sondeo de recuperación se detiene bajo light_state_v1.
+    const readsAtRecovery = presenceReads;
+    await sleep(1250);
+    assert.equal(presenceReads, readsAtRecovery, "el reintento periódico cesa al cerrar la verificación del stop");
   } finally {
     presenceMode = "closed";
     for (const resolve of presenceResolvers) resolve([]);

@@ -268,6 +268,7 @@ export function createThreadStream(deps: ThreadStreamDeps) {
       handoffCore.observe(fact);
     },
     presenceSnapshot: () => stopVerifySeq,
+    hasPendingStopVerification: () => reconcilingStops().length > 0,
     presenceApplied: (snapshot: number) => {
       const remaining: string[] = [];
       for (const [id, mark] of [...stopVerifyMarks]) {

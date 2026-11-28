@@ -153,8 +153,9 @@ export function createResync(deps: ResyncDeps) {
   }
   onCleanup(() => clearTimeout(reconcileTimer));
   createEffect(() => {
-    if (turnosPorEventos()) return;
-    const timer = setInterval(() => void reconcileActiveTurns(), 5000);
+    const verifyingStop = handoff.hasPendingStopVerification();
+    if (!verifyingStop && turnosPorEventos()) return;
+    const timer = setInterval(() => void reconcileActiveTurns(), verifyingStop ? 1000 : 5000);
     onCleanup(() => clearInterval(timer));
   });
 
