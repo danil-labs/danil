@@ -114,3 +114,120 @@ test("an email without any workspace keeps its sign-out in the footer profile me
   assert.ok(await until(() => closed.length === 1));
   assert.deepEqual(closed, ["empty-family"]);
 });
+
+test("adding a paid organization workspace in Desk materializes it locally when personal execution is allowed, and skips cloud-only ones", async () => {
+  const sealed = [];
+  const creations = [];
+  let active = "w";
+  const added = [];
+  const app = await boot("listo", "session-paid-materialize", {
+    ...RESPONSES,
+    machine_list: [{ id: "local", local: true, active: true, on: true, hosts: true, features: ["account_workspace_v1"] }],
+    list_workspaces: () => ({
+      active,
+      workspaces: [
+        { id: "w", name: "Local" },
+        ...sealed.map((w) => ({ id: w.id, name: w.name, account: w.account })),
+      ],
+    }),
+    danil_session_status: {
+      state: "connected",
+      sessions: [{
+        family: "paid-family",
+        email: "dev@example.com",
+        contexts: [context("paid-ctx", "paid-org", { plan: "teams", workspaces: "later" })],
+      }],
+    },
+    danil_edge_fetch: ({ method, path }) => {
+      if (path === "/v1/identity/me") return { status: 200, body: { id: "person-1" } };
+      if (path === "/v1/workspaces") {
+        return {
+          status: 200,
+          body: {
+            items: [
+              { id: "101", org: "paid-org", name: "Hybrid WS", engine_workspace_id: "ws_hybrid", runs_on: ["personal", "cloud"], placement: { kind: "organization_machine" } },
+              { id: "102", org: "paid-org", name: "Cloud Only WS", engine_workspace_id: "ws_cloud", runs_on: ["cloud"], placement: { kind: "organization_machine" } },
+            ],
+          },
+        };
+      }
+      if (method === "GET" && path === "/v1/workspaces/preferences") return { status: 200, body: { version: 1, added } };
+      if (method === "PUT" && path.startsWith("/v1/workspaces/preferences/added/")) {
+        const id = path.split("/").pop();
+        if (id && !added.includes(id)) added.push(id);
+        return { status: 204 };
+      }
+      return { status: 404, body: {} };
+    },
+    set_active_workspace: ({ id }) => { active = id; },
+    create_account_workspace: (args) => {
+      creations.push(args);
+      sealed.push({ id: args.id, name: args.name, account: args.account });
+      return { id: args.id, name: args.name, account: args.account };
+    },
+  });
+  const doc = app.w.document;
+  assert.ok(await until(() => doc.querySelector('[data-add-danil="ws_hybrid"]')));
+  doc.querySelector('[data-add-danil="ws_hybrid"]').click();
+  assert.ok(await until(() => creations.length === 1 && active === "ws_hybrid"));
+  assert.equal(creations[0].id, "ws_hybrid");
+  assert.deepEqual(creations[0].account, { org: "paid-org", account_id: "101" });
+
+  // Now add the cloud-only workspace: it must enter the rail without creating a local workspace.
+  doc.querySelector("[data-add-workspace]").click();
+  assert.ok(await until(() => doc.querySelector("[data-add-danil-step]")));
+  doc.querySelector("[data-add-danil-step]").click();
+  assert.ok(await until(() => doc.querySelector('[data-add-danil="ws_cloud"]')));
+  doc.querySelector('[data-add-danil="ws_cloud"]').click();
+  assert.ok(await until(() => added.includes("ws_cloud") && doc.querySelector('[data-workspace-tile="ws_cloud"]')));
+  assert.equal(creations.length, 1, "cloud-only workspace must not call create_account_workspace locally");
+});
+
+test("opening an already-added paid organization workspace in Desk materializes it locally when missing on This Mac", async () => {
+  const sealed = [];
+  const creations = [];
+  let active = "ws_preadded";
+  await boot("listo", "session-paid-already-added", {
+    ...RESPONSES,
+    machine_list: [{ id: "local", local: true, active: true, on: true, hosts: false, features: ["account_workspace_v1"] }],
+    list_workspaces: () => ({
+      active,
+      workspaces: [
+        { id: "w", name: "Local" },
+        ...sealed.map((w) => ({ id: w.id, name: w.name, account: w.account })),
+      ],
+    }),
+    danil_session_status: {
+      state: "connected",
+      sessions: [{
+        family: "paid-family",
+        email: "dev@example.com",
+        contexts: [context("paid-ctx", "paid-org", { plan: "teams" })],
+      }],
+    },
+    danil_edge_fetch: ({ method, path }) => {
+      if (path === "/v1/identity/me") return { status: 200, body: { id: "person-1" } };
+      if (path === "/v1/workspaces") {
+        return {
+          status: 200,
+          body: {
+            items: [
+              { id: "201", org: "paid-org", name: "Added On Web", engine_workspace_id: "ws_preadded", runs_on: ["personal", "cloud"] },
+            ],
+          },
+        };
+      }
+      if (method === "GET" && path === "/v1/workspaces/preferences") return { status: 200, body: { version: 1, added: ["ws_preadded"] } };
+      return { status: 404, body: {} };
+    },
+    set_active_workspace: ({ id }) => { active = id; },
+    create_account_workspace: (args) => {
+      creations.push(args);
+      sealed.push({ id: args.id, name: args.name, account: args.account });
+      return { id: args.id, name: args.name, account: args.account };
+    },
+  });
+  assert.ok(await until(() => creations.length === 1), "already-added org workspace missing locally must auto-materialize on This Mac");
+  assert.equal(creations[0].id, "ws_preadded");
+  assert.deepEqual(creations[0].account, { org: "paid-org", account_id: "201" });
+});

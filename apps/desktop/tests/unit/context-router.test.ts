@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Fleet, type Link } from "@terminus/fleet";
 import "../helpers/catalog.ts";
+import { runsWorkspace } from "../../../../packages/features/machines/src/model/runs-workspace.ts";
 import { contextAttentionStale, createContextAttention } from "../../../../packages/features/machines/src/queries/context-attention.ts";
 import { createContextRouter } from "../../../../packages/features/machines/src/queries/context-router.ts";
-import { runsWorkspace } from "../../../../packages/features/machines/src/model/runs-workspace.ts";
 import { createRouter } from "../../../../packages/features/machines/src/queries/router.ts";
 import { scopedFleet } from "../../../../packages/features/machines/src/queries/scoped-fleet.ts";
-import { activeWorkspaceContext, captureWorkspaceContext, displayWorkspaceContext, displayWorkspaceSnapshot, rememberWorkspaceSnapshot, requestedWorkspaceSnapshot, setActiveWorkspaceContext, setDisplayWorkspaceContext } from "../../src/lib/workspace-context.ts";
+import { activeWorkspaceContext, captureWorkspaceContext, clearWorkspacePersonalPolicy, displayWorkspaceContext, displayWorkspaceSnapshot, rememberWorkspaceSnapshot, requestedWorkspaceSnapshot, setActiveWorkspaceContext, setDisplayWorkspaceContext, setWorkspacePersonalPolicy } from "../../src/lib/workspace-context.ts";
 
 function setup(plans: Record<string, string> = {}, localOrg?: string, engineFeatures?: () => string[]) {
   const calls: { context: string; command: string; args: unknown; workspace: string | null }[] = [];
@@ -954,5 +954,82 @@ test("Desk paid-org list_workspaces and preview_file preserve local workspace lo
     assert.ok(!remoteCalls.some((c) => c.command === "preview_file"), "local workspace logo preview_file must not be sent to cloud VM");
   } finally {
     router.close();
+  }
+});
+
+test("create_account_workspace stays native while viewing a remote org workspace and immediately makes This Mac host it", async () => {
+  const { router, calls, native } = setup();
+  try {
+    await router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    const before = (await router.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      id: string; local: boolean; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    assert.equal(before.find((r) => r.local)?.hosts, false);
+
+    // Must run natively even though active workspace "same" is currently elsewhere (on vm) and no x-terminus-machine header is set.
+    await router.handle("create_account_workspace", {
+      "x-terminus-machine": "local",
+      id: "same",
+      name: "Shared",
+      account: { org: "org", account_id: "99" },
+    }, contextOptions("a"));
+    assert.ok(native.some((c) => c.command === "create_account_workspace"), "create_account_workspace must execute on native engine");
+    assert.ok(!calls.some((c) => c.command === "create_account_workspace"), "create_account_workspace must never be routed to cloud VM");
+
+    const after = (await router.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      id: string; local: boolean; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    const mac = after.find((r) => r.local);
+    assert.ok(mac && mac.hosts === true && mac.materializes === true && !mac.refuses, "This Mac immediately hosts and materializes the workspace after create_account_workspace");
+
+    // Subsequent task creation and repo cloning on This Mac now succeed locally.
+    await router.handle("send_message", { text: "local task" }, contextOptions("a", "local"));
+    await router.handle("clone_project", { url: "https://github.com/org/repo" }, contextOptions("a", "local"));
+    assert.ok(native.some((c) => c.command === "send_message"));
+    assert.ok(native.some((c) => c.command === "clone_project"));
+  } finally {
+    router.close();
+  }
+});
+
+test("Desk hides this machine (refuses: true) whenever it cannot run an org workspace: missing locally, cloud-only policy, or cross-org conflict", async () => {
+  const missingLocally = setup();
+  try {
+    await missingLocally.router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    const rows = (await missingLocally.router.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      local: boolean; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    const localMachine = rows.find((r) => r.local);
+    assert.ok(localMachine && localMachine.hosts === false && localMachine.materializes === false && localMachine.refuses === true && !runsWorkspace(localMachine));
+  } finally {
+    missingLocally.router.close();
+  }
+
+  const conflict = setup({}, "different-org");
+  try {
+    await conflict.router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    const rows = (await conflict.router.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      local: boolean; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    const localMachine = rows.find((r) => r.local);
+    assert.ok(localMachine && localMachine.hosts === false && localMachine.materializes === false && localMachine.refuses === true && !runsWorkspace(localMachine));
+  } finally {
+    conflict.router.close();
+  }
+
+  // Even if the workspace already existed locally on disk, a cloud-only org policy hides and refuses this machine.
+  const cloudOnly = setup({}, "org");
+  try {
+    setWorkspacePersonalPolicy("a", "same", false);
+    await cloudOnly.router.handle("set_active_workspace", { id: "same" }, contextOptions("a"));
+    const rows = (await cloudOnly.router.handle("machine_list", {}, contextOptions("a"))) as Array<{
+      local: boolean; hosts: boolean | null; materializes?: boolean; refuses?: boolean;
+    }>;
+    const localMachine = rows.find((r) => r.local);
+    assert.ok(localMachine && localMachine.hosts === false && localMachine.materializes === false && localMachine.refuses === true && !runsWorkspace(localMachine));
+    await assert.rejects(cloudOnly.router.handle("send_message", {}, contextOptions("a", "local")));
+  } finally {
+    clearWorkspacePersonalPolicy("a");
+    cloudOnly.router.close();
   }
 });

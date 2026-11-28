@@ -8,6 +8,7 @@ import { cn } from "../../../ui/src/lib/utils";
 import { Toast, ToastPortal } from "../../../ui/src/Toast";
 import { RETARDO_TOOLTIP, TooltipContent, TooltipRoot, TooltipTrigger } from "../../../ui/src/Tooltip";
 import { taskLabel } from "../../../features/projects/src/screens/TaskStatus";
+import { refetchMachines } from "../../../features/machines/src/queries/store";
 import { createWorkspaces } from "../../../features/settings/src/queries/workspaces-store";
 import { AccountHeader } from "./AccountHeader";
 import AddWorkspaceMenu from "./AddWorkspaceMenu";
@@ -103,6 +104,35 @@ export default function WorkspaceColumn(props: {
     const rows = visibles();
     if (!rows.some((w) => w.id === open) || (ws.activoContexto() && !sessions.groups()?.some((group) => group.context_id === ws.activoContexto()))) { const target = organizationStartTarget(visibleGroups(), open, ws.activoContexto(), sessions.sessions.defaultContext()); void ws.cambiarA(target?.id ?? rows.find((row) => row.id !== open)?.id ?? null, target?.context); }
   });
+  async function openWorkspace(id: string, context?: string) {
+    if (context && capabilities().nativeWindow) {
+      const state = await sessions.ensureLocal(context, id).catch(() => "skipped" as const);
+      if (state === "created") {
+        window.dispatchEvent(new CustomEvent("harness:machines"));
+        void refetchMachines();
+      }
+    }
+    await ws.cambiarA(id, context);
+  }
+  const ensuredLocal = new Set<string>();
+  createEffect(() => {
+    if (!capabilities().nativeWindow) return;
+    const open = ws.activo();
+    const context = ws.activoContexto();
+    const groups = sessions.groups();
+    if (!open || !context || !groups) return;
+    const group = groups.find((g) => g.context_id === context);
+    if (!group || group.plan === "free" || group.empty_reason || !group.available?.some((w) => w.id === open)) return;
+    const key = `${context}\0${open}`;
+    if (ensuredLocal.has(key)) return;
+    ensuredLocal.add(key);
+    void sessions.ensureLocal(context, open).then(async (state) => {
+      if (state !== "created") return;
+      await ws.rebindActive(open, context);
+      window.dispatchEvent(new CustomEvent("harness:machines"));
+      void refetchMachines();
+    }).catch(() => {});
+  });
   let sessionsSettled = false;
   // La web abre al arrancar el de la URL (W6) o el primero agregado, aunque ninguna máquina diga un activo.
   const asked = capabilities().nativeWindow ? "" : window.location.search;
@@ -112,7 +142,7 @@ export default function WorkspaceColumn(props: {
     sessionsSettled = true;
     const open = ws.activo();
     const next = requestedStartTarget(groups, sessions.sessions.families(), asked) ?? (open ? (groups.some((g) => g.available?.some((w) => w.id === open)) ? organizationStartTarget(groups, open, ws.activoContexto(), sessions.sessions.defaultContext()) : null) : organizationStartTarget(groups, "", null, sessions.sessions.defaultContext()));
-    if (next && (next.id !== ws.activo() || next.context !== ws.activoContexto())) void ws.cambiarA(next.id, next.context);
+    if (next && (next.id !== ws.activo() || next.context !== ws.activoContexto())) void openWorkspace(next.id, next.context);
   });
   const tasksOf = (id: string) => props.attention.find((w) => w.workspace === id)?.tasks ?? [];
 
@@ -163,7 +193,7 @@ export default function WorkspaceColumn(props: {
         <Show when={accounts && others().length > 0}>
           <AccountHeader accounts={accounts} id={accounts!.current.user_id} email={accounts!.current.email} extra={accounts!.current.extra} signedIn />
         </Show>
-        <SessionWorkspaceRows suppressTooltips={addMenuOpen()} sessions={sessions} rows={visibles()} active={ws.activo() && ws.activoContexto() ? { workspace: ws.activo()!, context: ws.activoContexto()! } : null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} staleOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.stale ?? false} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void ws.cambiarA(id, context)} onHide={hide} onRemove={setRemoving} hidden={isHidden} />
+        <SessionWorkspaceRows suppressTooltips={addMenuOpen()} sessions={sessions} rows={visibles()} active={ws.activo() && ws.activoContexto() ? { workspace: ws.activo()!, context: ws.activoContexto()! } : null} tasksOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.tasks ?? []} staleOf={(id, context) => props.attention.find((row) => row.workspace === id && row.context === context)?.stale ?? false} stateLabel={(state) => state ? taskLabel(state, true) : ""} onOpen={(id, context) => void openWorkspace(id, context)} onHide={hide} onRemove={setRemoving} hidden={isHidden} />
         <AddWorkspaceMenu
           onOpenChange={setAddMenuOpen}
           sessions={sessions}
@@ -173,7 +203,7 @@ export default function WorkspaceColumn(props: {
           tasksOf={tasksOf}
           badge={AttentionBadge}
           labelOf={(s) => taskLabel(s, true)}
-          onOpen={(id, context) => void ws.cambiarA(id, context)}
+          onOpen={(id, context) => void openWorkspace(id, context)}
           onShow={(w) => hidden.show(hiddenKey(w.id, w.context))}
           onRemove={setRemoving}
         />

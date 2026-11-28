@@ -20,9 +20,32 @@ import { coalesceSessionReturn as createSessionReturn } from "./session-return.t
 import { sessionSeedInputs, sessionSyncKey } from "./session-seeding.ts";
 import { createAddedSync } from "./workspace-added-sync.ts";
 import { ADDED_KEY, edgeAddedTransport, prefsAddedStore } from "./workspace-added-transport.ts";
+import { clearWorkspacePersonalPolicy, setWorkspacePersonalPolicy } from "../../../session/src/workspace-context.ts";
 import { sendIdentityMe } from "../../../platform-client/src/identity.ts";
 
 type WorkspaceRow = { id: string; name: string; logo?: string | null };
+type DeskCatalogEntry = { id: string; accountId: string; org: string; name: string; allowsPersonal: boolean; personalOnly: boolean };
+export function workspaceAllowsPersonal(row: Pick<Workspace, "runs_on" | "placement"> | null | undefined): boolean {
+  if (Array.isArray(row?.runs_on) && row.runs_on.length > 0) return row.runs_on.includes("personal");
+  return true;
+}
+export function workspacePersonalOnly(row: Pick<Workspace, "runs_on" | "placement"> | null | undefined): boolean {
+  if (Array.isArray(row?.runs_on) && row.runs_on.length > 0) return row.runs_on.includes("personal") && !row.runs_on.includes("cloud");
+  return row?.placement?.kind === "member_computer";
+}
+function toDeskCatalogEntry(row: Workspace, org: string): DeskCatalogEntry | null {
+  const id = row.engine_workspace_id;
+  const accountId = typeof row.id === "string" ? row.id : typeof row.id === "number" ? String(row.id) : "";
+  if (row.org !== org || typeof id !== "string" || !id || !accountId) return null;
+  return {
+    id,
+    accountId,
+    org,
+    name: typeof row.name === "string" && row.name.trim() ? row.name : id,
+    allowsPersonal: workspaceAllowsPersonal(row),
+    personalOnly: workspacePersonalOnly(row),
+  };
+}
 export type SessionRailGroup = ContextGroup & { available: readonly WorkspaceRow[] | null; added: ReadonlySet<string> | null; person: string | null; org_type?: string | null; free?: { id: string; name: string }; empty_reason?: EmptyReason | null };
 let instance: ReturnType<typeof wire> | undefined;
 export const [sessionRailState, setSessionRailState] = createRoot(() => createSignal<ReturnType<typeof wire>>());
@@ -49,6 +72,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   });
   const catalog = capabilities().webRailCatalog;
   const deskLists = new Map<string, readonly WorkspaceRow[]>();
+  const deskMeta = new Map<string, Map<string, DeskCatalogEntry>>();
+  const materializing = new Map<string, Promise<"present" | "created" | "skipped">>();
   const reading = new Map<string, Promise<void>>();
   const availableFor = (context: string) => {
     revision();
@@ -63,13 +88,20 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     const read = sessionWorkspaceCatalog(sessions.send, context).then((items) => {
       if (!items || active(context)?.org !== group.org) return;
       // El directorio puede incluir otras membresías de la persona.
+      const meta = new Map<string, DeskCatalogEntry>();
+      clearWorkspacePersonalPolicy(context);
       deskLists.set(context, items.flatMap((item) => {
         const row = item as Workspace | null;
         const id = row?.engine_workspace_id;
-        return row?.org === group.org && typeof id === "string" && id
-          ? [{ id, name: typeof row.name === "string" ? row.name : id }]
-          : [];
+        if (row?.org !== group.org || typeof id !== "string" || !id) return [];
+        const entry = toDeskCatalogEntry(row, group.org);
+        if (entry) {
+          meta.set(id, entry);
+          setWorkspacePersonalPolicy(context, id, entry.allowsPersonal);
+        }
+        return [{ id, name: typeof row.name === "string" ? row.name : id }];
       }));
+      deskMeta.set(context, meta);
       changed();
     }).finally(() => reading.delete(context));
     reading.set(context, read);
@@ -81,7 +113,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
   const accountKey = createMemo(() => JSON.stringify(groups()?.map((g) => [g.context_id, g.org, g.plan]) ?? null));
   createEffect(on(accountKey, () => {
     if (!catalog) {
-      for (const context of deskLists.keys()) if (!active(context)) deskLists.delete(context);
+      for (const context of deskLists.keys()) if (!active(context)) { deskLists.delete(context); deskMeta.delete(context); clearWorkspacePersonalPolicy(context); }
       void refreshCatalog();
     }
     void refreshAccounts();
@@ -214,6 +246,41 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       if (document.visibilityState === "visible") returned();
     });
   }
+  async function ensureLocal(context: string, id: string, options?: { strict?: boolean; entry?: DeskCatalogEntry }): Promise<"present" | "created" | "skipped"> {
+    if (!capabilities().nativeWindow) return "skipped";
+    const group = active(context);
+    if (!group) return "skipped";
+    if (accounts.available(group.org).some((w) => w.id === id)) return "present";
+    if (accounts.sealedElsewhere(group.org).some((w) => w.id === id)) return "skipped";
+    const key = `${context}\0${id}`;
+    const running = materializing.get(key);
+    if (running) return running;
+    const task = (async (): Promise<"present" | "created" | "skipped"> => {
+      let entry = options?.entry ?? deskMeta.get(context)?.get(id) ?? null;
+      if (!entry) {
+        const items = await workspaceCatalog(sessions.send, context).catch(() => []);
+        for (const item of items) {
+          if (!item || typeof item !== "object") continue;
+          const candidate = toDeskCatalogEntry(item as Workspace, group.org);
+          if (candidate?.id === id) { entry = candidate; break; }
+        }
+      }
+      if (!entry) return "skipped";
+      setWorkspacePersonalPolicy(context, id, entry.allowsPersonal);
+      if (!entry.allowsPersonal) return "skipped";
+      try {
+        await accounts.materialize(group.org, entry.accountId, id, entry.name);
+      } catch (error) {
+        const detail = (error as { detail?: unknown } | null)?.detail;
+        if (options?.strict && entry.personalOnly && detail !== "account_conflict" && detail !== "workspace_exists") throw error;
+        return "skipped";
+      }
+      await refreshAccounts();
+      return "created";
+    })().finally(() => { materializing.delete(key); });
+    materializing.set(key, task);
+    return task;
+  }
   async function addAdmitted(context: string, id: string) {
     for (let attempt = 0; attempt < 40 && !records.get(context)?.person; attempt++) {
       if (!active(context) && attempt % 5 === 0) await sessions.refresh();
@@ -221,6 +288,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
     }
     const record = records.get(context);
     if (!active(context) || !record?.person) throw { detail: "session_not_in_set" };
+    await ensureLocal(context, id, { strict: true });
     record.sync.add(id);
     await record.sync.sync();
     await catalog?.refresh();
@@ -239,6 +307,7 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       await addAdmitted(context, id);
       return id;
     },
+    ensureLocal: (context: string, id: string) => ensureLocal(context, id),
     addAdmitted,
     addFromHarness: async (target: WorkspaceAddLink) => {
       await sessions.refresh();
@@ -251,10 +320,8 @@ function wire(hidden: () => ReadonlySet<string>, onSeeded: (ids: readonly string
       const row = rows.find((item) => item !== null && typeof item === "object" && "org" in item && item.org === group.org && "id" in item && String(item.id) === target.accountId) as Workspace | undefined;
       const id = row?.engine_workspace_id;
       if (typeof id !== "string" || !id || (target.workspace && target.workspace !== id)) return null;
-      if (row.placement?.kind === "member_computer" && !accounts.known().includes(id)) {
-        await accounts.materialize(group.org, target.accountId, id, typeof row.name === "string" ? row.name : id);
-        await refreshAccounts();
-      }
+      const entry = toDeskCatalogEntry(row, group.org) ?? undefined;
+      await ensureLocal(context, id, { strict: true, entry });
       await addAdmitted(context, id);
       await refreshContext(context);
       return { id, context };

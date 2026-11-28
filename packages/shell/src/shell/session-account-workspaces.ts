@@ -187,7 +187,18 @@ export function createAccountWorkspaces(rpc: Invoke, native: boolean, changed: (
       } catch { failed = true; /* Un motor anterior conserva su riel; no ofrece crear sin capacidad anunciada. */ }
     },
     async materialize(org: string, accountId: string, id: string, name: string) {
-      if (!native || !extension || !local) throw { detail: "not_available_yet" };
+      if (!native) throw { detail: "not_available_yet" };
+      if (!local || !extension) {
+        const machines = await rpc<MachineListEntry[]>("machine_list").catch(() => []);
+        const self = findLocalMachine(machines);
+        const announced = self && features ? await features().catch(() => null) : null;
+        if (self) {
+          local = self.id;
+          const list = announced ?? self.features;
+          extension ||= list?.includes("account_workspace_v1") ?? false;
+        }
+      }
+      if (!extension || !local) throw { detail: "not_available_yet" };
       await rpc("create_account_workspace", { ...header(), id, name, account: { org, account_id: accountId } });
     },
     async create(group: Group, refresh: () => Promise<void>) {

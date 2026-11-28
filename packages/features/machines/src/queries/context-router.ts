@@ -1,5 +1,5 @@
 import { FleetError } from "../model/fleet/index.ts";
-import { rememberWorkspaceSnapshot, setActiveWorkspaceContext } from "../../../../session/src/workspace-context.ts";
+import { rememberWorkspaceSnapshot, setActiveWorkspaceContext, workspaceDisallowsPersonal } from "../../../../session/src/workspace-context.ts";
 import { createContextAttention } from "./context-attention.ts";
 import type { CatalogWorkspaceEntry, Invoke, RouterConfig } from "../model/router-config.ts";
 import { scopedFleet } from "./scoped-fleet.ts";
@@ -32,6 +32,13 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     ? async (command, args, options) => {
         const value = await config.native!(command, args, options);
         if (command === "list_workspaces" || command === "workspaces_startup") rememberLocal(value);
+        else if ((command === "create_account_workspace" || command === "adopt_account_workspace") && typeof args?.id === "string") {
+          const org = (args.account as { org?: unknown } | undefined)?.org;
+          if (typeof org === "string") localWorkspaces.set(args.id, org);
+        } else if (command === "reseal_account_workspace" && typeof args?.id === "string") {
+          const org = (args.to as { org?: unknown } | undefined)?.org;
+          if (typeof org === "string") localWorkspaces.set(args.id, org);
+        }
         return value;
       }
     : null;
@@ -68,7 +75,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
       const free = info.plan === "free";
       router = createRouterCore({ ...routerConfig,
         fleet: scopedFleet(config.fleet, { context, org: info.org, localOnly: free, includeLocalChildren: config.native !== null }),
-        localWorkspace: !free && config.native ? workspace => localWorkspaces.get(workspace) === info.org : undefined,
+        localWorkspace: !free && config.native ? workspace => localWorkspaces.get(workspace) === info.org && !workspaceDisallowsPersonal(context, workspace) : undefined,
         organizationCatalog: !free,
         readWorkspaceSpaces: config.readContextSpaces && (workspace => config.readContextSpaces!(context, info.org, workspace)),
         catalogWorkspaces: config.contextCatalogWorkspaces ? () => config.contextCatalogWorkspaces!(context) : undefined,
@@ -92,7 +99,7 @@ export function createContextRouter(config: ContextRouterConfig, createRouterCor
     const selectionCleared = cleared;
     headers.delete(HEADER);
     let clean = options?.headers ? { ...options, headers: Object.fromEntries(headers) } : options;
-    if (/^danil_|^radiant_|^agents_session_/.test(command)) return legacy.handle(command, args, clean);
+    if (/^danil_|^radiant_|^agents_session_|^(?:create|adopt|reseal)_account_workspace$|^adoption_(?:candidates|proof)$|^set_free_router_union$|^account_request_settle$/.test(command)) return legacy.handle(command, args, clean);
     if (command === "set_active_workspace" && args.id === null) {
       cleared = true; activeContext = undefined; setActiveWorkspaceContext(null); return null;
     }

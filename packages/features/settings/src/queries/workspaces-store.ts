@@ -113,6 +113,17 @@ export function createWorkspaces() {
     }
   }
 
+  async function rebindActive(id: string, context?: string) {
+    if (id !== activo() || (context ?? null) !== activeWorkspaceContext()) return;
+    try {
+      await callEngine("set_active_workspace", { id }, workspaceContextOptions(context ?? null));
+      enVuelo = null;
+      setFallo(null);
+    } catch (e) {
+      setFallo(asFailure(e));
+    }
+  }
+
   return {
     lista: orderedList,
     reorder: order.save,
@@ -124,6 +135,7 @@ export function createWorkspaces() {
     setFallo,
     cargar,
     cambiarA,
+    rebindActive,
     clearActive: () => cambiarA(null),
   };
 }

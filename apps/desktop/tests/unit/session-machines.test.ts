@@ -414,3 +414,18 @@ test("a caller waiting on a reopened relay's attention read gives up at its own 
     assert.ok(Date.now() - started < 1_000, "the reopen read's 30 s limit does not extend the caller's 50 ms");
   } finally { for (const link of links) link.close(); }
 });
+
+test("accounts.materialize resolves local machine and account_workspace_v1 on demand before refresh runs", async () => {
+  const calls: { command: string; args?: Record<string, unknown> }[] = [];
+  const invoke = async <T>(command: string, args?: Record<string, unknown>) => {
+    calls.push({ command, args });
+    if (command === "machine_list") return [{ id: "local", local: true, features: ["account_workspace_v1"] }] as T;
+    return {} as T;
+  };
+  const accounts = createAccountWorkspaces(invoke, true, () => {}, async () => ["account_workspace_v1"]);
+  await accounts.materialize("org_1", "77", "ws_new", "Nuevo");
+  assert.deepEqual(calls.at(-1), {
+    command: "create_account_workspace",
+    args: { "x-terminus-machine": "local", id: "ws_new", name: "Nuevo", account: { org: "org_1", account_id: "77" } },
+  });
+});

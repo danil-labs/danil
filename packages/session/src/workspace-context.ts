@@ -17,6 +17,19 @@ export function workspaceContextOptions(context: string | null) {
   return { headers: { "x-danil-context": context ?? "" } };
 }
 
+const personalDisallowed = new Set<string>();
+const personalKey = (context: string, workspace: string) => `${context}\0${workspace}`;
+export function setWorkspacePersonalPolicy(context: string, workspace: string, allowsPersonal: boolean) {
+  const key = personalKey(context, workspace);
+  if (allowsPersonal) personalDisallowed.delete(key);
+  else personalDisallowed.add(key);
+}
+export const workspaceDisallowsPersonal = (context: string, workspace: string) => personalDisallowed.has(personalKey(context, workspace));
+export function clearWorkspacePersonalPolicy(context: string) {
+  const prefix = `${context}\0`;
+  for (const key of [...personalDisallowed]) if (key.startsWith(prefix)) personalDisallowed.delete(key);
+}
+
 export function captureWorkspaceContext(options?: { headers?: HeadersInit }) {
   const headers = new Headers(options?.headers);
   if (!headers.has("x-danil-context")) headers.set("x-danil-context", displayWorkspaceContext() ?? "");

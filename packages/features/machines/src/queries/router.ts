@@ -902,8 +902,9 @@ function createRouterCore(config: RouterConfig) {
     const home = config.home?.();
     const selfOs = systemOf(home?.os);
     const selfFeatures = config.engineFeatures?.() ?? home?.features;
+    const selfRefuses = !!scopedLocal && !!workspace && !hasHere(workspace);
     return [
-      ...(self !== null ? [{ id: self, local: true, active: lead === self, on: true, power: "on" as const, hosts: hasHere(workspace), ...selfMaterializes(workspace), wakes: home?.wakes ?? false, ...(selfFeatures?.length ? { features: [...selfFeatures] } : {}), ...(home?.version ? { version: home.version } : {}), ...(selfOs ? { os: selfOs } : {}) }] : []),
+      ...(self !== null ? [{ id: self, local: true, active: lead === self, on: true, power: "on" as const, hosts: hasHere(workspace), ...selfMaterializes(workspace), ...(selfRefuses ? { refuses: true } : {}), wakes: home?.wakes ?? false, ...(selfFeatures?.length ? { features: [...selfFeatures] } : {}), ...(home?.version ? { version: home.version } : {}), ...(selfOs ? { os: selfOs } : {}) }] : []),
       // Una de otro contrato no corre tareas nuevas hasta actualizarse.
       ...fleet.machines().filter((m) => fleet.power(m.id) !== "outdated").map((m) => {
         const os = systemOf(m.os);
@@ -998,7 +999,7 @@ function createRouterCore(config: RouterConfig) {
       return native(command, { input: fleet.argsFor(self, input) }, options);
     }
     if (STORAGE.has(command) && !workspace) throw { what: { clave: "shell.service.failed" }, detail: "workspace_missing" };
-    if (local && ofThisMachine(command)) {
+    if (local && (OF_THIS_WINDOW.test(command) || ofThisMachine(command))) {
       if (OF_THIS_WINDOW.test(command)) return native(command, args, options);
       try {
         // Los chips de una cuenta actúan en su máquina: la de la cabecera o la que nombra el id.
