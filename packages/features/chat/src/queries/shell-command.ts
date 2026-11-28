@@ -318,7 +318,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
     if (busy()) { if (next) void detenerYEnviar(next.id); return; }
     if (view?.error && view.pending?.phase === "waiting-close") return void handoff.replaceWithQueued(scope, view.pending.queueItemId);
     if (handoff.blocked(scope) || (view?.pending && !view.error)) {
-      if (next && !view?.pending) void handoff.replaceWithQueued(scope, next.id);
+      if (next && !view?.pending && view?.stopping) void handoff.replaceWithQueued(scope, next.id);
       return;
     }
     if (head && esDeLaTerminal(head)) void ejecutarDeLaCola(head);

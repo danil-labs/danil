@@ -393,3 +393,98 @@ test("con dos elementos en cola durante handoff se oculta «mandar» inerte y «
     app.w.close();
   }
 });
+
+test("si stop_turn falla tras Detener optimista mantiene bloqueado «Enviar de nuevo» mientras list_active_turns sigue pendiente", async () => {
+  let rechazarStop = null;
+  let holdPresence = false;
+  const presenceResolvers = [];
+  const enviados = [];
+  const app = await boot("listo", "chat-stop-failed-holds-resend-during-reconcile", responses({
+    list_active_turns: () => holdPresence ? new Promise((resolve) => presenceResolvers.push(resolve)) : ["t1"],
+    load_queue: ({ session }) => session === "t1"
+      ? [{ id: "q1", text: "incierto durante fallo", provider: AGENTE, model: "deepseek", effort: null, permission_mode: null, attachments: [], uncertain: true }]
+      : [],
+    stop_turn: () => new Promise((_resolve, reject) => { rechazarStop = reject; }),
+    send_message: (args) => {
+      enviados.push(args);
+      return "duplicado";
+    },
+  }));
+  try {
+    await sleep(600);
+    app.w.document.querySelector('[data-sesion="t1"]').click();
+    await sleep(400);
+    app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+    await sleep(150);
+
+    porTitulo(app, "Detener turno").click();
+    await sleep(40);
+
+    // Bloquea la reconciliación de presencia y hace fallar stop_turn.
+    holdPresence = true;
+    rechazarStop(new Error("stop falló"));
+    await waitFor(() => app.w.document.body.textContent.includes("No se pudo detener el turno"), "aviso de fallo de stop", 2000);
+    await waitFor(() => presenceResolvers.length > 0, "la reconciliación salió tras fallar stop", 2000);
+
+    const reenviar = app.w.document.querySelector('button[aria-label*="Enviar de nuevo"], button[title="Enviar de nuevo"]');
+    assert.ok(reenviar, "la fila incierta sigue visible");
+    assert.equal(reenviar.disabled, true, "Enviar de nuevo sigue bloqueado mientras list_active_turns no confirma el cierre");
+    reenviar.click();
+    await sleep(60);
+    assert.equal(enviados.length, 0, "no se puede emitir send_message antes de confirmar si el turno cerró");
+
+    // La reconciliación confirma que t1 sigue vivo: continúa bloqueado y vuelve Detener turno.
+    holdPresence = false;
+    for (const resolve of presenceResolvers) resolve(["t1"]);
+    await waitFor(() => porTitulo(app, "Detener turno"), "restaura Detener turno cuando t1 siguió vivo", 2000);
+    assert.equal(reenviar.disabled, true);
+    assert.equal(enviados.length, 0);
+  } finally {
+    holdPresence = false;
+    for (const resolve of presenceResolvers) resolve([]);
+    app.w.close();
+  }
+});
+
+test("una cola manual con solo un !comando oculta «mandar» durante Detener optimista y lo recupera al cerrar", async () => {
+  let resolverStop = null;
+  let vivos = ["t1"];
+  const comandos = [];
+  const app = await boot("listo", "chat-stop-command-only-queue", responses({
+    list_active_turns: () => vivos,
+    load_queue: ({ session }) => session === "t1"
+      ? [{ id: "c1", text: "!echo listo", provider: AGENTE, model: "deepseek", effort: null, permission_mode: null, attachments: [] }]
+      : [],
+    stop_turn: () => new Promise((resolve) => { resolverStop = resolve; }),
+    run_shell_command: (args) => {
+      comandos.push(args);
+      return { session: "t1" };
+    },
+  }));
+  try {
+    await sleep(600);
+    app.w.document.querySelector('[data-sesion="t1"]').click();
+    await sleep(400);
+    app.emit("chat", { kind: "started", session: "t1", workspace: "w" });
+    await sleep(150);
+
+    porTitulo(app, "Detener turno").click();
+    await sleep(40);
+    const btnMandarDurante = [...app.w.document.querySelectorAll("button")].find((el) => el.textContent?.trim() === "mandar");
+    assert.equal(btnMandarDurante, undefined, "no ofrece un botón «mandar» inerte si solo hay un !comando en cola mientras Detener sigue en vuelo");
+
+    vivos = [];
+    resolverStop(null);
+    app.emit("chat", { kind: "done", session: "t1", workspace: "w", ok: false });
+    const btnMandarDespues = await waitFor(
+      () => [...app.w.document.querySelectorAll("button")].find((el) => el.textContent?.trim() === "mandar"),
+      "al cerrar el turno vuelve el botón «mandar» para ejecutar el !comando",
+      2000,
+    );
+    btnMandarDespues.click();
+    await waitFor(() => comandos.length === 1, "al pulsar mandar tras el cierre se ejecuta el !comando", 2000);
+    assert.equal(comandos[0].command, "echo listo");
+  } finally {
+    app.w.close();
+  }
+});

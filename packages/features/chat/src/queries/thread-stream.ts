@@ -219,7 +219,14 @@ export function createThreadStream(deps: ThreadStreamDeps) {
     route: opcionesDeLaTarea(id, workspaceActivo()),
   });
   const shellStops = new WeakSet<ConversationScope>();
-  const handoff = createConversationHandoff({
+  const [reconcilingStops, setReconcilingStops] = createSignal<string[]>([]);
+  const stopVerifyTokens = new Map<string, symbol>();
+  const clearStopVerify = (id: string, token?: symbol) => {
+    if (token && stopVerifyTokens.get(id) !== token) return;
+    stopVerifyTokens.delete(id);
+    setReconcilingStops((ids) => (ids.includes(id) ? ids.filter((item) => item !== id) : ids));
+  };
+  const handoffCore = createConversationHandoff({
     current: () => ({ workspace: workspaceActivo(), generation: workspaceContext.generation() }),
     runtime: { active: (scope) => vivas().includes(scope.session), stop: async (scope) => {
       const id = scope.session, shell = Boolean(terminales()[id] || lanzados.has(id));
@@ -239,14 +246,36 @@ export function createThreadStream(deps: ThreadStreamDeps) {
         }
         throw error;
       }
-    }, onStopSettled: (scope) => {
+    }, onStopSettled: (scope, outcome) => {
       if (shellStops.has(scope)) return;
-      if (scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation()) void reconcileActiveTurns();
+      if (scope.workspace !== workspaceActivo() || scope.generation !== workspaceContext.generation()) return;
+      if (outcome === "failed" || outcome === "declined") {
+        const token = Symbol();
+        stopVerifyTokens.set(scope.session, token);
+        setReconcilingStops((ids) => (ids.includes(scope.session) ? ids : [...ids, scope.session]));
+        void reconcileActiveTurns().finally(() => clearStopVerify(scope.session, token));
+        return;
+      }
+      void reconcileActiveTurns();
     } },
     queue: { message: (scope, id: string) => (scope.session === sessionId() ? taskQueues.items() : taskQueues.saved(scope.session)?.items ?? []).find((item) => item.id === id),
       select: (scope, id: string) => { if (scope.session !== sessionId() || !taskQueues.items().some(item => item.id === id)) return false; taskQueues.prioritize(id); return true; },
       release: (scope) => mandarElegido(scope.session), failed: () => {} },
   });
+  const handoff: typeof handoffCore = {
+    ...handoffCore,
+    observe: (fact) => {
+      if (fact.kind === "terminal" && fact.scope.workspace === workspaceActivo() && fact.scope.generation === workspaceContext.generation()) {
+        clearStopVerify(fact.scope.session);
+      }
+      handoffCore.observe(fact);
+    },
+    blocked: (scope) =>
+      handoffCore.blocked(scope) ||
+      (scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation() && reconcilingStops().includes(scope.session)),
+    reset: () => { stopVerifyTokens.clear(); setReconcilingStops([]); handoffCore.reset(); },
+    dispose: () => { stopVerifyTokens.clear(); setReconcilingStops([]); handoffCore.dispose(); },
+  };
   onCleanup(handoff.dispose);
   const handoffAt = (id: string | null, projectId?: string) => id ? handoff.view(conversationScope(id, projectId)) : null;
   const handoffBlocked = (id: string | null) => !!id && handoff.blocked(conversationScope(id));

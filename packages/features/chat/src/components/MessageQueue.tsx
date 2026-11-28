@@ -26,6 +26,8 @@ export type ColaDeMensajesProps = {
   handoffItemId?: string;
   /** True while a turn or stop barrier is active so direct resend actions stay disabled. */
   blocked?: boolean;
+  /** True while blocked by an active turn or in-flight stop that can promote an interruptible message. */
+  canInterrupt?: boolean;
   agentes: Agent[];
   /** Con qué se responde ahora mismo, para marcar lo que se escribió con otra cosa. */
   actual: { agent: string; model: string };
@@ -99,6 +101,11 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
   const parada = () => props.retenida !== null || editando() !== null;
   // El mensaje promovido a handoff ya se pinta en el hilo; no se repite en la cola como «Preparando…».
   const visibleItems = createMemo(() => props.items.filter((item) => item.id !== props.handoffItemId || editando() === item.id));
+  const canSendQueue = createMemo(() => {
+    if (props.retenida === null || props.retenida === "pregunta" || editando() !== null || props.handoffItemId) return false;
+    const libres = visibleItems().filter((item) => !item.uncertain && !props.pending?.includes(item.id));
+    return props.blocked ? Boolean(props.canInterrupt) && libres.some(interrumpible) : libres.length > 0;
+  });
 
   return (
     <Show when={visibleItems().length > 0}>
@@ -122,14 +129,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
             {/* Con una pregunta abierta no hay «mandar»: lo de la cola se
                 escribió sin la respuesta, y soltarlo la daría por contestada. Se
                 contesta arriba y la cola sigue sola. */}
-            <Show
-              when={
-                props.retenida !== null &&
-                props.retenida !== "pregunta" &&
-                editando() === null &&
-                !props.handoffItemId
-              }
-            >
+            <Show when={canSendQueue()}>
               <Button
                 type="button"
                 variant="secondary"

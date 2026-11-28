@@ -226,7 +226,7 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
 
       {/* Pegada a la caja y encima: lo que va a salir después está donde se
           escribió, no en una columna aparte. */}
-      <ColaDeMensajes {...props.cola} handoffItemId={props.handoff?.queueItemId} blocked={Boolean(props.cola.blocked || props.busy || props.stopping || props.handoff)} compact={presentation().compactQueue} onOpenTask={props.onOpenTask} />
+      <ColaDeMensajes {...props.cola} handoffItemId={props.handoff?.queueItemId} blocked={Boolean(props.cola.blocked || props.busy || props.stopping || props.handoff)} canInterrupt={props.cola.canInterrupt ?? Boolean(props.busy || props.stopping)} compact={presentation().compactQueue} onOpenTask={props.onOpenTask} />
 
       {/* Las dos interrupciones viven en el mismo sitio, pero no pesan igual.
           La pregunta es una decisión de producto; el permiso ejecuta algo y
