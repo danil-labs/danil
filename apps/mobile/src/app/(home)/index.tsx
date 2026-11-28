@@ -297,7 +297,7 @@ export default function Home() {
                 icon={{ name: "inbox", color: theme.merged }}
                 title="Mensajería"
                 chevron
-                onPress={() => router.push("/messaging" as never)}
+                onPress={() => router.push("/chats" as never)}
               />
             ) : null}
             {agents.length ? (
