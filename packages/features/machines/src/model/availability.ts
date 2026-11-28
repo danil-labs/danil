@@ -1,11 +1,7 @@
 import { errorCode } from "../../../../ui/src/lib/errorCode.ts";
+import type { MachineAvailability } from "../../../../ui/src/lib/machine.ts";
 
-export type MachineAvailability =
-  | { kind: "loading" }
-  | { kind: "unavailable"; reason: "service_error" | "not_permitted" }
-  | { kind: "no_machines"; scope: "context" | "workspace" }
-  | { kind: "offline"; wakeable: boolean; count: number }
-  | { kind: "ready"; online: number; total: number };
+export type { MachineAvailability };
 
 export type AvailabilityMachine = {
   power: "on" | "off" | "starting" | "outdated";

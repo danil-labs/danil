@@ -11,11 +11,11 @@ import { Button } from "../../../../ui/src/Button";
 import { Dialog, DialogContent, DialogTitle } from "../../../../ui/src/Dialog";
 import { Input } from "../../../../ui/src/Input";
 import { Terminal, TerminalBody } from "../../../../ui/src/Terminal";
-import { LoginCodeForm } from "../screens/LoginCodeForm";
 import { Spinner } from "../../../../ui/src/Spinner";
 import { ExternalLink as EnlaceExterno } from "../../../../ui/src/ExternalLink";
-import { isHeadlessCodeNotice, manualLoginMode } from "../../../../ui/src/lib/account-auth.ts";
+import { manualLoginMode } from "../../../../ui/src/lib/account-auth.ts";
 import { Paso } from "./ConnectionStep";
+import { LoginCodeStep } from "./LoginCodeStep";
 import type { createCuentas } from "./AccountsState";
 import type { createConexionDeCuentas } from "./AccountsConnect";
 import type { createAccionesDeCuentas } from "./AccountsActions";
@@ -112,35 +112,17 @@ export function createDialogosDeCuentas(cuentas: ReturnType<typeof createCuentas
               </Show>
 
               <Show when={pideCodigo()}>
-                <Paso numero={url() ? 2 : 1} titulo={tituloCodigo()}>
-                  <Show when={modoCodigo() === "callback_url"}>
-                    <p class="m-0 text-xs text-neutral-500" data-login-loopback-hint="">
-                      {t("settings.accounts.step_callback_url_hint")}
-                    </p>
-                  </Show>
-                  <Show when={modoCodigo() === "hosted_code"}>
-                    <p class="m-0 text-xs text-neutral-500" data-login-hosted-hint="">
-                      {t("settings.accounts.step_hosted_code_hint")}
-                    </p>
-                  </Show>
-                  <Show
-                    when={
-                      aviso() &&
-                      modoCodigo() !== "callback_url" &&
-                      !(modoCodigo() === "hosted_code" && isHeadlessCodeNotice(aviso()))
-                    }
-                  >
-                    <p class="m-0 text-xs text-neutral-500" data-login-notice="">{aviso()}</p>
-                  </Show>
-                  <LoginCodeForm
-                    value={codigo()}
-                    onInput={(v) => { setCodigo(v); setErrorCodigo(null); }}
-                    onSubmit={() => void enviarCodigo()}
-                    submitting={enviandoCodigo()}
-                    error={errorCodigo()}
-                    mode={modoCodigo()}
-                  />
-                </Paso>
+                <LoginCodeStep
+                  numero={url() ? 2 : 1}
+                  titulo={tituloCodigo()}
+                  modo={modoCodigo()}
+                  aviso={aviso()}
+                  value={codigo()}
+                  onInput={(v) => { setCodigo(v); setErrorCodigo(null); }}
+                  onSubmit={() => void enviarCodigo()}
+                  submitting={enviandoCodigo()}
+                  error={errorCodigo()}
+                />
               </Show>
 
               <Show when={!pideCodigo() && codigoEnviado()}>
