@@ -2,29 +2,12 @@ import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import { openExternalTarget } from "../../../../host/src/file-preview";
 import { VISUAL_THEME_TOKENS, type VisualTheme } from "../../../../ui/src/lib/chat/inlineVisual";
 import { t } from "../../../../ui/src/lib/i18n";
+import { isSafeExternalUrl, originOf } from "../../../../ui/src/lib/url";
 import type { MessagingCardTarget } from "../model/messagingMcpApp";
 import { proxyMessagingCardHttp } from "../queries/messaging-connect";
 
 const CARD_SANDBOX =
   "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox";
-
-function originOf(url: string): string | null {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return null;
-  }
-}
-
-function isSafeExternalUrl(raw: unknown): raw is string {
-  if (typeof raw !== "string") return false;
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === "https:" || parsed.protocol === "http:";
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Tarjeta compacta MCP App en el chat (`?mode=card&entity=conversation|campaign&id=<id>`).

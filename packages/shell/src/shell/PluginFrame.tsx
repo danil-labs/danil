@@ -7,28 +7,11 @@ import {
 } from "../../../platform-client/src/messaging-proxy";
 import { VISUAL_THEME_TOKENS, type VisualTheme } from "../../../ui/src/lib/chat/inlineVisual";
 import { t } from "../../../ui/src/lib/i18n";
+import { isSafeExternalUrl, originOf } from "../../../ui/src/lib/url";
 import { Spinner } from "../../../ui/src/Spinner";
 
 const PLUGIN_SANDBOX =
   "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads";
-
-function originOf(url: string): string | null {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return null;
-  }
-}
-
-function isSafeExternalUrl(raw: unknown): raw is string {
-  if (typeof raw !== "string") return false;
-  try {
-    const parsed = new URL(raw);
-    return parsed.protocol === "https:" || parsed.protocol === "http:";
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Contenedor `<iframe>` para una pestaña de aplicación o conector visual.

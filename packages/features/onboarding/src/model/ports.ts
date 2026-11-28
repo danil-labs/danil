@@ -1,4 +1,5 @@
 import type { Component } from "solid-js";
+import type { ConnectionDialogProps } from "../../../../ui/src/lib/account-auth.ts";
 import type { Consentimiento } from "../../../../ui/src/lib/freeRouterConsent.ts";
 
 /** Lo que el alta lee de la sesión de Danil de Configuración. */
@@ -24,20 +25,7 @@ export type PuertosDelAlta = {
   requestAccessInBrowser: () => void;
   TerminusLicense: Component<{ onRequest: () => void; onRetry: () => void; busy?: boolean; compact?: boolean }>;
   Consentir: Component<{ texto: Consentimiento; guardando: boolean; error?: string | null; onAceptar: () => void; onCancelar: () => void }>;
-  DialogoDeConexion: Component<{
-    etiqueta: string;
-    url: string | null;
-    aviso?: string | null;
-    porConfirmar: string | null;
-    pideCodigo: boolean;
-    enviandoCodigo?: boolean;
-    codigoEnviado?: boolean;
-    errorCodigo?: string | null;
-    onLimpiarErrorCodigo?: () => void;
-    salida: string[];
-    onCancelar: () => void;
-    onCodigo: (codigo: string) => void;
-  }>;
+  DialogoDeConexion: Component<ConnectionDialogProps>;
 };
 
 let puertos: PuertosDelAlta;

@@ -1,5 +1,5 @@
 import type { InvokeOptions } from "../../../../engine-client/src/client.ts";
-import type { Machine } from "../../../../ui/src/lib/machine";
+import type { Machine, MachineAvailability } from "../../../../ui/src/lib/machine";
 
 /**
  * Lo que Configuración usa de máquinas. Es de `features/machines` y lo enchufa
@@ -10,5 +10,5 @@ export type MaquinasDeAjustes = {
   machineName: (id: string, local?: boolean) => string;
   machineOf: (id: string | null | undefined) => InvokeOptions | undefined;
   isDanilWorkspace: (workspace: string) => boolean;
-  availability?: () => import("../../../machines/src/model/availability").MachineAvailability;
+  availability?: () => MachineAvailability;
 };
