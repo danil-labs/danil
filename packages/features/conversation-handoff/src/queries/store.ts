@@ -48,13 +48,16 @@ export function createConversationHandoff(deps: Dependencies) {
       try {
         const reply = await deps.runtime.stop(entry.scope);
         if (!live(entry)) return;
-        entry.barrier = { kind: reply === false ? "declined" : "acknowledged" }; publish();
+        const outcome = reply === false ? "declined" : "acknowledged";
+        entry.barrier = { kind: outcome }; publish();
         if (reply === false && !entry.queueItemId) { entries.delete(key(entry.scope)); publish(); }
         else settle(entry);
+        deps.runtime.onStopSettled?.(entry.scope, outcome);
       } catch (error) {
         if (!live(entry)) return;
         entry.barrier = { kind: "failed", error }; publish();
         if (entry.queueItemId) deps.queue.failed(entry.scope, entry.queueItemId, error);
+        deps.runtime.onStopSettled?.(entry.scope, "failed");
       } finally { finish(); }
     })();
     return promise;

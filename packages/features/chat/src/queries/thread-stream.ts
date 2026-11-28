@@ -218,32 +218,71 @@ export function createThreadStream(deps: ThreadStreamDeps) {
     workspace: workspaceActivo(), generation: workspaceContext.generation(), project: projectId, session: id,
     route: opcionesDeLaTarea(id, workspaceActivo()),
   });
-  const handoff = createConversationHandoff({
+  const shellStops = new WeakSet<ConversationScope>();
+  const [reconcilingStops, setReconcilingStops] = createSignal<string[]>([]);
+  let stopVerifySeq = 0;
+  const stopVerifyMarks = new Map<string, number>();
+  const clearStopVerify = (id: string) => {
+    stopVerifyMarks.delete(id);
+    setReconcilingStops((ids) => (ids.includes(id) ? ids.filter((item) => item !== id) : ids));
+  };
+  const handoffCore = createConversationHandoff({
     current: () => ({ workspace: workspaceActivo(), generation: workspaceContext.generation() }),
     runtime: { active: (scope) => vivas().includes(scope.session), stop: async (scope) => {
       const id = scope.session, shell = Boolean(terminales()[id] || lanzados.has(id));
       const current = () => scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation();
-      if (shell) detenidos.add(id);
+      if (shell) { detenidos.add(id); shellStops.add(scope); }
       try {
         const stopped = shell ? await callEngine<boolean>("stop_shell_command", { session: id }, scope.route) : await stopTurn(scope);
         if (current()) {
           if (shell && stopped === false) detenidos.delete(id);
-          if (!shell) { void reconcileActiveTurns(); if (stopped !== false) setPermissions(ps => ps.filter(p => p.session !== id)); }
+          if (!shell && stopped !== false) setPermissions(ps => ps.filter(p => p.session !== id));
         }
         return stopped;
       } catch (error) {
         if (current()) {
           if (shell) detenidos.delete(id);
-          void reconcileActiveTurns();
-          threads.appendLive(id, [{ role: "system", text: t("shell.turn.stop_failed", { error: prosaDe(error) }), meta: "fallo" }]);
+          threads.appendLive(id, [{ role: "system", text: t("shell.turn.stop_failed", { error: prosaDe(error) }), meta: "fallo", fallo: { clase: "stop_failed", detail: "" } }]);
         }
         throw error;
       }
+    }, onStopSettled: (scope, outcome) => {
+      if (shellStops.has(scope)) return;
+      if (scope.workspace !== workspaceActivo() || scope.generation !== workspaceContext.generation()) return;
+      if (outcome === "failed" || outcome === "declined") {
+        stopVerifyMarks.set(scope.session, ++stopVerifySeq);
+        setReconcilingStops((ids) => (ids.includes(scope.session) ? ids : [...ids, scope.session]));
+      }
+      void reconcileActiveTurns();
     } },
     queue: { message: (scope, id: string) => (scope.session === sessionId() ? taskQueues.items() : taskQueues.saved(scope.session)?.items ?? []).find((item) => item.id === id),
       select: (scope, id: string) => { if (scope.session !== sessionId() || !taskQueues.items().some(item => item.id === id)) return false; taskQueues.prioritize(id); return true; },
       release: (scope) => mandarElegido(scope.session), failed: () => {} },
   });
+  const handoff = {
+    ...handoffCore,
+    observe: (fact: Parameters<typeof handoffCore.observe>[0]) => {
+      if (fact.kind === "terminal" && fact.scope.workspace === workspaceActivo() && fact.scope.generation === workspaceContext.generation()) {
+        clearStopVerify(fact.scope.session);
+      }
+      handoffCore.observe(fact);
+    },
+    presenceSnapshot: () => stopVerifySeq,
+    hasPendingStopVerification: () => reconcilingStops().length > 0,
+    presenceApplied: (snapshot: number) => {
+      const remaining: string[] = [];
+      for (const [id, mark] of [...stopVerifyMarks]) {
+        if (mark <= snapshot) stopVerifyMarks.delete(id);
+        else remaining.push(id);
+      }
+      setReconcilingStops((ids) => (ids.length === remaining.length && ids.every((id, i) => id === remaining[i]) ? ids : remaining));
+    },
+    blocked: (scope: ConversationScope) =>
+      handoffCore.blocked(scope) ||
+      (scope.workspace === workspaceActivo() && scope.generation === workspaceContext.generation() && reconcilingStops().includes(scope.session)),
+    reset: () => { stopVerifyMarks.clear(); setReconcilingStops([]); handoffCore.reset(); },
+    dispose: () => { stopVerifyMarks.clear(); setReconcilingStops([]); handoffCore.dispose(); },
+  };
   onCleanup(handoff.dispose);
   const handoffAt = (id: string | null, projectId?: string) => id ? handoff.view(conversationScope(id, projectId)) : null;
   const handoffBlocked = (id: string | null) => !!id && handoff.blocked(conversationScope(id));

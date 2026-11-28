@@ -79,8 +79,18 @@ export function createChatEvents(deps: ChatEventsDeps) {
       // existen. Se apunta antes del filtro, como el cierre, y el historial
       // se recarga para que la fila aparezca —o, en un `done` de una tarea
       // que no se está mirando, para que deje de decir que trabaja—.
+      const wsKey = workspace ?? workspaceActivo();
+      const stoppedOptimistically =
+        esDelWorkspaceAbierto(workspace) &&
+        handoff.view(conversationScope(session)).stopping &&
+        !(wsKey && liveThreads.has(liveThreadKey(wsKey, session)));
       if (kind === "started" || kind === "done") {
         if (kind === "done") pendingStarts.delete(session);
+        if (kind === "started" && stoppedOptimistically) {
+          pendingStarts.delete(session);
+          turnStarted(conversationScope(session));
+          return;
+        }
         if (kind === "started" && workspace) liveThreads.add(liveThreadKey(workspace, session));
         enviarFiltro();
         if (kind === "started" && esDelWorkspaceAbierto(workspace)) {
@@ -147,10 +157,6 @@ export function createChatEvents(deps: ChatEventsDeps) {
 
       // Tras un Detener optimista el frente ya cerró el turno; descarta deltas/herramientas/reintentos
       // rezagados del turno moribundo hasta que llegue el `done` del backend.
-      const wsKey = workspace ?? workspaceActivo();
-      const stoppedOptimistically =
-        handoff.view(conversationScope(session)).stopping &&
-        !(wsKey && liveThreads.has(liveThreadKey(wsKey, session)));
       if (stoppedOptimistically && kind !== "done" && kind !== "permission_resolved") return;
 
       // El CLI está reintentando contra su proveedor. No entra en la

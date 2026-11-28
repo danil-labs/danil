@@ -147,7 +147,7 @@ export function createChatViewParts(props: ChatProps, deps: ChatViewPartsDeps) {
             )}
           </Show>
 
-          <PendingHandoff handoff={props.handoff ?? null} showStatus={props.handoff?.phase === "waiting-close" || !props.activities?.some(activity => activity.active)} bubble={presentation().UserBubble} userClass={presentation().userMessage} miniatura={props.onMiniatura} preview={props.onPreview} renderPdf={props.renderPdf} />
+          <PendingHandoff handoff={props.handoff ?? null} showStatus={!props.activities?.some(activity => activity.active)} bubble={presentation().UserBubble} userClass={presentation().userMessage} miniatura={props.onMiniatura} preview={props.onPreview} renderPdf={props.renderPdf} />
 
           <div
             class="col-span-full"

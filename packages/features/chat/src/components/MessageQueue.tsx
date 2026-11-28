@@ -7,7 +7,7 @@ import Play from "lucide-solid/icons/play";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import SquareTerminal from "lucide-solid/icons/square-terminal";
 import X from "lucide-solid/icons/x";
-import { createSignal, For, onCleanup, Show } from "solid-js";
+import { createMemo, createSignal, For, onCleanup, Show } from "solid-js";
 import { t } from "../../../../ui/src/lib/i18n";
 import type { Agent } from "../../../../ui/src/lib/model";
 import { cn } from "../../../../ui/src/lib/utils";
@@ -22,8 +22,12 @@ export type ColaDeMensajesProps = {
   compact?: boolean;
   items: Encolado[];
   pending?: string[];
-  /** The transcript already presents this pending input; retain its queue controls without repeating its body. */
+  /** The transcript already presents this pending input; omit it from the queue list while handoff owns it. */
   handoffItemId?: string;
+  /** True while a turn or stop barrier is active so direct resend actions stay disabled. */
+  blocked?: boolean;
+  /** True while blocked by an active turn or in-flight stop that can promote an interruptible message. */
+  canInterrupt?: boolean;
   agentes: Agent[];
   /** Con qué se responde ahora mismo, para marcar lo que se escribió con otra cosa. */
   actual: { agent: string; model: string };
@@ -95,11 +99,18 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
   // Una razón o una edición abierta se ven igual porque significan lo mismo:
   // de aquí no sale nada hasta que alguien haga algo.
   const parada = () => props.retenida !== null || editando() !== null;
+  // El mensaje promovido a handoff ya se pinta en el hilo; no se repite en la cola como «Preparando…».
+  const visibleItems = createMemo(() => props.items.filter((item) => item.id !== props.handoffItemId || editando() === item.id));
+  const canSendQueue = createMemo(() => {
+    if (props.retenida === null || props.retenida === "pregunta" || editando() !== null || props.handoffItemId) return false;
+    const libres = visibleItems().filter((item) => !item.uncertain && !props.pending?.includes(item.id));
+    return props.blocked ? Boolean(props.canInterrupt) && libres.some(interrumpible) : libres.length > 0;
+  });
 
   return (
-    <Show when={props.items.length > 0}>
+    <Show when={visibleItems().length > 0}>
       <div class={cn("mb-1.5 w-full", props.compact ? "px-1 py-1" : "rounded-md border border-border bg-surface p-1.5")}>
-        <Show when={props.items.length > 0}>
+        <Show when={visibleItems().length > 0}>
           <div class="flex items-center gap-2 px-1 pb-1">
             <Show when={parada()}>
               <Pause
@@ -110,7 +121,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
             </Show>
             <span class={cn("text-xs", props.compact ? "font-medium text-neutral-500" : "font-semibold text-neutral-700")}>
               {t("chat.queue.label")} ·{" "}
-              <span class="tabular-nums">{props.items.length}</span>
+              <span class="tabular-nums">{visibleItems().length}</span>
             </span>
             <Show when={props.retenida === "manual"}>
               <span class="truncate text-xs text-neutral-500">{t("chat.queue.manual")}</span>
@@ -118,13 +129,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
             {/* Con una pregunta abierta no hay «mandar»: lo de la cola se
                 escribió sin la respuesta, y soltarlo la daría por contestada. Se
                 contesta arriba y la cola sigue sola. */}
-            <Show
-              when={
-                props.retenida !== null &&
-                props.retenida !== "pregunta" &&
-                editando() === null
-              }
-            >
+            <Show when={canSendQueue()}>
               <Button
                 type="button"
                 variant="secondary"
@@ -140,7 +145,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
         </Show>
 
         <ol class={cn("m-0 grid list-none gap-0.5 p-0", props.compact && "max-h-40 overflow-y-auto")}>
-          <For each={props.items}>
+          <For each={visibleItems()}>
             {(it, i) => (
               <Show
                 when={editando() === it.id}
@@ -176,7 +181,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                         )}
                         title={props.compact ? it.text : undefined}
                       >
-                        {props.handoffItemId === it.id ? t("chat.activity.preparing") : it.text}
+                        {it.text}
                       </span>
                     </span>
 
@@ -206,7 +211,7 @@ export default function ColaDeMensajes(props: ColaDeMensajesProps) {
                       <Show when={it.uncertain}>
                         <span class="text-xs text-warning-strong">{t("chat.queue.uncertain")}</span>
                         <Button type="button" variant="ghost" size="icon" class="size-7" aria-label={t("chat.queue.send_again_aria", { n: i() + 1 })}
-                          title={t("chat.queue.send_again")} disabled={props.pending?.includes(it.id)} onClick={() => props.onReenviar(it.id)}>
+                          title={t("chat.queue.send_again")} disabled={props.blocked || props.pending?.includes(it.id)} onClick={() => props.onReenviar(it.id)}>
                           <RotateCcw size={13} />
                         </Button>
                       </Show>

@@ -50,7 +50,7 @@ export function createChatThreadRow(props: ChatProps, deps: ChatThreadRowDeps) {
                       observed
                       outcome={b().activity?.outcome}
                       messages={b().activity?.messages}
-                      stopping={props.stopping && isCurrentActivity(b().activity)}
+                      stopping={props.stopping && Boolean(b().activity?.active)}
                       latestAction={observedActivityAction(b().activity?.observation?.message, b().activity?.observation?.kind) ?? (b().activity?.startConfirmed ? { kind: "thinking" } : null)}
                       pasos={activitySteps(b().activity)}
                       razonamiento={b().activity?.messages.flatMap(message => message.razonamiento ?? []) ?? []}
