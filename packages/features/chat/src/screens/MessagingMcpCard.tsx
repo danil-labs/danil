@@ -14,7 +14,7 @@ const CARD_SANDBOX =
  * Ajusta su altura mediante `terminus:visual-height` / `ui/notifications/size-changed`
  * y atiende `danil/http` vía Modalidad 1 (`proxy`).
  */
-export default function MessagingMcpCard(props: { target: MessagingCardTarget }) {
+export default function MessagingMcpCard(props: { target: MessagingCardTarget; workspaceId?: string | null }) {
   let frame: HTMLIFrameElement | undefined;
   const [height, setHeight] = createSignal(220);
   const targetOrigin = createMemo(() => originOf(props.target.url));
@@ -36,7 +36,10 @@ export default function MessagingMcpCard(props: { target: MessagingCardTarget })
     const origin = targetOrigin();
     if (!origin || !frame?.contentWindow) return;
     const theme = readTheme();
-    frame.contentWindow.postMessage({ type: "danil:context", mode: "proxy", theme: theme.mode }, origin);
+    frame.contentWindow.postMessage(
+      { type: "danil:context", mode: "proxy", workspaceId: props.workspaceId ?? null, theme: theme.mode },
+      origin,
+    );
     frame.contentWindow.postMessage({ type: "terminus:visual-theme", theme }, origin);
     frame.contentWindow.postMessage(
       { jsonrpc: "2.0", method: "ui/notifications/host-context-changed", params: { theme: theme.mode } },
@@ -51,7 +54,27 @@ export default function MessagingMcpCard(props: { target: MessagingCardTarget })
       const msg = event.data;
       if (!msg || typeof msg !== "object") return;
 
-      if (msg.type === "danil:ready" || msg.method === "ui/initialize") {
+      if (msg.type === "danil:ready") {
+        syncContextAndTheme();
+        return;
+      }
+
+      if (msg.method === "ui/initialize") {
+        if (msg.id !== undefined) {
+          frame.contentWindow.postMessage(
+            {
+              jsonrpc: "2.0",
+              id: msg.id,
+              result: {
+                protocolVersion: "2025-11-25",
+                hostInfo: { name: "Danil", version: "0.3.5" },
+                hostCapabilities: { openLinks: {}, proxyHttp: true },
+                hostContext: { theme: readTheme().mode, workspaceId: props.workspaceId ?? null },
+              },
+            },
+            origin,
+          );
+        }
         syncContextAndTheme();
         return;
       }
@@ -77,6 +100,7 @@ export default function MessagingMcpCard(props: { target: MessagingCardTarget })
               ? (params.headers as Record<string, string>)
               : undefined,
           body: params.body,
+          workspaceId: props.workspaceId,
           signal: pending.signal,
         }).then((result) => {
           frame?.contentWindow?.postMessage({ jsonrpc: "2.0", id: msg.id, result }, origin);

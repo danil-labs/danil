@@ -3,6 +3,7 @@ import { openExternalTarget } from "../../../host/src/file-preview";
 import {
   executePluginProxyHttp,
   subscribeMessagingEvents,
+  unwrapPluginSseEvent,
   type PluginSseEvent,
 } from "../../../platform-client/src/messaging-proxy";
 import { VISUAL_THEME_TOKENS, type VisualTheme } from "../../../ui/src/lib/chat/inlineVisual";
@@ -81,12 +82,7 @@ export default function PluginFrame(props: {
   };
 
   const forwardSseEvent = (event: PluginSseEvent) => {
-    postToFrame({ type: "danil/event", event });
-    postToFrame({
-      jsonrpc: "2.0",
-      method: "danil/notifications/event",
-      params: { event },
-    });
+    postToFrame({ type: "danil/event", event: unwrapPluginSseEvent(event) });
   };
 
   const handleHttpRpc = async (id: unknown, rawParams: unknown) => {
@@ -222,7 +218,7 @@ export default function PluginFrame(props: {
         src={props.url}
         title={props.title}
         sandbox={PLUGIN_SANDBOX}
-        allow="clipboard-write"
+        allow="clipboard-write; microphone"
         referrerPolicy="no-referrer"
         class="block h-full w-full flex-1 border-0 bg-surface"
         onLoad={() => {

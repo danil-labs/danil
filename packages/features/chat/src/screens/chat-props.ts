@@ -376,4 +376,6 @@ export type ChatProps = {
   renderPdf: (props: { base64: string; name: string }) => JSX.Element;
   createFreeRouterConsent: CreateFreeRouterConsent;
   machineOf: MachineOf;
+  /** Identificador numérico de workspace en plataforma (opcional, para proxy MCP). */
+  workspaceId?: string | null;
 };

@@ -30,13 +30,13 @@ function esDrawio(v: AppView) {
   return v.resource_uri === "ui://drawio/mcp-app.html";
 }
 
-export default function McpAppView(props: { call: McpAppCall }) {
+export default function McpAppView(props: { call: McpAppCall; workspaceId?: string | null }) {
   if (isMessagingConnectCall(props.call)) {
-    return <MessagingConnectCard call={props.call} />;
+    return <MessagingConnectCard call={props.call} workspaceId={props.workspaceId} />;
   }
   const cardTarget = parseMessagingCardTarget(props.call);
   if (cardTarget) {
-    return <MessagingMcpCard target={cardTarget} />;
+    return <MessagingMcpCard target={cardTarget} workspaceId={props.workspaceId} />;
   }
 
   let frame: HTMLIFrameElement | undefined;

@@ -97,7 +97,7 @@ function webBuild(serve: boolean): UserConfig {
         "  X-Content-Type-Options: nosniff",
         "  Referrer-Policy: strict-origin-when-cross-origin",
         "  Strict-Transport-Security: max-age=31536000",
-        "  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+        '  Permissions-Policy: camera=(), microphone=(self "https://messaging.danil.ai" "https://messaging-staging.danil.ai"), geolocation=(), payment=(), usb=()',
         "",
       ];
       writeFileSync(join(root, "_headers"), headers.join("\n"));
