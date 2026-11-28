@@ -435,6 +435,7 @@ test('reopening the web app without URL params restores the last opened workspac
   await until(() => tile(doc1, 'wx1')?.getAttribute('aria-current') === 'true' && tile(doc1, 'wx1')?.dataset.workspaceContext === 'ctx_x', 'wx1 opened');
   const saved = app1.w.localStorage.getItem('danil.web.last-workspace');
   assert.deepEqual(JSON.parse(saved), { workspace: 'wx1', org: 'org_x', account: 'user_a' });
+  assert.equal(app1.w.localStorage.getItem('danil.login.last-org'), 'org_x', 'opening an organization workspace remembers its WorkOS org for future login');
   app1.w.dispatchEvent(new app1.w.Event('pagehide'));
   await new Promise(resolve => setTimeout(resolve, 50));
 

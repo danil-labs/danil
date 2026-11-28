@@ -12,3 +12,11 @@ export type Machine = { id: string; local: boolean; active: boolean; on: boolean
 
 /** Lo que el picker sabe del proyecto de la tarea nueva: las máquinas con su carpeta y su remoto. */
 export type ProjectPlace = { name: string; machines?: string[]; remote_url?: string | null } | null | undefined;
+
+/** Estado agregado de disponibilidad de máquinas para un contexto o workspace (compartido por R3). */
+export type MachineAvailability =
+  | { kind: "loading" }
+  | { kind: "unavailable"; reason: "service_error" | "not_permitted" }
+  | { kind: "no_machines"; scope: "context" | "workspace" }
+  | { kind: "offline"; wakeable: boolean; count: number }
+  | { kind: "ready"; online: number; total: number };

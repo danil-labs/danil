@@ -5,14 +5,12 @@ import { type CatalogosDeModelos } from "../../../../ui/src/lib/models.ts";
 import { esProvisional, tituloProvisional } from "../../../../ui/src/lib/taskDraft";
 import { callEngine } from "../../../../engine-client/src/client.ts";
 import { capabilities } from "../../../../host/src/platform";
-import { claveDe, prosaDe } from "../../../../ui/src/Failure";
+import { prosaDe } from "../../../../ui/src/Failure";
 import { type Encolado } from "../components/MessageQueue";
 import { type Respuesta, type RespuestaEnviada } from "../components/Questions";
-import { mensajeDeFallo } from "../model/failures";
 import { handoverInForce } from "../model/handover";
 import { type HandoverState } from "../model/handover.ts";
 import { type Author } from "../model/messageTypes.ts";
-import { comandoEscrito } from "../model/slashOutput";
 import { type Signatures } from "../model/transcript";
 import { type Session } from "../model/transcript.ts";
 import { type Msg } from "../screens/Chat";
@@ -27,6 +25,7 @@ import type { createHandover } from "./handover.ts";
 import type { createResync } from "./resync.ts";
 import type { createSendGates } from "./send-gates.ts";
 import type { createThreadStream } from "./thread-stream.ts";
+import { handleSendFailure, readPendingRequests } from "./send-failure.ts";
 
 
 /** Lo que corta un envío cuya copia se detuvo: el fallo y su arreglo quedan en el encabezado. */
@@ -360,92 +359,17 @@ export function createSend(deps: SendDeps) {
       if (finishedTurns.has(id)) void settleTurn(id, finishedTurns.get(id));
       return true;
     } catch (e) {
-      if (abierta && dormida) threads.markMachineWait(abierta, null);
-      if (provisional && naceDormida) threads.markMachineWait(provisional, null);
-      // Sin esto queda una tarea que nadie creó: la fila y la pestaña se
-      // pintaron contando con que Rust aceptara el turno.
-      const retirarProvisional = () => {
-        if (!provisional || enviado) return;
-        retirarNaciendo(provisional);
-        // Cerrar la pestaña provisional con `close` deja delante a su vecina
-        // (la tarea anterior) y la vista volvía a lo que se estaba mirando.
-        // Se vuelve al blanco en el mismo lote: el fallo se pinta en la celda
-        // vacía y el texto vuelve a la caja (`mandar` lo repone con `false`).
-        pestanas.close(provisional);
-        pestanas.activate(null);
-        paneles.showDraft();
-        olvidarPestana(provisional);
-      };
-      if (generation !== workspaceContext.generation()) {
-        batch(() => {
-          retirarProvisional();
-          threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
-        });
-        return false;
-      }
-      if (abierta && !enviado) handoff.observe({ kind: "rejected", scope: conversationScope(abierta, proyecto), error: e });
-      if (e === CARRY_STOPPED) {
-        // El texto vuelve a la caja: el globo se iría duplicado y el blanco recupera su selector.
-        batch(() => {
-          retirarProvisional();
-          threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
-          if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
-        });
-        return false;
-      }
-      if (destination && claveDe(e) === "history.error.busy") {
-        batch(() => {
-          retirarProvisional();
-          threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
-          marcarQuieta(destination.session, "failed");
-        });
-        throw e;
-      }
-      // Lo escrito para una tarea que otro turno ocupa espera en su cola, con la misma identidad.
-      if (!respuestas && !deLaCola && claveDe(e) === "history.error.busy" && abierta === sessionId()) {
-        batch(() => {
-          retirarProvisional();
-          threads.rejectOptimistic(clave, [turnoPropio, ...entrando]);
-          taskQueues.enqueue({ ...m, id: clientMessageId }, true);
-          if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
-          if (abierta) marcarQuieta(abierta);
-        });
-        return true;
-      }
-      // Ya salió: un fallo posterior no es un envío fallido ni devuelve el texto a la caja.
-      if (enviado) { threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]); return true; }
-      // Error real de envío: el globo se queda con «Reintentar» y la caja no lo repone.
-      batch(() => {
-        retirarProvisional();
-        threads.acknowledgeOptimistic(clave, [...entrando, turnoPropio]);
-        if (!abierta) { threads.finishActivity("", undefined, "failed"); setArrancando(false); }
-        if (abierta) marcarQuieta(abierta, "failed");
-        threads.appendLive(clave, [{
-                    role: "system",
-                    // Una negativa de comando llega como clave: la frase nombra lo escrito.
-                    ...mensajeDeFallo(e, {
-                      command: comandoEscrito(m.text),
-                      agent: agents().find((a) => a.id === m.provider)?.label ?? m.provider,
-                    }),
-                    meta: "fallo",
-                  }]);
-      });
-      if (respuestas) throw e;
-      return false;
+      return handleSendFailure(
+        { agents, conversationScope, handoff, marcarQuieta, olvidarPestana, paneles, pestanas, retirarNaciendo, sessionId, setArrancando, taskQueues, threads, workspaceContext },
+        { error: e, carryStopped: CARRY_STOPPED, abierta, provisional, dormida, naceDormida, enviado, generation, proyecto, clave, turnoPropio, entrando, m, clientMessageId, respuestas: Boolean(respuestas), deLaCola, destination },
+      );
     } finally {
       if (!enviado && abierta && pendingStarts.get(abierta) === start) pendingStarts.delete(abierta);
       void reconcileActiveTurns();
     }
   }
 
-  type Pendientes = {
-    records?: { permissions: { id: string; request_id: string; state: string; [key: string]: unknown }[] };
-    // `id` y `revision` faltan en un motor anterior a los pendientes durables.
-    questions: { id?: string; request_id: string; revision?: number; turn: string }[];
-    permissions: { id?: string; request_id: string; revision?: number; tool: string; target: string | null }[];
-  };
-  /** Lo que esa tarea tiene esperando. No lanza: sin respuesta, no hay nada. */
   const pendientesDe = (session: string, workspace = workspaceActivo()) =>
-    callEngine<Pendientes>("pending_requests", { session }, opcionesDeLaTarea(session, workspace)).catch(() => null);
+    readPendingRequests(session, workspace, opcionesDeLaTarea);
   return { enviar, pendientesDe };
 }

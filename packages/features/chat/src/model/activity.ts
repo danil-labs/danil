@@ -61,7 +61,7 @@ export function createActivityProjection() {
     const activity = current(workspace, session);
     if (!activity) return false;
     if (!activity.active) {
-      if (outcome !== "done" && activity.outcome !== outcome) {
+      if (activity.outcome === "done" && outcome !== "done") {
         activity.outcome = outcome;
         return true;
       }
@@ -109,7 +109,7 @@ export function createActivityProjection() {
       const hasResponse = messages.some(isAgentOutput);
       const outcome: TurnOutcome = record.active
         ? "running"
-        : messages.some(isInterruption)
+        : record.outcome === "interrupted" || messages.some(isInterruption)
           ? "interrupted"
           : record.outcome === "failed" || messages.some(isFailure)
             ? "failed"
@@ -125,8 +125,14 @@ export function createActivityProjection() {
         if ((outcome === "failed" || outcome === "interrupted") && !hasWork) return [];
         if (outcome === "done" && !hasWork && !hasResponse && duration === undefined) return [];
       }
-      const at = anchor ? visible.indexOf(anchor) : visible.length;
-      return [{ key: record.key, anchor: anchor ?? null, anchorIndex: at < 0 ? visible.length : at,
+      let at = anchor ? visible.indexOf(anchor) : -1;
+      if (at < 0) {
+        at = visible.length;
+        if (!record.active) {
+          while (at > 0 && visible[at - 1]?.role === "system" && visible[at - 1]?.meta === "fallo") at--;
+        }
+      }
+      return [{ key: record.key, anchor: anchor ?? null, anchorIndex: at,
         active: record.active, outcome, startConfirmed: record.startConfirmed, startedAt: record.startedAt, durationMs: duration ?? null, messages, observation: record.lastObserved && record.lastObservedKind ? { message: record.lastObserved, kind: record.lastObservedKind } : null }];
     });
   }

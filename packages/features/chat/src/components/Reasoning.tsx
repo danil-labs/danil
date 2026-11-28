@@ -14,7 +14,7 @@ import { reasoningHeadline, withEllipsis } from "../model/activityNarration";
 
 /** Reasoning renders as a collapsible row matching tool rows inside the turn's activity disclosure. */
 export default function Reasoning(props: { bloques: Razonamiento[]; slot?: string; active?: boolean }) {
-  const [openMap, setOpenMap] = createRowSignal<Record<string, boolean>>("reasoning", {});
+  const [openMap, setOpenMap] = createRowSignal<Record<string, boolean>>("reasoning", {}, props.slot);
   const slotKey = () => props.slot ?? "0";
   const open = () => Boolean(openMap()[slotKey()]);
   const toggle = () => setOpenMap({ ...openMap(), [slotKey()]: !open() });

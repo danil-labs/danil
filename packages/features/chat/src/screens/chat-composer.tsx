@@ -205,7 +205,7 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
               </Button>
             </Show>
             <Show when={!modoTerminal() || props.busy}>
-            <ComposerAction busy={props.busy} stopping={props.stopping} hasMessage={Boolean(props.input.trim() || props.adjuntos.length)} canSend={listo()} onStop={props.onStop} />
+            <ComposerAction busy={props.busy || Boolean(props.handoff && props.stopping)} stopping={props.stopping} hasMessage={Boolean(props.input.trim() || props.adjuntos.length)} canSend={listo()} onStop={props.onStop} />
             </Show>
           </div>
         </div>
@@ -226,7 +226,7 @@ export function createChatComposer(props: ChatProps, deps: ChatComposerDeps) {
 
       {/* Pegada a la caja y encima: lo que va a salir después está donde se
           escribió, no en una columna aparte. */}
-      <ColaDeMensajes {...props.cola} handoffItemId={props.handoff?.queueItemId} compact={presentation().compactQueue} onOpenTask={props.onOpenTask} />
+      <ColaDeMensajes {...props.cola} handoffItemId={props.handoff?.queueItemId} blocked={Boolean(props.cola.blocked || props.busy || props.stopping || props.handoff)} canInterrupt={props.cola.canInterrupt ?? Boolean(props.busy || props.stopping)} compact={presentation().compactQueue} onOpenTask={props.onOpenTask} />
 
       {/* Las dos interrupciones viven en el mismo sitio, pero no pesan igual.
           La pregunta es una decisión de producto; el permiso ejecuta algo y

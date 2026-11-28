@@ -366,3 +366,115 @@ test("el reintento solo vuelve a leer las carpetas que fallaron", async () => {
   assert.deepEqual(lists, { app: ["app"], otra: ["otra"] });
 });
 
+test("coalesce junta las carpetas rápidas de una oleada multi-carpeta en una sola aplicación", async () => {
+  const reads = new Map<string, ReturnType<typeof deferred<string[]>>>();
+  const timers: { id: number; run: () => void; ms: number; cancelled: boolean }[] = [];
+  let lists: SessionLists<string> = {};
+  let applies = 0;
+  const refresh = sessionRefresh<string>({
+    read: (project) => {
+      const d = deferred<string[]>();
+      reads.set(project, d);
+      return d.promise;
+    },
+    apply: (update) => {
+      applies += 1;
+      lists = update(lists);
+    },
+    projects: () => ["", "p1", "p2"],
+    key: (row) => row,
+    schedule: (run, ms) => {
+      const entry = { id: timers.length + 1, run, ms, cancelled: false };
+      timers.push(entry);
+      return entry.id;
+    },
+    cancel: (handle) => {
+      const entry = timers.find((t) => t.id === handle);
+      if (entry) entry.cancelled = true;
+    },
+    coalesce: 250,
+  });
+
+  const wave = refresh.refresh(["", "p1", "p2"]);
+  reads.get("")!.resolve(["t0"]);
+  await settle();
+  assert.equal(applies, 0, "espera dentro de la ventana antes de pintar un subconjunto parcial");
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0].ms, 250);
+
+  reads.get("p1")!.resolve(["t1"]);
+  await settle();
+  assert.equal(applies, 0, "aún espera la última carpeta rápida");
+
+  reads.get("p2")!.resolve(["t2"]);
+  await wave;
+  assert.equal(applies, 1, "todas las carpetas rápidas se pintan en una sola pasada");
+  assert.equal(timers[0].cancelled, true, "cancela el temporizador al completar la oleada");
+  assert.deepEqual(lists, { "": ["t0"], p1: ["t1"], p2: ["t2"] });
+});
+
+test("coalesce no se congela por una carpeta lenta y descarta oleadas obsoletas al cambiar de workspace o recibir un refresco nuevo", async () => {
+  const reads: { project: string; d: ReturnType<typeof deferred<string[]>> }[] = [];
+  const timers: { id: number; run: () => void; ms: number; cancelled: boolean }[] = [];
+  let lists: SessionLists<string> = {};
+  let applies = 0;
+  const refresh = sessionRefresh<string>({
+    read: (project) => {
+      const d = deferred<string[]>();
+      reads.push({ project, d });
+      return d.promise;
+    },
+    apply: (update) => {
+      applies += 1;
+      lists = update(lists);
+    },
+    projects: () => ["p1", "p2", "lenta"],
+    key: (row) => row,
+    schedule: (run, ms) => {
+      const entry = { id: timers.length + 1, run, ms, cancelled: false };
+      timers.push(entry);
+      return entry.id;
+    },
+    cancel: (handle) => {
+      const entry = timers.find((t) => t.id === handle);
+      if (entry) entry.cancelled = true;
+    },
+    coalesce: 250,
+  });
+
+  const wave = refresh.refresh(["p1", "p2", "lenta"]);
+  reads[0].d.resolve(["a1"]);
+  reads[1].d.resolve(["b1"]);
+  await settle();
+  assert.equal(applies, 0);
+
+  // Un refresco puntual más nuevo de p1 se aplica de inmediato y no puede ser pisado por la oleada vieja.
+  const single = refresh.refresh(["p1"]);
+  reads[3].d.resolve(["a2"]);
+  await single;
+  assert.equal(applies, 1);
+  assert.deepEqual(lists, { p1: ["a2"] });
+
+  // Al vencer coalesce, pinta las rápidas pendientes respetando p1 más nueva, sin esperar a lenta.
+  timers[0].run();
+  assert.equal(applies, 2);
+  assert.deepEqual(lists, { p1: ["a2"], p2: ["b1"] });
+
+  // Cuando la lenta responde después, se pinta sin bloquear.
+  reads[2].d.resolve(["c1"]);
+  await wave;
+  assert.equal(applies, 3);
+  assert.deepEqual(lists, { p1: ["a2"], p2: ["b1"], lenta: ["c1"] });
+
+  // reset() cancela el temporizador de coalesce y descarta lo acumulado.
+  const wave2 = refresh.refresh(["p1", "p2"]);
+  reads[4].d.resolve(["stale"]);
+  await settle();
+  const activeTimer = timers.at(-1)!;
+  refresh.reset();
+  assert.equal(activeTimer.cancelled, true);
+  reads[5].d.resolve(["stale2"]);
+  await wave2;
+  assert.deepEqual(lists, { p1: ["a2"], p2: ["b1"], lenta: ["c1"] });
+});
+

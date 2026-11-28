@@ -738,7 +738,7 @@ export default function TaskScreen() {
   return (
     // En la web, al volver de Archivos o del visor el chat entra desde la izquierda.
     <SlideIn enter={false}>
-    <KeyboardScreen>
+    <KeyboardScreen style={{ backgroundColor: theme.bg }}>
       <ChatScopeContext.Provider value={scope}>
       <Stack.Screen options={{ title: titleOf(key) ?? title, headerShown: false }} />
       <ChatBackdrop background={background} theme={theme} />
@@ -793,8 +793,8 @@ export default function TaskScreen() {
         }
       />
       {finding !== null ? (
-        <View style={[styles.findWrap, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-          <View style={[styles.findBar, { backgroundColor: theme.muted }]}>
+        <View style={styles.findWrap}>
+          <View style={[styles.findBar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <Icon name="search" size={14} color={theme.textMuted} />
             <TextInput
               testID="chat-find-input"
@@ -1180,8 +1180,8 @@ function QuestionCard({
 }
 
 const styles = StyleSheet.create({
-  findWrap: { paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
-  findBar: { flexDirection: "row", alignItems: "center", gap: 8, height: 38, borderRadius: 10, paddingLeft: 12 },
+  findWrap: { paddingHorizontal: 16, paddingBottom: 8 },
+  findBar: { flexDirection: "row", alignItems: "center", gap: 8, height: 38, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingLeft: 12 },
   findInput: { flex: 1, fontSize: TEXT.lead, minWidth: 0, ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as object) : null) },
   findClose: { width: 38, height: 38, alignItems: "center", justifyContent: "center" },
   banner: { padding: 8, borderRadius: RADIUS.lg, fontSize: TEXT.ui },

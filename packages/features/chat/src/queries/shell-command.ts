@@ -283,6 +283,7 @@ export function createShellCommand(deps: ShellCommandDeps) {
    */
   async function enviarDeLaCola(session: string, id: string, clientMessageId = id) {
     const scope = conversationScope(session);
+    if (handoff.blocked(scope) || vivas().includes(session) || settlingTurns().includes(session)) return;
     const item = (session === sessionId() ? cola() : taskQueues.saved(session)?.items ?? []).find((q: { id: string }) => q.id === id);
     if (!item || injecting().some((q) => q.session === session && q.id === id)) return;
     handoff.observe({ kind: "dispatching", scope, itemIds: [id] });
@@ -311,10 +312,15 @@ export function createShellCommand(deps: ShellCommandDeps) {
   function mandarCola() {
     const id = sessionId(), view = handoffAt(id);
     if (!id) return;
+    const scope = conversationScope(id);
     const libres = cola().filter((item) => !item.uncertain && !injecting().some((q) => q.session === id && q.id === item.id));
     const next = libres.find(interrumpible), head = libres[0];
     if (busy()) { if (next) void detenerYEnviar(next.id); return; }
-    if (view?.error && view.pending?.phase === "waiting-close") return void handoff.replaceWithQueued(conversationScope(id), view.pending.queueItemId);
+    if (view?.error && view.pending?.phase === "waiting-close") return void handoff.replaceWithQueued(scope, view.pending.queueItemId);
+    if (handoff.blocked(scope) || (view?.pending && !view.error)) {
+      if (next && !view?.pending && view?.stopping) void handoff.replaceWithQueued(scope, next.id);
+      return;
+    }
     if (head && esDeLaTerminal(head)) void ejecutarDeLaCola(head);
     else if (engineCanDispatch(id)) void reanudarCola(id);
     else if (head) void enviarDeLaCola(id, head.id);

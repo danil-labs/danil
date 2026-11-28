@@ -328,6 +328,8 @@ export function createPanelDeChatCell(deps: PanelDeChatCellDeps) {
         cola={{
           items: inline ? [] : cola(),
           pending: inline ? [] : injecting().filter((item) => item.session === sessionId()).map((item) => item.id),
+          blocked: inline ? false : Boolean(busy() || (pp.sesion && handoff.blocked(conversationScope(pp.sesion, proyectoDeLaCelda()?.id)))),
+          canInterrupt: inline ? false : Boolean(busy() || (pp.sesion && handoffAt(pp.sesion, proyectoDeLaCelda()?.id)?.stopping)),
           agentes: agents(),
           actual: { agent: inline ? inline.agent() : agent(), model: inline ? inline.model() : model() },
           retenida: inline ? null : razonDeLaCola(),

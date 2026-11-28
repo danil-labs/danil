@@ -296,25 +296,20 @@ export default function Home() {
 
   return (
     <KeyboardScreen style={{ backgroundColor: theme.bg }}>
-      {/* Minimal 2-button mobile header: left `=` drawer trigger + right `[⊞]` speed-dial */}
-      <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
+      {/* Minimal 2-button mobile header: bare left `=` drawer icon + bare right `[⊞]` speed-dial */}
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Pressable
           testID="home-open-drawer"
+          hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel={t("drawer.open")}
           onPress={() => {
             Keyboard.dismiss();
             setDrawerOpen(true);
           }}
-          style={({ pressed }) => [
-            styles.headerBtn,
-            {
-              backgroundColor: pressed ? theme.muted : theme.surface,
-              borderColor: theme.border,
-            },
-          ]}
+          style={({ pressed }) => [styles.headerBtn, { opacity: pressed ? 0.5 : 1 }]}
         >
-          <Icon name="menu" size={20} color={theme.text} />
+          <Icon name="menu" size={22} color={theme.text} />
         </Pressable>
 
         <HeaderToolsDial
@@ -585,15 +580,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingBottom: 6,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
     zIndex: 50,
   },
   headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
+    width: 28,
+    height: 28,
     alignItems: "center",
     justifyContent: "center",
   },
