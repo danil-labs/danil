@@ -93,9 +93,13 @@ export function createResync(deps: ResyncDeps) {
   onMount(serviceStream.start);
   onCleanup(serviceStream.dispose);
 
+  let reconcileSeq = 0;
+  let lastAppliedReconcile = 0;
+
   async function reconcileActiveTurns() {
     const workspace = workspaceActivo();
     if (!workspace || isNoMachines()) return;
+    const seq = ++reconcileSeq;
     const revision = deps.lifecycleRevision;
     const generation = workspaceContext.generation();
     const presenceSnapshot = handoff.presenceSnapshot();
@@ -104,7 +108,8 @@ export function createResync(deps: ResyncDeps) {
         callEngine<string[]>("list_active_turns", { workspace }),
         callEngine<LiveTurn[]>("list_live_turns").catch(() => []),
       ]);
-      if (generation !== workspaceContext.generation() || revision !== deps.lifecycleRevision) return;
+      if (generation !== workspaceContext.generation() || revision !== deps.lifecycleRevision || seq < lastAppliedReconcile) return;
+      lastAppliedReconcile = seq;
       const enVuelo = timing.filter((turn) => turn.workspace === workspace && active.includes(turn.session));
       setDesdeDeTurno((previous) => ({ ...previous, ...Object.fromEntries(
         enVuelo.map((turn) => [turn.session, turn.started_at]),

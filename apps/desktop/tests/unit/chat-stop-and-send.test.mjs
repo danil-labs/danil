@@ -517,3 +517,62 @@ test("una cola manual con solo un !comando oculta «mandar» durante Detener opt
     app.w.close();
   }
 });
+
+test("dos consultas de reconciliación resueltas en orden inverso no reactivan un turno ya cerrado", async () => {
+  let rechazarStop = null;
+  let holdReads = false;
+  const resolvers = [];
+  const ws = "w-order";
+  const app = await boot("listo", "chat-stop-out-of-order-reconcile", responses({
+    list_workspaces: { workspaces: [{ id: ws, name: "W Order", context_root: null }], active: ws },
+    workspaces_startup: { workspaces: [{ id: ws, name: "W Order", context_root: null }], active: ws },
+    list_machines: [{ id: "local", name: "Local", local: true, online: true, features: ["light_state_v1"] }],
+    list_active_turns: (args) => {
+      if (args?.workspace !== ws) return [];
+      if (holdReads) return new Promise((resolve) => resolvers.push(resolve));
+      return [];
+    },
+    load_queue: ({ session }) => session === "t1"
+      ? [{ id: "q1", text: "incierto tras cierre", provider: AGENTE, model: "deepseek", effort: null, permission_mode: null, attachments: [], uncertain: true }]
+      : [],
+    stop_turn: () => new Promise((_resolve, reject) => { rechazarStop = reject; }),
+  }));
+  try {
+    await sleep(600);
+    app.w.document.querySelector('[data-sesion="t1"]').click();
+    await sleep(400);
+    app.emit("chat", { kind: "started", session: "t1", workspace: ws });
+    await sleep(150);
+
+    porTitulo(app, "Detener turno").click();
+    await sleep(40);
+
+    // Captura la primera consulta inmediata tras fallar stop_turn y la segunda del reintento de 1 s.
+    holdReads = true;
+    rechazarStop(new Error("stop falló"));
+    await waitFor(() => resolvers.length >= 2, "salieron dos consultas de reconciliación concurrentes", 2500);
+    const [primera, segunda] = resolvers.splice(0, 2);
+
+    // La segunda consulta confirma el cierre antes de que responda la primera.
+    segunda([]);
+    const reenviar = await waitFor(
+      () => {
+        const btn = app.w.document.querySelector('button[aria-label*="Enviar de nuevo"], button[title="Enviar de nuevo"]');
+        return btn && !btn.disabled ? btn : null;
+      },
+      "la consulta más nueva libera «Enviar de nuevo» al confirmar el cierre",
+      2000,
+    );
+    assert.equal(porTitulo(app, "Detener turno"), null);
+
+    // La primera consulta llega tarde con t1 aún vivo y debe descartarse sin reactivar el turno.
+    primera(["t1"]);
+    await sleep(120);
+    assert.equal(porTitulo(app, "Detener turno"), null, "una respuesta anterior no reactiva «Detener turno»");
+    assert.equal(reenviar.disabled, false, "el reenvío sigue habilitado tras descartar la respuesta obsoleta");
+  } finally {
+    holdReads = false;
+    for (const resolve of resolvers) resolve([]);
+    app.w.close();
+  }
+});
