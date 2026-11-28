@@ -291,6 +291,15 @@ export default function Home() {
                 onPress={() => router.push((ALPHA_DEMO ? `${SECTIONS[entry.id].route}?demo=1` : SECTIONS[entry.id].route) as never)}
               />
             ))}
+            {Platform.OS === "web" ? (
+              <ListRow
+                testID="messaging"
+                icon={{ name: "inbox", color: theme.merged }}
+                title="Mensajería"
+                chevron
+                onPress={() => router.push("/messaging" as never)}
+              />
+            ) : null}
             {agents.length ? (
               <ListRow
                 testID="agents"

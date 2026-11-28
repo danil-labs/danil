@@ -119,6 +119,7 @@ export default function RootLayout() {
           <Stack.Screen name="settings" options={{ headerShown: false }} />
           <Stack.Screen name="inbox" options={{ headerShown: false }} />
           <Stack.Screen name="inbox-thread" options={{ headerShown: false }} />
+          <Stack.Screen name="messaging" options={{ headerShown: false }} />
           <Stack.Screen name="task-tools" options={{ headerShown: false }} />
           <Stack.Screen name="task-files" options={{ headerShown: false }} />
           {/* El visor de un archivo: entra desde la derecha, desde Archivos o desde el chat. */}
