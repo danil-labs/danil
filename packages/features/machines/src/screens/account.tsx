@@ -20,6 +20,7 @@ import { createScreenAccess } from "../queries/screen-access.ts";
 import { settledContextIds } from "../../../../session/src/settled-contexts.ts";
 import { cancelEdgeWrites, isRetiredComputersEndpoint, listComputers, readContextSpaces, sessionProbe, setMachineRoute, startComputer, startedOf, wokeOf } from "../queries";
 import { Fleet, type MachineInfo, unwrap } from "../model/fleet/index.ts";
+import { createAutoWaker } from "../model/auto-wake.ts";
 import { createRoot, createSignal } from "solid-js";
 import { listenDanilConnectionChange } from "../../../../host/src/danilConnectionEvents.ts";
 import { whenConnected } from "../../../../session/src/engineConnection.ts";
@@ -103,7 +104,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     // `403 organization_selection_required`: se abre el selector de organización (si esta ventana lo tiene).
     const organizations = (capabilities() as { organizations?: () => Promise<{ report: (e: unknown) => unknown }> }).organizations;
     void organizations?.().then((selector) => selector.report(e));
-  }, undefined, contexts => { installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts); }, createConnectedStatus(native));
+  }, undefined, contexts => { installed?.pruneContexts(contexts); installed?.router.pruneContexts(contexts); installed?.fleet.pruneContexts(contexts); }, createConnectedStatus(native));
   let cloudIds = new Set<string>();
   /** `machines.session.renew` anunciada por el borde: el relay renueva dentro del canal. */
   let cloudRenew = false;
@@ -253,7 +254,8 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
         return startedOf(await startComputer(endpoint, (await getToken()).token, id));
       },
       storage: localStorage,
-      onChange: () => {
+      onChange: (id, context) => {
+        autoWaker.onPowerChange(id, context, fleet.power(id, context));
         bump((n) => n + 1);
         window.dispatchEvent(new CustomEvent("harness:machines"));
         void refetchMachines();
@@ -270,6 +272,22 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
         }
       },
     });
+    const autoWaker = createAutoWaker({
+      fleet: () => fleet,
+      onAwake: () => {
+        slicesChanged(["workspaces", "projects", "sessions", "spaces", "attention", "mentions"]);
+        refresh();
+      },
+      onSettled: () => bump((n) => n + 1),
+    });
+    const wakeActive = () => {
+      const ctx = router.activeContext();
+      if (!ctx || !cloud.contextInfo(ctx)) return;
+      autoWaker.wake(ctx, router.activeWorkspace(), {
+        auto: true,
+        filter: (machine) => cloudIds.has(machine.id) && machine.kind === "organization",
+      });
+    };
     const router = createRouter({
       self, contextInfo: cloud.contextInfo,
       readContextSpaces: readContextSpaces(native),
@@ -347,7 +365,11 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
         refresh();
       },
     });
-    const route = (command: string, args?: unknown, options?: { headers?: HeadersInit }) => router.handle(command, (args ?? {}) as Record<string, unknown>, options);
+    const route = async (command: string, args?: unknown, options?: { headers?: HeadersInit }) => {
+      const result = await router.handle(command, (args ?? {}) as Record<string, unknown>, options);
+      if (command === "set_active_workspace") wakeActive();
+      return result;
+    };
     setMachineRoute(route);
     const onPageHide = () => fleet.flush();
     window.addEventListener("pagehide", onPageHide);
@@ -355,7 +377,10 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       key,
       fleet,
       router,
+      wakeActive,
+      pruneContexts: (contexts) => autoWaker.pruneContexts(contexts),
       restore: () => {
+        autoWaker.close();
         screens?.close();
         stopListing();
         setMachineRoute(null);
@@ -369,7 +394,10 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       .handle("list_workspaces", {})
       .catch(() => null)
       .then(() => {
-        if (installed?.router === router) refresh();
+        if (installed?.router === router) {
+          wakeActive();
+          refresh();
+        }
       });
   }
 
@@ -424,6 +452,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
       installed.fleet.setMachines([...others.map(infoOf), ...guestMachines()]);
       observeEngine(installed.fleet);
       machinesListed(installed.fleet);
+      installed.wakeActive();
       for (const context of cloud.validatedContexts() ?? []) readCloudWorkspaces(context);
       machineNamesChanged();
       return void refetchMachines();
@@ -443,6 +472,7 @@ export function startAccountMachines<DanilSessionInfo, WorkspaceAccount>(
     if (installed?.key === LOCAL_KEY) {
       installed.fleet.setMachines([...cloudRows.map(infoOf), ...guests]);
       machinesListed(installed.fleet);
+      installed.wakeActive();
       for (const context of cloud.validatedContexts() ?? []) readCloudWorkspaces(context);
       machineNamesChanged();
       return void refetchMachines();

@@ -68,7 +68,7 @@ export type Link = {
   /** Detenida sin reintentar sola (`license_required`) hasta `retry()`; una sesión de antes no lo tiene. */
   blocked?(): Blocked | null;
   onBlocked?(listener: (blocked: Blocked | null) => void): () => void;
-  retry?(admission?: RelayAdmission): void;
+  retry?(admission?: RelayAdmission): boolean | void;
   /** La sesión terminó definitivamente (revocada, reemplazada o cerrada): el pool la suelta. */
   onClose?(listener: () => void): () => void;
   /** Cada cambio de la cola de acciones aplazadas de la máquina; una sesión de antes no lo tiene. */

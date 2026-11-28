@@ -668,7 +668,10 @@ export class Fleet {
     // Lo que la ventana pide sola (`PASSIVE`) no enciende la VM: solo un mensaje o un gesto de la persona.
     if (off && PASSIVE.has(command)) throw new FleetError("machine_off", machine);
     // Archivar, borrar, renombrar, fijar o mover de space: el relay la guarda sin encenderla.
-    if (halted || (off && kind !== "read" && !this.defers(command, args, context))) {
+    const waking = this.starting.get(memberKey(member.info.id, member.info.context));
+    if (waking && kind !== "read" && !PASSIVE.has(command) && !this.defers(command, args, context)) {
+      await waking;
+    } else if (halted || (off && kind !== "read" && !this.defers(command, args, context))) {
       if (!member.info.wakes) throw new FleetError("machine_off", machine, null, false);
       // El relay enciende la VM solo con un intent; una hija (WSL), otra acción o el canal detenido se encienden antes aquí.
       if (kind === "action" || halted || member.info.child) await this.wakeMember(member);
@@ -733,14 +736,22 @@ export class Fleet {
     const { id } = member.info;
     if (alwaysOn(member.info)) throw new FleetError("machine_off", id, null, false);
     if (!this.config.wake) throw new FleetError("machine_off", id, null, true);
-    const alreadyStarting = member.link.state() === "starting" && member.link.blocked?.() !== "machine_stopped";
-    const started = alreadyStarting ? true : await this.config.wake(id, member.info.context).catch(() => false as const);
+    // Siempre pedimos `wake` al plano de control (que maneja `503 machine_starting` y entrega el ticket 201),
+    // en lugar de confiar en un estado `starting` del inventario que todavía no tiene admisión válida.
+    const started = await this.config.wake(id, member.info.context).catch(() => false as const);
     if (started === "not_startable") throw new FleetError("machine_off", id, "not_remotely_startable", false);
     if (!started) throw new FleetError("machine_off", id, "start_failed", true);
-    // Si `wake` devolvió el ticket recién emitido, la sesión lo usa directo sin volver a pedir ticket.
+    // Si `wake` devolvió el ticket recién emitido, la sesión debe aceptarlo o fallar de inmediato (sin colgar 330 s).
     const admission = typeof started === "object" && started !== null && started.ok ? started.admission : undefined;
-    if (admission) member.link.retry?.(admission);
-    else if (member.link.blocked?.() === "machine_stopped") member.link.retry?.();
+    if (admission) {
+      const accepted = member.link.retry?.(admission);
+      if (accepted === false) throw new FleetError("machine_off", id, "start_failed", true);
+    } else if (member.link.blocked?.() === "machine_stopped") {
+      const accepted = member.link.retry?.();
+      if (accepted === false) throw new FleetError("machine_off", id, "start_failed", true);
+    }
+    // Con el ticket 201 ya emitido, abrir el socket y recibir `online` tiene plazo acotado (nunca 330 s).
+    const readyDeadline = admission ? Math.min(this.deadlines.intent, this.deadlines.action) : this.deadlines.intent;
     await new Promise<void>((resolve, reject) => {
       let settled = false;
       const done = (error: FleetError | null) => {
@@ -752,7 +763,7 @@ export class Fleet {
         stopClose();
         error ? reject(error) : resolve();
       };
-      const timer = setTimeout(() => done(new FleetError("machine_timeout", id, "start")), this.deadlines.intent);
+      const timer = setTimeout(() => done(new FleetError("machine_timeout", id, "start")), readyDeadline);
       const stopState = member.link.onState((state) => {
         if (state === "online") done(null);
       });

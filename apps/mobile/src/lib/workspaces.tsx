@@ -8,7 +8,7 @@ import { DEFAULT_SIDEBAR_VIEW, type SidebarView, sanitizeSidebarView } from "@te
 import { store } from "./store";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { type Agent, type Folder, type HostSnapshot, type MergedSpace, type Task, type WorkspaceEntry, mergeSnapshots, snapshotOf, taskKey, wakeableStoppedHosts, withAccountFolders, withSpaceCatalog, workspaceEntries, workspacesOf } from "./engine";
-import type { Host } from "./hosts";
+import { HostError, type Host } from "./hosts";
 import { useMachines } from "./machines";
 import { keepSame } from "./reconcile";
 
@@ -58,6 +58,7 @@ const Context = createContext<Workspaces | null>(null);
 const KEY = "terminus.workspace";
 const SPACES_KEY = "terminus.spaces";
 const REFRESH_ON = new Set(["cli-changed", "session", "providers"]);
+const AUTO_WAKE_BACKOFF_MS = [5_000, 15_000, 30_000] as const;
 
 export function useWorkspaces() {
   const value = useContext(Context);
@@ -107,12 +108,24 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
   const hasSnapshot = useRef(false);
   hasSnapshot.current = snapshot !== null;
   const autoWaking = useRef<Set<string>>(new Set());
-  const autoWakeRetryAt = useRef<Map<string, number>>(new Map());
+  const autoWakeFailures = useRef<Map<string, number>>(new Map());
+  const autoWakeTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const autoWakeUnstartable = useRef<Set<string>>(new Set());
+  const [wakeRetryTick, setWakeRetryTick] = useState(0);
+  const clearAutoWakeTimers = useCallback(() => {
+    for (const handle of autoWakeTimers.current.values()) clearTimeout(handle);
+    autoWakeTimers.current.clear();
+  }, []);
 
   useEffect(() => {
     catalogs.current = { scope: plane.scope, byEntry: new Map() };
     setSpaceCatalogs({});
-  }, [plane.scope]);
+    clearAutoWakeTimers();
+    autoWakeFailures.current.clear();
+    autoWakeUnstartable.current.clear();
+  }, [plane.scope, clearAutoWakeTimers]);
+
+  useEffect(() => () => clearAutoWakeTimers(), [clearAutoWakeTimers]);
 
   useEffect(() => {
     void store.get(KEY).then((saved) => {
@@ -295,30 +308,60 @@ function LiveWorkspacesProvider({ children }: { children: ReactNode }) {
   const current = list.find((w) => w.id === currentId) ?? null;
   const hostsOfCurrent = useMemo(() => hosts.filter((h) => current?.members.has(h.id)), [hosts, current]);
 
-  // Abrir un workspace cuya VM administrada está detenida la despierta en segundo plano y reintenta tras un fallo pasajero.
+  // Abrir un workspace cuya VM administrada está detenida la despierta en segundo plano con reintento programado acotado.
   useEffect(() => {
-    const now = Date.now();
+    const scope = plane.scope;
     const skip = new Set<string>(autoWaking.current);
     for (const host of hosts) {
-      if (host.power() === "on") autoWakeRetryAt.current.delete(host.id);
-      else if ((autoWakeRetryAt.current.get(host.id) ?? 0) > now) skip.add(host.id);
+      if (host.power() === "on") {
+        const timer = autoWakeTimers.current.get(host.id);
+        if (timer !== undefined) { clearTimeout(timer); autoWakeTimers.current.delete(host.id); }
+        autoWakeFailures.current.delete(host.id);
+        autoWakeUnstartable.current.delete(host.id);
+      } else if (
+        autoWakeUnstartable.current.has(host.id) ||
+        autoWakeTimers.current.has(host.id) ||
+        (autoWakeFailures.current.get(host.id) ?? 0) >= AUTO_WAKE_BACKOFF_MS.length
+      ) {
+        skip.add(host.id);
+      }
     }
     const targets = hostsOfCurrent.length ? hostsOfCurrent : hosts;
     for (const host of wakeableStoppedHosts(targets, skip)) {
       autoWaking.current.add(host.id);
       void host.wake()
         .then(() => {
-          autoWakeRetryAt.current.delete(host.id);
+          const timer = autoWakeTimers.current.get(host.id);
+          if (timer !== undefined) { clearTimeout(timer); autoWakeTimers.current.delete(host.id); }
+          autoWakeFailures.current.delete(host.id);
+          autoWakeUnstartable.current.delete(host.id);
           return refresh();
         })
-        .catch(() => {
-          autoWakeRetryAt.current.set(host.id, Date.now() + 15_000);
+        .catch((error) => {
+          if (catalogs.current.scope !== scope) return;
+          if (error instanceof HostError && (error.code === "machine_asleep" || error.code === "machine_outdated")) {
+            autoWakeUnstartable.current.add(host.id);
+            return;
+          }
+          const count = autoWakeFailures.current.get(host.id) ?? 0;
+          if (count >= AUTO_WAKE_BACKOFF_MS.length) return;
+          autoWakeFailures.current.set(host.id, count + 1);
+          const delay = AUTO_WAKE_BACKOFF_MS[count];
+          const prev = autoWakeTimers.current.get(host.id);
+          if (prev !== undefined) clearTimeout(prev);
+          autoWakeTimers.current.set(
+            host.id,
+            setTimeout(() => {
+              autoWakeTimers.current.delete(host.id);
+              if (catalogs.current.scope === scope) setWakeRetryTick((n) => n + 1);
+            }, delay),
+          );
         })
         .finally(() => {
           autoWaking.current.delete(host.id);
         });
     }
-  }, [hosts, hostsOfCurrent, tick, refresh]);
+  }, [hosts, hostsOfCurrent, tick, wakeRetryTick, refresh, plane.scope]);
 
   const selectionReady=spacePreferenceReady && enumeratedScope===JSON.stringify(hosts.map(host=>host.id).sort()) && (!current || snapshotScope===JSON.stringify([current.id,[...current.hosts].sort()]));
   const value = useMemo<Workspaces>(

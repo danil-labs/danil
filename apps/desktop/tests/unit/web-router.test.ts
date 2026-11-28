@@ -208,11 +208,14 @@ test("an off computer of the person with nothing saved is not started by a read 
   assert.equal(starts, 0);
 });
 
-test("a read to a VM that is starting says it is starting, not that Danil is closed", async () => {
+test("a read to a VM that is starting keeps machine_starting detail without surfacing waking text", async () => {
   const vm = fakeLink({ list_surfaces: [] }, "starting");
   const { router } = web({ cmp_vm: vm });
   await router.handle("list_workspaces");
-  await assert.rejects(router.handle("list_surfaces"), (e: { detail: string; what: string }) => e.detail === "machine_starting" && e.what === "Encendiendo Danil VM…");
+  await assert.rejects(
+    router.handle("list_surfaces"),
+    (e: { detail: string; what: string }) => e.detail === "machine_starting" && !/Encendiendo/.test(e.what),
+  );
 });
 
 test("the start answer of the control plane reads as started, failed or not startable", () => {

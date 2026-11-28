@@ -86,21 +86,23 @@ export class RelaySession {
   }
 
   /** «Reintentar»: vuelve a abrir una sesión detenida o aprovecha un ticket recién emitido por `wake`. */
-  retry(admission?: RelayAdmission) {
-    if (this.closed) return;
+  retry(admission?: RelayAdmission): boolean {
+    if (this.closed) return false;
     if (admission) {
+      // Si el canal ya está abierto, descartamos el ticket prefijado para no consumirlo vencido en otro reconnect.
+      if (this.connected()) return true;
       this.prefetchedAdmission = admission;
-      if (this.connected()) return;
       clearTimeout(this.retryTimer);
       this.setBlocked(null);
       this.attempt = 0;
       void this.connect();
-      return;
+      return true;
     }
-    if (!this.stopped) return;
+    if (!this.stopped) return false;
     this.setBlocked(null);
     this.attempt = 0;
     void this.connect();
+    return true;
   }
 
   onClose(listener: () => void): () => void {
@@ -247,6 +249,12 @@ export class RelaySession {
     } catch {
       return this.reconnectLater();
     }
+    // Si una admisión de encendido toma el control mientras un socket viejo sigue en CONNECTING, lo sustituimos directo.
+    if (prefetched && this.socket !== null && this.socket.readyState !== OPEN) {
+      const stale = this.socket;
+      this.socket = null;
+      stale.close(1000);
+    }
     // Relevo (machine-session.v1, «sin renovación»): el socket vivo sigue recibiendo hasta que el nuevo abre.
     const handover = this.socket !== null;
     if (handover) {
@@ -290,14 +298,28 @@ export class RelaySession {
     };
     socket.onerror = () => {};
     socket.onclose = (event) => {
+      // Revocación, licencia o reemplazo: terminales también en el socket de relevo (machine-session.v1, «Vida del socket»).
+      const terminal = event.code === REVOKED || event.code === REPLACED || (this.config.getAdmission !== undefined && event.code === TICKET_CONTEXT_REVOKED);
       if (this.next === socket) {
-        // El relevo falló antes de abrir: la sesión viva sigue y se reintenta con otro ticket.
         this.next = null;
+        if (terminal) {
+          const previous = this.socket;
+          this.socket = null;
+          clearInterval(this.pinger);
+          clearTimeout(this.renew);
+          clearTimeout(this.waiting?.timer);
+          this.waiting = null;
+          if (previous) {
+            previous.close(1000);
+            for (const listener of this.linkListeners) listener(false);
+          }
+          if (event.code === REVOKED && event.reason === "license_required") return this.setBlocked("license_required");
+          if (event.code === REVOKED || (this.config.getAdmission && event.code === TICKET_CONTEXT_REVOKED)) this.config.onUnauthorized?.();
+          return this.close();
+        }
+        // El relevo falló antes de abrir por causa no terminal: la sesión viva sigue y se reintenta con otro ticket.
         if (this.socket) return this.reconnectLater();
       } else if (this.socket !== socket) return;
-      // Revocación, licencia o reemplazo: terminales también durante un relevo (machine-session.v1,
-      // «Vida del socket»); el socket pendiente se cancela y nunca toma la sesión.
-      const terminal = event.code === REVOKED || event.code === REPLACED || (this.config.getAdmission !== undefined && event.code === TICKET_CONTEXT_REVOKED);
       if (terminal && this.next) {
         this.next.close(1000);
         this.next = null;

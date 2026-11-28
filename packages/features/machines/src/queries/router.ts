@@ -319,7 +319,8 @@ function createRouterCore(config: RouterConfig) {
       case "machine_off":
         // Una VM que no se pudo encender no es lo mismo que una máquina propia apagada.
         if (error.canWake && error.detail === "start_failed") return { what: t("web.machines.start_failed", { name }), detail: "start_failed" };
-        if (error.machine && fleet.power(error.machine) === "starting") return { what: t("web.machines.starting", { name }), detail: "machine_starting" };
+        // Mientras despierta en segundo plano, nunca exponer texto «Encendiendo…»: `detail: machine_starting` se suprime internamente.
+        if (error.machine && fleet.power(error.machine) === "starting") return { what: t("web.machines.timeout", { name }), detail: "machine_starting" };
         // Una VM que Danil enciende no es «Danil cerrado»: despierta con un mensaje o una acción.
         if (error.canWake !== false && error.machine && fleet.machines().some((m) => m.id === error.machine && m.wakes)) return { what: t("web.machines.off_wakes", { name }), detail: "machine_off" };
         return { what: t("web.machines.off_action", { name }), detail: "machine_off" };

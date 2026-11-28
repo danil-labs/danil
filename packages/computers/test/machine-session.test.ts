@@ -248,3 +248,68 @@ test('onClose fires once when a ticket session closes terminally (4001/4003/4008
     assert.equal(closed, 1, 'subsequent close() is idempotent');
   }
 });
+
+test('retry(admission) discards prefetched ticket when already connected and replaces a CONNECTING socket directly', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const sockets: Array<SocketLike & { protocol: string; protocols?: string[]; sent: string[]; closed: boolean }> = [];
+  let tickets = 0;
+  const session = new RelaySession({
+    endpoint: 'wss://connect.danil.ai',
+    computerId: 'm',
+    getAdmission: async () => {
+      tickets += 1;
+      return { url: 'wss://connect.danil.ai/v1/machines/m/session', ticket: `ticket-${tickets}`, protocol: 'danil.machine-session.v1' };
+    },
+  }, (_url, protocols) => {
+    const socket = {
+      protocol: 'danil.machine-session.v1', protocols, readyState: 0,
+      onopen: null, onclose: null, onmessage: null, onerror: null,
+      sent: [] as string[], closed: false,
+      send(data: string) { this.sent.push(data); },
+      close() { this.closed = true; },
+    };
+    sockets.push(socket);
+    return socket;
+  });
+  t.after(() => session.close());
+
+  session.start();
+  await turn();
+  assert.equal(sockets.length, 1);
+  assert.equal(sockets[0].readyState, 0);
+
+  // While socket 0 is still CONNECTING, a wake admission replaces it directly rather than running a handover.
+  assert.equal(session.retry({ url: 'wss://connect.danil.ai/v1/machines/m/session', ticket: 'wake-ticket', protocol: 'danil.machine-session.v1' }), true);
+  await turn();
+  assert.equal(sockets[0].closed, true, 'pending CONNECTING socket is replaced immediately');
+  assert.equal(sockets.length, 2);
+  assert.deepEqual(sockets[1].protocols, ['danil.machine-session.v1', 'ticket.wake-ticket']);
+
+  // Once connected, retry(admission) must NOT retain a stale ticket for a future reconnect.
+  sockets[1].readyState = 1;
+  sockets[1].onopen?.({});
+  assert.equal(session.retry({ url: 'wss://connect.danil.ai/v1/machines/m/session', ticket: 'stale-ticket', protocol: 'danil.machine-session.v1' }), true);
+  sockets[1].onclose?.({ code: 1006 });
+  t.mock.timers.tick(2000);
+  await turn();
+  assert.equal(sockets.length, 3);
+  assert.equal(tickets, 2, 'reconnect requests a fresh ticket instead of reusing the discarded one');
+  assert.deepEqual(sockets[2].protocols, ['danil.machine-session.v1', 'ticket.ticket-2']);
+});
+
+test('terminal close on a handover socket terminates the session instead of retrying', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'] });
+  const app = setup('danil.machine-session.v1', 1000);
+  t.after(() => app.session.close());
+  let closed = 0;
+  app.session.onClose(() => { closed += 1; });
+  await turn();
+  app.sockets[0].onopen?.({});
+  // Trigger handover renewal (`this.next` opens while `this.socket` is open).
+  t.mock.timers.tick(950);
+  await turn();
+  assert.equal(app.sockets.length, 2);
+  app.sockets[1].onclose?.({ code: 4003 });
+  assert.equal(closed, 1, 'terminal 4003 on handover socket closes the session terminally');
+  assert.equal(app.sockets[0].closed, true, 'primary socket is closed on terminal handover rejection');
+});

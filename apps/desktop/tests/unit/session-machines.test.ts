@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { mergeBridgeInventory } from "../../../../packages/features/machines/src/model/bridge-inventory.ts";
 import { createContextRelayPool } from "../../../../packages/features/machines/src/queries/context-relay-pool.ts";
+import { createAutoWaker } from "../../../../packages/features/machines/src/model/auto-wake.ts";
+import { Fleet, FleetError } from "../../../../packages/features/machines/src/model/fleet/index.ts";
+import { windowContext } from "../../../../packages/session/src/window-context.ts";
 import { createSessionCloud, mergeContextMachines } from "../../../../packages/features/machines/src/queries/session-cloud.ts";
 import { createAccountWorkspaces } from "../../../../packages/shell/src/shell/session-account-workspaces.ts";
 import { confirmEmailClose, emailContextCount } from "../../../../packages/shell/src/shell/session-close-confirm.ts";
@@ -458,10 +461,196 @@ test("a terminally closed relay session is dropped from the pool so subsequent c
     // If session-2 also closes terminally, retry(admission) opens session-3 with that prefetched admission.
     closers[1]();
     const admission = { url: "wss://connect.danil.ai/v1/machines/machine/session", ticket: "fresh-ticket" };
-    link.retry?.(admission);
+    assert.equal(link.retry?.(admission), true);
     assert.equal(created, 3);
     assert.deepEqual(retries.at(-1), [3, admission]);
   } finally {
     link.close();
   }
+});
+
+test("pool returns false from retry(admission) when all slots are busy, propagates onClose, isolates stale recovery and shares one call deadline", async () => {
+  // 1. Full & busy pool on the same machine: retry(admission) returns false instead of silently dropping the ticket.
+  const busyPool = createContextRelayPool(undefined, 1);
+  let releaseBusy!: () => void;
+  const busyLink = busyPool.link("machine", () => ({
+    state: () => "online", onState: () => () => {}, onEvents: () => () => {}, subscribe() {}, start() {}, close() {},
+    call: () => new Promise((resolve) => { releaseBusy = () => resolve({ value: "ok", cached: null }); }),
+  }));
+  const waitingLink = busyPool.link("machine", () => ({
+    state: () => "stopped", onState: () => () => {}, onEvents: () => () => {}, subscribe() {}, start() {}, close() {},
+    call: async () => ({ value: "ok", cached: null }),
+  }));
+  const inflight = busyLink.call("1", "list_workspaces", null, null, {});
+  await Promise.resolve();
+  assert.equal(waitingLink.retry?.({ url: "wss://connect.danil.ai/v1/machines/machine/session", ticket: "t" }), false);
+  releaseBusy();
+  await inflight;
+  busyLink.close();
+  waitingLink.close();
+
+  // 2. Stale recovery rejecting or finishing onResume after a replacement relay opens NEVER suspends or corrupts the replacement.
+  const recoveryPool = createContextRelayPool(undefined, 2);
+  let seq = 0;
+  let closedRelays: number[] = [];
+  let finishStaleResume!: () => void;
+  let rejectStaleAttention!: (err: unknown) => void;
+  const onCloseHooks: Array<() => void> = [];
+  const relayedCloses: number[] = [];
+  const link = recoveryPool.link("machine", () => {
+    const id = ++seq;
+    const listeners = new Set<() => void>();
+    onCloseHooks.push(() => { for (const l of listeners) l(); });
+    return {
+      state: () => "online",
+      onState: () => () => {},
+      onEvents: () => () => {},
+      onClose: (l) => { listeners.add(l); return () => void listeners.delete(l); },
+      subscribe() {},
+      start() {},
+      close() { closedRelays.push(id); },
+      call(_req, command) {
+        if (command === "list_workspace_attention" && id === 2) {
+          return new Promise((_res, rej) => { rejectStaleAttention = rej; });
+        }
+        return Promise.resolve({ value: command === "list_workspace_attention" ? [] : `ok-${id}`, cached: null });
+      },
+    };
+  }, {
+    onResume: () => seq === 2 ? new Promise<void>((resolve) => { finishStaleResume = resolve; }) : undefined,
+  });
+  link.onClose?.(() => relayedCloses.push(seq));
+  await link.call("a", "list_workspaces", null, null, {}); // opens relay #1
+  onCloseHooks[0](); // closes relay #1 terminally -> marks needsRecovery, fires onClose
+  assert.deepEqual(relayedCloses, [1], "pool link propagates inner terminal onClose");
+  // Trigger relay #2 (enters recovery: list_workspace_attention pending)
+  const call2 = link.call("b", "list_workspaces", null, null, {}, 500).catch((e) => e);
+  await Promise.resolve();
+  // Relay #2 closes terminally before recovery finishes -> opens slot; relay #3 opens healthy.
+  onCloseHooks[1]();
+  const res3 = await link.call("c", "list_workspaces", null, null, {}, 500);
+  assert.equal(res3.value, "ok-3");
+  // Now relay #2's stale recovery rejects: relay #3 must NOT be closed/suspended!
+  rejectStaleAttention(new Error("stale-recovery-failed"));
+  await call2;
+  assert.equal(closedRelays.includes(3), false, "stale recovery catch must not close replacement relay #3");
+  assert.equal((await link.call("d", "list_workspaces", null, null, {})).value, "ok-3");
+  void finishStaleResume;
+  link.close();
+
+  // 3. Single absolute deadline spans acquire + call on the same machine.
+  const deadlinePool = createContextRelayPool(undefined, 1);
+  let releaseBlocker!: () => void;
+  const blocker = deadlinePool.link("machine", () => ({
+    state: () => "online", onState: () => () => {}, onEvents: () => () => {}, subscribe() {}, start() {}, close() {},
+    call: () => new Promise((resolve) => { releaseBlocker = () => resolve({ value: "a", cached: null }); }),
+  }));
+  let receivedTimeout: number | undefined;
+  const waiter = deadlinePool.link("machine", () => ({
+    state: () => "online", onState: () => () => {}, onEvents: () => () => {}, subscribe() {}, start() {}, close() {},
+    call: async (_id, _cmd, _ws, _f, _args, timeoutMs) => { receivedTimeout = timeoutMs; return { value: "b", cached: null }; },
+  }));
+  const blocking = blocker.call("1", "list_workspaces", null, null, {});
+  setTimeout(() => releaseBlocker(), 60);
+  await waiter.call("2", "list_workspaces", null, null, {}, 200);
+  await blocking;
+  assert.ok(typeof receivedTimeout === "number" && receivedTimeout <= 160, `remaining call timeout (${receivedTimeout}) deducts acquire wait`);
+  blocker.close();
+  waiter.close();
+});
+
+test("createAutoWaker schedules bounded retries for recoverable failures, cancels on online/context-switch/close, and stops on not_remotely_startable", async () => {
+  const timers = new Map<number, { fn: () => void; ms: number }>();
+  let nextTimer = 1;
+  let attempts = 0;
+  let nextError: unknown = new FleetError("machine_timeout", "vm1", "start");
+  const fleet = {
+    machines: (ctx?: string) => ctx === "ctx-a" ? [{ id: "vm1", name: "VM", wakes: true, hosted: true, context: "ctx-a" }] : [],
+    power: () => "off" as const,
+    lists: () => true,
+    wake: async () => {
+      attempts += 1;
+      if (nextError) throw nextError;
+    },
+  } as unknown as Fleet;
+  const waker = createAutoWaker({
+    fleet: () => fleet,
+    setTimer: (fn, ms) => { const id = nextTimer++; timers.set(id, { fn, ms }); return id as unknown as ReturnType<typeof setTimeout>; },
+    clearTimer: (h) => { timers.delete(h as unknown as number); },
+  });
+
+  // undefined context is ignored (never broadcasts across all orgs).
+  waker.wake(undefined, null, { auto: true });
+  assert.equal(attempts, 0);
+
+  // Recoverable machine_timeout (whose canWake defaults to false!) schedules 5s retry instead of Infinity lockout.
+  waker.wake("ctx-a", null, { auto: true });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(attempts, 1);
+  assert.deepEqual([...timers.values()].map((t) => t.ms), [5_000]);
+
+  // Firing the scheduled timer retries and schedules 15s backoff on machine_lost.
+  nextError = new FleetError("machine_lost", "vm1");
+  const first = [...timers.values()][0];
+  timers.clear();
+  first.fn();
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(attempts, 2);
+  assert.deepEqual([...timers.values()].map((t) => t.ms), [15_000]);
+
+  // Power becoming "on" cancels pending retry timers and resets failure budget.
+  waker.onPowerChange("vm1", "ctx-a", "on");
+  assert.equal(timers.size, 0);
+
+  // Explicit not_remotely_startable (`machine_off`, canWake: false) stops automatic retries permanently.
+  nextError = new FleetError("machine_off", "vm1", null, false);
+  waker.wake("ctx-a", null, { auto: true });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(attempts, 3);
+  assert.equal(timers.size, 0);
+  waker.wake("ctx-a", null, { auto: true });
+  await Promise.resolve();
+  assert.equal(attempts, 3, "not_remotely_startable does not re-trigger automatically");
+
+  // Context switch cancels pending timers cleanly.
+  nextError = new FleetError("machine_timeout", "vm1", "start");
+  waker.wake("ctx-a", null); // manual wake clears unstartable
+  await Promise.resolve(); await Promise.resolve();
+  waker.wake("ctx-a", null, { auto: true });
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(timers.size, 1);
+  waker.wake("ctx-b", null, { auto: true });
+  assert.equal(timers.size, 0, "switching active context cancels old org retry timer");
+  waker.close();
+});
+
+test("windowContext.inventory delivers active org rows via onGroupReady without waiting for slow inactive orgs", async () => {
+  let resolveSlow!: (v: unknown) => void;
+  const groups = [
+    { context: "ctx-active", org: "org-active", name: "Active Org", plan: "enterprise", email: "a@danil.ai" },
+    { context: "ctx-slow", org: "org-slow", name: "Slow Org", plan: "enterprise", email: "a@danil.ai" },
+  ];
+  const scope = windowContext({
+    factory: (context) => ({
+      list: () => context === "ctx-active"
+        ? Promise.resolve({ kind: "ok", value: [{ machine_id: "vm-active", organization_id: "org-active", name: "Active VM", state: "stopped", wakeable: true }] })
+        : new Promise((resolve) => { resolveSlow = resolve; }),
+    }) as never,
+    sessions: { handle: async () => ({ state: "connected" }) } as never,
+    groups: () => groups as never,
+    fallback: () => "ctx-active",
+    active: () => "ctx-active",
+    fleet: () => ({ pruneContexts() {} }) as never,
+    revision: () => 0,
+  });
+
+  const ready: string[] = [];
+  const pending = scope.inventory((group, rows) => {
+    ready.push(`${group.context}:${rows.map((r) => r.machine.machine_id).join(",")}`);
+  });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(ready, ["ctx-active:vm-active"], "active org resolves and triggers callback while slow org is still pending");
+  resolveSlow({ kind: "ok", value: [{ machine_id: "vm-slow", organization_id: "org-slow", name: "Slow VM", state: "stopped", wakeable: true }] });
+  const result = await pending;
+  assert.equal(result?.rows.length, 2);
 });
