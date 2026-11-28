@@ -100,12 +100,15 @@ export default function Sidebar(props: SidebarProps) {
   const { FilaDeClon, Grupo } = createFilas(props, tareas, { setDesplegado, setCreatingAgentIn });
   const seccionesVisibles = createMemo(() => resolvedRailSections().filter((section) => section.visible));
 
+  const sesionesCargadas = () =>
+    props.sessionsReady ?? ("" in props.sessions && props.projects.every((p) => p.id in props.sessions));
+
   /** La misma lista, montada en dos sitios: expandida y en el desplegable. */
   const Lista = () => (
     <div data-sidebar-tasks class="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-1 rounded-[14px]">
       <Show when={props.clon}>{(c) => <FilaDeClon clon={c()} />}</Show>
 
-      <Show when={todas().length === 0 && !hayCarpetasVacias()}>
+      <Show when={sesionesCargadas() && todas().length === 0 && !hayCarpetasVacias()}>
         <Show
           when={props.projects.length === 0}
           fallback={<p class="m-0 px-2 pt-1 text-xs text-neutral-500" data-sidebar-empty="">{t("shell.sidebar.empty")}</p>}

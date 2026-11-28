@@ -99,10 +99,11 @@ export function createTareasDelRiel(props: SidebarProps) {
       return i === -1 ? props.projects.length : i;
     };
     if (vistaEfectiva().group !== "folder") return todosLosGrupos;
-    // Por carpeta, una sin tareas también es grupo, con su «+»: la recién agregada no puede faltar.
+    // Por carpeta, una sin tareas también es grupo, con su «+»: solo tras leerse su carpeta para no
+    // parpadear «Sin tareas» antes de que llegue la primera oleada de sesiones.
     const elegidas = vista().folders;
     const vacias = props.projects
-      .filter((p) => (cuentas().get(p.id) ?? 0) === 0 && (elegidas.length === 0 || elegidas.includes(p.id)))
+      .filter((p) => p.id in props.sessions && (cuentas().get(p.id) ?? 0) === 0 && (elegidas.length === 0 || elegidas.includes(p.id)))
       .map((p): SidebarGroup<SessionRow> => ({ kind: "folder", key: p.id, tasks: [] }));
     return [...todosLosGrupos, ...vacias].map((g, i) => ({ g, i })).sort((a, b) => orden(a.g) - orden(b.g) || a.i - b.i).map(({ g }) => g);
   });

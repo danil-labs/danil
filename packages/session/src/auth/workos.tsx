@@ -12,7 +12,13 @@ export function signInError(search: string): string {
 }
 
 /** The original sign-in (80b251a8); its button goes to the edge's `/v1/identity/login`. */
-export function WorkosAuthPage(props: { loginUrl: string; error: string; onLogin?: () => void }) {
+export function WorkosAuthPage(props: {
+  loginUrl: string;
+  error: string;
+  onLogin?: () => void;
+  otherOrgUrl?: string;
+  onOtherOrg?: () => void;
+}) {
   document.title = "Danil";
   return (
     <main class="flex h-full flex-col items-center overflow-y-auto bg-bg px-6 py-10 text-neutral-950" data-web-auth="workos">
@@ -22,7 +28,16 @@ export function WorkosAuthPage(props: { loginUrl: string; error: string; onLogin
           <h2 class="m-0 text-xl font-semibold">{t("web.auth.signin_title")}</h2>
           <p class="m-0 text-sm text-neutral-500" role="status">{t("web.auth.workos_hint")}</p>
         </div>
-        <Button as="a" class="min-h-11" href={props.loginUrl} onClick={props.onLogin}>{t("web.auth.workos_email")}</Button>
+        <div class="grid gap-2">
+          <Button as="a" class="min-h-11" href={props.loginUrl} onClick={props.onLogin}>{t("web.auth.workos_email")}</Button>
+          <Show when={props.otherOrgUrl}>
+            {(href) => (
+              <Button as="a" variant="ghost" class="min-h-10" href={href()} data-web-auth-other-org="" onClick={props.onOtherOrg}>
+                {t("web.platform.other_organization")}
+              </Button>
+            )}
+          </Show>
+        </div>
         <p class="m-0 text-sm text-neutral-500">{t("web.auth.workos_password_hint")}</p>
         <Show when={props.error}><p class="m-0 text-sm text-error-strong" role="alert">{t(`web.auth.${props.error}`)}</p></Show>
       </div>
