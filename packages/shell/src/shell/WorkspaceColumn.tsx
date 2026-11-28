@@ -21,7 +21,7 @@ import { AttentionBadge, MarcaDeWorkspace } from "./WorkspaceMarks";
 export { AttentionBadge } from "./WorkspaceMarks";
 
 import { organizationStartTarget, resolveStartupWorkspace } from "./organization-start-target";
-import { readLastWorkspace, writeLastWorkspace } from "../../../session/src/last-workspace";
+import { readLastWorkspace, writeLastLoginOrg, writeLastWorkspace } from "../../../session/src/last-workspace";
 import ProfileMenu from "./ProfileMenu";
 import { SessionWorkspaceRows } from "./SessionWorkspaceRows";
 import { sessionRail } from "./session-groups";
@@ -108,7 +108,10 @@ export default function WorkspaceColumn(props: {
       const group = groupOf(ctx);
       const family = group ? sessions.sessions.families().find((f) => f.family === group.family) : undefined;
       const account = family?.sub ?? group?.person ?? group?.email;
-      if (group && account) writeLastWorkspace({ workspace: open, org: group.org, account });
+      if (group && account) {
+        writeLastWorkspace({ workspace: open, org: group.org, account });
+        if (!capabilities().nativeWindow && !group.personal && group.org_type !== "personal") writeLastLoginOrg(group.org);
+      }
     }
     if (!open || !railIds().includes(open)) return;
     if (!rows.some((w) => w.id === open) || (ctx && !sessions.groups()?.some((group) => group.context_id === ctx))) {

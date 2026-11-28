@@ -261,6 +261,34 @@ test("windowActiveContext prefers the remembered (org, account) before activeWor
   assert.equal(active.current()?.context, "ctx_personal", "without a remembered workspace, falls back to personal");
 });
 
+test("last login organization keeps only WorkOS org ids and survives clearWebCaches", async () => {
+  const { readLastLoginOrg, writeLastLoginOrg, isWorkosOrganizationId, WEB_LAST_LOGIN_ORG_KEY } = await import("../../../../packages/session/src/last-workspace.ts");
+  const { clearWebCaches } = await import("../../../../packages/session/src/session-storage.ts");
+  const backing = new Map<string, string>();
+  const store = {
+    get length() { return backing.size; },
+    key: (i: number) => [...backing.keys()][i] ?? null,
+    getItem: (k: string) => backing.get(k) ?? null,
+    setItem: (k: string, v: string) => void backing.set(k, v),
+    removeItem: (k: string) => void backing.delete(k),
+  };
+
+  assert.equal(isWorkosOrganizationId("org_danil"), true);
+  assert.equal(isWorkosOrganizationId("personal:user_a"), false);
+  assert.equal(isWorkosOrganizationId("org_"), false);
+  assert.equal(isWorkosOrganizationId("org_bad id"), false);
+
+  writeLastLoginOrg("org_danil", store);
+  assert.equal(store.getItem(WEB_LAST_LOGIN_ORG_KEY), "org_danil");
+  assert.equal(readLastLoginOrg(store), "org_danil");
+
+  clearWebCaches(store);
+  assert.equal(readLastLoginOrg(store), "org_danil", "the non-sensitive WorkOS login org hint survives cache wipe on session expiry");
+
+  writeLastLoginOrg("personal:user_a", store);
+  assert.equal(readLastLoginOrg(store), null, "writing a non-WorkOS org clears the hint instead of persisting it");
+});
+
 test("webRailCatalog does not latch settled on transient 503 or network errors and recovers on retry", async () => {
   const { webRailCatalog } = await import("../../../../packages/session/src/web-rail-catalog.ts");
   let mode: "throw" | "503" | "200" = "throw";

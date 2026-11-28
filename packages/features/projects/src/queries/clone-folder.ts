@@ -121,6 +121,8 @@ export function createCloneFolder(deps: CloneFolderDeps) {
     key: (row) => row.id,
     // Una mutación del CLI avisa dos veces seguidas, y varios agentes a la vez, una ráfaga.
     gather: 200,
+    // Junta las carpetas rápidas de una oleada inicial en un solo pintado sin bloquearse por una lenta.
+    coalesce: 250,
   });
   onCleanup(() => sessionLists.reset());
   function refreshSessions(proyectos: string[]) {

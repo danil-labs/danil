@@ -32,6 +32,8 @@ export type SidebarProps = {
   projects: Project[];
   /** Por id de proyecto, no por nombre: un proyecto se renombra. */
   sessions: Record<string, SessionRow[]>;
+  /** Si ya respondieron todas las carpetas consultadas del workspace (sin filtrar por espacio). */
+  sessionsReady?: boolean;
   current: string | null;
   /** Las tareas que están contestando ahora mismo. */
   vivas: string[];

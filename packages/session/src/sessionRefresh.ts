@@ -114,10 +114,17 @@ export function sessionRefresh<T>(options: {
   timeout?: number;
   /** Tope de lecturas de carpeta simultáneas. */
   concurrency?: number;
+  /**
+   * Ventana opcional (ms) para juntar las carpetas de una misma oleada multi-carpeta en una sola
+   * aplicación al estado: si todas contestan antes, pinta de golpe sin esperar; si una tarda más,
+   * pinta juntas las rápidas al vencer la ventana para no congelar la barra.
+   */
+  coalesce?: number;
 }) {
   const schedule = options.schedule ?? ((run, ms) => setTimeout(run, ms));
   const cancel = options.cancel ?? ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>));
   const limit = Math.max(1, Math.floor(options.concurrency ?? READ_CONCURRENCY));
+  const coalesce = Math.max(0, options.coalesce ?? 0);
   let generation = 0;
   let started = 0;
   // Por carpeta, el pedido más nuevo que ya se pintó: uno anterior que vuelve
@@ -127,6 +134,7 @@ export function sessionRefresh<T>(options: {
   // turno cuando ya salió otra más reciente se salta sin pegar al motor.
   const latestRequest = new Map<string, number>();
   const pendingRetry = new Set<string>();
+  const waveTimers = new Set<unknown>();
   let active = 0;
   const waiters: ((acquired: boolean) => void)[] = [];
   let delay = 0;
@@ -162,25 +170,76 @@ export function sessionRefresh<T>(options: {
     const timeout = options.timeout ?? READ_TIMEOUT;
     const unique = [...new Set(projects)];
     for (const project of unique) latestRequest.set(project, request);
-    const paint = (project: string, rows: T[] | null) => {
+    const paintBatch = (entries: [string, T[] | null][]) => {
+      if (current !== generation || entries.length === 0) return;
       const vigentes = new Set(options.projects());
-      // Un aviso de una carpeta que el riel no enseña no la mete.
-      if (!vigentes.has(project)) return;
+      const valid = entries.filter(([project]) => vigentes.has(project) && request >= (applied.get(project) ?? 0));
+      if (valid.length === 0) return;
+      for (const [project, rows] of valid) {
+        if (rows !== null) {
+          applied.set(project, request);
+          pendingRetry.delete(project);
+        } else {
+          pendingRetry.add(project);
+        }
+      }
       options.apply((previous) => {
         const next: SessionLists<T> = {};
         for (const [k, v] of Object.entries(previous)) if (vigentes.has(k)) next[k] = v;
-        next[project] = rows === null
-          ? previous[project] ?? []
-          : conservar(previous[project] ?? [], rows, options.key);
+        for (const [project, rows] of valid) {
+          next[project] = rows === null
+            ? previous[project] ?? []
+            : conservar(previous[project] ?? [], rows, options.key);
+        }
         return next;
       });
+    };
+    let remaining = unique.length;
+    let coalescing = coalesce > 0 && unique.length > 1;
+    let waveTimer: unknown;
+    const buffered = new Map<string, T[] | null>();
+    const flushWave = () => {
+      if (waveTimer !== undefined) {
+        cancel(waveTimer);
+        waveTimers.delete(waveTimer);
+        waveTimer = undefined;
+      }
+      if (buffered.size === 0) return;
+      const entries = [...buffered.entries()];
+      buffered.clear();
+      paintBatch(entries);
+    };
+    const settleFolder = (project?: string, rows?: T[] | null) => {
+      remaining--;
+      if (project !== undefined && rows !== undefined) {
+        if (!coalescing) {
+          paintBatch([[project, rows]]);
+          return;
+        }
+        buffered.set(project, rows);
+      }
+      if (!coalescing) return;
+      if (remaining <= 0) {
+        coalescing = false;
+        flushWave();
+      } else if (buffered.size > 0 && waveTimer === undefined) {
+        const handle = schedule(() => {
+          waveTimers.delete(handle);
+          if (waveTimer === handle) waveTimer = undefined;
+          coalescing = false;
+          flushWave();
+        }, coalesce);
+        waveTimer = handle;
+        waveTimers.add(handle);
+      }
     };
     const results = await Promise.all(unique.map(async (project) => {
       if (active >= limit) {
         const acquired = await new Promise<boolean>((resolve) => { waiters.push(resolve); });
-        if (!acquired) return null;
+        if (!acquired) { settleFolder(); return null; }
         if (current !== generation || request < (latestRequest.get(project) ?? 0)) {
           release();
+          settleFolder();
           return null;
         }
       } else {
@@ -200,14 +259,11 @@ export function sessionRefresh<T>(options: {
         release();
       }
       // Vieja: ya se pintó algo más nuevo de esta carpeta, o cambió el workspace.
-      if (current !== generation || request < (applied.get(project) ?? 0)) return null;
-      if (rows !== null) {
-        applied.set(project, request);
-        pendingRetry.delete(project);
-      } else {
-        pendingRetry.add(project);
+      if (current !== generation || request < (applied.get(project) ?? 0)) {
+        settleFolder();
+        return null;
       }
-      paint(project, rows);
+      settleFolder(project, rows);
       return rows !== null;
     }));
     if (current !== generation) return;
@@ -259,6 +315,8 @@ export function sessionRefresh<T>(options: {
       drainWaiters();
       delay = 0;
       clearRetry();
+      for (const timer of waveTimers) cancel(timer);
+      waveTimers.clear();
       if (batch) {
         cancel(batch.handle);
         for (const done of batch.waiting) done();
