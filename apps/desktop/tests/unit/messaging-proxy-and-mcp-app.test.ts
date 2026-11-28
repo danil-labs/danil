@@ -86,6 +86,56 @@ test("executePluginProxyHttp rechaza rutas fuera del allowlist con 403", async (
   });
 });
 
+test("executePluginProxyHttp reenvía GET y POST de /v1/inventory/inventories al borde", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const fakeFetch: typeof fetch = async (input, init) => {
+    const url = String(input);
+    calls.push({ url, init });
+    if (url.endsWith("/v1/identity/csrf")) {
+      return new Response(JSON.stringify({ csrf_token: "csrf_inv" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    if (init?.method === "POST") {
+      return new Response(JSON.stringify({ id: "inv_2", name: "Bodega" }), {
+        status: 201,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ data: [{ id: "inv_1" }] }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  };
+  const deps = { origin: "https://edge.danil.ai", fetcher: fakeFetch };
+
+  const list = await executePluginProxyHttp(
+    { method: "GET", path: "/api/v1/inventory/inventories?limit=20", workspaceId: "7" },
+    deps,
+  );
+  assert.equal(list.status, 200);
+  assert.equal(list.ok, true);
+  assert.deepEqual(list.body, { data: [{ id: "inv_1" }] });
+  assert.equal(calls[0].url, "https://edge.danil.ai/v1/inventory/inventories?limit=20");
+  assert.equal(calls[0].init?.method, "GET");
+  assert.equal((calls[0].init?.headers as Record<string, string>)["Idempotency-Key"], undefined);
+
+  const created = await executePluginProxyHttp(
+    { method: "POST", path: "/v1/inventory/inventories", body: { name: "Bodega" }, workspaceId: "7" },
+    deps,
+  );
+  assert.equal(created.status, 201);
+  assert.equal(created.ok, true);
+  assert.deepEqual(created.body, { id: "inv_2", name: "Bodega" });
+  const post = calls.find((c) => c.url === "https://edge.danil.ai/v1/inventory/inventories" && c.init?.method === "POST");
+  assert.ok(post, "POST /v1/inventory/inventories llega al borde");
+  const postHeaders = post.init?.headers as Record<string, string>;
+  assert.equal(postHeaders["X-CSRF-Token"], "csrf_inv");
+  assert.equal(postHeaders["X-Danil-Workspace"], "7");
+  assert.ok(postHeaders["Idempotency-Key"]);
+});
+
 test("executePluginProxyHttp en modo web pide CSRF antes de mutaciones y usa credentials include", async () => {
   const calls: Array<{ url: string; init?: RequestInit }> = [];
   const fakeFetch: typeof fetch = async (input, init) => {

@@ -114,6 +114,7 @@ const steps = [
   ["The added list goes through Desk's edge and the web cookie with CSRF, and its record stays per person and organization", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/workspace-added-transport.test.ts")], root],
   ["Messaging stays isolated from Desk and web", process.execPath, [join(root, "scripts/guards/messaging-isolation.mjs")], root],
   ["Messaging isolation guard rejects reintroduced transports", process.execPath, ["--test", join(root, "tests/unit/messaging-isolation.test.mjs")], root],
+  ["Plugin proxy allows only messaging, agents and inventory and forwards their calls safely", process.execPath, ["--conditions=browser", "--test", "--experimental-strip-types", join(root, "tests/unit/messaging-proxy-and-mcp-app.test.ts")], root],
   ["Web uses platform without direct database dependencies", process.execPath, [join(root, "scripts/guards/web-platform.mjs")], root],
   ["El consentimiento gratuito conserva su política y destino (free-model-policy-load.test.ts)", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/free-model-policy-load.test.ts")], root],
   ["El consentimiento gratuito conserva su política y destino (free-model-policy.test.ts)", process.execPath, ["--test", "--experimental-strip-types", join(root, "tests/unit/free-model-policy.test.ts")], root],
